@@ -28,10 +28,6 @@ class _FakeConverterStep:
     pass
 
 
-class _FakeTweakerStep:
-    pass
-
-
 class _FakeOrchestrator:
     def __init__(self, config):
         self._config = config
@@ -112,7 +108,6 @@ def test_process_directories_writes_validation_report_when_enabled(
     monkeypatch.setattr(
         "dispatch.pipeline.converter.EDIConverterStep", _FakeConverterStep
     )
-    monkeypatch.setattr("dispatch.pipeline.tweaker.EDITweakerStep", _FakeTweakerStep)
 
     coordinator = QtRunCoordinator(app)
     coordinator.process_directories(folders_table)

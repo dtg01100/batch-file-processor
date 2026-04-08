@@ -26,19 +26,37 @@ class RealHTTPClient:
     HTTP connections.
 
     Attributes:
-        timeout: Default timeout for requests in seconds
+        timeout: Default timeout for HTTP requests in seconds, or tuple of
+            (connect_timeout, read_timeout) for separate timeouts.
         _session: The underlying requests session object
 
     """
 
-    def __init__(self, timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        timeout: float | tuple[float, float] = 30.0,
+        connect_timeout: float | None = None,
+        read_timeout: float | None = None,
+    ) -> None:
         """Initialize HTTP client.
 
         Args:
-            timeout: Default timeout for HTTP requests in seconds
+            timeout: Default timeout for HTTP requests in seconds.
+                Can be a tuple (connect_timeout, read_timeout) for separate
+                connection and read timeouts.
+            connect_timeout: Explicit connection timeout in seconds.
+                Takes precedence over timeout if both are specified.
+            read_timeout: Explicit read timeout in seconds.
+                Takes precedence over timeout if both are specified.
 
         """
-        self.timeout = timeout
+        if connect_timeout is not None or read_timeout is not None:
+            self.timeout = (
+                connect_timeout if connect_timeout is not None else 30.0,
+                read_timeout if read_timeout is not None else 30.0,
+            )
+        else:
+            self.timeout = timeout
         self._session: requests.Session | None = None
 
     def post(
@@ -47,7 +65,7 @@ class RealHTTPClient:
         data: dict[str, Any] | None = None,
         files: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-        timeout: float | None = None,
+        timeout: float | tuple[float, float] | None = None,
     ) -> requests.Response:
         """Send a POST request.
 
@@ -56,7 +74,8 @@ class RealHTTPClient:
             data: Dictionary of form data (for non-file fields)
             files: Dictionary of files to upload (multipart/form-data)
             headers: Additional headers to include
-            timeout: Request-specific timeout (overrides default)
+            timeout: Request-specific timeout (overrides default).
+                Can be a tuple (connect_timeout, read_timeout).
 
         Returns:
             Response object

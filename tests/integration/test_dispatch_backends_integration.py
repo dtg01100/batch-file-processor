@@ -592,7 +592,6 @@ class TestDispatchFullPipeline:
             patch("backend.email_backend.do", side_effect=mock_email_do),
             patch("backend.copy_backend.do", side_effect=mock_copy_do),
         ):
-
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -627,12 +626,12 @@ class TestDispatchFullPipeline:
 
         # Create a mock validator
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (True, [])
+        mock_validator.execute.return_value = (True, sample_edi_file)
 
         with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
-                validator=mock_validator,
+                validator_step=mock_validator,
             )
             orchestrator = DispatchOrchestrator(config)
 
@@ -642,7 +641,7 @@ class TestDispatchFullPipeline:
             )
 
             # Verify validation was called
-            mock_validator.validate.assert_called_once_with(sample_edi_file)
+            mock_validator.execute.assert_called_once()
 
             # Verify file was sent after validation
             assert result.sent is True
@@ -761,7 +760,6 @@ class TestDispatchErrorHandling:
             patch("backend.email_backend.do", side_effect=mock_email_do_failure),
             patch("backend.ftp_backend.do", side_effect=mock_ftp_do),
         ):
-
             config = DispatchConfig(settings=settings_dict)
             orchestrator = DispatchOrchestrator(config)
 
@@ -850,7 +848,6 @@ class TestSendManagerIntegration:
             patch("backend.email_backend.do", side_effect=mock_email_do),
             patch("backend.copy_backend.do", side_effect=mock_copy_do),
         ):
-
             manager = SendManager()
 
             params = {
@@ -918,7 +915,7 @@ class TestFolderProcessingIntegration:
         """Test processing a folder when validation fails."""
         # Create a validator that always fails
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (False, ["Validation error"])
+        mock_validator.execute.return_value = (False, ["Validation error"])
 
         folder_config = {
             "id": 1,
@@ -938,7 +935,7 @@ class TestFolderProcessingIntegration:
         with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
-                validator=mock_validator,
+                validator_step=mock_validator,
             )
             orchestrator = DispatchOrchestrator(config)
 
@@ -959,7 +956,7 @@ class TestFolderProcessingIntegration:
         """Test processing with force_edi_validation sends despite errors."""
         # Create a validator that always fails
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (False, ["Validation error"])
+        mock_validator.execute.return_value = (False, ["Validation error"])
 
         folder_config = {
             "id": 1,
@@ -979,7 +976,7 @@ class TestFolderProcessingIntegration:
         with patch("backend.copy_backend.do", side_effect=mock_copy_do):
             config = DispatchConfig(
                 settings=settings_dict,
-                validator=mock_validator,
+                validator_step=mock_validator,
             )
             orchestrator = DispatchOrchestrator(config)
 

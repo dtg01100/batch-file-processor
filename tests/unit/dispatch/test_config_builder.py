@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dispatch.config_builder import DispatchConfigBuilder, create_default_config
-from dispatch.edi_validator import EDIValidator
+from dispatch.pipeline.validator import EDIValidationStep
 
 
 class TestDispatchConfigBuilder:
@@ -15,15 +15,15 @@ class TestDispatchConfigBuilder:
 
         assert config.version == "1.0.0"
         assert config.settings == {}
-        assert config.validator is None
+        assert config.validator_step is None
         assert config.backends == {}
 
     def test_build_with_validator(self):
-        """Test building config with validator."""
-        validator = EDIValidator()
-        config = DispatchConfigBuilder().with_validator(validator).build()
+        """Test building config with validator step."""
+        validator_step = EDIValidationStep()
+        config = DispatchConfigBuilder().with_validator(validator_step).build()
 
-        assert config.validator is validator
+        assert config.validator_step is validator_step
 
     def test_build_with_settings(self):
         """Test building config with settings."""
@@ -40,18 +40,18 @@ class TestDispatchConfigBuilder:
 
     def test_build_with_multiple_components(self):
         """Test building config with multiple components."""
-        validator = EDIValidator()
+        validator_step = EDIValidationStep()
         settings = {"test": "value"}
 
         config = (
             DispatchConfigBuilder()
-            .with_validator(validator)
+            .with_validator(validator_step)
             .with_settings(settings)
             .with_version("3.0.0")
             .build()
         )
 
-        assert config.validator is validator
+        assert config.validator_step is validator_step
         assert config.settings == settings
         assert config.version == "3.0.0"
 
@@ -90,7 +90,7 @@ class TestDispatchConfigBuilder:
         """Test that builder methods return self for chaining."""
         builder = DispatchConfigBuilder()
 
-        result = builder.with_validator(EDIValidator())
+        result = builder.with_validator(EDIValidationStep())
         assert result is builder
 
         result = builder.with_settings({})

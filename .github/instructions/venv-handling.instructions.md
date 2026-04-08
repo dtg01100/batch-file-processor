@@ -1,22 +1,29 @@
 ---
 applyTo: '**/*.py'
-description: 'Instructions for handling Python virtual environment issues - always recreate the venv instead of falling back to host Python'
+description: 'Instructions for handling Python virtual environment issues - always recreate the venv instead of falling back to host Python. Never use host/system Python directly.'
 ---
 
 # Python Virtual Environment Handling
 
 ## Core Principle
 
-**NEVER bypass the project's virtual environment.** When encountering venv issues, always recreate or fix the virtual environment rather than falling back to the host Python interpreter.
+**NEVER bypass the project's virtual environment.** The host/system Python is forbidden for project work, debugging, testing, or analysis. If `.venv/` is missing or broken, recreate it before doing anything else.
+
+## Required Behavior
+
+- Always use `.venv/bin/python`, `.venv/bin/pip`, or `./.venv/bin/pytest`.
+- Do not use `python`, `python3`, `pip`, `pip3`, or system package installations for this repository.
+- If the venv is broken, recreate it. Do not continue with the host Python.
+- If a tool or environment asks for a Python interpreter, choose `.venv/bin/python`.
 
 ## When to Recreate the Virtual Environment
 
 Recreate the virtual environment when you encounter:
-- Missing package errors that should be installed
-- Import errors for dependencies listed in `requirements.txt`
-- Version conflicts between installed packages
-- Corrupted or incomplete venv (missing `pip`, `python` executable, etc.)
-- Any indication that the venv is not properly configured
+- missing package errors for dependencies listed in `requirements.txt`
+- import errors for installed packages
+- version conflicts between installed or required packages
+- corrupted or incomplete `.venv` (missing `pip`, `python`, or `activate`)
+- shell/IDE integration using host Python instead of `.venv`
 
 ## How to Recreate the Virtual Environment
 
@@ -37,64 +44,52 @@ pip install --upgrade pip
 
 # 5. Install dependencies
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # if applicable
+pip install -r requirements-dev.txt
 
 # 6. Verify installation
 pip list
-python -c "import <key_package>; print(<key_package>.__version__)"
+python -c "import pytest; print(pytest.__version__)"
 ```
 
-### Using uv (if available)
+### If `uv` is available
 
 ```bash
-# 1. Remove existing venv
 rm -rf .venv
-
-# 2. Create with uv (faster)
 uv venv .venv
-
-# 3. Activate
 source .venv/bin/activate
-
-# 4. Install dependencies (much faster than pip)
 uv pip install -r requirements.txt
 uv pip install -r requirements-dev.txt
 ```
 
 ## What NOT to Do
 
-### ❌ BAD: Using host Python directly
+### ❌ NEVER use host/system Python
 ```bash
-# NEVER do this, even if venv is broken
 python3 script.py
 python3 -m pytest tests/
-pip3 install <package>  # without activating venv first
+pip3 install <package>
 ```
 
-### ❌ BAD: Installing packages globally
+### ❌ NEVER install packages globally
 ```bash
-# NEVER install packages globally to fix venv issues
 sudo pip install <package>
 pip3 install --user <package>
 ```
 
-### ❌ BAD: Workarounds that bypass the venv
+### ❌ NEVER bypass `.venv` with environment hacks
 ```bash
-# DON'T manipulate PYTHONPATH to use system packages
 export PYTHONPATH=/usr/lib/python3/site-packages:$PYTHONPATH
-
-# DON'T use system Python while pretending to use venv
 .venv/bin/python3 -c "import sys; sys.path.insert(0, '/usr/lib/python3')"
 ```
 
 ## Verification Steps
 
-After recreating the virtual environment:
+After recreating or activating the virtual environment:
 
-1. **Verify Python executable**:
+1. **Verify the interpreter path**:
    ```bash
    which python
-   # Should output: /path/to/project/.venv/bin/python
+   # Must output: /path/to/project/.venv/bin/python
    ```
 
 2. **Verify key packages**:
@@ -110,18 +105,16 @@ After recreating the virtual environment:
 
 ## Common Venv Issues and Solutions
 
-### Issue: Missing `python` executable in .venv/bin
+### Missing `python` executable in `.venv/bin`
 ```bash
-# Solution: Recreate the venv
 rm -rf .venv
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Issue: Package installation fails
+### Package installation fails
 ```bash
-# Solution: Clear pip cache and reinstall
 rm -rf .venv
 python3 -m venv .venv
 source .venv/bin/activate
@@ -130,58 +123,45 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Issue: Import errors after package installation
+### Import errors after package installation
 ```bash
-# Solution: Verify package is actually installed
 source .venv/bin/activate
 pip list | grep <package_name>
 
-# If not listed, reinstall
 pip uninstall <package_name>
 pip install <package_name>
 
-# If still failing, recreate entire venv
-```
-
-### Issue: pytest marker not recognized
-```bash
-# Solution: Ensure test dependencies are installed
+# If the issue persists, recreate the venv
+rm -rf .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-dev.txt
-
-# Verify markers are registered
-pytest --markers | grep <marker_name>
+pip install -r requirements.txt
 ```
 
 ## Project-Specific Notes
 
 For this Batch File Processor project:
-- The venv is located at `.venv/` in the project root
-- Use `./.venv/bin/python` for direct execution without activation
-- Main dependencies: PyQt6, pytest, pytest-qt, pytest-timeout
-- Development dependencies include: pytest-xdist, coverage, ruff, black
+- The venv is at `.venv/` in the project root.
+- Use `./.venv/bin/python` for direct execution without activation.
+- Use `./.venv/bin/pytest` for tests.
+- Do not use host or system Python for any repository task.
 
 ## Testing After Venv Recreation
 
-Always verify the venv is working correctly:
+Always verify the venv works correctly:
 
 ```bash
-# 1. Run a single unit test
 ./.venv/bin/pytest tests/unit/test_file.py -x --timeout=30
-
-# 2. Check import of main modules
 ./.venv/bin/python -c "from dispatch.orchestrator import Orchestrator; print('OK')"
-
-# 3. Verify Qt is working (for UI tests)
 QT_QPA_PLATFORM=offscreen ./.venv/bin/pytest tests/qt/test_widget.py -x --timeout=30
 ```
 
 ## Reminder
 
-**The virtual environment is non-negotiable.** It ensures:
-- Reproducible builds
-- Correct dependency versions
-- Isolation from system Python
-- Consistent behavior across development and CI
+**The virtual environment is non-negotiable.** It guarantees:
+- reproducible builds
+- correct dependency versions
+- isolation from system Python
+- consistent behavior across development and CI
 
-When in doubt, recreate the venv. It's faster than debugging a broken environment and guarantees a clean state.
+If anything in the workflow tries to use host Python, stop and fix the `.venv` first.

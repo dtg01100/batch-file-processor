@@ -177,7 +177,6 @@ class QtRunCoordinator:
                 from dispatch import DispatchConfig, DispatchOrchestrator
                 from dispatch.pipeline.converter import EDIConverterStep
                 from dispatch.pipeline.splitter import EDISplitterStep
-                from dispatch.pipeline.tweaker import EDITweakerStep
                 from dispatch.pipeline.validator import EDIValidationStep
 
                 run_error_bool = False
@@ -190,7 +189,6 @@ class QtRunCoordinator:
                     validator_step=validator_step,
                     splitter_step=EDISplitterStep(),
                     converter_step=EDIConverterStep(),
-                    tweaker_step=EDITweakerStep(),
                 )
 
                 orchestrator = DispatchOrchestrator(config)

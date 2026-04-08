@@ -57,6 +57,32 @@ pytestmark = [
     pytest.mark.workflow,
 ]
 
+
+class CompositeConverterStep:
+    """Composite converter that applies conversion then tweaks."""
+
+    def __init__(self, converter, tweaker):
+        self.converter = converter
+        self.tweaker = tweaker
+
+    def execute(self, file_path, folder, settings=None, upc_dict=None, context=None):
+        converted = self.converter.execute(
+            file_path,
+            folder,
+            settings=settings,
+            upc_dict=upc_dict,
+            context=context,
+        )
+        return self.tweaker.execute(
+            converted,
+            folder,
+            settings=settings,
+            upc_dict=upc_dict,
+            context=context,
+        )
+
+
+
 MINIMAL_EDI = (
     "HDRA0000000000000000  000000000000000test.edi\n"
     "A0000000000  0000000100100000000000\n"
@@ -734,8 +760,7 @@ class TestFullPipelineLogging:
             backends={"copy": backend},
             settings={},
             validator_step=validator,
-            converter_step=converter,
-            tweaker_step=tweaker,
+            converter_step=CompositeConverterStep(converter, tweaker),
         )
         orch = DispatchOrchestrator(config)
 
@@ -787,8 +812,7 @@ class TestFullPipelineLogging:
         config = DispatchConfig(
             backends={"copy": backend},
             settings={},
-            converter_step=FailingConverter(),
-            tweaker_step=tweaker,
+            converter_step=CompositeConverterStep(FailingConverter(), tweaker),
         )
         orch = DispatchOrchestrator(config)
 
@@ -827,7 +851,7 @@ class TestFullPipelineLogging:
         config = DispatchConfig(
             backends={"copy": backend},
             settings={},
-            tweaker_step=FailingTweaker(),
+            converter_step=FailingTweaker(),
         )
         orch = DispatchOrchestrator(config)
 

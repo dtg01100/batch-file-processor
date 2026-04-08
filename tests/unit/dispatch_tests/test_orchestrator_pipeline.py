@@ -359,7 +359,7 @@ class TestDispatchConfigPipelineFields:
         assert config.validator_step is None
         assert config.splitter_step is None
         assert config.converter_step is None
-        assert config.tweaker_step is None
+        assert config.converter_step is None
         assert config.file_processor is None
         assert config.upc_dict == {}
 
@@ -367,14 +367,12 @@ class TestDispatchConfigPipelineFields:
         """Test setting pipeline fields in constructor."""
         validator = FakeValidationStep(should_pass=True)
         converter = FakeConverterStep()
-        tweaker = FakeTweakerStep()
         upc_service = SimpleUPCService()
         progress = SimpleProgressReporter()
 
         config = DispatchConfig(
             validator_step=validator,
             converter_step=converter,
-            tweaker_step=tweaker,
             upc_service=upc_service,
             progress_reporter=progress,
             upc_dict={"123": "product"},
@@ -382,7 +380,6 @@ class TestDispatchConfigPipelineFields:
 
         assert config.validator_step is validator
         assert config.converter_step is converter
-        assert config.tweaker_step is tweaker
         assert config.upc_service is upc_service
         assert config.progress_reporter is progress
         assert config.upc_dict == {"123": "product"}
@@ -687,14 +684,12 @@ class TestProcessFileWithPipeline:
         """Test full pipeline processing flow."""
         validator = FakeValidationStep(should_pass=True)
         converter = FakeConverterStep()
-        tweaker = FakeTweakerStep()
         backend = CaptureBackend()
 
         config = DispatchConfig(
             backends={"copy": backend},
             validator_step=validator,
             converter_step=converter,
-            tweaker_step=tweaker,
             settings={},
         )
         orchestrator = DispatchOrchestrator(config)

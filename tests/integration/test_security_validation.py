@@ -20,7 +20,6 @@ from backend.copy_backend import do as copy_backend_do
 from backend.database.database_obj import DatabaseObj
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
-from dispatch.pipeline.tweaker import EDITweakerStep
 from dispatch.pipeline.validator import EDIValidationStep
 from scripts import create_database
 
@@ -63,7 +62,6 @@ def pipeline_steps():
     return {
         "validator_step": EDIValidationStep(),
         "converter_step": EDIConverterStep(),
-        "tweaker_step": EDITweakerStep(),
     }
 
 
@@ -107,7 +105,6 @@ C00000003000030000
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -125,12 +122,12 @@ C00000003000030000
 
         # Verify database is intact (SQL in EDI content must not have executed)
         all_folders = list(db.folders_table.all())
-        assert (
-            len(all_folders) == 1
-        ), "SQL injection in EDI content must not drop the folders table"
-        assert (
-            all_folders[0]["alias"] == "Security Test"
-        ), "Folder record must be unchanged"
+        assert len(all_folders) == 1, (
+            "SQL injection in EDI content must not drop the folders table"
+        )
+        assert all_folders[0]["alias"] == "Security Test", (
+            "Folder record must be unchanged"
+        )
 
     def test_null_byte_injection(self, secure_test_environment, pipeline_steps):
         """Test handling of null byte injection attempts."""
@@ -165,7 +162,6 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -174,9 +170,9 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
 
         # Should complete without errors -- normal EDI must process successfully
         assert hasattr(result, "success"), "process_folder must return a FolderResult"
-        assert (
-            result.success is True
-        ), f"Normal EDI processing must succeed; errors: {result.errors}"
+        assert result.success is True, (
+            f"Normal EDI processing must succeed; errors: {result.errors}"
+        )
         assert result.files_processed >= 1, "At least one file must have been processed"
 
 
@@ -287,7 +283,6 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -378,7 +373,6 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -429,7 +423,6 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -478,7 +471,6 @@ class TestErrorHandling:
             settings={},
             validator_step=pipeline_steps["validator_step"],
             converter_step=pipeline_steps["converter_step"],
-            tweaker_step=pipeline_steps["tweaker_step"],
         )
         orchestrator = DispatchOrchestrator(config)
 

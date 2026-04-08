@@ -36,6 +36,7 @@ from core.structured_logging import (
     get_or_create_correlation_id,
     log_with_context,
 )
+from core.utils import normalize_bool, normalize_convert_to_format
 
 if TYPE_CHECKING:
     from dispatch.orchestrator import FolderResult
@@ -486,11 +487,12 @@ class FolderPipelineExecutor:
                 "upc_target_length", 11
             )
 
-        raw_convert_format = effective_folder.get("convert_to_format", "")
-        legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
-        if legacy_tweak_enabled:
-            raw_convert_format = "tweaks"
-            effective_folder["convert_to_format"] = raw_convert_format
+        effective_folder["convert_to_format"] = normalize_convert_to_format(
+            effective_folder.get("convert_to_format", "")
+        )
+
+        if normalize_bool(effective_folder.get("tweak_edi", False)):
+            effective_folder["convert_to_format"] = "tweaks"
             effective_folder["process_edi"] = True
 
         if "settings" not in effective_folder:
@@ -558,7 +560,9 @@ class FolderPipelineExecutor:
                     }
                 )
         except Exception:
-            logger.debug("Failed to record processed file: %s", file_result.file_name)
+            logger.warning(
+                "Failed to record processed file to database: %s", file_result.file_name
+            )
 
     def _finalize_folder_result(self, result: FolderResult) -> None:
         """Finalize folder result and notify progress reporter.
@@ -604,7 +608,10 @@ class FolderPipelineExecutor:
                     total_files,
                 )
             except Exception:
-                pass
+                logger.warning(
+                    "Progress reporter failed to start folder: %s",
+                    folder.get("alias", folder.get("folder_name", "")),
+                )
 
     def _get_upc_dictionary(self) -> dict:
         """Get UPC dictionary from configured source.
@@ -628,7 +635,7 @@ class FolderPipelineExecutor:
             try:
                 run_log.write(f"{message}\r\n".encode())
             except Exception:
-                pass
+                logger.warning("Failed to write to run_log: %s", message)
 
     def _log_error(self, run_log: Any, error_msg: str) -> None:
         """Log an error message.

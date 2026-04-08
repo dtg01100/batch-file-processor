@@ -159,15 +159,92 @@ def invfetcher_with_test_data(invfetcher_test_db):
 # =============================================================================
 
 
-class MockQueryRunner:
-    """Mock query runner that returns empty results for hermetic testing.
+# Standard test data for customer lookups (matches ohhst table schema)
+TEST_CUSTOMER_DATA = [
+    {
+        "Salesperson Name": "John Doe",
+        "Invoice Date": "2024-01-15",
+        "Terms Code": "NET30",
+        "Terms Duration": "30",
+        "Customer Status": "A",
+        "Customer Number": "12345",
+        "Customer Name": "Test Customer",
+        "Customer Address": "123 Test St",
+        "Customer Town": "Testville",
+        "Customer State": "TS",
+        "Customer Zip": "12345",
+        "Customer Phone": "5551234567",
+        "Customer Email": "test@example.com",
+        "Customer Email 2": "",
+        "Corporate Customer Status": "A",
+        "Corporate Customer Number": "99999",
+        "Corporate Customer Name": "Corporate Test",
+        "Corporate Customer Address": "456 Corp Rd",
+        "Corporate Customer Town": "Corptown",
+        "Corporate Customer State": "CS",
+        "Corporate Customer Zip": "54321",
+        "Corporate Customer Phone": "5559876543",
+        "Corporate Customer Email": "corp@example.com",
+        "Corporate Customer Email 2": "",
+    }
+]
 
-    Used to test converters that normally require AS400 database access,
-    allowing tests to run without external dependencies.
+# Standard test data for UOM lookups (matches odhst table schema)
+TEST_UOM_DATA = [
+    {"itemno": "123456", "uom_mult": 1, "uom_code": "EA"},
+    {"itemno": "789012", "uom_mult": 12, "uom_code": "CS"},
+]
+
+# Standard test data for UPC lookups (matches dsanrep table schema)
+TEST_UPC_DATA = [
+    {
+        "anbacd": "123456",
+        "anbbcd": "789012",
+        "anbgcd": "01",
+        "anbhcd": "02",
+        "anbicd": "TEST001",
+        "anbjcd": "DESC",
+    },
+]
+
+
+class MockQueryRunner:
+    """Mock query runner that returns realistic test data for hermetic testing.
+
+    Returns appropriate test data based on the SQL query pattern, allowing
+    converters that require AS400 database access to function in tests
+    without external dependencies.
     """
 
+    def __init__(self):
+        self.call_count = 0
+
     def run_query(self, query: str, params: tuple = None) -> list[dict]:
-        """Return empty results for any query."""
+        """Return test data based on query pattern.
+
+        Args:
+            query: SQL query string
+            params: Query parameters (tuple)
+
+        Returns:
+            List of dictionaries representing result rows
+        """
+        self.call_count += 1
+        query_upper = query.upper()
+
+        # Customer lookup query (ohhst table)
+        if "DACDATA.OHHST" in query_upper or "BTHHNB" in query_upper:
+            return TEST_CUSTOMER_DATA
+
+        # UOM lookup query (odhst table)
+        if "DACDATA.ODHST" in query_upper or "BUHHNB" in query_upper:
+            return TEST_UOM_DATA
+
+        # UPC lookup query (dsanrep table)
+        if "DACDATA.DSANREP" in query_upper or "ANBACD" in query_upper:
+            return TEST_UPC_DATA
+
+        # Default: return empty list for unknown queries
         return []
 
     def close(self) -> None:
@@ -180,23 +257,24 @@ def mock_as400_query_runner():
     """Auto-used fixture that mocks AS400 query runner for all integration tests.
 
     This fixture patches create_query_runner_from_settings to return a mock
-    that produces empty results, making tests hermetic (not dependent on
-    external AS400 services).
+    that produces realistic test data, making tests hermetic (not dependent
+    on external AS400 services) while still allowing converters to function.
 
-    Converters that require AS400 data will produce empty/no output when
-    using this mock, which is appropriate for testing the pipeline flow
-    rather than the actual data conversion.
+    Yields the MockQueryRunner instance so tests can verify call counts.
+    Tests that need specific data can still use invfetcher_test_db fixture
+    for custom test data.
     """
     from unittest import mock
 
+    mock_runner = MockQueryRunner()
     # Patch at the source module - this works because converters import
     # create_query_runner_from_settings with "from core.database.query_runner import"
     patch = mock.patch(
         "core.database.query_runner.create_query_runner_from_settings",
-        return_value=MockQueryRunner()
+        return_value=mock_runner,
     )
     patch.start()
 
-    yield
+    yield mock_runner
 
     patch.stop()

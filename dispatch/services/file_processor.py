@@ -3,7 +3,7 @@
 This module provides a dedicated service for processing individual EDI files
 through the validation, splitting, conversion, and sending pipeline. It handles:
 - File checksum calculation
-- Pipeline execution (validation, splitting, conversion, tweaks)
+- Pipeline execution (validation, splitting, conversion)
 - Temporary file management
 - Send operations coordination
 """
@@ -77,8 +77,8 @@ class FileProcessor:
     """Service for processing individual EDI files.
 
     This service encapsulates all logic related to processing a single EDI file
-    through the complete pipeline: validation, splitting, conversion, tweaks,
-    and sending to backends.
+    through the complete pipeline: validation, splitting, conversion, and sending
+    to backends.
 
     Attributes:
         send_manager: Manager for backend send operations
@@ -86,7 +86,6 @@ class FileProcessor:
         validator_step: Pipeline validator step
         splitter_step: Pipeline splitter step
         converter_step: Pipeline converter step
-        tweaker_step: Pipeline tweaker step
         file_system: File system interface (optional)
 
     Example:
@@ -104,7 +103,6 @@ class FileProcessor:
         validator_step: Any | None = None,
         splitter_step: Any | None = None,
         converter_step: Any | None = None,
-        tweaker_step: Any | None = None,
         file_system: Any | None = None,
     ) -> None:
         """Initialize the file processor.
@@ -115,7 +113,6 @@ class FileProcessor:
             validator_step: Pipeline validator step
             splitter_step: Pipeline splitter step
             converter_step: Pipeline converter step
-            tweaker_step: Pipeline tweaker step
             file_system: Optional file system interface
 
         """
@@ -124,7 +121,6 @@ class FileProcessor:
         self.validator_step = validator_step
         self.splitter_step = splitter_step
         self.converter_step = converter_step
-        self.tweaker_step = tweaker_step
         self.file_system = file_system
 
     def process_file(
@@ -274,8 +270,8 @@ class FileProcessor:
         ):
             return
 
-        # Run conversion and tweaks
-        current_file, did_convert, conversion_failed = self._run_conversion_and_tweaks(
+        # Run conversion
+        current_file, did_convert, conversion_failed = self._run_conversion(
             current_file=current_file,
             file_basename=file_basename,
             original_file_path=file_path,
@@ -465,7 +461,7 @@ class FileProcessor:
             result.errors.append(f"Splitting error: {e}")
             return False
 
-    def _run_conversion_and_tweaks(
+    def _run_conversion(
         self,
         current_file: str,
         file_basename: str,
@@ -474,7 +470,7 @@ class FileProcessor:
         run_log: Any,
         validation_passed: bool,
     ) -> tuple[str, bool, bool]:
-        """Run conversion and tweaks steps of the pipeline.
+        """Run conversion step of the pipeline.
 
         Args:
             current_file: Current file path
@@ -492,25 +488,28 @@ class FileProcessor:
         conversion_failed = False
         file_path = current_file
 
-        if self.converter_step and validation_passed:
+        conversion_step = self.converter_step
+        if conversion_step and validation_passed:
             file_path, did_convert, conversion_failed = self._execute_conversion(
-                file_path, file_basename, context
+                conversion_step,
+                file_path,
+                file_basename,
+                context,
             )
-
-        if self.tweaker_step and file_path:
-            file_path = self._apply_tweaks(file_path, file_basename, context)
 
         return file_path, did_convert, conversion_failed
 
     def _execute_conversion(
         self,
+        conversion_step: Any,
         file_path: str,
         file_basename: str,
         context: ProcessingContext,
     ) -> tuple[str, bool, bool]:
-        """Execute conversion step.
+        """Execute a conversion-style step.
 
         Args:
+conversion_step: Converter step
             file_path: Current file path
             file_basename: File basename
             context: Processing context
@@ -523,7 +522,7 @@ class FileProcessor:
         conversion_failed = False
 
         try:
-            converted_file = self.converter_step.execute(
+            converted_file = conversion_step.execute(
                 file_path,
                 context.effective_folder,
                 context.settings,
@@ -543,39 +542,6 @@ class FileProcessor:
             conversion_failed = True
 
         return file_path, did_convert, conversion_failed
-
-    def _apply_tweaks(
-        self,
-        file_path: str,
-        file_basename: str,
-        context: ProcessingContext,
-    ) -> str:
-        """Apply tweaks step.
-
-        Args:
-            file_path: Current file path
-            file_basename: File basename
-            context: Processing context
-
-        Returns:
-            Possibly tweaked file path
-
-        """
-        try:
-            tweaked_file = self.tweaker_step.execute(
-                file_path,
-                context.effective_folder,
-                context.upc_dict,
-                settings=context.settings,
-                context=context,
-            )
-            if tweaked_file:
-                file_path = tweaked_file
-                logger.debug("Tweaks applied to %s: %s", file_basename, file_path)
-        except Exception as e:
-            logger.exception("Tweak error for %s: %s", file_basename, e)
-
-        return file_path
 
     def _send_file(
         self,

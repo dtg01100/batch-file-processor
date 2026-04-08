@@ -20,7 +20,6 @@ from backend.database import sqlite_wrapper
 from core.database import schema
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
-from dispatch.pipeline.tweaker import EDITweakerStep
 
 # =============================================================================
 # Shared EDI content + helpers
@@ -87,9 +86,8 @@ def _run_folder_from_db(db, folder_id: int, extra_settings: dict = None) -> tupl
     cfg = DispatchConfig(
         backends={"copy": backend},
         converter_step=EDIConverterStep(),
-        tweaker_step=EDITweakerStep(),
         settings=extra_settings or {},
-        upc_dict={"_mock": []},  # Non-empty dict prevents UPC lookup from AS400
+        upc_dict={"_mock": []},
     )
     orch = DispatchOrchestrator(cfg)
     result = orch.process_folder(loaded, run_log=[], processed_files=None)
@@ -124,9 +122,9 @@ class TestProcessEDIMappingFromDB:
         assert result.files_processed == 1
         # The file delivered to the backend should be a converted CSV
         assert backend.received
-        assert backend.received[0][0].endswith(
-            ".csv"
-        ), f"Expected .csv output, got: {backend.received[0][0]}"
+        assert backend.received[0][0].endswith(".csv"), (
+            f"Expected .csv output, got: {backend.received[0][0]}"
+        )
 
     def test_process_edi_false_sends_original(self, temp_db, tmp_path):
         indir = _make_edi_dir(tmp_path)

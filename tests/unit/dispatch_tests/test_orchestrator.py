@@ -4,7 +4,7 @@ import hashlib
 import logging
 from unittest.mock import MagicMock
 
-from dispatch.edi_validator import EDIValidator
+from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import (
     DispatchConfig,
@@ -70,7 +70,7 @@ class TestDispatchConfig:
         assert config.database is None
         assert config.file_system is None
         assert config.backends == {}
-        assert config.validator is None
+        assert config.validator_step is None
         assert config.error_handler is None
         assert config.settings == {}
         assert config.version == "1.0.0"
@@ -79,14 +79,14 @@ class TestDispatchConfig:
         """Test custom configuration values."""
         db = MockDatabase()
         fs = MockFileSystem()
-        validator = EDIValidator()
+        validator_step = EDIValidationStep()
         handler = ErrorHandler()
 
         config = DispatchConfig(
             database=db,
             file_system=fs,
             backends={"test": MockBackend()},
-            validator=validator,
+            validator_step=validator_step,
             error_handler=handler,
             settings={"key": "value"},
             version="2.0.0",
@@ -95,7 +95,7 @@ class TestDispatchConfig:
         assert config.database is db
         assert config.file_system is fs
         assert "test" in config.backends
-        assert config.validator is validator
+        assert config.validator_step is validator_step
         assert config.error_handler is handler
         assert config.settings == {"key": "value"}
         assert config.version == "2.0.0"
@@ -289,13 +289,13 @@ class TestDispatchOrchestrator:
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"AHEADER\nCFOOTER\n"})
 
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (True, [])
+        mock_validator.execute.return_value = (True, "/data/input/file.edi", [])
 
         mock_backend = MockBackend(should_succeed=True)
         config = DispatchConfig(
             file_system=mock_fs,
             backends={"copy": mock_backend},
-            validator=mock_validator,
+            validator_step=mock_validator,
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -307,16 +307,16 @@ class TestDispatchOrchestrator:
 
         orchestrator.process_file("/data/input/file.edi", folder)
 
-        mock_validator.validate.assert_called_once()
+        mock_validator.execute.assert_called_once()
 
     def test_process_file_validation_failure(self, caplog):
         """Test file processing with validation failure."""
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"invalid content"})
 
         mock_validator = MagicMock()
-        mock_validator.validate.return_value = (False, ["Invalid EDI"])
+        mock_validator.execute.return_value = (False, ["Invalid EDI"])
 
-        config = DispatchConfig(file_system=mock_fs, validator=mock_validator)
+        config = DispatchConfig(file_system=mock_fs, validator_step=mock_validator)
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/input", "process_edi": "True"}

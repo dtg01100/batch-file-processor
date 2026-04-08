@@ -19,7 +19,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e]
 
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FolderResult
 from dispatch.pipeline.converter import EDIConverterStep
-from dispatch.pipeline.tweaker import EDITweakerStep
+
 
 # =============================================================================
 # EDI sample content
@@ -426,7 +426,6 @@ class TestPipelineTweakEDI:
         cfg = DispatchConfig(
             backends={"copy": backend},
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
             settings=base_settings,
             upc_dict={"_mock": []},
         )
@@ -447,7 +446,6 @@ class TestPipelineTweakEDI:
         cfg = DispatchConfig(
             backends={"copy": backend},
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
             settings=base_settings,
             upc_dict={"_mock": []},
         )
@@ -469,7 +467,6 @@ class TestPipelineTweakEDI:
         cfg = DispatchConfig(
             backends={"copy": backend},
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
             settings=base_settings,
             upc_dict={"_mock": []},
         )
@@ -488,7 +485,6 @@ class TestPipelineTweakEDI:
         cfg = DispatchConfig(
             backends={"copy": backend},
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
             settings=base_settings,
             upc_dict={"_mock": []},
         )

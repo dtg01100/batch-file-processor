@@ -231,8 +231,24 @@ class BackendBase(ABC):
             True if the error should not be retried
 
         """
-        # Permission and missing-file errors are permanent — retrying won't help
-        return isinstance(error, (PermissionError, FileNotFoundError))
+        if isinstance(error, (PermissionError, FileNotFoundError)):
+            return True
+        if isinstance(error, ConnectionRefusedError):
+            return True
+        if isinstance(error, TimeoutError):
+            return True
+        if isinstance(error, OSError):
+            if getattr(error, "errno", None) in (
+                113,  # ECONNREFUSED (Linux)
+                61,  # ECONNREFUSED (macOS)
+                111,  # ECONNREFUSED (some Linux)
+                2,  # ENOENT - No such file or directory
+                9,  # EBADF - Bad file descriptor
+                13,  # EACCES - Permission denied
+                1,  # EPERM - Operation not permitted
+            ):
+                return True
+        return False
 
     def _prepare_for_retry(
         self,

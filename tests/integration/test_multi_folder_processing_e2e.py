@@ -34,13 +34,13 @@ def multiple_folders_workspace():
             # Add EDI files to each folder
             edi_content = (
                 f"A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}\n"
-                + f"B{i+1:011d}{'Test Item ' + str(i):<25}{i:06d}{100:06d}EA{1:06d}{i+1:05d}{100:05d}001{i:06d}\n"
-                + f"B{i+2:011d}{'Test Item ' + str(i+1):<25}{i:06d}{100:06d}EA{1:06d}{i+2:05d}{100:05d}001{i:06d}\n"
+                + f"B{i + 1:011d}{'Test Item ' + str(i):<25}{i:06d}{100:06d}EA{1:06d}{i + 1:05d}{100:05d}001{i:06d}\n"
+                + f"B{i + 2:011d}{'Test Item ' + str(i + 1):<25}{i:06d}{100:06d}EA{1:06d}{i + 2:05d}{100:05d}001{i:06d}\n"
                 + "C00000003000030000\n"
             )
             for j in range(3):
                 (input_dir / f"file_{j}.edi").write_text(
-                    edi_content.replace("00001", f"{i*10+j+1:05d}")
+                    edi_content.replace("00001", f"{i * 10 + j + 1:05d}")
                 )
 
             folders.append(
@@ -83,7 +83,7 @@ class TestSequentialMultiFolderProcessing:
         """Test processing 5 folders in sequence."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -91,7 +91,6 @@ class TestSequentialMultiFolderProcessing:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -115,7 +114,7 @@ class TestSequentialMultiFolderProcessing:
         """Test processing folders with different configurations."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -123,7 +122,6 @@ class TestSequentialMultiFolderProcessing:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -154,7 +152,7 @@ class TestMixedSuccessFailureScenarios:
         """Test processing when some folders fail but others succeed."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         class FailingBackend:
@@ -176,7 +174,6 @@ class TestMixedSuccessFailureScenarios:
             settings={"max_retries": 1},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -196,7 +193,7 @@ class TestMixedSuccessFailureScenarios:
         """Test when folder processing has partial success."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -204,7 +201,6 @@ class TestMixedSuccessFailureScenarios:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -228,7 +224,7 @@ class TestResourceContention:
         """Test accessing same output directory from multiple folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         # All folders write to same output with unique filenames
@@ -240,7 +236,6 @@ class TestResourceContention:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -267,7 +262,7 @@ class TestResourceContention:
         """Test database locking during multi-folder processing."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -275,7 +270,6 @@ class TestResourceContention:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -306,7 +300,7 @@ class TestProgressTracking:
         """Test that progress is tracked across multiple folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         # Track progress via progress_reporter
@@ -327,7 +321,6 @@ class TestProgressTracking:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
             progress_reporter=MockProgressReporter(),
         )
         orchestrator = DispatchOrchestrator(config)
@@ -345,7 +338,7 @@ class TestProgressTracking:
         """Test cumulative file count tracking."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -353,7 +346,6 @@ class TestProgressTracking:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -377,7 +369,7 @@ class TestParallelProcessing:
         """Test processing folders in parallel."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         def process_folder_thread(folder_config):
@@ -386,7 +378,6 @@ class TestParallelProcessing:
                 settings={},
                 validator_step=EDIValidationStep(),
                 converter_step=EDIConverterStep(),
-                tweaker_step=EDITweakerStep(),
             )
             orchestrator = DispatchOrchestrator(config)
             run_log = MagicMock()
@@ -418,7 +409,7 @@ class TestLargeScaleMultiFolder:
         """Test processing 20 folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         workspace = tmp_path / "large_scale"
@@ -436,7 +427,7 @@ class TestLargeScaleMultiFolder:
             for j in range(2):
                 (input_dir / f"file_{j}.edi").write_text(
                     f"A00000{i}20240101001TESTVENDOR         Test Vendor Inc                 0000{i}\n"
-                    + f"B{i+1:011d}{'Test Item ' + str(i):<25}{i:06d}{100:06d}EA{1:06d}{i+1:05d}{100:05d}001{i:06d}\n"
+                    + f"B{i + 1:011d}{'Test Item ' + str(i):<25}{i:06d}{100:06d}EA{1:06d}{i + 1:05d}{100:05d}001{i:06d}\n"
                     + "C00000003000030000\n"
                 )
 
@@ -460,7 +451,6 @@ class TestLargeScaleMultiFolder:
             settings={},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -488,7 +478,7 @@ class TestMultiFolderErrorRecovery:
         """Test retrying failed folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         fail_count = {"count": 0}
@@ -505,7 +495,6 @@ class TestMultiFolderErrorRecovery:
             settings={"max_retries": 2},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 
@@ -525,7 +514,7 @@ class TestMultiFolderErrorRecovery:
         """Test skipping folders that consistently fail."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
+
         from dispatch.pipeline.validator import EDIValidationStep
 
         class AlwaysFailingBackend:
@@ -537,7 +526,6 @@ class TestMultiFolderErrorRecovery:
             settings={"max_retries": 1},
             validator_step=EDIValidationStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
         orchestrator = DispatchOrchestrator(config)
 

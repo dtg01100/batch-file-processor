@@ -1,4 +1,4 @@
-"""Tests for dispatch/pipeline/tweaker.py - EDITweakerStep and TweakerResult classes."""
+"""Tests for dispatch/pipeline/tweaker.py - MockTweaker, TweakerInterface, and TweakerResult classes."""
 
 import logging
 from unittest.mock import Mock, patch
@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from dispatch.pipeline.tweaker import (
-    EDITweakerStep,
     MockTweaker,
     TweakerInterface,
     TweakerResult,
@@ -136,6 +135,7 @@ class TestMockTweaker:
         assert mock._result.success is False
 
 
+@pytest.mark.skip(reason="EDITweakerStep no longer exists")
 class TestEDITweakerStep:
     """Tests for EDITweakerStep class."""
 
@@ -312,6 +312,7 @@ class TestProtocolTests:
 
         assert isinstance(mock, TweakerInterface)
 
+    @pytest.mark.skip(reason="EDITweakerStep no longer exists")
     def test_edi_tweaker_step_satisfies_tweaker_interface(self):
         """Test EDITweakerStep satisfies TweakerInterface."""
         step = EDITweakerStep()
@@ -319,6 +320,7 @@ class TestProtocolTests:
         assert isinstance(step, TweakerInterface)
 
 
+@pytest.mark.skip(reason="EDITweakerStep no longer exists")
 class TestIntegrationTests:
     """Integration tests for EDITweakerStep."""
 
@@ -379,6 +381,7 @@ class TestIntegrationTests:
         assert result.success is True
 
 
+@pytest.mark.skip(reason="EDITweakerStep no longer exists")
 class TestExecuteWrapper:
     """Tests for EDITweakerStep.execute wrapper behavior."""
 

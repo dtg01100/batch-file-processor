@@ -145,7 +145,7 @@ class Table:
         # Validate identifier format
         if not name:
             raise ValueError("Empty identifier name")
-        if not all(c.isalnum() or c in '_-' for c in name):
+        if not all(c.isalnum() or c in "_-" for c in name):
             raise ValueError(f"Invalid identifier characters in: {name}")
         # Replace any double quotes with two double quotes (SQL standard escaping)
         safe_name = name.replace('"', '""')
@@ -769,21 +769,20 @@ class Database:
             except sqlite3.Error:
                 pass
 
-    def query(self, sql: str) -> list[dict[str, Any]]:
+    def query(self, sql: str, *, raise_on_error: bool = False) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
-
-        Warning:
-            This method silently swallows sqlite3.Error exceptions and
-            returns an empty list. Callers cannot distinguish between
-            "no results" and "query failed". Use raw_connection.execute()
-            directly if you need proper error handling.
 
         Args:
             sql: SQL statement to execute.
+            raise_on_error: If True, raise sqlite3.Error on query failure.
+                If False (default), returns empty list on error for backward
+                compatibility.
 
         Returns:
             List of dictionaries representing result rows.
-            Returns empty list if query execution fails.
+
+        Raises:
+            sqlite3.Error: If raise_on_error is True and query fails.
 
         Note:
             For non-SELECT statements, this method will attempt to commit
@@ -795,24 +794,24 @@ class Database:
             try:
                 cur = self._conn.execute(sql)
             except sqlite3.Error:
-                # If execution fails, commit any pending changes and return empty
+                if raise_on_error:
+                    raise
                 try:
                     self._conn.commit()
                 except sqlite3.Error:
                     pass
                 return []
 
-            # PRAGMA statements return results without needing commit
             if sql.strip().upper().startswith("PRAGMA"):
                 try:
                     return [dict(r) for r in cur.fetchall()]
                 except sqlite3.Error:
+                    if raise_on_error:
+                        raise
                     return []
 
-            # For other statements, commit and return processed rows
             try:
                 self._conn.commit()
-                # Use a dummy table to process rows with boolean conversion
                 dummy_table = Table(self._conn, "dummy", self._lock)
                 return [
                     row_dict
@@ -821,11 +820,32 @@ class Database:
                     if row_dict is not None
                 ]
             except sqlite3.Error:
+                if raise_on_error:
+                    raise
                 try:
                     self._conn.commit()
                 except sqlite3.Error:
                     pass
                 return []
+
+    def query_strict(self, sql: str) -> list[dict[str, Any]]:
+        """Execute raw SQL and return results as dictionaries.
+
+        Strict version that raises exceptions on query failure.
+        Use this when you need to distinguish between empty results
+        and query errors.
+
+        Args:
+            sql: SQL statement to execute.
+
+        Returns:
+            List of dictionaries representing result rows.
+
+        Raises:
+            sqlite3.Error: If query execution fails.
+
+        """
+        return self.query(sql, raise_on_error=True)
 
     @classmethod
     def connect(cls, path: str) -> Database:

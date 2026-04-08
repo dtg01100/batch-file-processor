@@ -25,7 +25,6 @@ from dispatch.interfaces import (
     DatabaseInterface,
     ErrorHandlerInterface,
     FileSystemInterface,
-    ValidatorInterface,
 )
 
 if TYPE_CHECKING:
@@ -37,10 +36,9 @@ class DispatchConfigBuilder:
     """Fluent builder for DispatchConfig with sensible defaults.
 
     Attributes:
-        _validator: Optional validator instance
+        _validator_step: Optional validator pipeline step
         _splitter_step: Optional splitter pipeline step
         _converter_step: Optional converter pipeline step
-        _tweaker_step: Optional tweaker pipeline step
         _backends: Dictionary of backend name to backend instance
         _database: Optional database interface
         _file_system: Optional file system interface
@@ -57,10 +55,9 @@ class DispatchConfigBuilder:
         '1.0.0'
     """
 
-    _validator: ValidatorInterface | None = None
+    _validator_step: Any | None = None
     _splitter_step: Any | None = None
     _converter_step: Any | None = None
-    _tweaker_step: Any | None = None
     _backends: dict[str, BackendInterface] = field(default_factory=dict)
     _database: DatabaseInterface | None = None
     _file_system: FileSystemInterface | None = None
@@ -71,16 +68,16 @@ class DispatchConfigBuilder:
     _progress_reporter: Any | None = None
     _upc_dict: dict = field(default_factory=dict)
 
-    def with_validator(self, validator: ValidatorInterface) -> DispatchConfigBuilder:
-        """Set the validator instance.
+    def with_validator(self, validator: Any) -> DispatchConfigBuilder:
+        """Set the validator pipeline step.
 
         Args:
-            validator: A ValidatorInterface implementation
+            validator: A validator pipeline step implementation
 
         Returns:
             Self for chaining
         """
-        self._validator = validator
+        self._validator_step = validator
         return self
 
     def with_splitter(self, splitter: Any) -> DispatchConfigBuilder:
@@ -105,18 +102,6 @@ class DispatchConfigBuilder:
             Self for chaining
         """
         self._converter_step = converter
-        return self
-
-    def with_tweaker(self, tweaker: Any) -> DispatchConfigBuilder:
-        """Set the tweaker pipeline step.
-
-        Args:
-            tweaker: Tweaker pipeline step
-
-        Returns:
-            Self for chaining
-        """
-        self._tweaker_step = tweaker
         return self
 
     def with_backends(
@@ -257,11 +242,9 @@ class DispatchConfigBuilder:
         from dispatch.orchestrator import DispatchConfig
 
         return DispatchConfig(
-            validator=self._validator,
-            validator_step=self._validator,  # For backward compatibility
+            validator_step=self._validator_step,
             splitter_step=self._splitter_step,
             converter_step=self._converter_step,
-            tweaker_step=self._tweaker_step,
             backends=self._backends,
             database=self._database,
             file_system=self._file_system,

@@ -33,7 +33,6 @@ from dispatch.interfaces import (
     DatabaseInterface,
     ErrorHandlerInterface,
     FileSystemInterface,
-    ValidatorInterface,
 )
 from dispatch.send_manager import SendManager
 from dispatch.services.file_processor import (
@@ -54,7 +53,6 @@ class DispatchConfig:
         database: Database interface for persistence
         file_system: File system interface for file operations
         backends: Dictionary of backend name to backend instance
-        validator: EDI validator instance
         error_handler: Error handler instance
         settings: Global application settings
         version: Application version string
@@ -63,7 +61,6 @@ class DispatchConfig:
         validator_step: Pipeline validator step
         splitter_step: Pipeline splitter step
         converter_step: Pipeline converter step
-        tweaker_step: Pipeline tweaker step
         file_processor: File processor service
         upc_dict: Cached UPC dictionary
 
@@ -72,7 +69,6 @@ class DispatchConfig:
     database: DatabaseInterface | None = None
     file_system: FileSystemInterface | None = None
     backends: dict[str, BackendInterface] = field(default_factory=dict)
-    validator: ValidatorInterface | None = None
     error_handler: ErrorHandlerInterface | None = None
     settings: dict = field(default_factory=dict)
     version: str = "1.0.0"
@@ -81,7 +77,6 @@ class DispatchConfig:
     validator_step: Any | None = None
     splitter_step: Any | None = None
     converter_step: Any | None = None
-    tweaker_step: Any | None = None
     file_processor: Any | None = None
     upc_dict: dict = field(default_factory=dict)
 
@@ -106,41 +101,6 @@ class FolderResult:
     files_failed: int = 0
     errors: list[str] = field(default_factory=list)
     success: bool = True
-
-
-class _ValidatorAdapter:
-    """Adapts a ValidatorInterface (.validate()) to the pipeline step execute() interface.
-
-    This wrapper allows legacy validators that expose a .validate() method
-    to be used uniformly by the FileProcessor service, which expects
-    pipeline steps to expose an .execute() method.
-
-    Attributes:
-        _validator: The wrapped ValidatorInterface instance.
-
-    """
-
-    def __init__(self, validator: Any) -> None:
-        """Initialize the adapter with a legacy validator.
-
-        Args:
-            validator: A ValidatorInterface instance with a .validate() method.
-
-        """
-        self._validator = validator
-
-    def execute(self, file_path: str, folder: dict) -> tuple[bool, list]:
-        """Execute the validation via the legacy .validate() method.
-
-        Args:
-            file_path: Path to the file to validate.
-            folder: Folder configuration dictionary (unused by legacy validators).
-
-        Returns:
-            Tuple of (success: bool, errors: list) from the validation.
-
-        """
-        return self._validator.validate(file_path)
 
 
 class DispatchOrchestrator:
@@ -172,7 +132,6 @@ class DispatchOrchestrator:
         )
 
         self.config = config
-        self.validator = config.validator or EDIValidator()
         self.send_manager = SendManager(backends=config.backends)
         self.error_handler = config.error_handler or ErrorHandler()
         self.run_log: StringIO = StringIO()
@@ -180,17 +139,12 @@ class DispatchOrchestrator:
         self.error_count: int = 0
         self.upc_service = UPCLookupService(config.settings)
 
-        effective_validator_step = config.validator_step
-        if effective_validator_step is None and config.validator:
-            effective_validator_step = _ValidatorAdapter(config.validator)
-
         self.file_processor = FileProcessor(
             send_manager=self.send_manager,
             error_handler=self.error_handler,
-            validator_step=effective_validator_step,
+            validator_step=config.validator_step,
             splitter_step=config.splitter_step,
             converter_step=config.converter_step,
-            tweaker_step=config.tweaker_step,
             file_system=config.file_system,
         )
 
@@ -205,11 +159,10 @@ class DispatchOrchestrator:
 
         logger.debug(
             "DispatchOrchestrator initialized (pipeline_steps: "
-            "validator=%s, splitter=%s, converter=%s, tweaker=%s)",
+            "validator=%s, splitter=%s, converter=%s)",
             bool(config.validator_step),
             bool(config.splitter_step),
             bool(config.converter_step),
-            bool(config.tweaker_step),
         )
 
     def process_folder(
@@ -720,7 +673,7 @@ class DispatchOrchestrator:
         """Execute core file pipeline and update result in place.
 
         Runs the file through checksum calculation, validation, splitting
-        (if enabled), conversion, tweaking, and sending stages. The result
+        (if enabled), conversion, and sending stages. The result
         object is mutated in place to reflect processing outcomes.
 
         Args:
@@ -758,8 +711,8 @@ class DispatchOrchestrator:
         ):
             return
 
-        # conversion / tweaks
-        current_file, did_convert = self._apply_conversion_and_tweaks(
+        # conversion
+        current_file, did_convert = self._apply_conversion(
             current_file=current_file,
             file_basename=file_basename,
             original_file_path=file_path,
@@ -884,7 +837,7 @@ class DispatchOrchestrator:
             files_to_send = split_files if split_files else [current_file]
 
             for pipeline_file in files_to_send:
-                current_pipeline_file, did_convert = self._apply_conversion_and_tweaks(
+                current_pipeline_file, did_convert = self._apply_conversion(
                     current_file=pipeline_file,
                     file_basename=file_basename,
                     original_file_path=file_path,
@@ -1001,46 +954,34 @@ class DispatchOrchestrator:
         should_validate = self._should_validate(context.effective_folder)
         logger.debug(
             "Validation step: enabled=%s, should_validate=%s",
-            bool(self.config.validator_step or self.config.validator),
+            bool(self.config.validator_step),
             should_validate,
         )
 
         if not should_validate:
             return True, current_file
 
-        if self.config.validator_step:
-            validation_output = self.config.validator_step.execute(
-                current_file, context.effective_folder
-            )
-            is_valid, errors_or_file = self._normalize_validation_output(
-                validation_output=validation_output,
-                current_file=current_file,
-            )
-            return self._apply_validation_outcome(
-                is_valid=is_valid,
-                errors_or_file=errors_or_file,
-                current_file=current_file,
-                result=result,
-                run_log=run_log,
-                file_basename=file_basename,
-                context=context,
-            )
+        if not self.config.validator_step:
+            return True, current_file
 
-        if self.config.validator:
-            is_valid, errors_or_file = self.config.validator.validate(current_file)
-            return self._apply_validation_outcome(
-                is_valid=is_valid,
-                errors_or_file=errors_or_file,
-                current_file=current_file,
-                result=result,
-                run_log=run_log,
-                file_basename=file_basename,
-                context=context,
-            )
+        validation_output = self.config.validator_step.execute(
+            current_file, context.effective_folder
+        )
+        is_valid, errors_or_file = self._normalize_validation_output(
+            validation_output=validation_output,
+            current_file=current_file,
+        )
+        return self._apply_validation_outcome(
+            is_valid=is_valid,
+            errors_or_file=errors_or_file,
+            current_file=current_file,
+            result=result,
+            run_log=run_log,
+            file_basename=file_basename,
+            context=context,
+        )
 
-        return True, current_file
-
-    def _apply_conversion_and_tweaks(
+    def _apply_conversion(
         self,
         current_file: str,
         file_basename: str,
@@ -1050,7 +991,7 @@ class DispatchOrchestrator:
         *,
         validation_passed: bool = True,
     ) -> tuple[str, bool]:
-        """Apply converter and tweaker steps for a single file path.
+        """Apply the converter step for a single file path.
 
         Args:
             current_file: Current file path in the pipeline
@@ -1064,7 +1005,6 @@ class DispatchOrchestrator:
             Tuple of (final_file_path, did_convert)
 
         """
-        # keep external behavior the same but delegate converter execution
         did_convert = False
         converter_step = self.config.converter_step
         convert_edi = context.effective_folder.get("convert_edi", False)
@@ -1112,7 +1052,7 @@ class DispatchOrchestrator:
     ) -> str | None:
         """Execute the configured converter step and return converted path or None.
 
-        Kept as a separate method to keep _apply_conversion_and_tweaks concise.
+        Kept as a separate method to keep _apply_conversion concise.
         """
         # The converter API expects: (input_path, folder, settings, upc_dict, context=...)
         return converter_step.execute(
@@ -1231,24 +1171,16 @@ class DispatchOrchestrator:
 
         """
         process_edi_raw = effective_folder.get("process_edi")
-        legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
-
         process_edi_bool = (
             normalize_bool(process_edi_raw) if process_edi_raw is not None else False
         )
 
-        # tweak_edi=True always forces conversion via tweaks format,
-        # regardless of whether convert_edi key already exists.
-        if legacy_tweak_enabled:
-            effective_folder["convert_edi"] = True
-        elif "convert_edi" not in effective_folder:
+        if "convert_edi" not in effective_folder:
             if process_edi_raw is None:
                 effective_folder["convert_edi"] = has_convert_target
             else:
                 effective_folder["convert_edi"] = process_edi_bool
 
-        # Converter step still checks process_edi in its own gate. Keep both gates
-        # aligned when conversion is enabled by mode inference above.
         if effective_folder.get("convert_edi", False):
             effective_folder["process_edi"] = True
 
@@ -1273,37 +1205,17 @@ class DispatchOrchestrator:
         if not effective_folder.get("upc_target_length"):
             effective_folder["upc_target_length"] = FOLDER_DEFAULTS["upc_target_length"]
 
-        # Legacy compatibility shim:
-        # Prior to tweaks being subsumed into converter formats, tweak mode was
-        # represented by tweak_edi=True. Preserve old behavior by routing any
-        # tweak-enabled row through convert_to_format='tweaks'.
-        raw_convert_format = effective_folder.get("convert_to_format", "")
-        legacy_tweak_enabled = normalize_bool(effective_folder.get("tweak_edi", False))
-        if legacy_tweak_enabled:
-            raw_convert_format = "tweaks"
-            # Legacy rows often have process_edi=False with tweak_edi=True.
-            # Force conversion explicitly so tweaks still execute. Only clear the
-            # legacy tweak flag when a converter step is present to avoid
-            # preventing the standalone tweaker step from running in tests or
-            # configurations where only tweaker_step is provided.
-            effective_folder["convert_edi"] = True
-            if self.config.converter_step:
-                # Runtime uses converter target as the source of truth for tweaks.
-                # Clear legacy tweak flag to avoid applying tweaks twice when a
-                # tweaker step is configured alongside converter_step.
-                effective_folder["tweak_edi"] = False
-
-        # Normalize convert format early so legacy/stale variants are treated
-        # consistently in downstream gates.
         effective_folder["convert_to_format"] = normalize_convert_to_format(
-            raw_convert_format
+            effective_folder.get("convert_to_format", "")
         )
 
-        # Runtime conversion gating is mode-aware:
-        # - Explicit process_edi values are respected.
-        # - convert_to_format is used as a fallback only when process_edi is
-        #   missing/NULL on legacy rows.
-        # - tweak_edi is deprecated and represented as convert_to_format='tweaks'.
+        if normalize_bool(effective_folder.get("tweak_edi", False)):
+            if (
+                not effective_folder.get("convert_to_format")
+                or effective_folder["convert_to_format"] == ""
+            ):
+                effective_folder["convert_to_format"] = "tweaks"
+            effective_folder["process_edi"] = True
 
         has_convert_target = bool(effective_folder.get("convert_to_format"))
 
@@ -1828,7 +1740,6 @@ class DispatchOrchestrator:
         # module import time (preserves original lazy-import behavior).
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.splitter import EDISplitterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -1839,7 +1750,6 @@ class DispatchOrchestrator:
             validator_step=EDIValidationStep(),
             splitter_step=EDISplitterStep(),
             converter_step=EDIConverterStep(),
-            tweaker_step=EDITweakerStep(),
         )
 
         orchestrator = DispatchOrchestrator(config)

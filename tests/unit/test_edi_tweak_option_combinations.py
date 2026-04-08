@@ -9,6 +9,9 @@ Tests cover:
 - Mixed boolean combinations
 - Cross-field interactions
 - Edge cases and boundary conditions
+
+Note: EDITweakerStep is deprecated; tweak functionality is now handled
+via convert_to_format='tweaks' in the orchestrator.
 """
 
 import logging
@@ -19,9 +22,11 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 from core.edi.edi_tweaker import EDITweaker
-from dispatch.pipeline.tweaker import EDITweakerStep
 
 
+@pytest.mark.skip(
+    reason="EDITweakerStep no longer exists; use convert_to_format='tweaks' via orchestrator"
+)
 class TestEDITweakBooleanCombinations:
     """Test EDI tweak with various boolean option combinations."""
 

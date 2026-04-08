@@ -100,7 +100,6 @@ class TestFileProcessorInitialization:
         validator = MagicMock()
         splitter = MagicMock()
         converter = MagicMock()
-        tweaker = MagicMock()
         file_system = MagicMock()
 
         processor = FileProcessor(
@@ -109,7 +108,6 @@ class TestFileProcessorInitialization:
             validator_step=validator,
             splitter_step=splitter,
             converter_step=converter,
-            tweaker_step=tweaker,
             file_system=file_system,
         )
 
@@ -118,7 +116,6 @@ class TestFileProcessorInitialization:
         assert processor.validator_step is validator
         assert processor.splitter_step is splitter
         assert processor.converter_step is converter
-        assert processor.tweaker_step is tweaker
         assert processor.file_system is file_system
 
     def test_init_with_minimal_args(self):
@@ -136,7 +133,7 @@ class TestFileProcessorInitialization:
         assert processor.validator_step is None
         assert processor.splitter_step is None
         assert processor.converter_step is None
-        assert processor.tweaker_step is None
+        assert processor.converter_step is None
         assert processor.file_system is None
 
 
@@ -594,8 +591,8 @@ class TestRunSplitting:
         assert was_split is True
 
 
-class TestRunConversionAndTweaks:
-    """Tests for _run_conversion_and_tweaks method."""
+class TestRunConversion:
+    """Tests for the unified conversion execution path."""
 
     def test_conversion_no_step(self):
         """Test conversion with no converter step."""
@@ -610,7 +607,7 @@ class TestRunConversionAndTweaks:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion_and_tweaks(
+        new_file, did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -639,7 +636,7 @@ class TestRunConversionAndTweaks:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion_and_tweaks(
+        new_file, did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -668,7 +665,7 @@ class TestRunConversionAndTweaks:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion_and_tweaks(
+        new_file, did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -694,7 +691,7 @@ class TestRunConversionAndTweaks:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion_and_tweaks(
+        new_file, did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -706,18 +703,14 @@ class TestRunConversionAndTweaks:
         converter.execute.assert_not_called()
         assert did_convert is False
 
-    def test_tweaks_applied_after_conversion(self):
-        """Test tweaks are applied after conversion."""
+    def test_conversion_step_output_is_accepted(self):
+        """Test converter_step output is accepted as converted output."""
         send_manager = MagicMock()
         error_handler = MagicMock()
-        converter = MagicMock()
-        converter.execute.return_value = "/path/to/converted.edi"
         tweaker = MagicMock()
         tweaker.execute.return_value = "/path/to/tweaked.edi"
 
-        processor = FileProcessor(
-            send_manager, error_handler, converter_step=converter, tweaker_step=tweaker
-        )
+        processor = FileProcessor(send_manager, error_handler, converter_step=tweaker)
 
         context = ProcessingContext(
             folder={},
@@ -726,7 +719,7 @@ class TestRunConversionAndTweaks:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion_and_tweaks(
+        new_file, did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -736,7 +729,8 @@ class TestRunConversionAndTweaks:
         )
 
         assert new_file == "/path/to/tweaked.edi"
-        assert tweaker.execute.called
+        assert did_convert is True
+        assert conversion_failed is False
 
 
 class TestSendFile:

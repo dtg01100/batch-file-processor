@@ -49,7 +49,6 @@ class TestCriticalClassesImportable:
             ("dispatch.pipeline.converter", "EDIConverterStep"),
             ("dispatch.pipeline.splitter", "EDISplitterStep"),
             ("dispatch.pipeline.validator", "EDIValidationStep"),
-            ("dispatch.pipeline.tweaker", "EDITweakerStep"),
             ("dispatch.pipeline.converter", "ConverterInterface"),
             ("dispatch.pipeline.splitter", "SplitterInterface"),
             ("dispatch.pipeline.validator", "ValidatorStepInterface"),
@@ -229,20 +228,17 @@ class TestPipelineStepExecuteMethod:
             "EDIConverterStep",
             "EDISplitterStep",
             "EDIValidationStep",
-            "EDITweakerStep",
         ],
     )
     def test_pipeline_step_has_execute_method(self, step_class):
         from dispatch.pipeline.converter import EDIConverterStep
         from dispatch.pipeline.splitter import EDISplitterStep
-        from dispatch.pipeline.tweaker import EDITweakerStep
         from dispatch.pipeline.validator import EDIValidationStep
 
         step_map = {
             "EDIConverterStep": EDIConverterStep,
             "EDISplitterStep": EDISplitterStep,
             "EDIValidationStep": EDIValidationStep,
-            "EDITweakerStep": EDITweakerStep,
         }
         step = step_map[step_class]
         assert hasattr(step, "execute"), f"{step_class} missing execute method"

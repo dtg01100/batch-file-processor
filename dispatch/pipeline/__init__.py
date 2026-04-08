@@ -23,7 +23,6 @@ from dispatch.pipeline.splitter import (
     SplitterResult,
 )
 from dispatch.pipeline.tweaker import (
-    EDITweakerStep,
     MockTweaker,
     TweakerInterface,
     TweakerResult,
@@ -64,6 +63,5 @@ __all__ = [
     "TweakerResult",
     "TweakerInterface",
     "TweakFunctionProtocol",
-    "EDITweakerStep",
     "MockTweaker",
 ]
