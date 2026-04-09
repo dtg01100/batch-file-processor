@@ -13,6 +13,11 @@ from dispatch.pipeline.converter import (
     MockConverter,
     ModuleLoaderProtocol,
 )
+from dispatch.pipeline.factory import (
+    create_minimal_pipeline,
+    create_pipeline_with_custom_steps,
+    create_standard_pipeline,
+)
 from dispatch.pipeline.splitter import (
     CreditDetectorProtocol,
     DefaultCreditDetector,
@@ -21,12 +26,6 @@ from dispatch.pipeline.splitter import (
     MockSplitter,
     SplitterInterface,
     SplitterResult,
-)
-from dispatch.pipeline.tweaker import (
-    MockTweaker,
-    TweakerInterface,
-    TweakerResult,
-    TweakFunctionProtocol,
 )
 from dispatch.pipeline.validator import (
     EDIValidationStep,
@@ -59,9 +58,8 @@ __all__ = [
     "EDIConverterStep",
     "MockConverter",
     "SUPPORTED_FORMATS",
-    # Tweaker
-    "TweakerResult",
-    "TweakerInterface",
-    "TweakFunctionProtocol",
-    "MockTweaker",
+    # Factory
+    "create_standard_pipeline",
+    "create_minimal_pipeline",
+    "create_pipeline_with_custom_steps",
 ]

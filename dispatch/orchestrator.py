@@ -40,6 +40,8 @@ from dispatch.services.file_processor import (
     FileResult,
     ProcessingContext,
 )
+from dispatch.services.folder_discovery import FolderDiscoveryService
+from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
 
 logger = get_logger(__name__)
@@ -146,6 +148,15 @@ class DispatchOrchestrator:
             splitter_step=config.splitter_step,
             converter_step=config.converter_step,
             file_system=config.file_system,
+        )
+
+        self._discovery_service = FolderDiscoveryService(
+            file_system=config.file_system,
+            progress_reporter=config.progress_reporter,
+        )
+
+        self._progress_service = ProgressReportingService(
+            progress_reporter=config.progress_reporter,
         )
 
         folder_deps = FolderProcessingDependencies(
@@ -325,41 +336,18 @@ class DispatchOrchestrator:
                 - Total number of pending files across all folders.
 
         """
-        folder_total = len(folders)
-        pending_lists: list[list[str]] = []
-        total_pending = 0
+        # Use provided progress_reporter or fall back to config's
+        original_reporter = self._discovery_service._progress_reporter
+        if progress_reporter is not None:
+            self._discovery_service._progress_reporter = progress_reporter
 
-        if progress_reporter and hasattr(progress_reporter, "start_discovery"):
-            progress_reporter.start_discovery(folder_total=folder_total)
-
-        for folder_index, folder in enumerate(folders, start=1):
-            alias = folder.get("alias", folder.get("folder_name", ""))
-            pending = self._discover_for_folder(
-                folder,
-                processed_files=processed_files,
-                progress_reporter=progress_reporter,
-                folder_index=folder_index,
-                folder_total=folder_total,
+        try:
+            return self._discovery_service.discover_pending_files(
+                folders, processed_files=processed_files
             )
-
-            pending_lists.append(pending)
-            total_pending += len(pending)
-
-            if progress_reporter and hasattr(
-                progress_reporter, "update_discovery_progress"
-            ):
-                progress_reporter.update_discovery_progress(
-                    folder_num=folder_index,
-                    folder_total=folder_total,
-                    folder_name=alias,
-                    pending_for_folder=len(pending),
-                    pending_total=total_pending,
-                )
-
-        if progress_reporter and hasattr(progress_reporter, "finish_discovery"):
-            progress_reporter.finish_discovery(total_pending=total_pending)
-
-        return pending_lists, total_pending
+        finally:
+            # Restore original reporter
+            self._discovery_service._progress_reporter = original_reporter
 
     def _process_folder_files(
         self,
@@ -390,8 +378,7 @@ class DispatchOrchestrator:
             return
 
         for idx, file_path in enumerate(files):
-            if self.config.progress_reporter:
-                self.config.progress_reporter.update_file(idx + 1, total_files)
+            self._progress_service.update_file(idx + 1, total_files)
 
             file_result = self._process_file_with_pipeline(
                 file_path, folder, effective_upc_dict, run_log
@@ -418,8 +405,7 @@ class DispatchOrchestrator:
 
         """
         result.success = result.files_failed == 0
-        if self.config.progress_reporter:
-            self.config.progress_reporter.complete_folder(success=result.success)
+        self._progress_service.complete_folder(success=result.success)
 
     # --- Small helper wrappers extracted to aid readability ---
     def _discover_folder_files(
@@ -431,7 +417,7 @@ class DispatchOrchestrator:
         run_log: Any,
     ) -> list[str] | None:
         """Wrapper for file discovery/filtering for a folder."""
-        return self._discover_and_filter_files(
+        return self._discovery_service.discover_and_filter_files(
             folder_path=folder_path,
             pre_discovered_files=pre_discovered_files,
             processed_files=processed_files,
@@ -447,7 +433,7 @@ class DispatchOrchestrator:
         folder_total: int | None,
     ) -> None:
         """Wrapper to initialize progress reporter for a folder."""
-        self._init_progress_reporter(
+        self._progress_service.start_folder(
             folder=folder,
             total_files=total_files,
             folder_num=folder_num,
@@ -475,35 +461,6 @@ class DispatchOrchestrator:
             total_files=total_files,
         )
 
-    def _discover_for_folder(
-        self,
-        folder: dict,
-        processed_files: DatabaseInterface | None = None,
-        progress_reporter: Any | None = None,
-        folder_index: int | None = None,
-        folder_total: int | None = None,
-    ) -> list[str]:
-        """Discover pending files for a single folder (extracted loop body)."""
-        folder_path = folder.get("folder_name", "")
-        alias = folder.get("alias", folder_path)
-
-        if not self._folder_exists(folder_path):
-            return []
-
-        pending = self._get_files_in_folder(folder_path)
-        if processed_files and pending:
-            pending = self._filter_processed_files(
-                pending,
-                processed_files,
-                folder,
-                folder_index=folder_index,
-                folder_total=folder_total,
-                folder_name=alias,
-                progress_reporter=progress_reporter,
-            )
-
-        return pending
-
     def _folder_not_found_result(
         self, folder_path: str, run_log: Any, result: FolderResult
     ) -> FolderResult:
@@ -524,44 +481,6 @@ class DispatchOrchestrator:
         result.files_failed = 1
         self._log_error(run_log, error_msg)
         return result
-
-    def _discover_and_filter_files(
-        self,
-        folder_path: str,
-        pre_discovered_files: list[str] | None,
-        processed_files: DatabaseInterface | None,
-        folder: dict,
-        run_log: Any,
-    ) -> list[str] | None:
-        """Discover files to process and filter already-processed files.
-
-        Returns:
-            List of file paths to process, or None if no files found (caller should return early).
-
-        """
-        files = list(pre_discovered_files) if pre_discovered_files is not None else None
-
-        if files is None:
-            files = self._get_files_in_folder(folder_path)
-
-            if not files:
-                self._log_message(run_log, f"No files in directory: {folder_path}")
-                return None
-
-            logger.debug(
-                "Found %d files in %s, filtering for already-processed...",
-                len(files),
-                folder_path,
-            )
-
-            if processed_files:
-                files = self._filter_processed_files(files, processed_files, folder)
-
-        if not files:
-            self._log_message(run_log, f"No new files in directory: {folder_path}")
-            return None
-
-        return files
 
     def _init_progress_reporter(
         self,
@@ -598,6 +517,10 @@ class DispatchOrchestrator:
                 folder_total=folder_total,
             )
         except TypeError:
+            logger.warning(
+                "Progress reporter start_folder() missing optional parameters "
+                "(folder_num, folder_total). Update reporter signature."
+            )
             progress.start_folder(
                 folder.get("alias", folder.get("folder_name", "")), total_files
             )

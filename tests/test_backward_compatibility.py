@@ -52,7 +52,6 @@ class TestCriticalClassesImportable:
             ("dispatch.pipeline.converter", "ConverterInterface"),
             ("dispatch.pipeline.splitter", "SplitterInterface"),
             ("dispatch.pipeline.validator", "ValidatorStepInterface"),
-            ("dispatch.pipeline.tweaker", "TweakerInterface"),
         ],
     )
     def test_critical_class_importable(self, import_path, class_name):
@@ -111,7 +110,6 @@ class TestPipelineStepInterfaces:
             ("dispatch.pipeline.converter", "ConverterInterface"),
             ("dispatch.pipeline.splitter", "SplitterInterface"),
             ("dispatch.pipeline.validator", "ValidatorStepInterface"),
-            ("dispatch.pipeline.tweaker", "TweakerInterface"),
         ],
     )
     def test_pipeline_interface_exists(self, interface_path, interface_name):

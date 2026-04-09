@@ -357,50 +357,22 @@ def do_split_edi(
 def do_clear_old_files(folder_path: str, maximum_files: int) -> None:
     """Delete oldest files in a folder until the count is at or below the maximum.
 
-    Uses a while loop rather than a simple if check because files may be
-    added concurrently by other processes. Each iteration re-scans the
-    directory to get an accurate current count.
+    DEPRECATED: Use core.utils.file_utils.clear_old_files instead.
+    This wrapper is kept for backward compatibility.
 
     Args:
         folder_path: Path to the folder to clean up.
         maximum_files: Maximum number of files to allow before deletion starts.
 
     """
-    while True:
-        files = os.listdir(folder_path)
-        if len(files) <= maximum_files:
-            break
-
-        def _safe_ctime(f):
-            try:
-                return os.path.getctime(os.path.join(folder_path, f))
-            except OSError:
-                return float("inf")
-
-        oldest = min(files, key=_safe_ctime)
-        oldest_path = os.path.join(folder_path, oldest)
-        try:
-            os.remove(oldest_path)
-            log_file_operation(
-                logger,
-                "delete",
-                oldest_path,
-                file_type="log",
-                success=True,
-                context={"reason": "cleanup", "max_files": maximum_files},
-            )
-        except FileNotFoundError:
-            pass  # already deleted by another process
-        except Exception as e:
-            log_file_operation(
-                logger,
-                "delete",
-                oldest_path,
-                file_type="log",
-                success=False,
-                error=e,
-                context={"reason": "cleanup", "max_files": maximum_files},
-            )
+    import warnings
+    warnings.warn(
+        "do_clear_old_files is deprecated, use clear_old_files from core.utils.file_utils",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    from core.utils.file_utils import clear_old_files
+    clear_old_files(folder_path, maximum_files)
 
 
 def qty_to_int(qty: str) -> int:

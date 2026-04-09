@@ -174,21 +174,15 @@ class QtRunCoordinator:
                 )
 
             try:
-                from dispatch import DispatchConfig, DispatchOrchestrator
-                from dispatch.pipeline.converter import EDIConverterStep
-                from dispatch.pipeline.splitter import EDISplitterStep
-                from dispatch.pipeline.validator import EDIValidationStep
+                from dispatch import DispatchOrchestrator
+                from dispatch.pipeline import create_standard_pipeline
 
                 run_error_bool = False
-                validator_step = EDIValidationStep()
-                config = DispatchConfig(
+                config = create_standard_pipeline(
                     database=folders_table_process,
                     settings=settings_dict,
                     version=self._app._version,
                     progress_reporter=self._app._progress_service,
-                    validator_step=validator_step,
-                    splitter_step=EDISplitterStep(),
-                    converter_step=EDIConverterStep(),
                 )
 
                 orchestrator = DispatchOrchestrator(config)
@@ -247,7 +241,8 @@ class QtRunCoordinator:
                 run_summary_string = orchestrator.get_summary()
 
                 validator_log_output = ""
-                if hasattr(validator_step, "get_error_log"):
+                validator_step = orchestrator.config.validator_step
+                if validator_step and hasattr(validator_step, "get_error_log"):
                     validator_log_output = validator_step.get_error_log()
 
                 report_edi_errors_enabled = self._app._utils_module.normalize_bool(

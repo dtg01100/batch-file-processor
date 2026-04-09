@@ -1345,30 +1345,6 @@ class TestOrchestratorPipelineHelpers:
         assert context.effective_folder["convert_edi"] is True
         assert context.effective_folder["process_edi"] is True
 
-    def test_build_processing_context_legacy_tweak_flag_overrides_explicit_format(
-        self,
-    ):
-        """Legacy tweak_edi=True must route through tweaks converter.
-
-        Old rows can contain stale convert_to_format values from prior mode
-        switches. To preserve old behavior, tweak mode remains authoritative
-        and routes through the tweaks converter.
-        """
-        orchestrator = DispatchOrchestrator(DispatchConfig())
-
-        context = orchestrator._build_processing_context(
-            {
-                "process_edi": None,
-                "tweak_edi": True,
-                "convert_to_format": "csv",
-            },
-            {},
-        )
-
-        assert context.effective_folder["convert_to_format"] == "tweaks"
-        assert context.effective_folder["convert_edi"] is True
-        assert context.effective_folder["process_edi"] is True
-
     def test_build_processing_context_infers_convert_when_mode_missing_both_gates(
         self, tmp_path
     ):
@@ -1497,6 +1473,7 @@ class TestOrchestratorProgressPhases:
             return file_to_checksum.get(file_path, "other")
 
         orchestrator._calculate_checksum = mock_calculate
+        orchestrator._discovery_service._calculate_checksum = mock_calculate
 
         pending_lists, total_pending = orchestrator.discover_pending_files(
             folders,

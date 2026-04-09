@@ -9,6 +9,7 @@ from dispatch.services.file_processor import (
     FileResult,
     ProcessingContext,
 )
+from dispatch.services.folder_discovery import FolderDiscoveryService
 from dispatch.services.progress_reporter import (
     CLIProgressReporter,
     LoggingProgressReporter,
@@ -16,6 +17,7 @@ from dispatch.services.progress_reporter import (
     ProgressReporter,
     UIProgressReporter,
 )
+from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
 
 __all__ = [
@@ -23,6 +25,10 @@ __all__ = [
     "FileProcessor",
     "FileResult",
     "ProcessingContext",
+    # Folder Discovery
+    "FolderDiscoveryService",
+    # Progress Reporting
+    "ProgressReportingService",
     # UPC Service
     "UPCLookupService",
     # Progress Reporter
