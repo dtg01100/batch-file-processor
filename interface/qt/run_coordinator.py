@@ -190,25 +190,19 @@ class QtRunCoordinator:
                     folders_table_process.find(folder_is_active=True, order_by="alias")
                 )
 
-                pending_files_by_folder, total_pending_files = (
-                    orchestrator.discover_pending_files(
-                        folders,
-                        self._app._database.processed_files,
-                        progress_reporter=self._app._progress_service,
-                    )
-                )
-
+                # Single-pass approach: discover and process files for each folder immediately
+                # No pre-discovery phase needed
                 if self._app._progress_service and hasattr(
                     self._app._progress_service, "start_sending"
                 ):
+                    # We don't know total files upfront anymore, but that's OK
+                    # Progress will be reported per-folder as we discover them
                     self._app._progress_service.start_sending(
-                        total_files=total_pending_files,
+                        total_files=0,  # Unknown until discovery
                         total_folders=len(folders),
                     )
 
                 for folder_index, folder in enumerate(folders, start=1):
-                    pending_files = pending_files_by_folder[folder_index - 1]
-
                     if self._app._progress_service and hasattr(
                         self._app._progress_service, "set_folder_context"
                     ):
@@ -218,15 +212,15 @@ class QtRunCoordinator:
                             folder_name=folder.get(
                                 "alias", folder.get("folder_name", "")
                             ),
-                            file_total=len(pending_files),
+                            file_total=0,  # Will be updated during discovery
                         )
 
                     try:
-                        result = orchestrator.process_folder(
+                        # Discover and process in single pass
+                        result = orchestrator.discover_and_process_folder(
                             folder,
                             run_log,
                             self._app._database.processed_files,
-                            pre_discovered_files=pending_files,
                             folder_num=folder_index,
                             folder_total=len(folders),
                         )

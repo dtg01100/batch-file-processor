@@ -30,10 +30,20 @@ class _FakeConverterStep:
 
 class _FakeOrchestrator:
     def __init__(self, config):
-        self._config = config
+        self.config = config  # Public attribute to match real DispatchOrchestrator
 
     def discover_pending_files(self, folders, processed_files, progress_reporter=None):
         return ([[] for _ in folders], 0)
+
+    def discover_and_process_folder(
+        self,
+        folder,
+        run_log,
+        processed_files=None,
+        folder_num=None,
+        folder_total=None,
+    ):
+        return SimpleNamespace(success=True)
 
     def process_folder(
         self,

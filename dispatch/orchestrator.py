@@ -349,6 +349,90 @@ class DispatchOrchestrator:
             # Restore original reporter
             self._discovery_service._progress_reporter = original_reporter
 
+    def discover_and_process_folder(
+        self,
+        folder: dict,
+        run_log: Any,
+        processed_files: DatabaseInterface | None = None,
+        effective_upc_dict: dict | None = None,
+        folder_num: int | None = None,
+        folder_total: int | None = None,
+    ) -> FolderResult:
+        """Discover files for a folder and process them in a single pass.
+
+        This method combines file discovery and processing into one operation,
+        eliminating the need for a separate pre-discovery phase. Files are
+        discovered, filtered, and processed immediately.
+
+        Args:
+            folder: Folder configuration dictionary.
+            run_log: Run log for recording processing activity.
+            processed_files: Optional database of already processed files.
+            effective_upc_dict: UPC lookup dictionary (computed if not provided).
+            folder_num: Current folder index (1-based) for progress reporting.
+            folder_total: Total number of folders for progress reporting.
+
+        Returns:
+            FolderResult with processing outcome.
+
+        """
+        folder_path = folder.get("folder_name", "")
+        alias = folder.get("alias", folder_path)
+
+        logger.debug("Discovering and processing folder: %s", alias)
+
+        # Step 1: Discover files for this folder
+        files = self._discover_folder_files(
+            folder_path=folder_path,
+            pre_discovered_files=None,  # Force fresh discovery
+            processed_files=processed_files,
+            folder=folder,
+            run_log=run_log,
+        )
+
+        if not files:
+            # No files to process - return empty success result
+            result = FolderResult(
+                folder_name=alias,
+                alias=alias,
+                files_processed=0,
+                files_failed=0,
+                errors=[],
+                success=True,
+            )
+            self._finalize_folder_result(result)
+            return result
+
+        # Step 2: Initialize progress for this folder
+        total_files = len(files)
+        self._setup_folder_progress(folder, total_files, folder_num, folder_total)
+
+        # Step 3: Process discovered files immediately
+        result = FolderResult(
+            folder_name=alias,
+            alias=alias,
+            files_processed=0,
+            files_failed=0,
+            errors=[],
+            success=True,
+        )
+
+        if effective_upc_dict is None:
+            effective_upc_dict = self._get_upc_dictionary(self.config.settings)
+
+        self._process_folder_files(
+            files=files,
+            folder=folder,
+            effective_upc_dict=effective_upc_dict,
+            processed_files=processed_files,
+            run_log=run_log,
+            result=result,
+            total_files=total_files,
+        )
+
+        self._finalize_folder_result(result)
+        return result
+
     def _process_folder_files(
         self,
         files: list[str],
@@ -1683,11 +1767,22 @@ class DispatchOrchestrator:
     def _iterate_folders(
         orchestrator: "DispatchOrchestrator", folders: list, run_log, processed_files
     ) -> bool:
-        """Iterate over folders and run processing, returning whether any errors occurred."""
+        """Iterate over folders and run processing, returning whether any errors occurred.
+
+        Uses single-pass discovery and processing: files are discovered and
+        processed immediately for each folder, eliminating the pre-discovery phase.
+        """
         has_errors = False
-        for folder in folders:
+        for folder_index, folder in enumerate(folders, start=1):
             try:
-                result = orchestrator.process_folder(folder, run_log, processed_files)
+                # Discover and process in single pass
+                result = orchestrator.discover_and_process_folder(
+                    folder,
+                    run_log,
+                    processed_files,
+                    folder_num=folder_index,
+                    folder_total=len(folders),
+                )
                 if not result.success:
                     has_errors = True
             except Exception as folder_error:

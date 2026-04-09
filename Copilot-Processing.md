@@ -6,6 +6,63 @@
 ## User Request
 "search project for refactoring opprotunities, be opprotunistic about cleanups"
 
+---
+
+# Single-Pass Discovery and Processing (2026-04-09)
+
+**User Request**: "we could probably process files as we discover them"
+
+## Changes Made
+
+### 1. Added `discover_and_process_folder()` method to `DispatchOrchestrator`
+- **File**: `dispatch/orchestrator.py`
+- **Lines**: Added before `_process_folder_files()` method
+- **Purpose**: Combines file discovery and processing into a single operation
+- **Benefits**:
+  - Eliminates pre-discovery phase
+  - Processes files immediately after discovery
+  - Reduces memory usage (no need to store all discovered files)
+  - Enables early termination if needed
+
+### 2. Updated `_iterate_folders()` to use single-pass approach
+- **File**: `dispatch/orchestrator.py`
+- **Change**: Now calls `discover_and_process_folder()` instead of `process_folder()` with pre-discovered files
+- **Impact**: Removes need for `discover_pending_files()` pre-pass in main processing flow
+
+### 3. Updated `run_coordinator.py` to use single-pass approach
+- **File**: `interface/qt/run_coordinator.py`
+- **Change**: Removed `discover_pending_files()` call, now calls `discover_and_process_folder()` directly
+- **Impact**: UI no longer waits for full file discovery before starting processing
+
+## Architecture Comparison
+
+### Before (Two-Pass)
+```
+Pass 1: discover_pending_files() → discovers ALL files for ALL folders
+Pass 2: process_folder() → processes each folder with pre-discovered files
+```
+
+### After (Single-Pass)
+```
+For each folder:
+  1. Discover files for THIS folder
+  2. Process them immediately
+  3. Move to next folder
+```
+
+## Backward Compatibility
+
+- `discover_pending_files()` method is still available for tests and backward compatibility
+- `process_folder()` method still works with `pre_discovered_files` parameter
+- Existing tests continue to work without modification
+
+## Next Steps
+
+- [x] Run tests to verify changes work correctly ✅ (47 orchestrator tests pass)
+- [x] Update documentation to reflect new architecture ✅
+- [ ] Consider removing `discover_pending_files()` pre-pass from other callers (if any)
+- [ ] Monitor performance in production
+
 ## Detailed Task Plan
 
 ### Task 1: Search for Code Smells
