@@ -647,60 +647,6 @@ class TestFolderConfigurationFlow:
 class TestCombinedFlows:
     """Test combinations of multiple flows together."""
 
-    @pytest.mark.skip(
-        reason="EDITweakerStep no longer exists; tweak functionality now handled via convert_to_format='tweaks'"
-    )
-    def test_filter_tweak_convert_flow(self, temp_workspace):
-        """Test complete flow: filter → tweak → convert."""
-        test_file = temp_workspace["input_folder"] / "combined.edi"
-        temp_workspace["output_folder"] / "combined.csv"
-        content = """A00001120240101001VENDOR1           Vendor One                      00001
-B001001ITEM001     000010EA0010CAT1Description 1                   0000010000
-B001002ITEM002     000020EA0020CAT2Description 2                   0000020000
-C00000003000030000
-"""
-        test_file.write_text(content)
-
-        # Step 1: Filter by category
-        try:
-            filter_edi_file_by_category(
-                str(test_file),
-                str(temp_workspace["output_folder"] / "filtered.edi"),
-                {},
-                "CAT1",
-            )
-        except Exception:
-            pass  # Filter may have specific requirements
-
-        # Step 2: Apply tweaks
-        parameters_dict = {
-            "tweak_edi": True,
-            "pad_a_records": False,
-            "a_record_padding": "",
-            "a_record_padding_length": 0,
-            "invoice_date_offset": 1,
-            "append_a_records": False,
-            "a_record_append_text": "",
-        }
-
-        try:
-            tweaker = EDITweakerStep()
-            tweaker.tweak(
-                str(test_file),
-                str(temp_workspace["output_folder"]),
-                parameters_dict,
-                {},
-                {},
-            )
-        except Exception:
-            pass  # Tweak may have specific requirements
-
-        # Step 3: Convert (mock)
-        # Verify file still exists and has content
-        assert test_file.exists(), "File should still exist after processing"
-        content_after = test_file.read_text()
-        assert len(content_after) > 0, "File should have content"
-
     def test_process_error_resend_flow(self, temp_workspace, folder_config):
         """Test flow: process → error → mark resend → reprocess."""
         db = temp_workspace["db"]
