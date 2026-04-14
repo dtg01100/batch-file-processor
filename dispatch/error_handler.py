@@ -290,7 +290,7 @@ class ErrorHandler:
 
         if not threaded:
             if hasattr(run_log, "write"):
-                run_log.write(message.encode())
+                run_log.write(message)
             if hasattr(errors_log, "write"):
                 errors_log.write(message)
         else:

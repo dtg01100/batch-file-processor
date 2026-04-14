@@ -1283,7 +1283,7 @@ class DispatchOrchestrator:
 
         self._validate_rename_template(new_name)
 
-        if not new_name or new_name == "..":
+        if not new_name or new_name == ".." or os.path.isabs(new_name):
             raise ValueError(f"Invalid filename from template: {new_name}")
 
         full_dest = os.path.join(temp_dir, new_name)
