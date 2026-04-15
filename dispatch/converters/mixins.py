@@ -291,11 +291,22 @@ class UOMLookupMixin(ABC):
         if not self.uom_lookup_list:
             return "?"
 
+        def get_key(entry: dict, *keys: str) -> str | None:
+            """Case-insensitive key lookup."""
+            for key in keys:
+                for k, v in entry.items():
+                    if k.upper() == key.upper():
+                        return v
+                for k, v in entry.items():
+                    if k.lower() == key.lower():
+                        return v
+            return None
+
         stage_1_list = []
         stage_2_list = []
 
         for entry in self.uom_lookup_list:
-            item_no = entry.get("itemno")
+            item_no = get_key(entry, "itemno", "ITEMNO")
             if item_no is None:
                 continue
             try:
@@ -305,7 +316,7 @@ class UOMLookupMixin(ABC):
                 continue
 
         for entry in stage_1_list:
-            uom_mult = entry.get("uom_mult")
+            uom_mult = get_key(entry, "uom_mult", "UOM_MULT")
             if uom_mult is None:
                 stage_2_list.append(entry)
                 break
@@ -317,7 +328,8 @@ class UOMLookupMixin(ABC):
                 break
 
         try:
-            return stage_2_list[0].get("uom_code", "?")
+            uom_code = get_key(stage_2_list[0], "uom_code", "UOM_CODE")
+            return uom_code if uom_code else "?"
         except IndexError:
             return "?"
 
