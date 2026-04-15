@@ -208,10 +208,16 @@ class EmailBackend(BackendBase):
         return "smtp"
 
     def _is_non_retryable_error(self, error: Exception) -> bool:
-        """Treat network-unreachable SMTP errors as non-retryable."""
+        """Treat network-unreachable SMTP errors as non-retryable.
+
+        Unlike the base class, we DO retry ConnectionRefusedError because SMTP
+        servers can be temporarily unavailable or restarting.
+        """
         if _is_network_unreachable(error):
             return True
-        return super()._is_non_retryable_error(error)
+        if isinstance(error, (PermissionError, FileNotFoundError, TimeoutError)):
+            return True
+        return False
 
     def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get SMTP endpoint for logging."""
