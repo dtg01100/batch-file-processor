@@ -112,11 +112,11 @@ def _parse_a_record(line: str) -> dict | None:
 
 
 def _parse_b_record(line: str) -> dict | None:
-    if len(line) < 70:
+    if len(line) < 50:
         import logging
 
         logging.getLogger(__name__).debug(
-            "B record line too short: expected >=70 chars, got %d", len(line)
+            "B record line too short: expected >=50 chars, got %d", len(line)
         )
         return None
     return {
@@ -187,6 +187,7 @@ def capture_records(line: str, parser=None) -> dict | None:
         return _parse_c_record(line)
     else:
         return None  # Invalid record type
+
 
 def parse_a_record(line: str) -> ARecord:
     """Parse an A record line into an ARecord dataclass.

@@ -367,6 +367,8 @@ class EDITweaker:
         c_records = 0
 
         for line_num, line in enumerate(lines):
+            if not line.strip():
+                continue
             input_edi_dict = utils.capture_records(line)
             writeable_line = line
 
