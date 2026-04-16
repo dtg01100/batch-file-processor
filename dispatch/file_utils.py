@@ -213,6 +213,4 @@ def build_processed_file_record(
     }
 
 
-from core.utils import (  # noqa: F401 - re-exported for backward compat
-    do_clear_old_files,
-)
+from core.utils.file_utils import clear_old_files as do_clear_old_files  # noqa: F401 - re-exported for backward compat
