@@ -16,7 +16,8 @@ from core.structured_logging import (
     get_or_create_correlation_id,
     redact_sensitive_data,
 )
-from core.utils import normalize_bool, normalize_convert_to_format
+from core.utils.bool_utils import normalize_bool
+from core.utils.format_utils import normalize_convert_to_format
 from dispatch.interfaces import FileSystemInterface
 from dispatch.pipeline.temp_dir_utils import (
     cleanup_pipeline_temp_dir,
@@ -399,7 +400,7 @@ class EDIConverterStep:
             early_return_result contains the result to return.
 
         """
-        if not convert_to_format:
+        if not convert_to_format or convert_to_format == "do_nothing":
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
                 logger,
@@ -770,7 +771,9 @@ class EDIConverterStep:
         try:
             self._record_error(input_path, error_msg)
         except Exception:
-            logger.debug("Failed to record error for %s", input_path, exc_info=True)
+            logger.warning(
+                "Failed to record conversion error for %s: %s", input_path, error_msg
+            )
         return ConverterResult(
             output_path=input_path,
             format_used=convert_to_format,
@@ -829,9 +832,7 @@ class EDIConverterStep:
                 correlation_id=correlation_id,
             )
 
-        temp_dir, temp_dirs = create_pipeline_temp_dir(
-            "edi_converter", folder, context
-        )
+        temp_dir, temp_dirs = create_pipeline_temp_dir("edi_converter", folder, context)
         StructuredLogger.log_debug(
             logger,
             "execute",

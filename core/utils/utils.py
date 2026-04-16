@@ -1,15 +1,22 @@
 """Utility functions for batch file processing.
 
-This module provides common utilities used across the application.
-Many functions are now migrated to core modules for better organization:
-- Boolean utilities: core.utils.bool_utils
-- Date utilities: core.utils.date_utils
-- EDI parsing: core.edi.edi_parser
-- UPC utilities: core.edi.upc_utils
-- Invoice fetching: core.edi.inv_fetcher
+This module provides utility functions for EDI file processing:
+- do_split_edi: Split multi-invoice EDI files into individual invoices
+- filter_b_records_by_category: Filter B records by item category
+- filter_edi_file_by_category: Filter EDI files by item category
+- apply_retail_uom_transform: Apply retail UOM transformation to B records
+- apply_upc_override: Override UPC from lookup table
+- qty_to_int: Convert quantity strings to integers
+- add_row: Write dictionary rows to CSV
+- CRecGenerator: Generate split C records for sales tax
 
-For backward compatibility, this module re-exports functions from core modules.
-New code should import directly from the core modules.
+Functions from core.edi modules (capture_records, convert_to_price, etc.) are
+imported here because they are used internally by the functions above. Import them
+directly from their source modules when needed:
+- core.edi.edi_parser: capture_records
+- core.edi.edi_transformer: convert_to_price, dac_str_int_to_int, etc.
+- core.edi.upc_utils: calc_check_digit, convert_upce_to_upca
+- core.edi.inv_fetcher: InvFetcher
 """
 
 import os
@@ -17,28 +24,28 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Callable
 
-MAX_A_RECORD_COUNT = 700
-
 # Import from core modules for backward compatibility
-from core.edi.edi_parser import capture_records
-from core.edi.edi_transformer import (
+from core.edi.edi_parser import capture_records  # noqa: E402
+from core.edi.edi_transformer import (  # noqa: E402
     convert_to_price,  # noqa: F401
     convert_to_price_decimal,  # noqa: F401
     dac_str_int_to_int,  # noqa: F401
     detect_invoice_is_credit,  # noqa: F401
 )
-from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: F401
-from core.edi.upc_utils import calc_check_digit  # noqa: F401
-from core.edi.upc_utils import (  # noqa: F401
+from core.edi.inv_fetcher import InvFetcher as invFetcher  # noqa: E402, F401
+from core.edi.upc_utils import calc_check_digit  # noqa: E402, F401
+from core.edi.upc_utils import (  # noqa: E402, F401
     convert_upce_to_upca as convert_UPCE_to_UPCA,
 )
-from core.structured_logging import get_logger, log_file_operation
-from core.utils.date_utils import (
+from core.structured_logging import get_logger  # noqa: E402
+from core.utils.date_utils import (  # noqa: E402
     dactime_from_datetime,  # noqa: F401
     dactime_from_invtime,  # noqa: F401
     datetime_from_dactime,  # noqa: F401
     datetime_from_invtime,  # noqa: F401
 )
+
+MAX_A_RECORD_COUNT = 700
 
 logger = get_logger(__name__)
 
@@ -194,7 +201,8 @@ def _write_split_edi_files(
         lines written across all output files.
 
     Raises:
-        ValueError: If no A record is found before data lines, or if file has no A records.
+        ValueError: If no A record is found before data lines, or if
+            file has no A records.
 
     """
     count = 0
@@ -239,8 +247,7 @@ def _write_split_edi_files(
                     work_directory + os.sep
                 ):
                     logger.error(
-                        "Invalid output path generated "
-                        "(potential path traversal): %s",
+                        "Invalid output path generated (potential path traversal): %s",
                         output_file_path,
                     )
                     raise ValueError(
@@ -354,25 +361,7 @@ def do_split_edi(
     return edi_send_list
 
 
-def do_clear_old_files(folder_path: str, maximum_files: int) -> None:
-    """Delete oldest files in a folder until the count is at or below the maximum.
-
-    DEPRECATED: Use core.utils.file_utils.clear_old_files instead.
-    This wrapper is kept for backward compatibility.
-
-    Args:
-        folder_path: Path to the folder to clean up.
-        maximum_files: Maximum number of files to allow before deletion starts.
-
-    """
-    import warnings
-    warnings.warn(
-        "do_clear_old_files is deprecated, use clear_old_files from core.utils.file_utils",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    from core.utils.file_utils import clear_old_files
-    clear_old_files(folder_path, maximum_files)
+# Deprecated wrapper removed: use core.utils.file_utils.clear_old_files directly
 
 
 def qty_to_int(qty: str) -> int:
@@ -539,8 +528,8 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         if test_unit_multiplier == 0:
             raise ValueError("unit_multiplier cannot be zero")
         int(record["qty_of_units"].strip())
-    except Exception:
-        logger.debug("cannot parse b record field, skipping")
+    except (ValueError, KeyError, TypeError) as e:
+        logger.warning("Cannot parse B record field: %s", e)
         return False
 
     # Get the each-level UPC from lookup

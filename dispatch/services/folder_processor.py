@@ -36,7 +36,8 @@ from core.structured_logging import (
     get_or_create_correlation_id,
     log_with_context,
 )
-from core.utils import normalize_bool, normalize_convert_to_format
+from core.utils.bool_utils import normalize_bool
+from core.utils.format_utils import normalize_convert_to_format
 
 if TYPE_CHECKING:
     from dispatch.orchestrator import FolderResult
@@ -474,7 +475,6 @@ class FolderPipelineExecutor:
             Normalized folder dict with defaults applied
         """
         from core.constants import FOLDER_DEFAULTS
-        from core.utils import normalize_bool
 
         effective_folder = folder.copy()
 
@@ -596,21 +596,23 @@ class FolderPipelineExecutor:
         if not hasattr(progress, "start_folder"):
             return
 
+        folder_name = folder.get("alias", folder.get("folder_name", ""))
         try:
             progress.start_folder(
-                alias=folder.get("alias", folder.get("folder_name", "")),
+                alias=folder_name,
                 total_files=total_files,
             )
         except TypeError:
             try:
                 progress.start_folder(
-                    folder.get("alias", folder.get("folder_name", "")),
+                    folder_name,
                     total_files,
                 )
             except Exception:
                 logger.warning(
                     "Progress reporter failed to start folder: %s",
-                    folder.get("alias", folder.get("folder_name", "")),
+                    folder_name,
+                    exc_info=True,
                 )
 
     def _get_upc_dictionary(self) -> dict:
@@ -635,7 +637,7 @@ class FolderPipelineExecutor:
             try:
                 run_log.write(f"{message}\r\n".encode())
             except Exception:
-                logger.warning("Failed to write to run_log: %s", message)
+                logger.warning("Failed to write to run_log: %s", message, exc_info=True)
 
     def _log_error(self, run_log: Any, error_msg: str) -> None:
         """Log an error message.

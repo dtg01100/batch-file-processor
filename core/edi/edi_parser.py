@@ -3,7 +3,10 @@
 Pure functions for parsing EDI A, B, and C records.
 """
 
+import logging
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 _default_parser = None
 
@@ -20,6 +23,7 @@ def _get_default_parser():
 
             _default_parser = EDIFormatParser.get_default_parser()
         except Exception:
+            logger.exception("Failed to initialize EDIFormatParser")
             _default_parser = False
     return _default_parser if _default_parser is not False else None
 

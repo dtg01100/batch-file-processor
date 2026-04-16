@@ -10,17 +10,16 @@ to reduce its size and improve cohesion. These helpers deal with:
 """
 
 import hashlib
-import logging
 import os
-import re
 import shutil
 from typing import Any
 
+from core.edi.edi_parser import capture_records
 from core.structured_logging import (
     get_logger,
     log_file_operation,
 )
-from core.utils import capture_records, normalize_bool
+from core.utils.bool_utils import normalize_bool
 
 logger = get_logger(__name__)
 
@@ -123,7 +122,10 @@ class FileProcessingHelpers:
                             if invoice_num:
                                 invoice_numbers.append(invoice_num)
                         except Exception:
-                            pass  # Skip malformed records
+                            logger.warning(
+                                "Skipping malformed A-record in %s while extracting invoice numbers",
+                                file_path,
+                            )
         except OSError as e:
             logger.error("Failed to read file %s: %s", file_path, e)
         return ", ".join(invoice_numbers)

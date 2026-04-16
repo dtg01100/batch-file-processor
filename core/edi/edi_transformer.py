@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from core.structured_logging import get_logger, log_with_context
 from core.utils.safe_parse import safe_int
@@ -29,13 +29,13 @@ def convert_to_price_decimal(value):
     )
     try:
         return Decimal(retprice)
-    except Exception:
+    except (InvalidOperation, ValueError) as e:
         log_with_context(
             logger,
             logging.WARNING,
             "Price conversion failed",
             operation="convert_to_price_decimal",
-            context={"input_value": value, "parsed_value": retprice},
+            context={"input_value": value, "parsed_value": retprice, "error": str(e)},
         )
         return 0
 

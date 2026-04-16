@@ -486,10 +486,8 @@ def ensure_schema(database_connection) -> None:
                             object_name,
                         )
             except Exception:
-                # last resort: skip silently to avoid breaking upgrades
-                logger.debug(
-                    "Failed to execute schema statement "
-                    "(may already exist or DB locked): %s",
+                logger.info(
+                    "Schema statement skipped (may already exist or DB locked): %s",
                     object_name or "unknown",
                 )
 
@@ -520,10 +518,8 @@ def ensure_schema(database_connection) -> None:
 
         logger.info("Migration: added plugin_configurations column to folders table")
     except Exception:
-        # Ignore failures (column exists or DB locked) -- migrations elsewhere
-        logger.debug(
-            "Failed to add plugin_configurations column to folders table "
-            "(may already exist)"
+        logger.info(
+            "Folders plugin_configurations column migration skipped (may already exist)"
         )
 
     try:
@@ -539,9 +535,8 @@ def ensure_schema(database_connection) -> None:
 
         logger.info("Migration: added invoice_numbers column to processed_files table")
     except Exception:
-        logger.debug(
-            "Failed to add invoice_numbers column to processed_files table "
-            "(may already exist)"
+        logger.info(
+            "Processed_files invoice_numbers column migration skipped (may already exist)"
         )
 
     logger.info("Database schema initialization complete")
