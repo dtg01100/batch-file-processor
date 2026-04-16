@@ -31,6 +31,7 @@ class _FakeConverterStep:
 class _FakeOrchestrator:
     def __init__(self, config):
         self.config = config  # Public attribute to match real DispatchOrchestrator
+        self.config.validator_step = _FakeValidationStep()
 
     def discover_pending_files(self, folders, processed_files, progress_reporter=None):
         return ([[] for _ in folders], 0)
