@@ -116,9 +116,9 @@ class TestHiddenImports:
                 collected = collect_submodules(package)
                 assert len(collected) > 0, f"No submodules collected for {package}"
 
-                assert (
-                    "collect_submodules" in hook_content
-                ), f"Hook for {package} should use collect_submodules"
+                assert "collect_submodules" in hook_content, (
+                    f"Hook for {package} should use collect_submodules"
+                )
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):
@@ -219,9 +219,9 @@ class TestHiddenImports:
             content = f.read()
 
         assert "hookspath" in content, "Spec file should configure hookspath"
-        assert (
-            "['hooks']" in content or '"hooks"' in content
-        ), "Spec file should include 'hooks' in hookspath"
+        assert "['hooks']" in content or '"hooks"' in content, (
+            "Spec file should include 'hooks' in hookspath"
+        )
 
     def test_windows_bundle_validation_checks_exe_size(self):
         """Verify Windows bundle validation checks executable minimum size."""
@@ -265,6 +265,8 @@ class TestImportDiscovery:
                 or ".wine" in str(py_file)
                 or "build_wine" in str(py_file)
                 or "winvenv" in str(py_file)
+                or "tests/_tmp" in str(py_file)
+                or "tests/tmp" in str(py_file)
             ):
                 continue
 
