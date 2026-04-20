@@ -1,12 +1,12 @@
-"""Stewarts Custom CSV EDI Converter - Refactored to use Template Method Pattern.
+"""Stewarts Custom CSV EDI Converter - Refactored to use Composition.
 
 This module converts EDI files to Stewarts Custom CSV format with database lookups
 for customer information. It has been refactored to use:
 - BaseEDIConverter base class for template method pattern
-- DatabaseConnectionMixin for DB connection management
-- CustomerLookupMixin for customer header lookups
-- UOMLookupMixin for UOM resolution
-- ItemProcessingMixin for item total and UPC calculations
+- DatabaseConnector for DB connection management
+- CustomerLookupService for customer header lookups
+- UOMLookupService for UOM resolution
+- ItemProcessor for item total and UPC calculations
 
 The converter features:
 - Database lookups via QueryRunner for customer information
@@ -27,7 +27,7 @@ Backward Compatibility:
 """
 
 import csv
-from typing import Any
+from typing import Any, Optional
 
 from core import utils
 from core.utils import prettify_dates
@@ -36,47 +36,27 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
 )
-from dispatch.converters.mixins import (
-    STEWARTS_CUSTOMER_FIELDS_LIST,
-    STEWARTS_CUSTOMER_QUERY_SQL,
-    CustomerLookupMixin,
-    DatabaseConnectionMixin,
-    ItemProcessingMixin,
-    UOMLookupMixin,
-)
+from dispatch.converters.customer_queries import STEWARTS_CUSTOMER_QUERY_SQL
+from dispatch.services.database_connector import DatabaseConnector
+from dispatch.services.item_processing import ItemProcessor
+from dispatch.services.uom_lookup_service import UOMLookupService
 
 
-class StewartsCustomConverter(
-    BaseEDIConverter,
-    DatabaseConnectionMixin,
-    CustomerLookupMixin,
-    UOMLookupMixin,
-    ItemProcessingMixin,
-):
+class StewartsCustomConverter(BaseEDIConverter):
     """Converter for Stewarts Custom CSV format with database lookups.
 
-    Uses shared mixins for database operations, customer lookups,
+    Uses composable services for database operations, customer lookups,
     UOM lookups, and item processing.
     """
 
-    def _get_customer_query_sql(self) -> str:
-        """Return the SQL query template for customer lookup."""
-        return STEWARTS_CUSTOMER_QUERY_SQL
-
-    def _get_customer_header_field_names(self) -> list[str]:
-        """Return ordered list of field names for customer query results."""
-        return list(STEWARTS_CUSTOMER_FIELDS_LIST)
-
-    def _build_customer_header_dict(
-        self, header_fields: dict[str, Any], header_fields_list: list[str]
-    ) -> dict[str, Any]:
-        """Build customer header dictionary from query results."""
-        # Convert spaces to underscores in keys for compatibility
-        result = {}
-        for key, value in header_fields.items():
-            new_key = key.replace(" ", "_")
-            result[new_key] = value
-        return result
+    def __init__(self):
+        """Initialize the converter with service objects."""
+        self._db_connector = DatabaseConnector()
+        self._customer_service: Optional[CustomerLookupService] = None
+        self._uom_service: Optional[UOMLookupService] = None
+        self._item_processor = ItemProcessor()
+        self._header_a_record: dict[str, str] = {}
+        self._header_fields_dict: dict[str, Any] = {}
 
     def _initialize_output(self, context: ConversionContext) -> None:
         """Initialize CSV output file, writer, and database connection.
@@ -85,13 +65,13 @@ class StewartsCustomConverter(
             context: The conversion context
 
         """
-        # Initialize database connection using mixin
-        self._init_db_connection(context.settings_dict)
+        self._db_connector.init_connection(context.settings_dict)
 
-        # Initialize state
-        self.header_a_record: dict[str, str] = {}
+        self._customer_service = CustomerLookupService(
+            self._db_connector.query_runner, STEWARTS_CUSTOMER_QUERY_SQL
+        )
+        self._uom_service = UOMLookupService(self._db_connector.query_runner)
 
-        # Open output file and create CSV writer
         context.output_file = open(
             context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
@@ -106,17 +86,15 @@ class StewartsCustomConverter(
 
         """
         super().process_a_record(record, context)
-        self.header_a_record = record.fields
+        self._header_a_record = record.fields
 
-        # Fetch customer data from database using mixin
-        self._init_customer_lookup(record.fields["invoice_number"], self.query_object)
+        self._customer_service.lookup(record.fields["invoice_number"])
+        self._uom_service.init_uom_lookup(record.fields["invoice_number"])
 
-        # Fetch UOM lookup data using mixin
-        self._init_uom_lookup(record.fields["invoice_number"], self.query_object)
+        self._header_fields_dict = self._customer_service.header_dict
 
         csv_writer = context.csv_writer
 
-        # Write invoice header section
         csv_writer.writerow(["Invoice Details"])
         csv_writer.writerow([""])
         csv_writer.writerow(
@@ -124,70 +102,68 @@ class StewartsCustomConverter(
         )
         csv_writer.writerow(
             [
-                prettify_dates(self.header_fields_dict["Invoice_Date"]),
-                self.header_fields_dict["Terms_Code"],
+                prettify_dates(self._header_fields_dict["Invoice_Date"]),
+                self._header_fields_dict["Terms_Code"],
                 record.fields["invoice_number"],
                 prettify_dates(
-                    self.header_fields_dict["Invoice_Date"],
-                    self.header_fields_dict["Terms_Duration"],
+                    self._header_fields_dict["Invoice_Date"],
+                    self._header_fields_dict["Terms_Duration"],
                     -1,
                 ),
             ]
         )
 
-        # Build bill-to segment
-        if self.header_fields_dict.get("Corporate_Customer_Number") is not None:
+        if self._header_fields_dict.get("Corporate_Customer_Number") is not None:
             bill_to_segment = [
-                str(self.header_fields_dict["Corporate_Customer_Number"])
+                str(self._header_fields_dict["Corporate_Customer_Number"])
                 + "\n"
-                + self.header_fields_dict["Corporate_Customer_Name"]
+                + self._header_fields_dict["Corporate_Customer_Name"]
                 + "\n"
-                + self.header_fields_dict["Corporate_Customer_Address"]
+                + self._header_fields_dict["Corporate_Customer_Address"]
                 + "\n"
-                + self.header_fields_dict["Corporate_Customer_Town"]
+                + self._header_fields_dict["Corporate_Customer_Town"]
                 + ", "
-                + self.header_fields_dict["Corporate_Customer_State"]
+                + self._header_fields_dict["Corporate_Customer_State"]
                 + ", "
-                + self.header_fields_dict["Corporate_Customer_Zip"]
+                + self._header_fields_dict["Corporate_Customer_Zip"]
                 + ", "
                 + "\n"
                 + "US",
             ]
         else:
             bill_to_segment = [
-                str(self.header_fields_dict["Customer_Number"])
+                str(self._header_fields_dict["Customer_Number"])
                 + "\n"
-                + self.header_fields_dict["Customer_Name"]
+                + self._header_fields_dict["Customer_Name"]
                 + "\n"
-                + self.header_fields_dict["Customer_Address"]
+                + self._header_fields_dict["Customer_Address"]
                 + "\n"
-                + self.header_fields_dict["Customer_Town"]
+                + self._header_fields_dict["Customer_Town"]
                 + ", "
-                + self.header_fields_dict["Customer_State"]
+                + self._header_fields_dict["Customer_State"]
                 + ", "
-                + self.header_fields_dict["Customer_Zip"]
+                + self._header_fields_dict["Customer_Zip"]
                 + ", "
                 + "\n"
                 + "US",
             ]
 
-        # Write ship-to/bill-to section
         csv_writer.writerow(
             [
                 "Ship To:",
-                str(self.header_fields_dict["Customer_Number"])
+                str(self._header_fields_dict["Customer_Number"])
                 + " "
-                + str(self.header_fields_dict.get("Customer_Store_Number", ""))
+                + str(self._header_fields_dict.get("Customer_Store_Number", ""))
                 + "\n"
-                + self.header_fields_dict["Customer_Name"]
+                + self._header_fields_dict["Customer_Name"]
                 + "\n"
-                + self.header_fields_dict["Customer_Address"]
+                + self._header_fields_dict["Customer_Address"]
                 + "\n"
-                + self.header_fields_dict["Customer_Town"]
+                + self._header_fields_dict["Customer_Town"]
                 + ", "
-                + self.header_fields_dict["Customer_State"]
+                + self._header_fields_dict["Customer_State"]
                 + ", "
-                + self.header_fields_dict["Customer_Zip"]
+                + self._header_fields_dict["Customer_Zip"]
                 + ", "
                 + "\n"
                 + "US",
@@ -218,18 +194,18 @@ class StewartsCustomConverter(
             context: The conversion context
 
         """
-        total_price, qtyint = self._convert_to_item_total(
+        total_price, qtyint = self._item_processor.convert_to_item_total(
             record.fields["unit_cost"], record.fields["qty_of_units"]
         )
         context.csv_writer.writerow(
             [
-                self.header_a_record["invoice_number"],
-                self.header_fields_dict.get("Customer_Store_Number", ""),
+                self._header_a_record["invoice_number"],
+                self._header_fields_dict.get("Customer_Store_Number", ""),
                 record.fields["vendor_item"],
                 record.fields["description"],
-                self._generate_full_upc(record.fields["upc_number"]),
+                self._item_processor.generate_full_upc(record.fields["upc_number"]),
                 qtyint,
-                self._get_uom(
+                self._uom_service.get_uom(
                     record.fields["vendor_item"], record.fields["unit_multiplier"]
                 ),
                 "$" + str(utils.convert_to_price(record.fields["unit_cost"])),
@@ -263,8 +239,7 @@ class StewartsCustomConverter(
             context: The conversion context
 
         """
-        # Write total row
-        if self.header_a_record:
+        if self._header_a_record:
             context.csv_writer.writerow(
                 [
                     "",
@@ -278,28 +253,22 @@ class StewartsCustomConverter(
                     "$"
                     + str(
                         utils.convert_to_price(
-                            self.header_a_record["invoice_total"]
+                            self._header_a_record["invoice_total"]
                         ).lstrip("0")
                     ),
                 ]
             )
 
-        # Close the output file
         if context.output_file is not None:
             context.output_file.close()
             context.output_file = None
 
-        # Close database connection using mixin
-        self._close_db_connection()
+        self._db_connector.close()
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
+from dispatch.converters.convert_base import create_edi_convert_wrapper
+from dispatch.services.customer_lookup_service import CustomerLookupService
 
-from .convert_base import create_edi_convert_wrapper
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(
     StewartsCustomConverter, format_name="stewarts_custom"
 )

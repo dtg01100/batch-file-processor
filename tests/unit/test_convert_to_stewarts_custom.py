@@ -221,22 +221,18 @@ class TestConvertToStewartsCustomDatabaseLookup(TestConvertToStewartsCustomFixtu
         complete_edi_content,
         default_parameters,
         default_settings,
-        mock_query_runner_result,
         mock_uom_result,
         tmp_path,
     ):
-        """Test UOM lookup via unit method test."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        """Test UOM lookup via service."""
+        from dispatch.services.uom_lookup_service import UOMLookupService
 
-        converter = StewartsCustomConverter()
-        # UOM data is now stored as list of dicts with keys: itemno, uom_mult, uom_code
-        converter.uom_lookup_list = [
+        uom_service = UOMLookupService(MagicMock())
+        uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
             {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
         ]
-        result = converter._get_uom("123456", "6")
+        result = uom_service.get_uom("123456", "6")
         assert result == "CS"
 
 
@@ -250,12 +246,10 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         tmp_path,
     ):
         """Test UPC generation from 11-digit input adds check digit."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.item_processing import ItemProcessor
 
-        converter = StewartsCustomConverter()
-        result = converter._generate_full_upc("01234567890")
+        item_processor = ItemProcessor()
+        result = item_processor.generate_full_upc("01234567890")
         assert len(result) == 12
 
     def test_upc_8_digit_conversion(
@@ -265,12 +259,10 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         tmp_path,
     ):
         """Test UPC generation from 8-digit input (UPC-E to UPC-A)."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.item_processing import ItemProcessor
 
-        converter = StewartsCustomConverter()
-        result = converter._generate_full_upc("01234567")
+        item_processor = ItemProcessor()
+        result = item_processor.generate_full_upc("01234567")
         assert len(result) == 12 or result == ""
 
     def test_upc_empty_string(
@@ -280,12 +272,10 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         tmp_path,
     ):
         """Test UPC generation from empty string returns empty string."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.item_processing import ItemProcessor
 
-        converter = StewartsCustomConverter()
-        result = converter._generate_full_upc("")
+        item_processor = ItemProcessor()
+        result = item_processor.generate_full_upc("")
         assert result == ""
 
 
@@ -298,12 +288,10 @@ class TestConvertToStewartsCustomItemTotal(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test item total calculation with positive quantity."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.item_processing import ItemProcessor
 
-        converter = StewartsCustomConverter()
-        total, qty = converter._convert_to_item_total("000100", "00010")
+        item_processor = ItemProcessor()
+        total, qty = item_processor.convert_to_item_total("000100", "00010")
         assert qty == 10
         assert total > 0
 
@@ -313,12 +301,10 @@ class TestConvertToStewartsCustomItemTotal(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test item total calculation with negative quantity returns negative values."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.item_processing import ItemProcessor
 
-        converter = StewartsCustomConverter()
-        total, qty = converter._convert_to_item_total("000100", "-00010")
+        item_processor = ItemProcessor()
+        total, qty = item_processor.convert_to_item_total("000100", "-00010")
         assert qty == -10
         assert total < 0
 
@@ -332,17 +318,14 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test UOM lookup with matching item and packsize."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.uom_lookup_service import UOMLookupService
 
-        converter = StewartsCustomConverter()
-        # UOM data is now stored as list of dicts with keys: itemno, uom_mult, uom_code
-        converter.uom_lookup_list = [
+        uom_service = UOMLookupService(MagicMock())
+        uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
             {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
         ]
-        result = converter._get_uom("123456", "6")
+        result = uom_service.get_uom("123456", "6")
         assert result == "CS"
 
     def test_get_uom_no_match(
@@ -351,16 +334,13 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test UOM lookup with no matching item returns '?'."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
+        from dispatch.services.uom_lookup_service import UOMLookupService
 
-        converter = StewartsCustomConverter()
-        # UOM data is now stored as list of dicts
-        converter.uom_lookup_list = [
+        uom_service = UOMLookupService(MagicMock())
+        uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"}
         ]
-        result = converter._get_uom("999999", "6")
+        result = uom_service.get_uom("999999", "6")
         assert result == "?"
 
 
