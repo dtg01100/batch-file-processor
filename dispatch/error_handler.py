@@ -184,6 +184,7 @@ class ErrorHandler:
         database: DatabaseInterface | None = None,
         log_path: str | None = None,
         file_system: FileSystemInterface | None = None,
+        alert_dispatcher: Any = None,
     ) -> None:
         """Initialize the error handler.
 
@@ -191,6 +192,7 @@ class ErrorHandler:
             database: Optional database interface for error persistence
             log_path: Optional path for error log files
             file_system: Optional file system interface (uses RealFileSystem if None)
+            alert_dispatcher: Optional alert dispatcher for error alerts
 
         """
         self.errors_folder = errors_folder or ""
@@ -203,6 +205,7 @@ class ErrorHandler:
         self.error_log: StringIO = StringIO()
         self.logger = ErrorLogger(self.errors_folder, self.run_log)
         self.report_generator = ReportGenerator()
+        self._alert_dispatcher = alert_dispatcher
 
     def record_error(
         self,
@@ -258,6 +261,26 @@ class ErrorHandler:
         # Persist to database if configured
         if self.db is not None:
             self._persist_to_database(error_record)
+
+        # Fire alert if configured and allowed
+        if self._alert_dispatcher is not None and context.get(
+            "alert_on_failure", True
+        ):
+            try:
+                import traceback as tb
+                self._alert_dispatcher.dispatch_error_alert(
+                    error_record={
+                        "error_type": type(error).__name__,
+                        "error_message": str(error),
+                        "stack_trace": tb.format_exc(),
+                    },
+                    correlation_id=context.get("correlation_id", ""),
+                    folder_alias=context.get("folder_alias", ""),
+                    file_path=context.get("file_path", ""),
+                    processing_context=context,
+                )
+            except Exception:
+                pass
 
     def record_error_to_logs(
         self,
