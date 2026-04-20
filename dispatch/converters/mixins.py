@@ -23,19 +23,16 @@ Example:
 
 """
 
-import decimal
 from abc import ABC
 from typing import Any
 
 from core.database import QueryRunner
 from core.exceptions import CustomerLookupError
 from core.structured_logging import get_logger
-from core.utils import (
-    calc_check_digit,
-    convert_to_price,
-    convert_UPCE_to_UPCA,
-    safe_int,
-)
+
+from dispatch.services.database_connector import DatabaseConnector
+from dispatch.services.item_processing import ItemProcessor
+from dispatch.services.uom_lookup_service import UOMLookupService
 
 logger = get_logger(__name__)
 
@@ -75,55 +72,24 @@ class DatabaseConnectionMixin(ABC):
             required_keys: Tuple of required settings keys
 
         """
-        if self._db_initialized:
-            return
-
-        missing_keys = [
-            key
-            for key in required_keys
-            if key not in settings_dict or not settings_dict[key]
-        ]
-        if missing_keys:
-            raise ValueError(
-                f"Missing required database settings: {', '.join(missing_keys)}"
-            )
-
-        # Either password or ssh_key_filename is required to authenticate
-        ssh_key_filename = settings_dict.get("ssh_key_filename", "").strip() or None
-        as400_password = settings_dict.get("as400_password", "").strip() or None
-        if not (as400_password or ssh_key_filename):
-            raise ValueError(
-                "Either as400_password or ssh_key_filename must be provided"
-            )
-
-        self.ssh_key_filename = ssh_key_filename
-        self.as400_password = as400_password
-
-        # Use the convenience wrapper to create query runner from settings
-        from core.database.query_runner import create_query_runner_from_settings
-
-        self.query_object = create_query_runner_from_settings(
-            settings_dict, database=database
-        )
-        self._db_initialized = True
+        connector = DatabaseConnector()
+        connector.init_connection(settings_dict, database, required_keys)
+        self.query_object = connector.query_runner
+        self._db_initialized = connector.is_initialized
+        self._db_connector = connector
         logger.debug(
             "Database connection initialized for %s (ssh_key_filename=%s)",
             self.__class__.__name__,
-            ssh_key_filename,
+            connector.ssh_key_filename,
         )
 
     def _close_db_connection(self) -> None:
         """Close the database connection if open."""
-        if hasattr(self, "query_object") and self.query_object is not None:
-            try:
-                self.query_object.close()
-                logger.debug(
-                    "Database connection closed for %s", self.__class__.__name__
-                )
-            except AttributeError:
-                pass
+        if hasattr(self, "_db_connector") and self._db_connector is not None:
+            self._db_connector.close()
+        if hasattr(self, "query_object"):
             self.query_object = None
-            self._db_initialized = False
+        self._db_initialized = False
 
 
 class CustomerLookupMixin(ABC):
@@ -133,7 +99,7 @@ class CustomerLookupMixin(ABC):
 
     Subclasses must:
     - Implement _get_customer_query_sql() returning the SQL template
-    - Implement _build_customer_header_dict() to map query results to dict
+    - Implement _get_customer_header_field_names() to map query results to dict
     - Call _init_customer_lookup(invoice_number) in process_a_record
 
     Attributes:
@@ -178,7 +144,6 @@ class CustomerLookupMixin(ABC):
             Dictionary mapping field names to values
 
         """
-        # Convert spaces to underscores in keys for compatibility
         result = {}
         for key, value in header_fields.items():
             new_key = key.replace(" ", "_")
@@ -204,7 +169,6 @@ class CustomerLookupMixin(ABC):
         query_sql = self._get_customer_query_sql()
         header_fields_list = self._get_customer_header_field_names()
 
-        # Normalize invoice number for query (strip leading zeros)
         invoice_param = invoice_number.lstrip("0")
 
         header_fields = query_object.run_query(query_sql, (invoice_param,))
@@ -217,7 +181,6 @@ class CustomerLookupMixin(ABC):
             )
             raise CustomerLookupError(f"Cannot Find Order {invoice_number} In History.")
 
-        # Apply subclass's header dict builder (handles Jolley/Stewarts specifics)
         self.header_fields_dict = self._build_customer_header_dict(
             header_fields[0], header_fields_list
         )
@@ -346,74 +309,15 @@ class ItemProcessingMixin(ABC):
     """
 
     @staticmethod
-    def _convert_to_item_total(unit_cost: str, qty: str) -> tuple[decimal.Decimal, int]:
-        """Calculate item total from unit cost and quantity.
-
-        Args:
-            unit_cost: The unit cost string (in cents, no decimal)
-            qty: The quantity string (may be negative)
-
-        Returns:
-            Tuple of (item_total as Decimal, qty_as_int)
-
-        """
-        wrkqtyint = safe_int(qty)
-
-        try:
-            item_total = decimal.Decimal(convert_to_price(unit_cost)) * wrkqtyint
-        except ValueError:
-            item_total = decimal.Decimal()
-        except decimal.InvalidOperation:
-            item_total = decimal.Decimal()
-
-        return item_total, wrkqtyint
+    def _convert_to_item_total(unit_cost: str, qty: str):
+        processor = ItemProcessor()
+        return processor.convert_to_item_total(unit_cost, qty)
 
     @staticmethod
     def _generate_full_upc(input_upc: str) -> str:
-        """Generate a full 12-digit UPC from input.
+        processor = ItemProcessor()
+        return processor.generate_full_upc(input_upc)
 
-        Handles UPC-E to UPC-A conversion and check digit calculation.
-
-        Args:
-            input_upc: The input UPC string (may be 8, 11, or 12 digits)
-
-        Returns:
-            Full 12-digit UPC string or empty string if invalid
-
-        """
-        input_upc = input_upc.strip()
-        if not input_upc:
-            return ""
-
-        upc_string = ""
-        blank_upc = False
-        try:
-            _ = int(input_upc)
-        except ValueError:
-            blank_upc = True
-
-        if blank_upc:
-            return ""
-
-        proposed_upc = input_upc
-        upc_len = len(str(proposed_upc))
-
-        if upc_len == 11:
-            # Calculate and append check digit
-            upc_string = str(proposed_upc) + str(calc_check_digit(proposed_upc))
-        elif upc_len == 8:
-            # Convert UPC-E to UPC-A
-            converted = convert_UPCE_to_UPCA(proposed_upc)
-            upc_string = converted if isinstance(converted, str) else ""
-        elif upc_len == 12:
-            upc_string = str(proposed_upc)
-
-        return upc_string
-
-
-# =============================================================================
-# Shared SQL Queries for Customer Lookups
-# =============================================================================
 
 CUSTOMER_QUERY_SQL_TEMPLATE = """
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
@@ -546,13 +450,11 @@ def build_jolley_header_dict(
         Dictionary with Jolley-specific corporate field fallback
 
     """
-    # Convert spaces to underscores in keys for compatibility with field list
     result = {}
     for key, value in header_fields.items():
         new_key = key.replace(" ", "_")
         result[new_key] = value
 
-    # Jolley-specific: fallback corporate fields to customer fields if None
     if result.get("Corporate_Customer_Number") is None:
         result["Corporate_Customer_Number"] = result.get("Customer_Number", "")
     if result.get("Corporate_Customer_Name") is None:

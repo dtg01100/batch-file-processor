@@ -169,6 +169,9 @@ class BaseEDIConverter(ABC):
             upc_lut=upc_lut,
         )
 
+        # Store context reference for subclasses that need access via _csv_file property
+        self._context = context
+
         # Step 1: Initialize output (hook method)
         self._initialize_output(context)
 

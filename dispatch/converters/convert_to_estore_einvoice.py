@@ -127,47 +127,10 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
     @property
     def _csv_file(self):
         """Get the CSV writer from context."""
-        # This is needed for utils.add_row which expects a csv writer
-        # Access through the converter's internal state
-        return self._context.csv_writer if hasattr(self, "_context") else None
-
-    def edi_convert(
-        self,
-        edi_process: str,
-        output_filename: str,
-        settings_dict: dict[str, Any],
-        parameters_dict: dict[str, Any],
-        upc_lut: dict[int, tuple],
-    ) -> str:
-        """Override to store context reference for _csv_file property."""
-        # Create context to hold shared state
-        from dispatch.converters.convert_base import ConversionContext
-
-        context = ConversionContext(
-            edi_filename=edi_process,
-            output_filename=output_filename,
-            settings_dict=settings_dict,
-            parameters_dict=parameters_dict,
-            upc_lut=upc_lut,
-        )
-        self._context = context
-
-        # Step 1: Initialize output (hook method)
-        self._initialize_output(context)
-
-        try:
-            # Step 2: Process EDI file line by line
-            self._process_edi_file(context)
-
-            # Step 3: Finalize output (hook method)
-            self._finalize_output(context)
-
-        except Exception as e:
-            # Ensure cleanup on error
-            self._cleanup_on_error(context, e)
-            raise
-
-        return self._get_return_value(context)
+        ctx = getattr(self, "_context", None)
+        if ctx is not None and ctx.csv_writer is not None:
+            return ctx.csv_writer
+        return None
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header), handling shipper mode and creating header row.
