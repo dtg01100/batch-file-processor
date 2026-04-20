@@ -104,6 +104,7 @@ class FileProcessor:
         splitter_step: Any | None = None,
         converter_step: Any | None = None,
         file_system: Any | None = None,
+        audit_logger: Any = None,
     ) -> None:
         """Initialize the file processor.
 
@@ -114,6 +115,7 @@ class FileProcessor:
             splitter_step: Pipeline splitter step
             converter_step: Pipeline converter step
             file_system: Optional file system interface
+            audit_logger: Optional audit logger for event recording
 
         """
         self.send_manager = send_manager
@@ -122,6 +124,15 @@ class FileProcessor:
         self.splitter_step = splitter_step
         self.converter_step = converter_step
         self.file_system = file_system
+        self._audit_logger = audit_logger
+
+    def set_audit_logger(self, audit_logger: Any) -> None:
+        """Set the audit logger for the file processor.
+
+        Args:
+            audit_logger: AuditLogger instance for event recording
+        """
+        self._audit_logger = audit_logger
 
     def process_file(
         self,
@@ -249,11 +260,18 @@ class FileProcessor:
             run_log: Run log for activity recording
 
         """
+        import time
+
         result.checksum = self._calculate_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
         current_file = file_path
 
+        correlation_id = get_or_create_correlation_id()
+        folder_id = context.folder.get("id", 0)
+        file_name = os.path.basename(file_path)
+
         # Run validation
+        val_start = time.time()
         continue_processing, current_file = self._run_validation(
             current_file=current_file,
             context=context,
@@ -261,21 +279,50 @@ class FileProcessor:
             run_log=run_log,
             file_basename=file_basename,
         )
+        val_duration = int((time.time() - val_start) * 1000)
+        if self._audit_logger:
+            validation_status = "success" if result.validated else "failure"
+            validation_error = None
+            if result.errors and not result.validated:
+                validation_error = ValueError(result.errors[-1])
+            self._audit_logger.log_step(
+                correlation_id=correlation_id,
+                folder_id=folder_id,
+                file_name=file_name,
+                step="validation",
+                status=validation_status,
+                duration_ms=val_duration,
+                error=validation_error,
+                input_path=file_path,
+                output_path=current_file if current_file != file_path else None,
+            )
         if not continue_processing:
             return
 
         # Run splitting
-        if self._run_splitting(
+        split_start = time.time()
+        split_skipped = self._run_splitting(
             current_file=current_file,
             file_path=file_path,
             file_basename=file_basename,
             context=context,
             result=result,
             run_log=run_log,
-        ):
-            return
+        )
+        split_duration = int((time.time() - split_start) * 1000)
+        if self._audit_logger and split_skipped:
+            self._audit_logger.log_step(
+                correlation_id=correlation_id,
+                folder_id=folder_id,
+                file_name=file_name,
+                step="split",
+                status="skipped",
+                duration_ms=split_duration,
+                input_path=current_file,
+            )
 
         # Run conversion
+        convert_start = time.time()
         current_file, did_convert, conversion_failed = self._run_conversion(
             current_file=current_file,
             file_basename=file_basename,
@@ -284,8 +331,21 @@ class FileProcessor:
             run_log=run_log,
             validation_passed=result.validated,
         )
+        convert_duration = int((time.time() - convert_start) * 1000)
         if did_convert:
             result.converted = True
+        if self._audit_logger:
+            convert_status = "failure" if conversion_failed else "success"
+            self._audit_logger.log_step(
+                correlation_id=correlation_id,
+                folder_id=folder_id,
+                file_name=file_name,
+                step="convert",
+                status=convert_status,
+                duration_ms=convert_duration,
+                input_path=file_path,
+                output_path=current_file if current_file != file_path else None,
+            )
 
         # If conversion failed (i.e., conversion was attempted but produced no output),
         # treat as error. However, when process_edi is False and convert_to_format
@@ -301,6 +361,7 @@ class FileProcessor:
             return
 
         # Send to backends
+        send_start = time.time()
         self._send_file(
             current_file=current_file,
             file_path=file_path,
@@ -309,6 +370,18 @@ class FileProcessor:
             result=result,
             run_log=run_log,
         )
+        send_duration = int((time.time() - send_start) * 1000)
+        if self._audit_logger:
+            send_status = "success" if result.sent else "failure"
+            self._audit_logger.log_step(
+                correlation_id=correlation_id,
+                folder_id=folder_id,
+                file_name=file_name,
+                step="send",
+                status=send_status,
+                duration_ms=send_duration,
+                input_path=current_file,
+            )
 
     def _run_validation(
         self,
