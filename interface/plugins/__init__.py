@@ -20,6 +20,12 @@ from .estore_einvoice_generic_configuration_plugin import (
     EStoreEInvoiceGenericConfigurationPlugin,
 )
 from .fintech_configuration_plugin import FintechConfigurationPlugin
+from .interfaces import (
+    IPlugin,
+    IConfigurablePlugin,
+    IUIPlugin,
+    IPluginCompatibility,
+)
 from .jolley_custom_configuration_plugin import JolleyCustomConfigurationPlugin
 from .plugin_base import PluginBase
 from .plugin_manager import PluginManager
@@ -50,4 +56,8 @@ __all__ = [
     "StewartsCustomConfigurationPlugin",
     "YellowDogCSVConfigurationPlugin",
     "ScanSheetTypeAConfigurationPlugin",
+    "IPlugin",
+    "IConfigurablePlugin",
+    "IUIPlugin",
+    "IPluginCompatibility",
 ]

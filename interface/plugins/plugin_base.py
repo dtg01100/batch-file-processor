@@ -10,10 +10,11 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from .config_schemas import ConfigurationSchema
+from .interfaces import IPlugin, IConfigurablePlugin, IUIPlugin, IPluginCompatibility
 from .validation_framework import ValidationResult
 
 
-class PluginBase(ABC):
+class PluginBase(IPlugin, IConfigurablePlugin, IUIPlugin, IPluginCompatibility):
     """
     Base interface for all plugins.
 
