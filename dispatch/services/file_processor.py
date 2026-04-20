@@ -176,7 +176,12 @@ class FileProcessor:
                 folder=folder.get("folder_name", ""),
                 filename=file_path,
                 error=e,
-                context={"folder_config": folder, "pipeline_mode": True},
+                context={
+                    "folder_config": folder,
+                    "pipeline_mode": True,
+                    "correlation_id": correlation_id,
+                    "file_path": file_path,
+                },
             )
 
         finally:

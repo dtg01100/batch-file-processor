@@ -35,6 +35,7 @@ from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
     log_with_context,
+    set_correlation_id,
 )
 from core.utils.bool_utils import normalize_bool
 from core.utils.format_utils import normalize_convert_to_format
@@ -125,6 +126,16 @@ class FolderPipelineExecutor:
         """
         self._deps = dependencies
         self._log_messages: list[str] = []
+        self._audit_logger: Any = None
+        self._correlation_id: str | None = None
+
+    def set_audit_logger(self, audit_logger: Any) -> None:
+        """Set the audit logger for the folder processor.
+
+        Args:
+            audit_logger: AuditLogger instance for event logging
+        """
+        self._audit_logger = audit_logger
 
     def process_folder(
         self,
@@ -145,6 +156,8 @@ class FolderPipelineExecutor:
         alias = folder.get("alias", "")
 
         correlation_id = get_or_create_correlation_id()
+        self._correlation_id = correlation_id
+        set_correlation_id(correlation_id)
 
         result = FolderResult(
             folder_name=folder_path,
