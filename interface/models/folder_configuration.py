@@ -395,6 +395,9 @@ class FolderConfiguration:
     process_backend_email: bool = False
     process_backend_http: bool = False
 
+    # Alerting
+    alert_on_failure: bool = True
+
     # Backend configurations
     ftp: FTPConfiguration | None = None
     email: EmailConfiguration | None = None
@@ -650,6 +653,7 @@ class FolderConfiguration:
             process_backend_ftp=_bool_from_data(data, "process_backend_ftp"),
             process_backend_email=_bool_from_data(data, "process_backend_email"),
             process_backend_http=_bool_from_data(data, "process_backend_http"),
+            alert_on_failure=_bool_from_data(data, "alert_on_failure", default=True),
             ftp=ftp,
             email=email,
             copy=copy,
@@ -676,6 +680,7 @@ class FolderConfiguration:
             "process_backend_ftp": normalize_bool(self.process_backend_ftp),
             "process_backend_email": normalize_bool(self.process_backend_email),
             "process_backend_http": normalize_bool(self.process_backend_http),
+            "alert_on_failure": normalize_bool(self.alert_on_failure),
         }
 
         self._add_ftp_to_dict(data)
