@@ -1,8 +1,11 @@
-"""EStore E-Invoice Generic CSV EDI Converter - Refactored to use Template Method Pattern.
+"""EStore E-Invoice Generic CSV EDI Converter
+- Refactored to use Template Method Pattern.
 
-This module converts EDI files to EStore E-Invoice Generic CSV format with support for
-complex "shipper mode" handling and database lookups for PO numbers and UOM descriptions.
-It has been refactored to use the BaseEDIConverter base class while maintaining the
+This module converts EDI files to EStore E-Invoice Generic CSV format
+with support for complex "shipper mode" handling and database lookups
+for PO numbers and UOM descriptions.
+It has been refactored to use the BaseEDIConverter base class while
+maintaining the
 exact same behavior and output format.
 
 The converter features:
@@ -200,7 +203,10 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         # Generate output filename with timestamp
         self.output_filename = os.path.join(
             os.path.dirname(context.output_filename),
-            f"eInv{self.vendor_name}.{datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')}.csv",
+            (
+                f"eInv{self.vendor_name}"
+                f".{datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')}.csv"
+            ),
         )
 
         # Open output file and create CSV writer
@@ -463,7 +469,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

@@ -27,7 +27,8 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
         - get_format_enum(): ConvertFormat enum value
 
     Subclasses may optionally override:
-        - get_description(): Plugin description (defaults to "{name} format configuration options for EDI conversion")
+        - get_description(): Plugin description (defaults to
+      "{name} format configuration options for EDI conversion")
         - get_version(): Plugin version (defaults to "1.0.0")
         - get_config_fields(): Configuration fields (defaults to empty list)
         - create_config(): Create config instance (defaults to simple dict-like class)
@@ -56,7 +57,10 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
     @classmethod
     def get_description(cls) -> str:
         """Get a detailed description of the plugin's functionality."""
-        return f"Provides {cls.get_format_name()} format configuration options for EDI conversion"
+        return (
+            f"Provides {cls.get_format_name()}"
+            f" format configuration options for EDI conversion"
+        )
 
     @classmethod
     def get_version(cls) -> str:

@@ -22,7 +22,8 @@ class ValidationResult:
 
     Attributes:
         is_valid: True if file passes validation (no blocking errors)
-        has_minor_errors: True if there are warnings (suppressed UPC, missing pricing, etc.)
+        has_minor_errors: True if there are warnings (suppressed UPC,
+        missing pricing, etc.)
         errors: List of error messages
         warnings: List of warning messages
         log_output: Full log output for reporting

@@ -1,8 +1,6 @@
 # tests/unit/dispatch/observability/test_alert_dispatcher.py
 from unittest.mock import MagicMock
 
-import pytest
-
 from dispatch.observability.alert_dispatcher import AlertDispatcher
 from dispatch.observability.alert_queue import AlertQueue
 

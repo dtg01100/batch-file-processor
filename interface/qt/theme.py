@@ -100,7 +100,10 @@ class Theme:
     PROGRESS_BAR_CHUNK = "#4CAF50"
 
     # Typography System
-    FONT_FAMILY = '"Segoe UI", "SF Pro Display", -apple-system, BlinkMacSystemFont, Roboto, sans-serif'
+    FONT_FAMILY = (
+        '"Segoe UI", "SF Pro Display", -apple-system, '
+        "BlinkMacSystemFont, Roboto, sans-serif"
+    )
     FONT_SIZE_XS = "11px"
     FONT_SIZE_SM = "12px"
     FONT_SIZE_BASE = "14px"
@@ -164,7 +167,8 @@ class Theme:
 
     @staticmethod
     def _asset_uri(filename: str) -> str:
-        """Return an absolute path for a theme asset located under interface/qt/assets."""
+        """Return an absolute path for a theme asset located
+        under interface/qt/assets."""
         # Qt stylesheet url(...) parsing is most reliable with forward slashes,
         # especially on Windows where backslashes can be interpreted as escapes.
         # On Windows, Qt requires the file:/// prefix for absolute paths in stylesheets.
@@ -1019,7 +1023,8 @@ class Theme:
     def apply_theme(widget) -> None:
         app = QApplication.instance()
         if app:
-            # Apply a sanitized stylesheet to avoid Qt warnings about unsupported properties
+            # Apply a sanitized stylesheet to avoid Qt warnings
+            # about unsupported properties
             app.setStyleSheet(Theme.get_stylesheet())
 
     @staticmethod

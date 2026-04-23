@@ -282,7 +282,8 @@ class FormGenerator(ABC):
         Add multiple plugin configuration sections to the form.
 
         Args:
-            sections: List of section definitions with 'id', 'schema', and optional 'config'
+            sections: List of section definitions with 'id', 'schema',
+            and optional 'config'
 
         """
         for section in sections:

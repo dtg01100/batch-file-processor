@@ -1,5 +1,4 @@
 # tests/unit/interface/models/test_folder_config_alert.py
-import pytest
 
 from interface.models.folder_configuration import FolderConfiguration
 

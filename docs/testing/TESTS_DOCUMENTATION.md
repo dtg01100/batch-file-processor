@@ -1,8 +1,8 @@
-# Test Suite Documentation for PyQt6 Interface
+# Test Suite Documentation for PyQt5 Interface
 
 ## Overview
 
-This document describes the test suite for the PyQt6-based interface, covering all new code components.
+This document describes the test suite for the PyQt5-based interface, covering all new code components.
 
 ## Test Structure
 
@@ -178,7 +178,7 @@ pytest --cov=interface --cov-report=html tests/
 
 ## Test Requirements
 
-The tests use mocking **sparingly** to avoid requiring PyQt6 or a display server.
+The tests use mocking **sparingly** to avoid requiring PyQt5 or a display server.
 Following project guidelines, we prefer real implementations with isolated fixtures
 over extensive mocking:
 
@@ -193,7 +193,7 @@ pytest-cov>=4.1.0
 **IMPORTANT:** This project follows a "minimize mocks" philosophy. Mocks are used
 only when:
 - External services are involved (FTP, SMTP)
-- UI display server is required (PyQt6 widgets)
+- UI display server is required (PyQt5 widgets)
 - Operations are truly expensive (network calls, large file I/O)
 
 For all other cases, we prefer:
@@ -215,7 +215,7 @@ def mock_db_manager():
 ```
 
 ### Qt Widget Mocking
-Tests avoid instantiating actual PyQt6 widgets, focusing on:
+Tests avoid instantiating actual PyQt5 widgets, focusing on:
 - Class structure verification
 - Method signature verification
 - Logic testing with mocked dependencies
@@ -259,7 +259,7 @@ Tests can run in CI without display server:
 
 ## Known Limitations
 
-1. **PyQt6 Widget Tests**: Full widget instantiation tests require display server and PyQt6 installed
+1. **PyQt5 Widget Tests**: Full widget instantiation tests require display server and PyQt5 installed
 2. **End-to-End UI Tests**: Manual testing still required for full UI workflows
 3. **Processing Tests**: ProcessingOrchestrator needs more comprehensive tests
 
@@ -313,10 +313,10 @@ Tests use minimal mock data to verify logic without complex setup:
 
 ## Conclusion
 
-The test suite provides comprehensive coverage of the new PyQt6 interface code, focusing on:
+The test suite provides comprehensive coverage of the new PyQt5 interface code, focusing on:
 - Business logic correctness
 - Component integration
 - Error handling
 - State management
 
-All tests use mocking to run quickly without external dependencies like PyQt6 or database files.
+All tests use mocking to run quickly without external dependencies like PyQt5 or database files.

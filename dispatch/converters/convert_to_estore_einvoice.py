@@ -33,7 +33,6 @@ import csv
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
 
 from core import utils
 from core.constants import EMPTY_DATE_MMDDYY, EMPTY_PARENT_ITEM
@@ -85,7 +84,10 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         # Generate output filename with timestamp
         self.output_filename = os.path.join(
             os.path.dirname(context.output_filename),
-            f"eInv{self.vendor_name}.{datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')}.csv",
+            (
+                f"eInv{self.vendor_name}"
+                f".{datetime.strftime(datetime.now(), '%Y%m%d%H%M%S')}.csv"
+            ),
         )
 
         # Open output file and create CSV writer
@@ -273,7 +275,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

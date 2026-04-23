@@ -1,0 +1,3 @@
+"Invoice Total","Description","Item Number","Cost","Quantity","UOM Desc.","Invoice Date","Invoice Number","Customer Name","Customer PO Number","UPC"
+"1000.00","Test Item Description    ","123456","1.00","10","LO","20250101","0000000001","","","01234567890"
+"1000.00","Sales Tax                ","9999999","      0.00","1","","20250101","0000000001","",""

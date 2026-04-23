@@ -251,7 +251,8 @@ class DynamicEDIBuilder:
         try:
             keys_to_remove = []
 
-            # Store items to remove in a list to avoid modifying the layout during iteration
+        # Store items to remove in a list to avoid modifying
+        # the layout during iteration
             items_to_remove = []
             while self.dynamic_layout.count():
                 items_to_remove.append(self.dynamic_layout.takeAt(0))
@@ -340,7 +341,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001
+    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 - Qt signal handler, 'checked' param required but not used
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return

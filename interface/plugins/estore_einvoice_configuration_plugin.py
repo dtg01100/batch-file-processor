@@ -32,7 +32,8 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
     """
     eStore eInvoice configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for eStore eInvoice format configuration with specific fields and validation.
+    Provides support for eStore eInvoice format configuration with
+    specific fields and validation.
     """
 
     @classmethod
@@ -93,7 +94,10 @@ class EStoreEInvoiceConfigurationPlugin(ConfigurationPlugin):
                 name="estore_vendor_namevendoroid",
                 field_type=FieldType.STRING,
                 label="Vendor Name (Vendor OID)",
-                description="The vendor name or vendor OID identifier for the output filename",
+                description=(
+                "The vendor name or vendor OID identifier"
+                " for the output filename"
+            ),
                 default="",
             ),
         ]

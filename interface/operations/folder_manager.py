@@ -145,7 +145,8 @@ class FolderManager:
                 "must be provided"
             )
         self._folder_repo = folder_repo
-        self._db = database  # Always store database if provided - needed for delete_folder_with_related
+        self._db = database  # Always store database if provided
+        # - needed for delete_folder_with_related
         self._settings_repo = settings_repo
 
     def add_folder(self, folder_path: str, template_data: dict | None = None) -> dict:

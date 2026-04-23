@@ -237,7 +237,8 @@ class UPCLookupService:
 
         if strict_db_mode and rows and not upc_dict:
             raise LookupError(
-                "database_lookup_mode is strict but UPC query returned no parseable rows"
+                "database_lookup_mode is strict but UPC query"
+                " returned no parseable rows"
             )
 
         if not upc_dict:

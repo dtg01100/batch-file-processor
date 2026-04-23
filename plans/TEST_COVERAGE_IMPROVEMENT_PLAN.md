@@ -234,7 +234,7 @@ This document outlines a comprehensive test plan to improve test coverage for th
 ### Resource Requirements
 - **Test Engineers**: 2-3 experienced Python testers
 - **Tools**: pytest, pytest-cov, pytest-qt
-- **Environment**: Python 3.14+, PyQt6
+- **Environment**: Python 3.11+, PyQt5
 - **Documentation**: Test plan, coverage reports, test summaries
 
 ## Success Criteria

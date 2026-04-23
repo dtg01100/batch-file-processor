@@ -137,7 +137,8 @@ class FieldDefinition:
 
         if self.min_length is not None and len(value) < self.min_length:
             errors.append(
-                f"Field '{self.name}' must be at least {self.min_length} characters long"
+                f"Field '{self.name}' must be at least"
+                f" {self.min_length} characters long"
             )
         elif self.max_length is not None and len(value) > self.max_length:
             errors.append(
@@ -209,10 +210,13 @@ class FieldDefinition:
             invalid_values = [v for v in value if v not in valid_values]
             if invalid_values:
                 valid_choices = ", ".join(valid_values)
-                errors.append(
-                    f"Field '{self.name}' contains invalid values: {', '.join(invalid_values)}. "
-                    f"Valid choices are: {valid_choices}"
+            errors.append(
+                (
+                    f"Field '{self.name}' contains invalid values:"
+                    f" {', '.join(invalid_values)}."
+                    f" Valid choices are: {valid_choices}"
                 )
+            )
         return errors
 
 

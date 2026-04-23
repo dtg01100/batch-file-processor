@@ -277,65 +277,85 @@ class QtBatchFileSenderApp:
         self._window_controller.set_main_button_states()
 
     def _select_folder(self) -> None:
-        if (
-            self._database is None
-            or self._ui_service is None
-            or self._folder_manager is None
-        ):
+        if not self._preselect_select_folder_checks():
             return
+
         prior_folder = self._database.get_oversight_or_default()
         initial_directory = prior_folder.get("single_add_folder_prior", "")
         if not initial_directory or not os.path.exists(initial_directory):
             initial_directory = os.path.expanduser("~")
 
         selected_folder = self._ui_service.ask_directory(
-            title="Select Directory", initial_dir=initial_directory
+            title="Select Directory",
+            initial_dir=initial_directory,
         )
         if not selected_folder or not os.path.exists(selected_folder):
             return
 
         if self._database.oversight_and_defaults:
             self._database.oversight_and_defaults.update(
-                {"id": 1, "single_add_folder_prior": selected_folder}, ["id"]
+                {"id": 1, "single_add_folder_prior": selected_folder},
+                ["id"],
             )
         existing_folders = self._folder_manager.check_folder_exists(selected_folder)
 
         if existing_folders["truefalse"]:
-            # Folder already exists - give user three choices
-            existing_count = len(existing_folders["all_matched_folders"])
-            msg = f"This folder has {existing_count} existing configuration(s)."
-            choice = self._ui_service.ask_three_choices(
-                "Folder Already Exists",
-                msg,
-                "Add Another",  # 0
-                "Edit Original",  # 1
-                "Cancel",  # 2
-            )
-            if choice == 2:  # Cancel
+            if self._handle_existing_folder_choice(existing_folders):
                 return
-            elif choice == 1:  # Edit original
-                self._open_edit_folders_dialog(existing_folders["matched_folder"])
-                return
-            # choice == 0: Proceed to add new configuration
 
         if self._progress_service:
             self._progress_service.show("Adding Folder...")
         self._folder_manager.add_folder(selected_folder)
         # Only ask about marking processed if folder is new (no existing configs)
         if not existing_folders["truefalse"]:
-            if self._ui_service.ask_yes_no(
-                "Mark Processed",
-                "Do you want to mark files in folder as processed?",
-            ):
-                if self._database.folders_table:
-                    folder_dict = self._database.folders_table.find_one(
-                        folder_name=selected_folder
-                    )
-                    if folder_dict:
-                        self._mark_active_as_processed_wrapper(folder_dict["id"])
+            self._maybe_mark_as_processed(selected_folder)
         if self._progress_service:
             self._progress_service.hide()
         self._refresh_users_list()
+
+    def _maybe_mark_as_processed(self, selected_folder: str) -> None:
+        """Ask user whether to mark files as processed and perform marking if agreed."""
+        if self._ui_service.ask_yes_no(
+            "Mark Processed", "Do you want to mark files in folder as processed?"
+        ):
+            if self._database and self._database.folders_table:
+                folder_dict = self._database.folders_table.find_one(
+                    folder_name=selected_folder
+                )
+                if folder_dict:
+                    self._mark_active_as_processed_wrapper(folder_dict["id"])
+
+    def _preselect_select_folder_checks(self) -> bool:
+        """Checks prerequisites for selecting a folder."""
+        if (
+            self._database is None
+            or self._ui_service is None
+            or self._folder_manager is None
+        ):
+            return False
+        return True
+
+    def _handle_existing_folder_choice(self, existing_folders: dict) -> bool:
+        """Handle user choice when folder already exists.
+
+        Returns True if dialog action handled and caller should return.
+        """
+        # Folder already exists - give user three choices
+        existing_count = len(existing_folders["all_matched_folders"])
+        msg = f"This folder has {existing_count} existing configuration(s)."
+        choice = self._ui_service.ask_three_choices(
+            "Folder Already Exists",
+            msg,
+            "Add Another",  # 0
+            "Edit Original",  # 1
+            "Cancel",  # 2
+        )
+        if choice == 2:  # Cancel
+            return True
+        if choice == 1:  # Edit original
+            self._open_edit_folders_dialog(existing_folders["matched_folder"])
+            return True
+        return False
 
     def _batch_add_folders(self) -> None:
         if (
@@ -424,7 +444,8 @@ class QtBatchFileSenderApp:
         try:
             if self._database.session_database:
                 self._database.session_database.query(
-                    "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+                "CREATE TABLE IF NOT EXISTS "
+                "single_table AS SELECT * FROM folders WHERE 0"
                 )
                 self._database.session_database.query(
                     "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
@@ -482,7 +503,8 @@ class QtBatchFileSenderApp:
             if not has_backend:
                 self._ui_service.show_error(
                     "Cannot Enable Folder",
-                    f"Folder '{folder.get('alias', 'Unknown')}' has no backends configured.\n\n"
+                f"Folder '{folder.get('alias', 'Unknown')}' "
+                f"has no backends configured.\n\n"
                     "Please edit the folder and enable at least one backend:\n"
                     "• Email\n"
                     "• FTP\n"

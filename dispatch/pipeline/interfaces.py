@@ -40,7 +40,9 @@ class PipelineStep(Protocol):
 
     Example:
         >>> class MyStep:
-        ...     def execute(self, input_path: str, context: dict) -> tuple[bool, str, list]:
+        ... def execute(
+        ...     self, input_path: str, context: dict
+        ... ) -> tuple[bool, str, list]:
         ...         return True, input_path, []
     """
 
@@ -100,7 +102,7 @@ class LegacyValidatorAdapter:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],
+        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by adapter
     ) -> tuple[bool, str, list[str]]:
         """Execute validation via the legacy .validate() method.
 
@@ -140,7 +142,7 @@ class ValidatorStep:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],
+        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by this wrapper
     ) -> tuple[bool, str, list[str]]:
         """Execute validation step.
 
@@ -172,7 +174,7 @@ class NoOpStep:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],
+        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by design
     ) -> tuple[bool, str, list[str]]:
         """Execute no-op step.
 

@@ -3,8 +3,6 @@ import queue
 import time
 from unittest.mock import MagicMock
 
-import pytest
-
 from dispatch.observability.audit_logger import AuditEvent
 from dispatch.observability.background_writer import AuditBackgroundWriter
 

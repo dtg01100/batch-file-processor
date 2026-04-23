@@ -23,9 +23,11 @@ class ScanSheetTypeAConfiguration:
 
 class ScanSheetTypeAConfigurationPlugin(ConfigurationPlugin):
     """
-    ScanSheet Type A configuration plugin implementing the ConfigurationPlugin interface.
+    ScanSheet Type A configuration plugin implementing
+    the ConfigurationPlugin interface.
 
-    Provides support for ScanSheet Type A format configuration with specific fields and validation.
+    Provides support for ScanSheet Type A format configuration with
+    specific fields and validation.
     """
 
     @classmethod

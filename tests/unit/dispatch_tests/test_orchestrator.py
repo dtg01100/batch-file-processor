@@ -4,7 +4,6 @@ import hashlib
 import logging
 from unittest.mock import MagicMock
 
-from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import (
     DispatchConfig,
@@ -12,6 +11,7 @@ from dispatch.orchestrator import (
     FileResult,
     FolderResult,
 )
+from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.send_manager import MockBackend
 
 

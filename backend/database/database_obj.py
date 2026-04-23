@@ -187,7 +187,8 @@ class DatabaseObj:
             schema.ensure_schema(self.database_connection)
             schema.ensure_schema(self.session_database)
             self.session_database.query(
-                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+                "CREATE TABLE IF NOT EXISTS"
+                " single_table AS SELECT * FROM folders WHERE 0"
             )
             self.session_database.query(
                 "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
@@ -243,8 +244,12 @@ class DatabaseObj:
             if self._show_error_func:
                 self._show_error_func(
                     "Error",
-                    "Database is corrupted or invalid. Version information is missing.\r\n"
-                    "The database file will need to be recreated or restored from backup.",
+                (
+                    "Database is corrupted or invalid."
+                    " Version information is missing.\r\n"
+                    "The database file will need to be recreated"
+                    " or restored from backup.",
+                ),
                 )
             raise SystemExit("Database corrupted: missing version record")
 
@@ -266,9 +271,10 @@ class DatabaseObj:
             if self._show_error_func:
                 self._show_error_func(
                     "Error",
-                    f"The operating system detected is: "
-                    f'"{self._running_platform}", '
-                    f"this does not match the configuration creator, which is stored as: "
+                f"The operating system detected is: "
+                f'"{self._running_platform}", '
+                f"this does not match the configuration creator,"
+                " which is stored as: "
                     f'"{db_version_dict["os"]}".\r\n'
                     f"Folder paths are not portable between operating systems. Exiting",
                 )
@@ -524,11 +530,13 @@ class DatabaseObj:
             self.session_database = sqlite_wrapper.Database.connect("")
             schema.ensure_schema(self.session_database)
             self.session_database.query(
-                "CREATE TABLE IF NOT EXISTS single_table AS SELECT * FROM folders WHERE 0"
+                "CREATE TABLE IF NOT EXISTS"
+                " single_table AS SELECT * FROM folders WHERE 0"
             )
             self.session_database.query(
                 "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
             )
+            self._initialize_tables()
         except Exception as connect_error:
             self._handle_connection_error(connect_error)
 

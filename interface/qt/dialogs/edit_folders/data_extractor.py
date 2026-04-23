@@ -174,27 +174,25 @@ class QtFolderDataExtractor:
         if isinstance(widget, int):
             return widget
         if isinstance(widget, (str, float)):
-            try:
-                return int(widget)
-            except (TypeError, ValueError):
-                return default
+            return self._coerce_number(widget, default)
         try:
             if isinstance(widget, QSpinBox):
                 return widget.value()
-            elif isinstance(widget, QLineEdit):
-                try:
-                    return int(widget.text().strip())
-                except (TypeError, ValueError):
-                    pass
-            elif isinstance(widget, QComboBox):
-                try:
-                    return int(widget.currentText().strip())
-                except (TypeError, ValueError):
-                    pass
+            if isinstance(widget, QLineEdit):
+                return self._coerce_number(widget.text(), default)
+            if isinstance(widget, QComboBox):
+                return self._coerce_number(widget.currentText(), default)
         except RuntimeError:
             # Widget has been deleted
             pass
         return default
+
+    def _coerce_number(self, value, default: int) -> int:
+        """Try to coerce a value to int, returning default on failure."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
     def _get_combo(self, key: str) -> str:
         widget = self.fields.get(key)

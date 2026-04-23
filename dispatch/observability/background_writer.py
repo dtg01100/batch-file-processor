@@ -21,7 +21,9 @@ class AuditBackgroundWriter:
 
     def start(self) -> None:
         self._shutdown.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True, name="AuditBackgroundWriter")
+        self._thread = threading.Thread(
+            target=self._run, daemon=True, name="AuditBackgroundWriter"
+        )
         self._thread.start()
 
     def stop(self, timeout: float = 5.0) -> None:

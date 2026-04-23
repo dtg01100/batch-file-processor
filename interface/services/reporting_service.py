@@ -111,9 +111,11 @@ class ReportingService:
 
         Args:
             database: Database object implementing ReportingDatabaseProtocol
-            batch_log_sender_module: Module for sending batch logs (injected for testing)
+            batch_log_sender_module: Module for sending batch logs
+                (injected for testing)
             print_run_log_module: Module for printing run logs (injected for testing)
-            utils_module: Utils module with normalize_bool function (injected for testing)
+            utils_module: Utils module with normalize_bool function
+                (injected for testing)
 
         """
         self._db = database
@@ -421,7 +423,8 @@ class ReportingService:
                     )
                 else:
                     logger.info(
-                        "Emailing report log failed with error: %s, printing disabled, stopping",
+                "Emailing report log failed with error: %s, "
+                "printing disabled, stopping",
                         error,
                     )
                     run_log.write(

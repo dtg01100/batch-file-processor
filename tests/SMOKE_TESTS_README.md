@@ -29,7 +29,7 @@ Tests headless/batch processing mode:
 
 Tests GUI startup functionality:
 
-- **Module imports**: Verifies PyQt6 modules can be imported
+- **Module imports**: Verifies PyQt5 modules can be imported
 - **Application creation**: Tests `create_application` function
 - **Main window creation**: Tests `create_main_window` function
 - **Application controller**: Validates `ApplicationController` class exists
@@ -142,7 +142,7 @@ Fast execution (~0.3s) makes them perfect for pre-commit hooks or quick validati
 
 ## Notes
 
-- **GUI tests**: Some GUI tests skip if PyQt6 is not installed (using `pytest.skip()`)
+- **GUI tests**: Some GUI tests skip if PyQt5 is not installed (using `pytest.skip()`)
 - **Isolation**: Tests use mocks and temporary directories to avoid affecting the real application
 - **No actual execution**: These tests verify imports and basic initialization, but don't actually run the full processing workflow
 - **Script validation**: Shell script tests use `bash -n` for syntax checking without execution

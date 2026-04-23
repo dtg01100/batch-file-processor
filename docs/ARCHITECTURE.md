@@ -27,7 +27,7 @@ Input Files → Discovery → Validation → EDI Processing → Conversion → S
 ```mermaid
 flowchart TB
     subgraph Interface Layer
-        UI[PyQt6 GUI]
+        UI[PyQt5 GUI]
         App[Application Controller]
         DB[Database Manager]
     end
@@ -71,7 +71,7 @@ flowchart TB
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| GUI Framework | PyQt6 | Desktop application interface |
+| GUI Framework | PyQt5 | Desktop application interface |
 | Database | SQLite | Local data persistence |
 | Database Access | sqlite3 + custom wrapper | ORM-like API |
 | EDI Parsing | Custom utilities | EDI format handling |
@@ -87,7 +87,7 @@ flowchart TB
 
 ```
 batch-file-processor/
-├── interface/          # PyQt6 GUI implementation
+├── interface/          # PyQt5 GUI implementation
 │   ├── ui/            # UI components (dialogs, widgets, windows)
 │   ├── database/      # Database access layer
 │   ├── models/        # Data models
@@ -282,7 +282,7 @@ pip install -r requirements.txt
 |-----------|----------|--------|
 | Plugin Discovery | Filesystem glob | Simple, but requires naming conventions |
 | Database | SQLite | Portable, but no column deletion |
-| GUI Framework | PyQt6 | Powerful, but complex for testing |
+| GUI Framework | PyQt5 | Powerful, but complex for testing |
 | State Management | Global + Database | Simple, but tight coupling in places |
 | Legacy Code | Mixed old/new | Technical debt, but gradual refactoring |
 

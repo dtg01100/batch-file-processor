@@ -37,7 +37,8 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
     """
     Simplified CSV configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for Simplified CSV format configuration with specific fields and validation.
+    Provides support for Simplified CSV format configuration with
+    specific fields and validation.
     """
 
     @classmethod
@@ -106,7 +107,10 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
                 name="simple_csv_sort_order",
                 field_type=FieldType.STRING,
                 label="Simple CSV Sort Order",
-                description="Sort order for simple CSV format (comma-separated column names)",
+                description=(
+                "Sort order for simple CSV format"
+                " (comma-separated column names)"
+            ),
                 default="",
             ),
         ]

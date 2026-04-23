@@ -295,10 +295,11 @@ class QtProgressService(QObject):
         # Ensure stylesheet background gets painted even with global QFrame styles.
         overlay.setAttribute(
             Qt.WidgetAttribute.WA_StyledBackground,
-            True,  # noqa: FBT003
+            True,  # noqa: FBT003 - Qt attribute requires boolean argument for WA_StyledBackground
         )
         overlay.setStyleSheet(
-            f"QFrame#qt_progress_overlay {{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
+            f"QFrame#qt_progress_overlay "
+            f"{{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
         )
 
         palette = overlay.palette()
@@ -337,7 +338,8 @@ class QtProgressService(QObject):
         label = QLabel(parent)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(
-            f"color: {Theme.TEXT_ON_OVERLAY_TERTIARY}; font-size: 11pt; font-style: italic;"
+            f"color: {Theme.TEXT_ON_OVERLAY_TERTIARY}; "
+            f"font-size: 11pt; font-style: italic;"
         )
         label.setWordWrap(True)
         return label
@@ -348,7 +350,8 @@ class QtProgressService(QObject):
         label = QLabel(text, parent)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(
-            f"color: {Theme.TEXT_ON_OVERLAY_SECONDARY}; font-size: 11pt; font-weight: 600;"
+            f"color: {Theme.TEXT_ON_OVERLAY_SECONDARY}; "
+            f"font-size: 11pt; font-weight: 600;"
         )
         return label
 
@@ -862,7 +865,7 @@ class QtProgressService(QObject):
         """Resize the overlay to match the parent widget."""
         self._overlay.setGeometry(self._parent.rect())
 
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:  # noqa: N802
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:  # noqa: N802 - Qt override, 'a0'/'a1' are conventional Qt names
         """Resize overlay when the parent widget is resized."""
         parent = getattr(self, "_parent", None)
         if a0 is parent and a1 and a1.type() == QEvent.Type.Resize:

@@ -1,5 +1,4 @@
 # tests/unit/dispatch/observability/test_package.py
-import pytest
 
 
 class TestObservabilityPackage:
@@ -7,9 +6,9 @@ class TestObservabilityPackage:
         from dispatch.observability import (
             AlertDispatcher,
             AlertQueue,
+            AuditBackgroundWriter,
             AuditEvent,
             AuditLogger,
-            AuditBackgroundWriter,
         )
 
         assert AlertDispatcher is not None

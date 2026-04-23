@@ -83,7 +83,6 @@ class TestSequentialMultiFolderProcessing:
         """Test processing 5 folders in sequence."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -114,7 +113,6 @@ class TestSequentialMultiFolderProcessing:
         """Test processing folders with different configurations."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -152,7 +150,6 @@ class TestMixedSuccessFailureScenarios:
         """Test processing when some folders fail but others succeed."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         class FailingBackend:
@@ -193,7 +190,6 @@ class TestMixedSuccessFailureScenarios:
         """Test when folder processing has partial success."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -224,7 +220,6 @@ class TestResourceContention:
         """Test accessing same output directory from multiple folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         # All folders write to same output with unique filenames
@@ -262,7 +257,6 @@ class TestResourceContention:
         """Test database locking during multi-folder processing."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -300,7 +294,6 @@ class TestProgressTracking:
         """Test that progress is tracked across multiple folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         # Track progress via progress_reporter
@@ -338,7 +331,6 @@ class TestProgressTracking:
         """Test cumulative file count tracking."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         config = DispatchConfig(
@@ -369,7 +361,6 @@ class TestParallelProcessing:
         """Test processing folders in parallel."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         def process_folder_thread(folder_config):
@@ -409,7 +400,6 @@ class TestLargeScaleMultiFolder:
         """Test processing 20 folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         workspace = tmp_path / "large_scale"
@@ -478,7 +468,6 @@ class TestMultiFolderErrorRecovery:
         """Test retrying failed folders."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         fail_count = {"count": 0}
@@ -514,7 +503,6 @@ class TestMultiFolderErrorRecovery:
         """Test skipping folders that consistently fail."""
         from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
         from dispatch.pipeline.converter import EDIConverterStep
-
         from dispatch.pipeline.validator import EDIValidationStep
 
         class AlwaysFailingBackend:

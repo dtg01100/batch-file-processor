@@ -84,7 +84,7 @@ def test_<function>_<feature>_<case>(...):
 |--------|---------------|---------|
 | `unit` | Fast, isolated, no I/O | <1s |
 | `integration` | Real DB, filesystem, or component | 1-10s |
-| `qt` | Real PyQt6 widgets, offscreen | 1-5s |
+| `qt` | Real PyQt5 widgets, offscreen | 1-5s |
 | `database` | DB-specific (schema, queries) | 1-5s |
 | `backend` | Real FTP/SMTP/copy protocols | 5-30s |
 | `dispatch` | Pipeline orchestration | 5-30s |

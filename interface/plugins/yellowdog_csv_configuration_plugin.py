@@ -25,7 +25,8 @@ class YellowDogCSVConfigurationPlugin(ConfigurationPlugin):
     """
     YellowDog CSV configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for YellowDog CSV format configuration with specific fields and validation.
+    Provides support for YellowDog CSV format configuration with
+    specific fields and validation.
     """
 
     @classmethod

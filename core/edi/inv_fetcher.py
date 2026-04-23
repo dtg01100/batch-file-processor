@@ -224,65 +224,7 @@ class InvFetcher:
         """
         if invno != self.last_invno:
             self.uom_lut = {0: "N/A"}
-
-            # Handle case where no query_runner is provided (for testing)
-            if self._query_runner is None:
-                msg = "InvFetcher.fetch_uom_desc() called with no query_runner"
-                if self._strict_database_lookup:
-                    raise RuntimeError(msg)
-                logger.warning("%s - falling back to item-based UOM lookup", msg)
-                # Don't attempt DB query, just use empty uom_lut for fallback
-
-            elif self._query_runner is not None:
-                try:
-                    qry = """
-                        SELECT
-                            BUHUNB,
-                            BUHXTX
-                        FROM
-                            dacdata.odhst odhst
-                        WHERE
-                            odhst.BUHHNB = ?
-                    """
-                    qry_ret = self._query_runner.run_query(qry, (int(invno),))
-                    # Convert results to dict lookup
-                    self.uom_lut = {}
-                    for row in qry_ret:
-                        if isinstance(row, dict):
-                            values = list(row.values())
-                            self.uom_lut[values[0]] = (
-                                values[1] if len(values) > 1 else ""
-                            )
-                        else:
-                            self.uom_lut[row[0]] = row[1]
-                    log_with_context(
-                        logger,
-                        logging.DEBUG,
-                        "UOM lookup query executed",
-                        operation="fetch_uom_desc",
-                        context={
-                            "invoice_number": invno,
-                            "query_type": "SELECT",
-                            "table": "dacdata.odhst",
-                            "params": (int(invno),),
-                            "uom_count": len(self.uom_lut),
-                        },
-                    )
-                except (RuntimeError, OSError, ValueError):
-                    if self._strict_database_lookup:
-                        raise
-                    log_with_context(
-                        logger,
-                        logging.ERROR,
-                        "UOM lookup query failed",
-                        operation="fetch_uom_desc",
-                        context={
-                            "invoice_number": invno,
-                            "query_type": "SELECT",
-                            "table": "dacdata.odhst",
-                        },
-                        exc_info=True,
-                    )
+            self._refresh_uom_lut_for_invoice(invno)
             self.last_invno = invno
 
         try:
@@ -319,6 +261,70 @@ class InvFetcher:
             Unit of measure description string
 
         """
+        return self._fetch_uom_from_item_impl(itemno, uommult)
+
+
+    def _refresh_uom_lut_for_invoice(self, invno: int) -> None:
+        """Populate self.uom_lut from invoice-level UOM table for given invoice."""
+        # Handle case where no query_runner is provided (for testing)
+        if self._query_runner is None:
+            msg = "InvFetcher.fetch_uom_desc() called with no query_runner"
+            if self._strict_database_lookup:
+                raise RuntimeError(msg)
+            logger.warning("%s - falling back to item-based UOM lookup", msg)
+            return
+
+        try:
+            qry = """
+                SELECT
+                    BUHUNB,
+                    BUHXTX
+                FROM
+                    dacdata.odhst odhst
+                WHERE
+                    odhst.BUHHNB = ?
+            """
+            qry_ret = self._query_runner.run_query(qry, (int(invno),))
+            # Convert results to dict lookup
+            self.uom_lut = {}
+            for row in qry_ret:
+                if isinstance(row, dict):
+                    values = list(row.values())
+                    self.uom_lut[values[0]] = values[1] if len(values) > 1 else ""
+                else:
+                    self.uom_lut[row[0]] = row[1]
+            log_with_context(
+                logger,
+                logging.DEBUG,
+                "UOM lookup query executed",
+                operation="fetch_uom_desc",
+                context={
+                    "invoice_number": invno,
+                    "query_type": "SELECT",
+                    "table": "dacdata.odhst",
+                    "params": (int(invno),),
+                    "uom_count": len(self.uom_lut),
+                },
+            )
+        except (RuntimeError, OSError, ValueError):
+            if self._strict_database_lookup:
+                raise
+            log_with_context(
+                logger,
+                logging.ERROR,
+                "UOM lookup query failed",
+                operation="fetch_uom_desc",
+                context={
+                    "invoice_number": invno,
+                    "query_type": "SELECT",
+                    "table": "dacdata.odhst",
+                },
+                exc_info=True,
+            )
+
+
+    def _fetch_uom_from_item_impl(self, itemno: int, uommult: int) -> str:
+        """Implementation detail for fetching UOM from item master."""
         # Handle case where no query_runner is provided (for testing)
         if self._query_runner is None:
             if self._strict_database_lookup:
@@ -329,10 +335,7 @@ class InvFetcher:
 
         try:
             _ALLOWED_UOM_FIELDS = {"ANB9TX", "ANB8TX"}
-            if int(uommult) > 1:
-                field = "ANB9TX"
-            else:
-                field = "ANB8TX"
+            field = "ANB9TX" if int(uommult) > 1 else "ANB8TX"
             assert field in _ALLOWED_UOM_FIELDS, f"Unexpected UOM field: {field}"
             qry = f"""
                 SELECT dsanrep.{field}
@@ -355,8 +358,6 @@ class InvFetcher:
                 raise
             logger.debug("UOM lookup failed for item %s, using default: %s", itemno, e)
             try:
-                if int(uommult) > 1:
-                    return "HI"
-                return "LO"
+                return "HI" if int(uommult) > 1 else "LO"
             except ValueError:
                 return "NA"

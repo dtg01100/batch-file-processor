@@ -11,7 +11,7 @@ from typing import Any
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from interface.operations.maintenance_functions import (  # Toolkit-agnostic business logic
+from interface.operations.maintenance_functions import (  # Toolkit-agnostic
     MaintenanceFunctions,
 )
 from interface.ports import UIServiceProtocol
@@ -127,7 +127,7 @@ class MaintenanceDialog(BaseDialog):
         if path:
             self._mf.database_import_wrapper(path)
 
-    def keyPressEvent(self, a0) -> None:  # noqa: N802
+    def keyPressEvent(self, a0) -> None:  # noqa: N802 - Qt override, 'a0' is conventional Qt event param
         event = a0
         if event.key() == Qt.Key.Key_Escape:
             self.reject()

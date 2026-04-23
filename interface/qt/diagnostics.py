@@ -21,12 +21,13 @@ class QtDiagnosticsService:
 
     def run_self_test(self) -> int:
         print(
-            f"Running self-test for {self._app._appname} Version {self._app._version}"
+            f"Running self-test for {self._app._appname} Version "
+            f"{self._app._version}"
         )
         print(f"Platform: {self._app._running_platform}")
         print("=" * 50)
 
-        failures = 0
+        # failures count intentionally omitted to keep output simple
         required_modules = [
             "argparse",
             "datetime",
@@ -85,44 +86,67 @@ class QtDiagnosticsService:
         else:
             required_modules.extend(["PIL"])
 
+        failures = 0
+        failures += self._check_imports(required_modules, optional_modules)
+        failures += self._check_config_directories()
+        failures += self._check_appdirs()
+        failures += self._check_filesystem()
+
+        print("\n" + "=" * 50)
+        return 1 if failures > 0 else 0
+
+    def _check_imports(
+        self,
+        required_modules: list[str],
+        optional_modules: list[str],
+    ) -> int:
         print("\n1. Checking module imports...")
+        failures = 0
         for module in required_modules:
             try:
                 __import__(module)
-                print(f"  [OK] {module}")
+                print(f" [OK] {module}")
             except ImportError as e:
-                print(f"  [FAIL] {module}: {e}")
+                print(f" [FAIL] {module}: {e}")
                 failures += 1
 
         for module in optional_modules:
             try:
                 __import__(module)
-                print(f"  [OK] {module} (optional)")
+                print(f" [OK] {module} (optional)")
             except ImportError as e:
-                print(f"  [?] {module} (optional, not bundled on this platform): {e}")
+                print(f" [?] {module} (optional, not bundled on this platform): {e}")
 
+        return failures
+
+    def _check_config_directories(self) -> int:
         print("\n2. Checking configuration directories...")
         try:
             self._app._setup_config_directories()
             if self._app._config_folder and os.path.exists(self._app._config_folder):
-                print(f"  [OK] Config directory: {self._app._config_folder}")
+                print(f" [OK] Config directory: {self._app._config_folder}")
             else:
                 print(
-                    f"  [FAIL] Config directory not created: {self._app._config_folder}"
+                    f" [FAIL] Config directory not created: "
+                    f"{self._app._config_folder}"
                 )
-                failures += 1
+                return 1
         except Exception as e:
-            print(f"  [FAIL] Failed to setup config directories: {e}")
-            failures += 1
+            print(f" [FAIL] Failed to setup config directories: {e}")
+            return 1
+        return 0
 
+    def _check_appdirs(self) -> int:
         print("\n3. Checking appdirs functionality...")
         try:
             test_config = appdirs.user_data_dir("TestApp")
-            print(f"  [OK] appdirs module working: {test_config}")
+            print(f" [OK] appdirs module working: {test_config}")
         except Exception as e:
-            print(f"  [FAIL] appdirs module error: {e}")
-            failures += 1
+            print(f" [FAIL] appdirs module error: {e}")
+            return 1
+        return 0
 
+    def _check_filesystem(self) -> int:
         print("\n4. Checking file system access...")
         try:
             temp_dir = os.path.join(os.path.expanduser("~"), "BatchFileSenderTest")
@@ -132,22 +156,11 @@ class QtDiagnosticsService:
                 f.write("test")
             os.remove(temp_file)
             os.rmdir(temp_dir)
-            print("  [OK] File system access working")
+            print(" [OK] File system access working")
         except Exception as e:
-            print(f"  [FAIL] File system access error: {e}")
-            failures += 1
-
-        print("\n" + "=" * 50)
-        if failures == 0:
-            print(
-                f"[PASS] Self-test passed - all {len(required_modules)} checks successful"
-            )
-            return 0
-
-        print(
-            f"[FAIL] Self-test failed - {failures} out of {len(required_modules)} checks failed"
-        )
-        return 1
+            print(f" [FAIL] File system access error: {e}")
+            return 1
+        return 0
 
     def run_gui_self_test(self) -> int:
         from PyQt5.QtCore import QTimer
@@ -158,14 +171,30 @@ class QtDiagnosticsService:
 
         failures = 0
 
+        if not self._create_qapplication():
+            return 1
+
+        if not self._create_main_window():
+            return 1
+
+        # Initialize DB and folder manager, build UI, and verify widgets
+        failures += self._init_db_and_services()
+        failures += self._build_and_verify_ui()
+
+        QTimer.singleShot(2000, self._close_and_report(failures))
+        return self._app._app.exec()
+
+    def _create_qapplication(self) -> bool:
         print("\n1. Creating QApplication...")
         try:
             self._app._app = QApplication.instance() or QApplication(sys.argv)
             print("  [OK] QApplication created")
+            return True
         except Exception as e:
             print(f"  [FAIL] QApplication creation failed: {e}")
-            return 1
+            return False
 
+    def _create_main_window(self) -> bool:
         print("\n2. Creating main window...")
         try:
             self._app._window = QMainWindow()
@@ -173,11 +202,14 @@ class QtDiagnosticsService:
                 f"{self._app._appname} {self._app._version} (GUI Test)"
             )
             print("  [OK] QMainWindow created")
+            return True
         except Exception as e:
             print(f"  [FAIL] QMainWindow creation failed: {e}")
-            return 1
+            return False
 
+    def _init_db_and_services(self) -> int:
         print("\n3. Initializing database and services...")
+        failures = 0
         try:
             self._app._setup_config_directories()
             if self._app._database is None:
@@ -198,8 +230,11 @@ class QtDiagnosticsService:
         except Exception as e:
             print(f"  [FAIL] FolderManager initialization failed: {e}")
             failures += 1
+        return failures
 
+    def _build_and_verify_ui(self) -> int:
         print("\n4. Building UI components...")
+        failures = 0
         try:
             self._app._build_main_window()
             print("  [OK] Main window built")
@@ -232,7 +267,10 @@ class QtDiagnosticsService:
             print(f"  [FAIL] Window display failed: {e}")
             failures += 1
 
-        def close_and_quit() -> None:
+        return failures
+
+    def _close_and_report(self, failures: int):
+        def _inner():
             print("\n7. Closing window...")
             self._app._window.close()
             self._app._app.quit()
@@ -244,5 +282,4 @@ class QtDiagnosticsService:
                 print(f"[FAIL] GUI self-test failed with {failures} errors")
             print("=" * 50)
 
-        QTimer.singleShot(2000, close_and_quit)
-        return self._app._app.exec()
+        return _inner

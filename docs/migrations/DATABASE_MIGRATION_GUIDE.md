@@ -129,7 +129,7 @@ EOF
 python3 << EOF
 import sys
 sys.path.insert(0, ".")
-from PyQt6.QtSql import QSqlDatabase
+from PyQt5.QtSql import QSqlDatabase
 from interface.database.database_manager import DatabaseConnection
 import folders_database_migrator
 

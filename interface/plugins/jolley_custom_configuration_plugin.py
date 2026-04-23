@@ -25,7 +25,8 @@ class JolleyCustomConfigurationPlugin(ConfigurationPlugin):
     """
     Jolley Custom configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for Jolley Custom format configuration with specific fields and validation.
+    Provides support for Jolley Custom format configuration with
+    specific fields and validation.
     """
 
     @classmethod

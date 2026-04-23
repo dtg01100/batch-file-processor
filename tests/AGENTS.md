@@ -9,7 +9,7 @@ tests/
 ├── unit/              # Unit tests (utils, dispatch, converters, backends)
 ├── integration/       # DB migrations, schema, DatabaseManager
 ├── operations/        # Folder ops, maintenance ops
-├── ui/                # PyQt6 UI tests (dialogs, widgets)
+├── ui/                # PyQt5 UI tests (dialogs, widgets)
 ├── convert_backends/  # Converter parity/baseline tests (see convert_backends/AGENTS.md)
 ├── conftest.py        # Shared fixtures (qapp, qtbot, temp_dir, mock_db_manager)
 ├── test_smoke.py      # Utility smoke tests
@@ -25,7 +25,7 @@ tests/
 | Migration tests | `integration/test_database_migrations.py` | All versions v5→v39 |
 | Folder operations | `operations/test_folder_operations.py` | add/remove/toggle/update |
 | Maintenance ops | `operations/test_maintenance_operations.py` | clear_processed, mark_processed |
-| UI dialogs | `ui/test_dialogs_qt.py`, `ui/test_dialogs.py` | PyQt6 dialog tests |
+| UI dialogs | `ui/test_dialogs_qt.py`, `ui/test_dialogs.py` | PyQt5 dialog tests |
 | Converter tests | `convert_backends/` | Parity, baselines, smoke tests |
 
 ## CONVENTIONS

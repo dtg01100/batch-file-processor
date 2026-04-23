@@ -95,7 +95,7 @@ After recreating or activating the virtual environment:
 2. **Verify key packages**:
    ```bash
    python -c "import pytest; print(f'pytest {pytest.__version__}')"
-   python -c "import PyQt6; print(f'PyQt6 {PyQt6.QtCore.PYQT_VERSION_STR}')"
+   python -c "import PyQt5; print(f'PyQt5 {PyQt5.QtCore.PYQT_VERSION_STR}')"
    ```
 
 3. **Run a quick test**:

@@ -11,7 +11,25 @@ This package contains small, focused utility modules organized by functionality:
 - utils: Legacy utilities (deprecated, use specific modules above)
 """
 
-from core.edi.edi_parser import EDIParseError
+# Backward-compatible re-exports for widely-used helper functions.
+# These are transitional and should be imported directly from their
+# source modules in new code (core.edi.edi_parser, core.edi.upc_utils).
+from core.edi.edi_parser import (
+    EDIParseError,
+    capture_records,  # noqa: E402
+)
+from core.edi.edi_transformer import (  # noqa: E402
+    convert_to_price,
+    convert_to_price_decimal,
+    dac_str_int_to_int,
+    detect_invoice_is_credit,
+)
+from core.edi.upc_utils import (
+    calc_check_digit,
+)  # noqa: E402
+from core.edi.upc_utils import (
+    convert_upce_to_upca as convert_UPCE_to_UPCA,
+)
 
 from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
 from .date_utils import (
@@ -21,26 +39,11 @@ from .date_utils import (
     datetime_from_invtime,
     prettify_dates,
 )
-from .file_utils import clear_old_files, clear_old_files as do_clear_old_files  # noqa: F401 - backward compat
+from .file_utils import clear_old_files  # noqa: F401 - backward compat
+from .file_utils import clear_old_files as do_clear_old_files
 from .format_utils import normalize_convert_to_format
 from .safe_parse import safe_float, safe_int
 from .timing_utils import context_timer
-
-# Backward-compatible re-exports for widely-used helper functions.
-# These are transitional and should be imported directly from their
-# source modules in new code (core.edi.edi_parser, core.edi.upc_utils).
-from core.edi.edi_parser import capture_records  # noqa: E402
-from core.edi.edi_transformer import (  # noqa: E402
-    convert_to_price,
-    convert_to_price_decimal,
-    dac_str_int_to_int,
-    detect_invoice_is_credit,
-)
-from core.edi.upc_utils import (
-    calc_check_digit,
-    convert_upce_to_upca as convert_UPCE_to_UPCA,
-)  # noqa: E402
-
 
 # Legacy imports from utils.py - these are actually defined in core/utils/utils.py
 # Functions from core.edi modules should be imported directly from their source modules:
@@ -81,4 +84,13 @@ __all__ = [
     "add_row",
     "qty_to_int",
     "EDIParseError",
+    # Backward-compatible re-exports from core.edi
+    "capture_records",
+    "convert_to_price",
+    "convert_to_price_decimal",
+    "dac_str_int_to_int",
+    "detect_invoice_is_credit",
+    "calc_check_digit",
+    "convert_UPCE_to_UPCA",
+    "do_clear_old_files",
 ]

@@ -181,7 +181,7 @@ class DatabaseImportDialog(BaseDialog):
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, message: str) -> None:  # noqa: FBT001
+    def _on_finished(self, success: bool, message: str) -> None:  # noqa: FBT001 - Qt signal handler, 'message' param required but not used
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -267,7 +267,8 @@ class ImportThread(QThread):
         result_event = threading.Event()
         setattr(result_event, "result", False)
 
-        # Emit signal to main thread - handler will set result_event.result and call result_event.set()
+        # Emit signal to main thread - handler will set result_event.result
+        # and call result_event.set()
         self.confirm_required.emit(title, message, result_event)
 
         # Wait for result
@@ -289,59 +290,19 @@ class ImportThread(QThread):
             new_db_version = new_db_version_dict["version"]
 
             # Check version compatibility
-            if int(new_db_version) < 14:
-                if not self._confirm(
-                    "Version Warning",
-                    "Database versions below 14 do not contain operating system "
-                    "information.\nFolder paths are not portable between operating "
-                    "systems.\nThere is no guarantee that the imported folders will "
-                    "work. Continue?",
-                ):
-                    self.finished.emit(
-                        False, "Import cancelled by user"  # noqa: FBT003
-                    )
-                    return
-
-            elif int(new_db_version) > int(self._db_version):
-                if not self._confirm(
-                    "Version Warning",
-                    "The proposed database version is newer than the version "
-                    "supported by this program.\nContinue?",
-                ):
-                    self.finished.emit(
-                        False, "Import cancelled by user"  # noqa: FBT003
-                    )
-                    return
-
-                if not self._confirm(
-                    "Compatibility Warning",
-                    "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
-                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path,
-                ):
-                    self.finished.emit(
-                        False, "Import cancelled by user"  # noqa: FBT003
-                    )
-                    return
-
-            elif new_db_version_dict.get("os") != self._platform:
-                if not self._confirm(
-                    "Platform Warning",
-                    "The operating system specified in the configuration does "
-                    "not match the currently running operating system.\n"
-                    "There is no guarantee that the imported folders will work. "
-                    "Continue?",
-                ):
-                    self.finished.emit(
-                        False, "Import cancelled by user"  # noqa: FBT003
-                    )
-                    return
+            # Version and platform compatibility checks
+            if not self._check_version_compatibility(
+                new_db_version, new_db_version_dict
+            ):
+                self.finished.emit(False, "Import cancelled by user")
+                return
 
             # Run the migration
             self._migrate_job.do_migrate(
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003
+            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003 - Qt signal requires bool argument
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")
@@ -353,6 +314,49 @@ class ImportThread(QThread):
             self.error.emit(f"Invalid data in database: {e}")
         except Exception as e:
             self.error.emit(f"Import failed: {type(e).__name__}: {e}")
+
+    def _check_version_compatibility(
+        self, new_db_version: str, new_db_version_dict: dict
+    ) -> bool:
+        """Return True if compatibility checks pass, False if user cancels."""
+        try:
+            if int(new_db_version) < 14:
+                if not self._confirm(
+                    "Version Warning",
+                    "Database versions below 14 do not contain operating system "
+                    "information.\nFolder paths are not portable between operating "
+                    "systems.\nThere is no guarantee that the imported folders will "
+                    "work. Continue?",
+                ):
+                    return False
+
+            elif int(new_db_version) > int(self._db_version):
+                if not self._confirm(
+                    "Version Warning",
+                    "The proposed database version is newer than the version "
+                    "supported by this program.\nContinue?",
+                ):
+                    return False
+                if not self._confirm(
+                    "Compatibility Warning",
+                    "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
+                    "TO CONTINUE?\nBackup is stored at: "
+                    + self._backup_path,
+                ):
+                    return False
+
+            elif new_db_version_dict.get("os") != self._platform:
+                if not self._confirm(
+                    "Platform Warning",
+                    "The operating system specified in the configuration does "
+                    "not match the currently running operating system.\n"
+                    "There is no guarantee that the imported folders will work. "
+                    "Continue?",
+                ):
+                    return False
+        except Exception:
+            return False
+        return True
 
 
 class DbMigrationJob:

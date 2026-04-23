@@ -151,7 +151,6 @@ class EditFoldersDialog(BaseDialog):
 
     def _populate_fields(self, config: dict[str, Any]) -> None:
         """Populate UI fields from configuration."""
-
         def to_bool(val, *, default=False):
             if val is None:
                 return default
@@ -159,6 +158,7 @@ class EditFoldersDialog(BaseDialog):
                 return val
             return normalize_bool(val)
 
+        # Populate basic fields
         for field_key, config_key, field_type, default in self._FIELD_SPECS:
             value = config.get(config_key, default)
             if field_type == "check":
@@ -168,6 +168,10 @@ class EditFoldersDialog(BaseDialog):
             elif field_type == "combo":
                 self._set_combo(field_key, str(value or default))
 
+        self._populate_split_mode(config)
+        self._populate_edi_options(config)
+
+    def _populate_split_mode(self, config: dict[str, Any]) -> None:
         mode_combo = self._fields.get("split_edi_filter_mode")
         if mode_combo:
             filter_mode = config.get("split_edi_filter_mode") or "include"
@@ -175,22 +179,25 @@ class EditFoldersDialog(BaseDialog):
             if idx >= 0:
                 mode_combo.setCurrentIndex(idx)
 
+    def _populate_edi_options(self, config: dict[str, Any]) -> None:
         edi_check = self.dynamic_edi_builder.edi_options_check
-        if edi_check:
-            want_convert = normalize_bool(config.get("process_edi")) or bool(
-                config.get("convert_to_format")
-            )
-            edi_check.blockSignals(True)  # noqa: FBT003
-            try:
-                edi_check.setChecked(want_convert)
-            finally:
-                edi_check.blockSignals(False)  # noqa: FBT003
+        if not edi_check:
+            return
+        want_convert = (
+            normalize_bool(config.get("process_edi"))
+            or bool(config.get("convert_to_format"))
+        )
+        edi_check.blockSignals(True)  # noqa: FBT003 - prevent signal cascade during programmatic state change
+        try:
+            edi_check.setChecked(want_convert)
+        finally:
+            edi_check.blockSignals(False)  # noqa: FBT003 - re-enable signals after programmatic state change
 
-            self.dynamic_edi_builder._clear_dynamic_edi()
-            if want_convert:
-                self.dynamic_edi_builder._build_convert_edi_area()
-            else:
-                self.dynamic_edi_builder._build_do_nothing_area()
+        self.dynamic_edi_builder._clear_dynamic_edi()
+        if want_convert:
+            self.dynamic_edi_builder._build_convert_edi_area()
+        else:
+            self.dynamic_edi_builder._build_do_nothing_area()
 
         convert_combo = self.dynamic_edi_builder.convert_format_combo
         if convert_combo:
@@ -203,9 +210,7 @@ class EditFoldersDialog(BaseDialog):
             if idx >= 0:
                 convert_combo.setCurrentIndex(idx)
             else:
-                self.dynamic_edi_builder.handle_convert_format_changed(
-                    convert_combo.currentText()
-                )
+                self.dynamic_edi_builder.handle_convert_format_changed(convert_combo.currentText())
 
     def _populate_fields_from_config(self, config: dict[str, Any]) -> None:
         """Reload the dialog with a new configuration (e.g. after 'Copy Config').
@@ -603,68 +608,63 @@ class EditFoldersDialog(BaseDialog):
 
     def validate(self) -> bool:
         """Validate current UI state."""
+        # Quick exit if folder is not active
         active_btn = self._fields.get("active_checkbutton")
         if active_btn and not active_btn.isChecked():
             return True
 
-        extractor = QtFolderDataExtractor(
+        extracted = QtFolderDataExtractor(
             self._fields,
             plugin_manager=self.plugin_manager,
             copy_to_directory=self.handlers.copy_to_directory,
-        )
-        extracted = extractor.extract_all()
+        ).extract_all()
 
         validator = self._create_validator()
         current_alias = self._folder_config.get("alias", "")
         result = validator.validate_extracted_fields(extracted, current_alias)
 
         if not result.is_valid:
-            first_invalid_widget = None
-            grouped: dict[str, list[str]] = {
-                "Folder": [],
-                "Backends": [],
-                "FTP": [],
-                "Email": [],
-                "Copy": [],
-                "Other": [],
-            }
-
-            def section_for_field(field_name: str) -> str:
-                if field_name.startswith("ftp_"):
-                    return "FTP"
-                if field_name.startswith("email_"):
-                    return "Email"
-                if field_name.startswith("copy_"):
-                    return "Copy"
-                if field_name in {"alias"}:
-                    return "Folder"
-                if field_name in {"backends"}:
-                    return "Backends"
-                return "Other"
-
-            for error in result.errors:
-                grouped[section_for_field(error.field)].append(error.message)
-                if first_invalid_widget is None:
-                    first_invalid_widget = self._widget_for_validation_field(
-                        error.field
-                    )
-
-            lines = []
-            for section, messages in grouped.items():
-                if not messages:
-                    continue
-                lines.append(f"{section}:")
-                for msg in messages:
-                    lines.append(f"- {msg}")
-                lines.append("")
-            while lines and not lines[-1]:
-                lines.pop()
-
-            self._focus_widget(first_invalid_widget)
-            QMessageBox.critical(self, "Validation Error", "\n".join(lines))
+            self._handle_validation_errors(result.errors)
             return False
 
         return True
+
+    def _handle_validation_errors(self, errors: list) -> None:
+        """Group validation errors into sections, focus first invalid widget,
+        and show message box.
+        """
+        first_invalid_widget = None
+        grouped: dict[str, list[str]] = {
+            "Folder": [],
+            "Backends": [],
+            "FTP": [],
+            "Email": [],
+            "Copy": [],
+            "Other": [],
+        }
+
+        for error in errors:
+            section = self._section_for_field(error.field)
+            grouped[section].append(error.message)
+            if first_invalid_widget is None:
+                first_invalid_widget = self._widget_for_validation_field(error.field)
+
+        message = self._format_grouped_errors(grouped)
+        self._focus_widget(first_invalid_widget)
+        QMessageBox.critical(self, "Validation Error", message)
+
+    def _section_for_field(self, field_name: str) -> str:
+        if field_name.startswith("ftp_"):
+            return "FTP"
+        if field_name.startswith("email_"):
+            return "Email"
+        if field_name.startswith("copy_"):
+            return "Copy"
+        if field_name in {"alias"}:
+            return "Folder"
+        if field_name in {"backends"}:
+            return "Backends"
+        return "Other"
 
     def _create_validator(self) -> FolderSettingsValidator:
         if self._validator is not None:
@@ -681,28 +681,42 @@ class EditFoldersDialog(BaseDialog):
 
     def apply(self) -> None:
         """Extract data from UI and update the configuration dictionary."""
-        extractor = QtFolderDataExtractor(
-            self._fields,
-            plugin_manager=self.plugin_manager,
-            copy_to_directory=self.handlers.copy_to_directory,
-        )
-        extracted = extractor.extract_all()
-
+        extracted = (
+            QtFolderDataExtractor(
+                self._fields,
+                plugin_manager=self.plugin_manager,
+                copy_to_directory=self.handlers.copy_to_directory,
+            )
+        ).extract_all()
         target = self._folder_config
+        self._apply_basic_folder_fields(target, extracted)
+        self._apply_backend_fields(target, extracted)
+        self._apply_edi_fields(target, extracted)
+        self._apply_estore_fields(target, extracted)
+
+        # Plugins - update plugin_configurations from extracted values
+        if extracted.plugin_configurations:
+            if "plugin_configurations" not in target:
+                target["plugin_configurations"] = {}
+            for format_name, config in extracted.plugin_configurations.items():
+                target["plugin_configurations"][format_name.lower()] = config
+        self._apply_plugin_configurations(target)
+        self._sync_tweaks_plugin_to_flat_columns(target)
+        if self._on_apply_success:
+            self._on_apply_success(target)
+
+    def _apply_basic_folder_fields(self, target: dict[str, Any], extracted) -> None:
         target["folder_is_active"] = normalize_bool(extracted.folder_is_active)
-
         if target.get("folder_name") != "template":
-            alias = extracted.alias
-            if not alias:
-                alias = os.path.basename(target.get("folder_name", ""))
+            alias = extracted.alias or os.path.basename(target.get("folder_name", ""))
             target["alias"] = alias
-
         target["copy_to_directory"] = self.handlers.copy_to_directory
+
+    def _apply_backend_fields(self, target: dict[str, Any], extracted) -> None:
         target["process_backend_copy"] = extracted.process_backend_copy
         target["process_backend_ftp"] = extracted.process_backend_ftp
         target["process_backend_email"] = extracted.process_backend_email
         target["process_backend_http"] = extracted.process_backend_http
-
         target["ftp_server"] = extracted.ftp_server
         try:
             target["ftp_port"] = int(extracted.ftp_port)
@@ -711,17 +725,15 @@ class EditFoldersDialog(BaseDialog):
         target["ftp_folder"] = extracted.ftp_folder
         target["ftp_username"] = extracted.ftp_username
         target["ftp_password"] = extracted.ftp_password
-
         target["email_to"] = extracted.email_to
         target["email_subject_line"] = extracted.email_subject_line
-
         target["http_url"] = extracted.http_url
         target["http_headers"] = extracted.http_headers
         target["http_field_name"] = extracted.http_field_name
         target["http_auth_type"] = extracted.http_auth_type
         target["http_api_key"] = extracted.http_api_key
 
-        # EDI settings
+    def _apply_edi_fields(self, target: dict[str, Any], extracted) -> None:
         target["process_edi"] = normalize_bool(extracted.process_edi)
         target["convert_to_format"] = extracted.convert_to_format
         target["calculate_upc_check_digit"] = normalize_bool(
@@ -732,7 +744,7 @@ class EditFoldersDialog(BaseDialog):
         target["include_headers"] = normalize_bool(extracted.include_headers)
         target["filter_ampersand"] = normalize_bool(extracted.filter_ampersand)
         target["force_edi_validation"] = extracted.force_edi_validation
-        target["tweak_edi"] = False  # always zero; column kept for DB compat only
+        target["tweak_edi"] = False
         target["split_edi"] = extracted.split_edi
         target["split_edi_include_invoices"] = extracted.split_edi_include_invoices
         target["split_edi_include_credits"] = extracted.split_edi_include_credits
@@ -771,28 +783,12 @@ class EditFoldersDialog(BaseDialog):
         target["simple_csv_sort_order"] = extracted.simple_csv_sort_order
         target["split_prepaid_sales_tax_crec"] = extracted.split_prepaid_sales_tax_crec
 
-        # Estore specific
+    def _apply_estore_fields(self, target: dict[str, Any], extracted) -> None:
         target["estore_store_number"] = extracted.estore_store_number
         target["estore_Vendor_OId"] = extracted.estore_vendor_oid
         target["estore_vendor_NameVendorOID"] = extracted.estore_vendor_namevendoroid
         target["estore_c_record_OID"] = extracted.estore_c_record_oid
         target["fintech_division_id"] = extracted.fintech_division_id
-
-        # Plugins - update plugin_configurations from extracted values
-        if extracted.plugin_configurations:
-            if "plugin_configurations" not in target:
-                target["plugin_configurations"] = {}
-            for format_name, config in extracted.plugin_configurations.items():
-                target["plugin_configurations"][format_name.lower()] = config
-        self._apply_plugin_configurations(target)
-
-        # Keep flat DB columns in sync with plugin_configurations["tweaks"] so
-        # the orchestrator (which reads flat columns directly) always has
-        # up-to-date values after the dialog is saved.
-        self._sync_tweaks_plugin_to_flat_columns(target)
-
-        if self._on_apply_success:
-            self._on_apply_success(target)
 
     def _sync_tweaks_plugin_to_flat_columns(self, target: dict[str, Any]) -> None:
         """Write tweaks plugin_configurations values back to legacy flat DB columns.

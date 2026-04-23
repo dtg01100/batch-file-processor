@@ -35,47 +35,54 @@ class UOMLookupService:
         if not self.uom_lookup_list:
             return "?"
 
-        def get_key(entry: dict, *keys: str) -> Optional[str]:
-            """Case-insensitive key lookup."""
-            for key in keys:
-                for k, v in entry.items():
-                    if k.upper() == key.upper():
-                        return v
-                for k, v in entry.items():
-                    if k.lower() == key.lower():
-                        return v
-            return None
-
-        stage_1_list = []
-        stage_2_list = []
-
-        for entry in self.uom_lookup_list:
-            item_no = get_key(entry, "itemno", "ITEMNO")
-            if item_no is None:
-                continue
-            try:
-                if int(item_no) == int(item_number):
-                    stage_1_list.append(entry)
-            except (ValueError, TypeError):
-                continue
-
-        for entry in stage_1_list:
-            uom_mult = get_key(entry, "uom_mult", "UOM_MULT")
-            if uom_mult is None:
-                stage_2_list.append(entry)
-                break
-            try:
-                if int(uom_mult) == int(packsize):
-                    stage_2_list.append(entry)
-            except (ValueError, TypeError):
-                stage_2_list.append(entry)
-                break
+        candidates = self._uom_candidates(item_number)
+        selected = self._uom_select(candidates, packsize)
 
         try:
-            uom_code = get_key(stage_2_list[0], "uom_code", "UOM_CODE")
+            uom_code = self._uom_get_key(selected[0], "uom_code", "UOM_CODE")
             return uom_code if uom_code else "?"
         except IndexError:
             return "?"
+
+    def _uom_get_key(self, entry: dict[str, Any], *keys: str) -> Optional[str]:
+        for key in keys:
+            for k, v in entry.items():
+                if k.upper() == key.upper():
+                    return v
+            for k, v in entry.items():
+                if k.lower() == key.lower():
+                    return v
+        return None
+
+    def _uom_safe_int_eq(self, a: Optional[str], b: str) -> bool:
+        try:
+            return int(a) == int(b)
+        except (ValueError, TypeError):
+            return False
+
+    def _uom_candidates(self, item_number: str) -> List[dict[str, Any]]:
+        out: List[dict[str, Any]] = []
+        for e in self.uom_lookup_list:
+            item_no = self._uom_get_key(e, "itemno", "ITEMNO")
+            if item_no is None:
+                continue
+            if self._uom_safe_int_eq(item_no, item_number):
+                out.append(e)
+        return out
+
+    def _uom_select(
+        self, candidates: List[dict[str, Any]], packsize: str
+    ) -> List[dict[str, Any]]:
+        out: List[dict[str, Any]] = []
+        for e in candidates:
+            uom_mult = self._uom_get_key(e, "uom_mult", "UOM_MULT")
+            if uom_mult is None:
+                out.append(e)
+                break
+            if self._uom_safe_int_eq(uom_mult, packsize):
+                out.append(e)
+                break
+        return out
 
     def _get_uom_query_sql(self) -> str:
         """Return the SQL query template for UOM lookup."""

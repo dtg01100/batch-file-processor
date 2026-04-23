@@ -1,8 +1,10 @@
 """
 eStore eInvoice Generic Configuration Plugin
 
-Implements the ConfigurationPlugin interface for eStore eInvoice Generic format configuration.
-Provides support for eStore eInvoice Generic-specific configuration fields and validation.
+Implements the ConfigurationPlugin interface for eStore eInvoice
+Generic format configuration.
+Provides support for eStore eInvoice Generic-specific configuration
+fields and validation.
 """
 
 from typing import Any
@@ -32,9 +34,11 @@ class EStoreEInvoiceGenericConfiguration:
 
 class EStoreEInvoiceGenericConfigurationPlugin(ConfigurationPlugin):
     """
-    eStore eInvoice Generic configuration plugin implementing the ConfigurationPlugin interface.
+    eStore eInvoice Generic configuration plugin implementing
+    the ConfigurationPlugin interface.
 
-    Provides support for eStore eInvoice Generic format configuration with specific fields and validation.
+    Provides support for eStore eInvoice Generic format configuration
+    with specific fields and validation.
     """
 
     @classmethod
@@ -50,7 +54,10 @@ class EStoreEInvoiceGenericConfigurationPlugin(ConfigurationPlugin):
     @classmethod
     def get_description(cls) -> str:
         """Get a detailed description of the plugin's functionality."""
-        return "Provides eStore eInvoice Generic format configuration options for EDI conversion"
+        return (
+            "Provides eStore eInvoice Generic format"
+            " configuration options for EDI conversion"
+        )
 
     @classmethod
     def get_version(cls) -> str:
@@ -93,7 +100,10 @@ class EStoreEInvoiceGenericConfigurationPlugin(ConfigurationPlugin):
                 name="estore_vendor_namevendoroid",
                 field_type=FieldType.STRING,
                 label="Vendor Name (Vendor OID)",
-                description="The vendor name or vendor OID identifier for the output filename",
+                description=(
+                "The vendor name or vendor OID identifier"
+                " for the output filename"
+            ),
                 default="",
             ),
             FieldDefinition(

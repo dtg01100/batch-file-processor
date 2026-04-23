@@ -1,8 +1,6 @@
 # tests/unit/dispatch/services/test_folder_processor_correlation.py
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from dispatch.services.folder_processor import FolderPipelineExecutor
 
 
@@ -39,7 +37,7 @@ class TestFolderProcessorCorrelation:
     def test_sets_correlation_id_in_context_var(self):
         deps = MagicMock()
         executor = FolderPipelineExecutor(deps)
-        from core.structured_logging import get_correlation_id, set_correlation_id
+        from core.structured_logging import get_correlation_id
 
         with patch.object(executor, "_folder_exists", return_value=True):
             with patch.object(executor, "_discover_and_filter_files", return_value=["/test/file.edi"]):

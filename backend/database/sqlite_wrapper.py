@@ -288,11 +288,17 @@ class Table:
             if key in boolean_cols:
                 if normalize_bool(value):
                     clauses.append(
-                        f"({quoted_key}=1 OR lower(cast({quoted_key} as text)) IN {true_legacy})"
+                        (
+                    f"({quoted_key}=1 OR lower(cast({quoted_key} as text))"
+                    f" IN {true_legacy})"
+                )
                     )
                 else:
                     clauses.append(
-                        f"({quoted_key}=0 OR lower(cast({quoted_key} as text)) IN {false_legacy})"
+                        (
+                    f"({quoted_key}=0 OR lower(cast({quoted_key} as text))"
+                    f" IN {false_legacy})"
+                )
                     )
             else:
                 clauses.append(f"{quoted_key}=?")
@@ -655,7 +661,10 @@ class Table:
         """
         with self._lock:
             quoted_table = self._quote_identifier(self._name)
-            sql = f"SELECT DISTINCT * FROM {quoted_table} ORDER BY {self._quote_identifier(column)}"
+            sql = (
+                f"SELECT DISTINCT * FROM {quoted_table}"
+                f" ORDER BY {self._quote_identifier(column)}"
+            )
             cur = self._conn.execute(sql)
             return [
                 row_dict

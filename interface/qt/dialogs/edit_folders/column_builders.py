@@ -332,7 +332,8 @@ class ColumnBuilders:
     # Column 4 -- EDI Settings (base column, dynamic sections added separately)
     # ------------------------------------------------------------------
     def build_edi_column(self) -> QWidget:
-        """Build the base 'EDI' column with force EDI validation and split EDI options."""
+        """Build the base EDI column with force EDI validation
+        and split EDI options."""
         container = QWidget()
         container.setMinimumWidth(260)
         layout = QVBoxLayout(container)

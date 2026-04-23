@@ -1,5 +1,5 @@
-import pytest
 from unittest.mock import MagicMock
+
 from dispatch.services.uom_lookup_service import UOMLookupService
 
 

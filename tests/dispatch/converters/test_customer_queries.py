@@ -1,10 +1,8 @@
-import pytest
 from dispatch.converters.customer_queries import (
-    CUSTOMER_QUERY_SQL_TEMPLATE,
-    CUSTOMER_FIELDS_LIST_BASE,
     BASIC_CUSTOMER_QUERY_SQL,
-    STEWARTS_CUSTOMER_QUERY_SQL,
+    CUSTOMER_FIELDS_LIST_BASE,
     STEWARTS_CUSTOMER_FIELDS_LIST,
+    STEWARTS_CUSTOMER_QUERY_SQL,
     build_customer_query_sql,
 )
 

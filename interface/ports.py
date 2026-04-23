@@ -446,7 +446,8 @@ class QtUIService:
             message: Question or informational text.
             choice1: Label for first button (returns 0 if clicked).
             choice2: Label for second button (returns 1 if clicked).
-            choice3: Label for third button, typically cancel-like (returns 2 if clicked).
+        choice3: Label for third button, typically cancel-like
+            (returns 2 if clicked).
 
         Returns:
             0 if user selected choice1, 1 if choice2, 2 if choice3.

@@ -29,10 +29,8 @@ from typing import Any
 from core.database import QueryRunner
 from core.exceptions import CustomerLookupError
 from core.structured_logging import get_logger
-
 from dispatch.services.database_connector import DatabaseConnector
 from dispatch.services.item_processing import ItemProcessor
-from dispatch.services.uom_lookup_service import UOMLookupService
 
 logger = get_logger(__name__)
 
@@ -240,6 +238,51 @@ class UOMLookupMixin(ABC):
 
         return self.uom_lookup_list
 
+    def _uom_get_key(self, entry: dict[str, Any], *keys: str) -> str | None:
+        """Case-insensitive key lookup for UOM entries."""
+        for key in keys:
+            for k, v in entry.items():
+                if k.upper() == key.upper():
+                    return v
+            for k, v in entry.items():
+                if k.lower() == key.lower():
+                    return v
+        return None
+
+    def _uom_build_stage_1_list(self, item_number: str) -> list[dict[str, Any]]:
+        """Build list of entries matching the given item_number."""
+        res: list[dict[str, Any]] = []
+        for entry in self.uom_lookup_list:
+            item_no = self._uom_get_key(entry, "itemno", "ITEMNO")
+            if item_no is None:
+                continue
+            try:
+                if int(item_no) == int(item_number):
+                    res.append(entry)
+            except (ValueError, TypeError):
+                continue
+        return res
+
+    def _uom_select_stage_2_list(
+        self, stage_1_list: list[dict[str, Any]], packsize: str
+    ) -> list[dict[str, Any]]:
+        """From stage_1_list select entries matching packsize or
+        fallback entries.
+        """
+        res: list[dict[str, Any]] = []
+        for entry in stage_1_list:
+            uom_mult = self._uom_get_key(entry, "uom_mult", "UOM_MULT")
+            if uom_mult is None:
+                res.append(entry)
+                break
+            try:
+                if int(uom_mult) == int(packsize):
+                    res.append(entry)
+            except (ValueError, TypeError):
+                res.append(entry)
+                break
+        return res
+
     def _get_uom(self, item_number: str, packsize: str) -> str:
         """Get UOM (Unit of Measure) for an item.
 
@@ -254,44 +297,12 @@ class UOMLookupMixin(ABC):
         if not self.uom_lookup_list:
             return "?"
 
-        def get_key(entry: dict, *keys: str) -> str | None:
-            """Case-insensitive key lookup."""
-            for key in keys:
-                for k, v in entry.items():
-                    if k.upper() == key.upper():
-                        return v
-                for k, v in entry.items():
-                    if k.lower() == key.lower():
-                        return v
-            return None
-
-        stage_1_list = []
-        stage_2_list = []
-
-        for entry in self.uom_lookup_list:
-            item_no = get_key(entry, "itemno", "ITEMNO")
-            if item_no is None:
-                continue
-            try:
-                if int(item_no) == int(item_number):
-                    stage_1_list.append(entry)
-            except (ValueError, TypeError):
-                continue
-
-        for entry in stage_1_list:
-            uom_mult = get_key(entry, "uom_mult", "UOM_MULT")
-            if uom_mult is None:
-                stage_2_list.append(entry)
-                break
-            try:
-                if int(uom_mult) == int(packsize):
-                    stage_2_list.append(entry)
-            except (ValueError, TypeError):
-                stage_2_list.append(entry)
-                break
+        # Use class-level helpers to keep this method simple
+        stage_1_list = self._uom_build_stage_1_list(item_number)
+        stage_2_list = self._uom_select_stage_2_list(stage_1_list, packsize)
 
         try:
-            uom_code = get_key(stage_2_list[0], "uom_code", "UOM_CODE")
+            uom_code = self._uom_get_key(stage_2_list[0], "uom_code", "UOM_CODE")
             return uom_code if uom_code else "?"
         except IndexError:
             return "?"

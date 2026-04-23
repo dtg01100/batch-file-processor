@@ -262,7 +262,10 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                     logger.warning("Barcode error: %s", barcode_error)
                 if save_counter >= 100:
                     logger.debug(
-                        "saving intermediate workbook to free file handles (batch of 100)"
+                        (
+                "saving intermediate workbook to free file handles"
+                " (batch of 100)"
+            )
                     )
                     self.output_spreadsheet.save(self.output_spreadsheet_name)
                     logger.debug("intermediate save successful")
@@ -358,7 +361,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

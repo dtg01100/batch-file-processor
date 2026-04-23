@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 import logging
 import time
-import traceback
 from typing import Any
 
 from core.structured_logging import (
@@ -85,21 +84,74 @@ class QtRunCoordinator:
         set_correlation_id(correlation_id)
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Starting process_directories run",
             correlation_id=correlation_id,
             component="qt_run_coordinator",
             operation="process_directories",
             context={
-                "folder_count": folders_table_process.count(folder_is_active=True)
+                "folder_count": folders_table_process.count(
+                    folder_is_active=True
+                )
             },
         )
+
         original_folder = self._app._os_module.getcwd()
         settings_dict = self._app._database.get_settings_or_default()
 
+        # Prepare run (backups, log directory checks)
+        start_time, reporting, run_log_path, run_log_full_path = self._prepare_run(
+            settings_dict
+        )
+
+        run_summary_string = ""
+
+        # Main run body
+        try:
+            with open(run_log_full_path, "wb") as run_log:
+                self._write_run_header(run_log, run_log_path)
+                if self._app._utils_module.normalize_bool(
+                    reporting["enable_reporting"]
+                ):
+                    self._app._database.emails_table.insert(
+                        {
+                            "log": run_log_full_path,
+                            "folder_alias": self._app._os_module.path.basename(
+                                run_log_full_path
+                            ),
+                        }
+                    )
+
+                run_summary_string = self._execute_dispatch(
+                    folders_table_process, settings_dict, run_log
+                )
+        finally:
+            # Ensure we always return to original cwd
+            try:
+                self._app._os_module.chdir(original_folder)
+            except Exception:
+                pass
+
+        # Send reports if configured
+        if self._app._utils_module.normalize_bool(reporting["enable_reporting"]):
+            self._app._reporting_service.send_report_emails(
+                settings_dict=settings_dict,
+                reporting_config=reporting,
+                run_log_path=run_log_path,
+                start_time=start_time,
+                run_summary=run_summary_string,
+                progress_callback=self._app._progress_service,
+            )
+
+    def _prepare_run(self, settings_dict: dict[str, Any]):
+        """Prepare run: handle backups, ensure log directory exists
+        and return run paths.
+        """
         if (
             settings_dict["enable_interval_backups"]
-            and settings_dict["backup_counter"]
+            and settings_dict[
+                "backup_counter"
+            ]
             >= settings_dict["backup_counter_maximum"]
         ):
             self._app._backup_increment_module.do_backup(self._app._database_path)
@@ -122,7 +174,7 @@ class QtRunCoordinator:
             except IOError as mkdir_error:
                 log_with_context(
                     logger,
-                    40,  # ERROR
+                    40,
                     f"Failed to create log directory: {mkdir_error}",
                     correlation_id=get_correlation_id(),
                     component="qt_run_coordinator",
@@ -140,8 +192,8 @@ class QtRunCoordinator:
                 while not self._app._check_logs_directory():
                     if self._app._ui_service.ask_ok_cancel(
                         "Error",
-                        "Can't write to log directory,\r\n"
-                        " would you like to change reporting settings?",
+                        "Can't write to log directory,\r\n "
+                        "would you like to change reporting settings?",
                     ):
                         self._app._show_edit_settings_dialog()
                     else:
@@ -158,160 +210,134 @@ class QtRunCoordinator:
         run_log_full_path = self._app._os_module.path.join(
             run_log_path, run_log_name_constructor
         )
-        run_summary_string = ""
+        return start_time, reporting, run_log_path, run_log_full_path
 
-        with open(run_log_full_path, "wb") as run_log:
-            logger.debug("Run log: %s", run_log_full_path)
-            self._app._utils_module.do_clear_old_files(run_log_path, 1000)
-            run_log.write(
-                (f"Batch File Sender Version {self._app._version}\r\n").encode()
+    def _write_run_header(self, run_log, run_log_path: str) -> None:
+        logger.debug("Run log: %s", run_log_path)
+        self._app._utils_module.do_clear_old_files(run_log_path, 1000)
+        run_log.write((f"Batch File Sender Version {self._app._version}\r\n").encode())
+        run_log.write((f"starting run at {time.ctime()}\r\n").encode())
+
+    def _execute_dispatch(
+        self, folders_table_process, settings_dict: dict[str, Any], run_log
+    ) -> str:
+        """Execute dispatch pipeline and return run summary string."""
+        # Decompose into smaller helpers to reduce complexity
+        config = self._build_dispatch_config(folders_table_process, settings_dict)
+        orchestrator, folders = self._init_orchestrator_and_folders(
+            config, folders_table_process
+        )
+        run_error_bool = self._process_folders(orchestrator, folders, run_log)
+        run_summary_string = orchestrator.get_summary()
+        self._handle_validation_report(
+            orchestrator, run_log, settings_dict, run_summary_string
+        )
+        if run_error_bool and not self._app._args.automatic:
+            self._app._ui_service.show_info("Run Status", "Run completed with errors.")
+        log_with_context(
+            logger,
+            20,
+            "Dispatch completed",
+            correlation_id=get_correlation_id(),
+            component="qt_run_coordinator",
+            operation="process_directories",
+            context={
+                "run_error": run_error_bool,
+                "summary": run_summary_string,
+                "folders_processed": len(folders),
+            },
+        )
+        return run_summary_string
+
+    def _build_dispatch_config(self, folders_table_process, settings_dict):
+        from dispatch.pipeline import create_standard_pipeline
+
+        return create_standard_pipeline(
+            database=folders_table_process,
+            settings=settings_dict,
+            version=self._app._version,
+            progress_reporter=self._app._progress_service,
+        )
+
+    def _init_orchestrator_and_folders(self, config, folders_table_process):
+        from dispatch import DispatchOrchestrator
+
+        orchestrator = DispatchOrchestrator(config)
+        folders = list(
+            folders_table_process.find(folder_is_active=True, order_by="alias")
+        )
+        if (
+            self._app._progress_service
+            and hasattr(self._app._progress_service, "start_sending")
+        ):
+            self._app._progress_service.start_sending(
+                total_files=0, total_folders=len(folders)
             )
-            run_log.write((f"starting run at {time.ctime()}\r\n").encode())
+        return orchestrator, folders
 
-            if self._app._utils_module.normalize_bool(reporting["enable_reporting"]):
-                self._app._database.emails_table.insert(
-                    {"log": run_log_full_path, "folder_alias": run_log_name_constructor}
+    def _process_folders(self, orchestrator, folders, run_log):
+        run_error_bool = False
+        for folder_index, folder in enumerate(folders, start=1):
+            if (
+                self._app._progress_service
+                and hasattr(self._app._progress_service, "set_folder_context")
+            ):
+                self._app._progress_service.set_folder_context(
+                    folder_num=folder_index,
+                    folder_total=len(folders),
+                    folder_name=folder.get("alias", folder.get("folder_name", "")),
+                    file_total=0,
                 )
-
             try:
-                from dispatch import DispatchOrchestrator
-                from dispatch.pipeline import create_standard_pipeline
-
-                run_error_bool = False
-                config = create_standard_pipeline(
-                    database=folders_table_process,
-                    settings=settings_dict,
-                    version=self._app._version,
-                    progress_reporter=self._app._progress_service,
+                result = orchestrator.discover_and_process_folder(
+                    folder,
+                    run_log,
+                    self._app._database.processed_files,
+                    folder_num=folder_index,
+                    folder_total=len(folders),
                 )
-
-                orchestrator = DispatchOrchestrator(config)
-                folders = list(
-                    folders_table_process.find(folder_is_active=True, order_by="alias")
+                if not result.success:
+                    run_error_bool = True
+            except Exception as folder_error:
+                run_error_bool = True
+                run_log.write(
+                    f"ERROR processing folder {folder.get('alias', 'unknown')}: "
+                    f"{folder_error}\r\n".encode()
                 )
+        return run_error_bool
 
-                # Single-pass approach: discover and process files for each folder immediately
-                # No pre-discovery phase needed
-                if self._app._progress_service and hasattr(
-                    self._app._progress_service, "start_sending"
+    def _handle_validation_report(
+        self, orchestrator, run_log, settings_dict, run_summary_string
+    ):
+        validator_log_output = ""
+        validator_step = orchestrator.config.validator_step
+        if validator_step and hasattr(validator_step, "get_error_log"):
+            validator_log_output = validator_step.get_error_log()
+
+        report_edi_errors_enabled = self._app._utils_module.normalize_bool(
+            settings_dict.get("report_edi_errors", False)
+        )
+        if report_edi_errors_enabled and validator_log_output.strip():
+            try:
+                validator_report_path = ErrorHandler(
+                    run_log_directory=self._app._logs_directory.get(
+                        "logs_directory", ""
+                    )
+                ).write_validation_report(validator_log_output)
+                if self._app._utils_module.normalize_bool(
+                    settings_dict.get("enable_reporting", False)
                 ):
-                    # We don't know total files upfront anymore, but that's OK
-                    # Progress will be reported per-folder as we discover them
-                    self._app._progress_service.start_sending(
-                        total_files=0,  # Unknown until discovery
-                        total_folders=len(folders),
+                    self._app._database.emails_table.insert(
+                        {"log": validator_report_path}
                     )
-
-                for folder_index, folder in enumerate(folders, start=1):
-                    if self._app._progress_service and hasattr(
-                        self._app._progress_service, "set_folder_context"
-                    ):
-                        self._app._progress_service.set_folder_context(
-                            folder_num=folder_index,
-                            folder_total=len(folders),
-                            folder_name=folder.get(
-                                "alias", folder.get("folder_name", "")
-                            ),
-                            file_total=0,  # Will be updated during discovery
-                        )
-
-                    try:
-                        # Discover and process in single pass
-                        result = orchestrator.discover_and_process_folder(
-                            folder,
-                            run_log,
-                            self._app._database.processed_files,
-                            folder_num=folder_index,
-                            folder_total=len(folders),
-                        )
-                        if not result.success:
-                            run_error_bool = True
-                    except Exception as folder_error:
-                        run_error_bool = True
-                        run_log.write(
-                            f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
-                        )
-
-                run_summary_string = orchestrator.get_summary()
-
-                validator_log_output = ""
-                validator_step = orchestrator.config.validator_step
-                if validator_step and hasattr(validator_step, "get_error_log"):
-                    validator_log_output = validator_step.get_error_log()
-
-                report_edi_errors_enabled = self._app._utils_module.normalize_bool(
-                    reporting.get("report_edi_errors", False)
-                )
-
-                if report_edi_errors_enabled and validator_log_output.strip():
-                    try:
-                        validator_report_path = ErrorHandler(
-                            run_log_directory=run_log_path
-                        ).write_validation_report(validator_log_output)
-
-                        if self._app._utils_module.normalize_bool(
-                            reporting["enable_reporting"]
-                        ):
-                            self._app._database.emails_table.insert(
-                                {"log": validator_report_path}
-                            )
-
-                        run_summary_string += ", has EDI validator errors"
-                    except Exception as validation_report_error:
-                        run_log.write(
-                            (
-                                "Failed to write validation report: "
-                                f"{validation_report_error}\r\n"
-                            ).encode()
-                        )
-
-                if run_error_bool and not self._app._args.automatic:
-                    self._app._ui_service.show_info(
-                        "Run Status", "Run completed with errors."
-                    )
-                log_with_context(
-                    logger,
-                    20,  # INFO
-                    "Dispatch completed",
-                    correlation_id=get_correlation_id(),
-                    component="qt_run_coordinator",
-                    operation="process_directories",
-                    context={
-                        "run_error": run_error_bool,
-                        "summary": run_summary_string,
-                        "folders_processed": len(folders),
-                    },
-                )
-            except Exception as dispatch_error:
-                log_with_context(
-                    logger,
-                    40,  # ERROR
-                    f"Run failed: {dispatch_error}",
-                    correlation_id=get_correlation_id(),
-                    component="qt_run_coordinator",
-                    operation="process_directories",
-                    context={"error_type": type(dispatch_error).__name__},
-                    exc_info=True,
-                )
+                run_summary_string += ", has EDI validator errors"
+            except Exception as validation_report_error:
                 run_log.write(
                     (
-                        "Run failed, check your configuration \r\n"
-                        f"Error from dispatch module is: \r\n{dispatch_error}\r\n"
+                        f"Failed to write validation report: "
+                        f"{validation_report_error}\r\n"
                     ).encode()
                 )
-                run_log.write(traceback.format_exc().encode())
-            finally:
-                self._app._os_module.chdir(original_folder)
-
-        if self._app._utils_module.normalize_bool(reporting["enable_reporting"]):
-            self._app._reporting_service.send_report_emails(
-                settings_dict=settings_dict,
-                reporting_config=reporting,
-                run_log_path=run_log_path,
-                start_time=start_time,
-                run_summary=run_summary_string,
-                progress_callback=self._app._progress_service,
-            )
 
     def automatic_process_directories(self, automatic_process_folders_table) -> None:
         correlation_id = generate_correlation_id()

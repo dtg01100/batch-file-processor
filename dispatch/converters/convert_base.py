@@ -129,7 +129,9 @@ class BaseEDIConverter(ABC):
         result = converter.edi_convert("input.edi", "output", settings, params, upc_lut)
 
     2. Module-level wrapper function (for backward compatibility):
-        def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lut):
+        def edi_convert(
+        edi_process, output_filename, settings_dict, parameters_dict, upc_lut
+    ):
             converter = MyConverter()
             return converter.edi_convert(edi_process, output_filename, settings_dict,
                                         parameters_dict, upc_lut)

@@ -375,6 +375,76 @@ class EditSettingsDialog(BaseDialog):
             lines.pop()
         return "\n".join(lines)
 
+    def _emails_section_validation(self, add_error):
+        if self._enable_email_cb.isChecked():
+            if not self._email_address.text():
+                add_error(
+                    "Email Settings",
+                    "Email Address Is A Required Field",
+                    self._email_address,
+                )
+            elif not validate_email_format(self._email_address.text()):
+                add_error(
+                    "Email Settings",
+                    "Invalid Email Origin Address",
+                    self._email_address,
+                )
+
+            if not self._email_username.text() and self._email_password.text():
+                add_error(
+                    "Email Settings",
+                    "Email Username Required If Password Is Set",
+                    self._email_username,
+                )
+            if not self._email_password.text() and self._email_username.text():
+                add_error(
+                    "Email Settings",
+                    "Email Username Without Password Is Not Supported",
+                    self._email_password,
+                )
+            if not self._email_smtp_server.text():
+                add_error(
+                    "Email Settings",
+                    "SMTP Server Address Is A Required Field",
+                    self._email_smtp_server,
+                )
+            if not self._email_smtp_port.text():
+                add_error(
+                    "Email Settings",
+                    "SMTP Port Is A Required Field",
+                    self._email_smtp_port,
+                )
+
+    def _reporting_section_validation(self, add_error):
+        if self._enable_reporting_cb.isChecked():
+            if not self._email_destination.text():
+                add_error(
+                    "Reporting",
+                    "Reporting Email Destination Is A Required Field",
+                    self._email_destination,
+                )
+            else:
+                for addr in [
+                    a.strip() for a in self._email_destination.text().split(",")
+                ]:
+                    if not validate_email_format(addr):
+                        add_error(
+                            "Reporting",
+                            "Invalid Email Destination Address",
+                            self._email_destination,
+                        )
+                        break
+
+    def _backup_section_validation(self, add_error):
+        if self._enable_backup_cb.isChecked():
+            val = self._backup_interval_spin.value()
+            if val < 1 or val > 5000:
+                add_error(
+                    "Backup",
+                    "Backup Interval Needs To Be A Number Between 1 and 5000",
+                    self._backup_interval_spin,
+                )
+
     def _test_smtp_connection(self) -> None:
         if not self._enable_email_cb.isChecked():
             QMessageBox.information(
@@ -424,73 +494,10 @@ class EditSettingsDialog(BaseDialog):
             errors_by_section[section].append(message)
             if first_invalid_widget is None and widget is not None:
                 first_invalid_widget = widget
-
-        if self._enable_email_cb.isChecked():
-            if not self._email_address.text():
-                add_error(
-                    "Email Settings",
-                    "Email Address Is A Required Field",
-                    self._email_address,
-                )
-            elif not validate_email_format(self._email_address.text()):
-                add_error(
-                    "Email Settings",
-                    "Invalid Email Origin Address",
-                    self._email_address,
-                )
-
-            if not self._email_username.text() and self._email_password.text():
-                add_error(
-                    "Email Settings",
-                    "Email Username Required If Password Is Set",
-                    self._email_username,
-                )
-            if not self._email_password.text() and self._email_username.text():
-                add_error(
-                    "Email Settings",
-                    "Email Username Without Password Is Not Supported",
-                    self._email_password,
-                )
-            if not self._email_smtp_server.text():
-                add_error(
-                    "Email Settings",
-                    "SMTP Server Address Is A Required Field",
-                    self._email_smtp_server,
-                )
-            if not self._email_smtp_port.text():
-                add_error(
-                    "Email Settings",
-                    "SMTP Port Is A Required Field",
-                    self._email_smtp_port,
-                )
-
-        if self._enable_reporting_cb.isChecked():
-            if not self._email_destination.text():
-                add_error(
-                    "Reporting",
-                    "Reporting Email Destination Is A Required Field",
-                    self._email_destination,
-                )
-            else:
-                for addr in [
-                    a.strip() for a in self._email_destination.text().split(",")
-                ]:
-                    if not validate_email_format(addr):
-                        add_error(
-                            "Reporting",
-                            "Invalid Email Destination Address",
-                            self._email_destination,
-                        )
-                        break
-
-        if self._enable_backup_cb.isChecked():
-            val = self._backup_interval_spin.value()
-            if val < 1 or val > 5000:
-                add_error(
-                    "Backup",
-                    "Backup Interval Needs To Be A Number Between 1 and 5000",
-                    self._backup_interval_spin,
-                )
+        # Delegate section validations to helpers
+        self._emails_section_validation(add_error)
+        self._reporting_section_validation(add_error)
+        self._backup_section_validation(add_error)
 
         grouped_errors = self._format_grouped_errors(errors_by_section)
         if grouped_errors:

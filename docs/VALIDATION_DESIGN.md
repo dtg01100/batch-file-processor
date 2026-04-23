@@ -224,8 +224,8 @@ def sanitize_input(value: str, max_length: int = 255) -> str:
 The `interface/utils/qt_validators.py` module provides ready-to-use Qt validators:
 
 ```python
-from PyQt6.QtCore import QRegularExpression
-from PyQt6.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator
+from PyQt5.QtCore import QRegularExpression
+from PyQt5.QtGui import QIntValidator, QDoubleValidator, QRegularExpressionValidator
 ```
 
 ### 4.2 Integer Range Validators
@@ -371,7 +371,7 @@ def add_validation_to_fields(*fields: QLineEdit) -> None:
 ### 5.5 Usage Example
 
 ```python
-from PyQt6.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QLineEdit
 from interface.utils.qt_validators import PORT_VALIDATOR, EMAIL_VALIDATOR
 from interface.utils.validation_feedback import add_validation_to_fields
 

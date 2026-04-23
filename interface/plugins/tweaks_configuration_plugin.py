@@ -141,7 +141,10 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 name="append_arec_text",
                 field_type=FieldType.STRING,
                 label="A-Record Append Text",
-                description="Text to append to A records (use %po_str% for PO number lookup)",
+                description=(
+                "Text to append to A records"
+                " (use %po_str% for PO number lookup)"
+            ),
                 default="",
             ),
             # Invoice Date Handling
@@ -220,7 +223,10 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 name="override_upc_category_filter",
                 field_type=FieldType.STRING,
                 label="UPC Override Category Filter",
-                description="Category filter for UPC override (use ALL or comma-separated list)",
+                description=(
+                "Category filter for UPC override"
+                " (use ALL or comma-separated list)"
+            ),
                 default="ALL",
             ),
             # UPC Padding
@@ -289,7 +295,9 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
             "append_arec": config.append_arec,
             "append_arec_text": config.append_arec_text,
             "invoice_date_custom_format": config.invoice_date_custom_format,
-            "invoice_date_custom_format_string": config.invoice_date_custom_format_string,
+            "invoice_date_custom_format_string": (
+                config.invoice_date_custom_format_string
+            ),
             "force_txt_file_ext": config.force_txt_file_ext,
             "calc_upc": config.calc_upc,
             "invoice_date_offset": config.invoice_date_offset,

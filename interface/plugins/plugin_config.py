@@ -163,59 +163,82 @@ class PluginConfigMixin:
 
         for cfg_field in fields:
             value = config.get(cfg_field.key)
+            valid, field_errors = cls._validate_field(cfg_field, value)
+            if not valid:
+                errors.extend(field_errors)
 
-            # Check required fields
-            if cfg_field.required and (value is None or value == ""):
-                errors.append(f"{cfg_field.label} is required")
-                continue
+        return len(errors) == 0, errors
 
-            # Skip further validation if field is empty and not required
-            if value is None or value == "":
-                continue
+    @classmethod
+    def _validate_field(
+        cls, cfg_field: ConfigField, value: Any
+    ) -> tuple[bool, list[str]]:
+        """Validate a single field and return (is_valid, errors)."""
+        errors: list[str] = []
 
-            # Type validation
-            if cfg_field.type == "boolean" and not isinstance(value, bool):
+        # Check required fields
+        if cfg_field.required and (value is None or value == ""):
+            errors.append(f"{cfg_field.label} is required")
+            return False, errors
+
+        # Skip further validation if field is empty and not required
+        if value is None or value == "":
+            return True, []
+
+        # Type-specific validation
+        if cfg_field.type == "boolean":
+            if not isinstance(value, bool):
                 errors.append(f"{cfg_field.label} must be a boolean")
-            elif cfg_field.type == "integer":
-                if not isinstance(value, int):
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        errors.append(f"{cfg_field.label} must be an integer")
-                        continue
+        elif cfg_field.type == "integer":
+            valid, int_errors = cls._validate_integer_field(cfg_field, value)
+            errors.extend(int_errors)
+        elif cfg_field.type == "float":
+            valid, float_errors = cls._validate_float_field(cfg_field, value)
+            errors.extend(float_errors)
+        elif cfg_field.type == "select":
+            valid_options = [
+                opt if isinstance(opt, str) else opt[0] for opt in cfg_field.options
+            ]
+            if value not in valid_options:
+                errors.append(f"{cfg_field.label} has invalid value")
 
-                if cfg_field.min_value is not None and value < cfg_field.min_value:
-                    errors.append(
-                        f"{cfg_field.label} must be at least {cfg_field.min_value}"
-                    )
-                if cfg_field.max_value is not None and value > cfg_field.max_value:
-                    errors.append(
-                        f"{cfg_field.label} must be at most {cfg_field.max_value}"
-                    )
+        return len(errors) == 0, errors
 
-            elif cfg_field.type == "float":
-                if not isinstance(value, (int, float)):
-                    try:
-                        value = float(value)
-                    except (ValueError, TypeError):
-                        errors.append(f"{cfg_field.label} must be a number")
-                        continue
+    @classmethod
+    def _validate_integer_field(
+        cls, cfg_field: ConfigField, value: Any
+    ) -> tuple[bool, list[str]]:
+        errors: list[str] = []
+        if not isinstance(value, int):
+            try:
+                value = int(value)
+            except (ValueError, TypeError):
+                errors.append(f"{cfg_field.label} must be an integer")
+                return False, errors
 
-                if cfg_field.min_value is not None and value < cfg_field.min_value:
-                    errors.append(
-                        f"{cfg_field.label} must be at least {cfg_field.min_value}"
-                    )
-                if cfg_field.max_value is not None and value > cfg_field.max_value:
-                    errors.append(
-                        f"{cfg_field.label} must be at most {cfg_field.max_value}"
-                    )
+        if cfg_field.min_value is not None and value < cfg_field.min_value:
+            errors.append(f"{cfg_field.label} must be at least {cfg_field.min_value}")
+        if cfg_field.max_value is not None and value > cfg_field.max_value:
+            errors.append(f"{cfg_field.label} must be at most {cfg_field.max_value}")
 
-            elif cfg_field.type == "select":
-                valid_options = [
-                    opt if isinstance(opt, str) else opt[0] for opt in cfg_field.options
-                ]
-                if value not in valid_options:
-                    errors.append(f"{cfg_field.label} has invalid value")
+        return len(errors) == 0, errors
+
+    @classmethod
+    def _validate_float_field(
+        cls, cfg_field: ConfigField, value: Any
+    ) -> tuple[bool, list[str]]:
+        errors: list[str] = []
+        if not isinstance(value, (int, float)):
+            try:
+                value = float(value)
+            except (ValueError, TypeError):
+                errors.append(f"{cfg_field.label} must be a number")
+                return False, errors
+
+        if cfg_field.min_value is not None and value < cfg_field.min_value:
+            errors.append(f"{cfg_field.label} must be at least {cfg_field.min_value}")
+        if cfg_field.max_value is not None and value > cfg_field.max_value:
+            errors.append(f"{cfg_field.label} must be at most {cfg_field.max_value}")
 
         return len(errors) == 0, errors
 

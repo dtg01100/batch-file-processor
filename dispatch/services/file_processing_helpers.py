@@ -123,7 +123,8 @@ class FileProcessingHelpers:
                                 invoice_numbers.append(invoice_num)
                         except Exception:
                             logger.warning(
-                                "Skipping malformed A-record in %s while extracting invoice numbers",
+                "Skipping malformed A-record in %s "
+                "while extracting invoice numbers",
                                 file_path,
                             )
         except OSError as e:

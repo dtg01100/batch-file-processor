@@ -2,12 +2,12 @@
 
 ## Overview
 
-Tests now use **actual PyQt6 widgets** instead of mocks for higher confidence and better integration testing.
+Tests now use **actual PyQt5 widgets** instead of mocks for higher confidence and better integration testing.
 
 ## Requirements
 
 ```bash
-pip install pytest>=7.4.3 pytest-cov>=4.1.0 pytest-qt>=4.2.0 PyQt6>=6.6.0
+pip install pytest>=7.4.3 pytest-cov>=4.1.0 pytest-qt>=4.2.0 PyQt5>=6.6.0
 ```
 
 All requirements are in `requirements.txt`:
@@ -87,14 +87,14 @@ def test_widget_state(qtbot):
 - Instantiate real widgets
 - Test signal emission
 - Test UI state changes
-- Require PyQt6 installed
+- Require PyQt5 installed
 
 ### Non-Qt Tests (tests/operations/, tests/integration/)
 - Use mocking for database
 - Test business logic
 - Test operations
 - Fast execution
-- No PyQt6 required
+- No PyQt5 required
 
 ## Example Qt Test
 
@@ -205,10 +205,10 @@ pytest tests/
 ```
 
 ### Import Errors
-Ensure PyQt6 is installed:
+Ensure PyQt5 is installed:
 
 ```bash
-pip install PyQt6>=6.6.0
+pip install PyQt5>=6.6.0
 ```
 
 ## CI/CD Integration
@@ -258,5 +258,5 @@ With Qt testing:
 ## Further Reading
 
 - [pytest-qt documentation](https://pytest-qt.readthedocs.io/)
-- [PyQt6 testing guide](https://www.riverbankcomputing.com/static/Docs/PyQt6/)
+- [PyQt5 testing guide](https://www.riverbankcomputing.com/static/Docs/PyQt5/)
 - [Qt Test documentation](https://doc.qt.io/qt-6/qtest.html)

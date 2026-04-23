@@ -117,7 +117,46 @@ class FolderSettingsValidator:
         if not enabled:
             return result
 
-        # Required field checks
+        # Basic required checks grouped
+        self._validate_ftp_required_fields(
+            result, server, port, folder, username, password
+        )
+
+        # Port numeric range
+        self._validate_ftp_port(result, port)
+
+        # FTP connection test (if all fields valid and service available)
+        if result.is_valid and self.ftp_service:
+            try:
+                conn_result = self.ftp_service.test_connection(
+                    server=server,
+                    port=int(port),
+                    username=username,
+                    password=password,
+                    folder=folder,
+                )
+            except Exception:
+                conn_result = None
+
+            if conn_result is None or not getattr(conn_result, "success", False):
+                error_msg = (
+                    getattr(conn_result, "error_message", None)
+                    or "FTP connection failed"
+                )
+                result.add_error("ftp_connection", error_msg)
+
+        return result
+
+    def _validate_ftp_required_fields(
+        self,
+        result: ValidationResult,
+        server: str,
+        port: str,
+        folder: str,
+        username: str,
+        password: str,
+    ) -> None:
+        """Validate required FTP fields and folder path ending."""
         if not server:
             result.add_error("ftp_server", "FTP Server Field Is Required")
 
@@ -135,33 +174,22 @@ class FolderSettingsValidator:
         if not password:
             result.add_error("ftp_password", "FTP Password Field Is Required")
 
-        # Port validation
+    def _validate_ftp_port(self, result: ValidationResult, port: str) -> None:
+        """Validate port is numeric and in valid range."""
         if port == "":
             result.add_error("ftp_port", "FTP Port Field Is Required")
-        else:
-            try:
-                port_int = int(port)
-                if not (1 <= port_int <= 65535):
-                    result.add_error(
-                        "ftp_port", "FTP Port Field Needs To Be A Valid Port Number"
-                    )
-            except ValueError:
-                result.add_error("ftp_port", "FTP Port Field Needs To Be A Number")
+            return
 
-        # FTP connection test (if all fields valid and service available)
-        if result.is_valid and self.ftp_service:
-            conn_result = self.ftp_service.test_connection(
-                server=server,
-                port=int(port),
-                username=username,
-                password=password,
-                folder=folder,
+        try:
+            port_int = int(port)
+        except ValueError:
+            result.add_error("ftp_port", "FTP Port Field Needs To Be A Number")
+            return
+
+        if not (1 <= port_int <= 65535):
+            result.add_error(
+                "ftp_port", "FTP Port Field Needs To Be A Valid Port Number"
             )
-            if not conn_result.success:
-                error_msg = conn_result.error_message or "FTP connection failed"
-                result.add_error("ftp_connection", error_msg)
-
-        return result
 
     def validate_email_settings(
         self, recipients: str, *, enabled: bool

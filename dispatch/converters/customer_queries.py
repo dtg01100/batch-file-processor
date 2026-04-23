@@ -116,5 +116,9 @@ def build_customer_query_sql(customer_store_number_field: str) -> str:
     )
 
 
-BASIC_CUSTOMER_QUERY_SQL = build_customer_query_sql(CUSTOMER_STORE_NUMBER_FIELD_BASIC)
-STEWARTS_CUSTOMER_QUERY_SQL = build_customer_query_sql(CUSTOMER_STORE_NUMBER_FIELD_STEWARTS)
+BASIC_CUSTOMER_QUERY_SQL = build_customer_query_sql(
+    CUSTOMER_STORE_NUMBER_FIELD_BASIC
+)
+STEWARTS_CUSTOMER_QUERY_SQL = build_customer_query_sql(
+    CUSTOMER_STORE_NUMBER_FIELD_STEWARTS
+)

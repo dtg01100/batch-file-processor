@@ -89,12 +89,18 @@ class YellowDogConverter(BaseEDIConverter):
                 if strict_db_mode:
                     raise
                 logger.exception(
-                    "YellowDog could not initialize DB query runner; continuing in optional mode"
+                    (
+                "YellowDog could not initialize DB query runner;"
+                " continuing in optional mode"
+            )
                 )
 
         if query_runner is None and strict_db_mode:
             raise RuntimeError(
-                "YellowDog strict database_lookup_mode requires a working AS400 query runner"
+                (
+                "YellowDog strict database_lookup_mode requires"
+                " a working AS400 query runner"
+            )
             )
 
         inv_fetcher_settings = dict(settings_dict)
@@ -293,7 +299,7 @@ class YellowDogConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

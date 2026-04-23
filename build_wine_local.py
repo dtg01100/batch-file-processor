@@ -68,7 +68,8 @@ def ensure_wine_prefix() -> None:
 
 
 def get_windows_executable_path(dist_dir: Path = DIST_DIR) -> Path:
-    """Return the expected Windows executable path for a dist root (single-file mode)."""
+    """Return the expected Windows executable path for a dist
+    root (single-file mode)."""
     return Path(dist_dir) / WINDOWS_EXECUTABLE_NAME
 
 

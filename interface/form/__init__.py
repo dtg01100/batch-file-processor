@@ -15,12 +15,17 @@ Key Components:
 
 Usage Example:
     from interface.form import FormGeneratorFactory
-    from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition, FieldType
+    from interface.plugins.config_schemas import (
+        ConfigurationSchema, FieldDefinition, FieldType,
+    )
 
     # Create schema
     schema = ConfigurationSchema([
         FieldDefinition('name', FieldType.STRING, label='Name', required=True),
-        FieldDefinition('age', FieldType.INTEGER, label='Age', min_value=18, max_value=100),
+        FieldDefinition(
+            'age', FieldType.INTEGER,
+            label='Age', min_value=18, max_value=100,
+        ),
         FieldDefinition('email', FieldType.STRING, label='Email', required=True),
     ])
 

@@ -459,7 +459,8 @@ class EDISplitterStep:
                     original_count = getattr(split_result, "original_invoice_count", 1)
                     if original_count > 1:
                         logger.info(
-                            "Split produced single file (was filtered from multi-invoice source): %s",
+                "Split produced single file "
+                "(was filtered from multi-invoice source): %s",
                             split_result.output_files[0][0],
                         )
                         return SplitterResult(
@@ -610,7 +611,10 @@ class EDISplitterStep:
 
         """
         logger.debug(
-            "Filtering %d files by credit/invoice (include_invoices=%s, include_credits=%s)",
+            (
+                "Filtering %d files by credit/invoice"
+                " (include_invoices=%s, include_credits=%s)"
+            ),
             len(files),
             include_invoices,
             include_credits,
@@ -631,7 +635,8 @@ class EDISplitterStep:
                     filtered_files.append((file_path, prefix, suffix))
             except Exception as e:
                 logger.warning(
-                    "Credit/invoice detection failed for %s; keeping file by default: %s",
+                "Credit/invoice detection failed for %s; "
+                "keeping file by default: %s",
                     file_path,
                     e,
                 )

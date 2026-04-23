@@ -6,11 +6,11 @@ This includes lifecycle methods, configuration schema definition,
 validation, and UI widget creation.
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 from .config_schemas import ConfigurationSchema
-from .interfaces import IPlugin, IConfigurablePlugin, IUIPlugin, IPluginCompatibility
+from .interfaces import IConfigurablePlugin, IPlugin, IPluginCompatibility, IUIPlugin
 from .validation_framework import ValidationResult
 
 

@@ -39,7 +39,7 @@ docs/
 #### Testing (`docs/testing/`)
 - `TESTING.md` - Comprehensive testing guide
 - `TESTING_BEST_PRACTICES.md` - Testing guidelines
-- `QT_TESTING_GUIDE.md` - PyQt6/Qt widget testing
+- `QT_TESTING_GUIDE.md` - PyQt5/Qt widget testing
 - `CORPUS_TESTING_GUIDE.md` - Production EDI corpus testing
 - `CONVERT_TESTING_QUICK_REFERENCE.md` - Converter testing
 - `TESTS_DOCUMENTATION.md` - Test suite overview

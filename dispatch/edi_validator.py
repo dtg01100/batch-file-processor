@@ -294,41 +294,7 @@ class EDIValidator:
             lines = content.splitlines()
 
             for line_num, line in enumerate(lines, start=1):
-                if not line or line[0] != "B":
-                    continue
-
-                proposed_upc = line[1:12]
-                stripped_upc = str(proposed_upc).strip()
-                description = line[12:37].strip()
-                item_ctx = f"line {line_num} (UPC: {proposed_upc.strip()!r}, desc: {description!r})"
-
-                # Check for non-numeric UPC (not blank)
-                if proposed_upc != "           ":
-                    try:
-                        int(proposed_upc)
-                    except ValueError:
-                        self.has_minor_errors = True
-                        issues.append(f"Non-numeric UPC in {item_ctx}")
-
-                # Check for suppressed UPC (8 chars)
-                if len(stripped_upc) == 8:
-                    self.has_minor_errors = True
-                    issues.append(f"Suppressed UPC in {item_ctx}")
-
-                # Check for truncated UPC (1-10 chars)
-                elif 0 < len(stripped_upc) < 11:
-                    self.has_minor_errors = True
-                    issues.append(f"Truncated UPC in {item_ctx}")
-
-                # Check for blank UPC
-                if line[1:12] == "           ":
-                    self.has_minor_errors = True
-                    issues.append(f"Blank UPC in {item_ctx}")
-
-                # Check for missing pricing
-                if len(line) == 70:
-                    self.has_minor_errors = True
-                    issues.append(f"Missing pricing information in {item_ctx}")
+                issues.extend(self._edi_check_line_for_issues(line_num, line))
 
             if issues:
                 logger.debug("Found %d issue(s) in: %s", len(issues), file_path)
@@ -339,6 +305,55 @@ class EDIValidator:
             self.has_errors = True
             issues.append(f"Error checking EDI issues: {str(e)}")
             return issues
+
+    def _edi_item_context(
+        self, line_num: int, proposed_upc: str, description: str
+    ) -> str:
+        return (
+            f"line {line_num}"
+            f" (UPC: {proposed_upc.strip()!r},"
+            f" desc: {description!r})"
+        )
+
+    def _edi_check_line_for_issues(self, line_num: int, line: str) -> list[str]:
+        """Check a single line for EDI issues and return messages."""
+        msgs: list[str] = []
+        if not line or line[0] != "B":
+            return msgs
+
+        proposed_upc = line[1:12]
+        stripped_upc = str(proposed_upc).strip()
+        description = line[12:37].strip()
+        item_ctx = self._edi_item_context(line_num, proposed_upc, description)
+
+        def _append_minor(msg: str) -> None:
+            self.has_minor_errors = True
+            msgs.append(msg)
+
+        # Check for non-numeric UPC (not blank)
+        if proposed_upc != "           ":
+            try:
+                int(proposed_upc)
+            except ValueError:
+                _append_minor(f"Non-numeric UPC in {item_ctx}")
+
+        # Check for suppressed UPC (8 chars)
+        if len(stripped_upc) == 8:
+            _append_minor(f"Suppressed UPC in {item_ctx}")
+
+        # Check for truncated UPC (1-10 chars)
+        elif 0 < len(stripped_upc) < 11:
+            _append_minor(f"Truncated UPC in {item_ctx}")
+
+        # Check for blank UPC
+        if line[1:12] == "           ":
+            _append_minor(f"Blank UPC in {item_ctx}")
+
+        # Check for missing pricing
+        if len(line) == 70:
+            _append_minor(f"Missing pricing information in {item_ctx}")
+
+        return msgs
 
     def _check_edi_issues_with_warnings(
         self, file_path: str, content: str, errors: list[str], warnings: list[str]
@@ -364,9 +379,13 @@ class EDIValidator:
                 proposed_upc = line[1:12]
                 stripped_upc = str(proposed_upc).strip()
                 description = line[12:37].strip()
-                item_ctx = f"line {line_num} (UPC: {proposed_upc.strip()!r}, desc: {description!r})"
+                item_ctx = (
+                    f"line {line_num}"
+                    f" (UPC: {proposed_upc.strip()!r},"
+                    f" desc: {description!r})"
+                )
 
-                # Warnings (minor errors)
+            # Warnings (minor errors)
                 if proposed_upc != "           ":
                     try:
                         int(proposed_upc)

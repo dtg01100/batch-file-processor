@@ -5,7 +5,7 @@
 - **Smoke tests**: Quick validation (~0.2s)
 - **Integration tests**: Core functionality (~7s)
 - **Plugin tests**: Converter and backend parity verification
-- **UI tests**: PyQt6 interface testing
+- **UI tests**: PyQt5 interface testing
 
 ## Test Organization
 ```
@@ -15,7 +15,7 @@ tests/
 ├── unit/                      # Unit tests (comprehensive coverage)
 ├── integration/               # DB migrations, schema tests
 ├── operations/               # Folder/maintenance operations
-├── ui/                       # PyQt6 UI tests
+├── ui/                       # PyQt5 UI tests
 └── convert_backends/         # Converter parity/baselines
 ```
 

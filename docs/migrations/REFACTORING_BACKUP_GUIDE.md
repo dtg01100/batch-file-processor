@@ -7,7 +7,7 @@
 - **Baseline**: 177 core integration tests passing
 - **Smoke Tests**: 10/10 passing
 - **Git Tags**: `phase-1-start`, `phase-1-complete` created
-- **Environment**: PyQt6 dependencies installed and working
+- **Environment**: PyQt5 dependencies installed and working
 
 ## Rollback Procedures
 

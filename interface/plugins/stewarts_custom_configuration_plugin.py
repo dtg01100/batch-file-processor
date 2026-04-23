@@ -25,7 +25,8 @@ class StewartsCustomConfigurationPlugin(ConfigurationPlugin):
     """
     Stewarts Custom configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for Stewarts Custom format configuration with specific fields and validation.
+    Provides support for Stewarts Custom format configuration with
+    specific fields and validation.
     """
 
     @classmethod

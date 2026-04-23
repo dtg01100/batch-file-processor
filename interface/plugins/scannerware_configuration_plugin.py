@@ -39,7 +39,8 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
     """
     ScannerWare configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for ScannerWare format configuration with specific fields and validation.
+    Provides support for ScannerWare format configuration with
+    specific fields and validation.
     """
 
     @classmethod
@@ -96,7 +97,9 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
                 name="a_record_append_text",
                 field_type=FieldType.STRING,
                 label="A-Record Append Text",
-                description="Text to append to A-records when append_a_records is enabled",
+                description=(
+                "Text to append to A-records when append_a_records is enabled"
+            ),
                 default="",
             ),
             FieldDefinition(
@@ -110,7 +113,10 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
                 name="invoice_date_offset",
                 field_type=FieldType.INTEGER,
                 label="Invoice Date Offset",
-                description="Number of days to offset the invoice date (negative or positive)",
+                description=(
+                "Number of days to offset the invoice date"
+                " (negative or positive)"
+            ),
                 default=0,
                 min_value=-14,
                 max_value=14,

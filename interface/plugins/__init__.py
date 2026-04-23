@@ -21,10 +21,10 @@ from .estore_einvoice_generic_configuration_plugin import (
 )
 from .fintech_configuration_plugin import FintechConfigurationPlugin
 from .interfaces import (
-    IPlugin,
     IConfigurablePlugin,
-    IUIPlugin,
+    IPlugin,
     IPluginCompatibility,
+    IUIPlugin,
 )
 from .jolley_custom_configuration_plugin import JolleyCustomConfigurationPlugin
 from .plugin_base import PluginBase

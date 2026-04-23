@@ -450,46 +450,7 @@ def ensure_schema(database_connection) -> None:
     for s in stmts:
         # Extract table/index name for logging
         object_name = _extract_object_name(s)
-
-        raw_conn = getattr(database_connection, "_conn", None)
-
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            try:
-                _execute_sqlite_statement(raw_conn, s, object_name=object_name)
-            except sqlite3.OperationalError as exc:
-                logger.warning(
-                    "Schema statement lock/operational issue: %s, %s",
-                    object_name or "unknown",
-                    exc,
-                )
-            except sqlite3.Error as exc:
-                logger.warning(
-                    "Schema statement sqlite error: %s: %s",
-                    object_name or "unknown",
-                    exc,
-                )
-            continue
-
-        try:
-            database_connection.query(s)
-            if object_name:
-                logger.debug("Schema object created/verified: %s", object_name)
-        except Exception:
-            # be tolerant: older dataset impl or DB state may raise; ensure best-effort
-            try:
-                if raw_conn is not None:
-                    raw_conn.execute(s)
-                    raw_conn.commit()
-                    if object_name:
-                        logger.debug(
-                            "Schema object created/verified (via raw conn): %s",
-                            object_name,
-                        )
-            except Exception:
-                logger.info(
-                    "Schema statement skipped (may already exist or DB locked): %s",
-                    object_name or "unknown",
-                )
+        _apply_statement_to_connection(database_connection, s, object_name)
 
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
@@ -536,7 +497,10 @@ def ensure_schema(database_connection) -> None:
         logger.info("Migration: added invoice_numbers column to processed_files table")
     except Exception:
         logger.info(
-            "Processed_files invoice_numbers column migration skipped (may already exist)"
+            (
+                "Processed_files invoice_numbers column"
+                " migration skipped (may already exist)"
+            )
         )
 
     logger.info("Database schema initialization complete")
@@ -575,3 +539,53 @@ def _extract_object_name(stmt: str) -> str | None:
         return "PRAGMA"
 
     return None
+
+
+def _apply_statement_to_connection(
+    database_connection, stmt: str, object_name: str | None
+) -> None:
+    """Apply a schema statement to the provided database connection.
+
+    Handles both wrapped dataset-style connections (with .query) and raw
+    sqlite3.Connection objects stored in _conn. Logs failures but attempts
+    several strategies for best-effort idempotent behavior.
+    """
+    raw_conn = getattr(database_connection, "_conn", None)
+
+    if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+        try:
+            _execute_sqlite_statement(raw_conn, stmt, object_name=object_name)
+        except sqlite3.OperationalError as exc:
+            logger.warning(
+                "Schema statement lock/operational issue: %s, %s",
+                object_name or "unknown",
+                exc,
+            )
+        except sqlite3.Error as exc:
+            logger.warning(
+                "Schema statement sqlite error: %s: %s",
+                object_name or "unknown",
+                exc,
+            )
+        return
+
+    try:
+        database_connection.query(stmt)
+        if object_name:
+            logger.debug("Schema object created/verified: %s", object_name)
+    except Exception:
+        # be tolerant: older dataset impl or DB state may raise; ensure best-effort
+        try:
+            if raw_conn is not None:
+                raw_conn.execute(stmt)
+                raw_conn.commit()
+                if object_name:
+                    logger.debug(
+                        "Schema object created/verified (via raw conn): %s",
+                        object_name,
+                    )
+        except Exception:
+            logger.info(
+                "Schema statement skipped (may already exist or DB locked): %s",
+                object_name or "unknown",
+            )

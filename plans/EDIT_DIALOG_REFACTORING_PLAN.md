@@ -301,7 +301,7 @@ Split into logical tables:
 
 ```python
 # interface/qt/widgets/dynamic_widget.py
-from PyQt6.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget
 
 class DynamicQtWidget(QWidget):
     """Base class for dynamically generated Qt widgets."""

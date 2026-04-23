@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from dispatch.services.customer_lookup_service import CustomerLookupService
 
 

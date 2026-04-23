@@ -266,8 +266,10 @@ class StewartsCustomConverter(BaseEDIConverter):
         self._db_connector.close()
 
 
-from dispatch.converters.convert_base import create_edi_convert_wrapper
-from dispatch.services.customer_lookup_service import CustomerLookupService
+from dispatch.converters.convert_base import create_edi_convert_wrapper  # noqa: E402
+from dispatch.services.customer_lookup_service import (  # noqa: E402
+    CustomerLookupService,
+)
 
 edi_convert = create_edi_convert_wrapper(
     StewartsCustomConverter, format_name="stewarts_custom"

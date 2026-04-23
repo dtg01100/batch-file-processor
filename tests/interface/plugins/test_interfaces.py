@@ -10,15 +10,18 @@ Tests:
 
 import pytest
 
+from interface.plugins.config_schemas import (
+    ConfigurationSchema,
+    FieldDefinition,
+    FieldType,
+)
 from interface.plugins.interfaces import (
-    IPlugin,
     IConfigurablePlugin,
-    IUIPlugin,
+    IPlugin,
     IPluginCompatibility,
+    IUIPlugin,
 )
 from interface.plugins.plugin_base import PluginBase
-from interface.plugins.config_schemas import ConfigurationSchema, FieldDefinition, FieldType
-from interface.plugins.validation_framework import ValidationResult
 
 
 class TestIPlugin:

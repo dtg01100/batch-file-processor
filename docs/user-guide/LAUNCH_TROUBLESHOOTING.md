@@ -77,10 +77,10 @@ ImportError: DLL load failed while importing QtWidgets: The specified module cou
 ```
 
 **What this usually means:**
-- The workstation is missing the Microsoft Visual C++ runtime / UCRT that Qt6
+- The workstation is missing the Microsoft Visual C++ runtime / UCRT that Qt5
   depends on.
 - The executable was copied without the rest of the extracted bundle.
-- Antivirus or deployment tooling removed DLLs from `_internal/PyQt6/Qt6/bin`.
+- Antivirus or deployment tooling removed DLLs from `_internal/PyQt5/Qt5/bin`.
 
 **Checklist:**
 1. Extract the full bundle and keep the entire `Batch File Sender` folder
@@ -90,10 +90,10 @@ ImportError: DLL load failed while importing QtWidgets: The specified module cou
    (x64)**:
    https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist
 4. Confirm these paths exist after extraction:
-   - `_internal/PyQt6/Qt6/bin`
-   - `_internal/PyQt6/Qt6/plugins/platforms/qwindows.dll`
+   - `_internal/PyQt5/Qt5/bin`
+   - `_internal/PyQt5/Qt5/plugins/platforms/qwindows.dll`
 5. If the error persists, check whether security software quarantined files
-   under `_internal/PyQt6/Qt6/bin`.
+   under `_internal/PyQt5/Qt5/bin`.
 
 **Build note:**
 - Current Windows bundles are built with **PyInstaller 6.19.0**.
@@ -172,7 +172,7 @@ You should see the Python process running.
 
 ## Architecture Notes
 
-- The application uses PyQt6 for the GUI
+- The application uses PyQt5 for the GUI
 - In the dev container, Xvfb provides a virtual X11 display on `:99`
 - The `start_x11.sh` script manages X11, VNC, and noVNC services for browser-based viewing
 - Offscreen mode is useful for automated testing or headless environments

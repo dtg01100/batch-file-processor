@@ -100,11 +100,11 @@ def test_smtp_backend_with_mock():
     mock_smtp.sendmail.assert_called_once()
 ```
 
-### 2. UI Display Servers (PyQt6, Tkinter)
+### 2. UI Display Servers (PyQt5, Tkinter)
 
 ```python
 def test_dialog_logic_without_display():
-    # PyQt6 widgets require display server - mock for unit tests
+    # PyQt5 widgets require display server - mock for unit tests
     mock_parent = MagicMock()
     dialog = EditFolderDialog(parent=mock_parent, folder_config=config)
     # Test dialog logic without actual widget rendering

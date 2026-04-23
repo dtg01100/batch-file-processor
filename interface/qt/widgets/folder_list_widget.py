@@ -314,7 +314,8 @@ class FolderListWidget(QWidget):
         """Build a single folder row with status indicator and action buttons.
 
         Args:
-            folder: A folder dictionary with ``id``, ``alias``, and ``folder_is_active`` keys.
+            folder: A folder dictionary with ``id``, ``alias``,
+                and ``folder_is_active`` keys.
             edit_button_min_width: Minimum width used for edit buttons in the list.
 
         Returns:
@@ -565,7 +566,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)  # noqa: FBT003
+        btn.setProperty("compact", True)  # noqa: FBT003 - Qt setProperty requires boolean argument
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

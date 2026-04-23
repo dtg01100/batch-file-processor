@@ -226,11 +226,11 @@ class PluginManager:
             format_enum: ConvertFormat enum value
 
         Returns:
-            Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
+        Optional[ConfigurationPlugin]: Configuration plugin instance
+            or None if not found
 
         """
         self._ensure_initialized()
-
         return self._configuration_plugins.get(format_enum)
 
     def get_configuration_plugin_by_format_name(
@@ -243,7 +243,8 @@ class PluginManager:
             format_name: Format name string
 
         Returns:
-            Optional[ConfigurationPlugin]: Configuration plugin instance or None if not found
+            Optional[ConfigurationPlugin]: Configuration plugin instance
+                or None if not found
 
         """
         self._ensure_initialized()

@@ -6,7 +6,6 @@ injectable client support for testing.
 
 import ftplib
 import os
-import time  # noqa: F401
 
 from backend.backend_base import BackendBase
 from backend.ftp_client import create_ftp_client

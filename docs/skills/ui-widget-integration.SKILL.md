@@ -1,6 +1,6 @@
 # ui-widget-integration Skill
 
-Workspace-scoped helper skill for PyQt UI integration + plugin lifecycle verification.
+Workspace-scoped helper skill for PyQt5 UI integration + plugin lifecycle verification.
 
 ## Purpose
 
@@ -35,4 +35,4 @@ Workspace-scoped helper skill for PyQt UI integration + plugin lifecycle verific
 
 ## Output
 
-- UI integration tests ensuring functional behavior and no regressions across PyQt6 updates.
+- UI integration tests ensuring functional behavior and no regressions across PyQt5 updates.

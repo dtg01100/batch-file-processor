@@ -113,7 +113,7 @@ Example: If `JOIN` queries fail through db2ssh but work via ODBC, the fix belong
 core/           Core utilities, EDI parser/splitter, database abstraction
 dispatch/       Pipeline orchestration and file sending
 backend/        Protocol clients (FTP, SMTP, local filesystem)
-interface/      PyQt6 UI layer
+interface/      PyQt5 UI layer
 batch_file_processor/  Package namespace (compatibility shim re-exporting root modules)
 migrations/     Lightweight custom migration scripts (not Alembic)
 schema.py       Centralized table definitions; call ensure_schema() at DB init
@@ -169,7 +169,7 @@ Tests use strict markers (`--strict-markers`). Decorate new tests appropriately:
 |--------|-------------|
 | `unit` | Fast, isolated, no I/O |
 | `integration` | Real DB, filesystem, or real component interaction |
-| `qt` | PyQt6 UI tests (requires `pytest-qt`) |
+| `qt` | PyQt5 UI tests (requires `pytest-qt`) |
 | `database` | Database-specific tests |
 | `dispatch` | Pipeline/orchestration tests |
 | `conversion` | File conversion tests |

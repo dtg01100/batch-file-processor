@@ -25,7 +25,7 @@ This document describes the testing strategy, framework configuration, and patte
 **pytest.ini:**
 ```ini
 [pytest]
-qt_api = pyqt6
+qt_api = pyqt5
 testpaths = tests
 python_files = test_*.py
 python_classes = Test*
@@ -159,7 +159,7 @@ pytest -m db
 @pytest.fixture(scope="session")
 def qapp():
     """Create QApplication for the test session (singleton)."""
-    from PyQt6.QtWidgets import QApplication
+    from PyQt5.QtWidgets import QApplication
     import sys
     
     app = QApplication.instance()

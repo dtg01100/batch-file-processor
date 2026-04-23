@@ -122,7 +122,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         return context.user_data.get("output_path", context.output_filename)
 
 
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(TweaksConverter, format_name="tweaks")

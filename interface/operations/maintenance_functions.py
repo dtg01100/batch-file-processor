@@ -231,106 +231,137 @@ class MaintenanceFunctions:
             selected_folder: Optional specific folder ID, or None for all active folders
 
         """
-        if selected_folder is None:
-            if self._on_operation_start:
-                self._on_operation_start()
+        # Start operation
+        if selected_folder is None and self._on_operation_start:
+            self._on_operation_start()
+
         starting_folder = os.getcwd()
-        folder_count = 0
-        self._database_obj.folders_table_list = []
-        if selected_folder is None:
-            for row in self._database_obj.folders_table.find(folder_is_active=True):
-                self._database_obj.folders_table_list.append(row)
-        else:
-            folder_dict = self._database_obj.folders_table.find_one(id=selected_folder)
-            if folder_dict:
-                self._database_obj.folders_table_list = [folder_dict]
-            else:
-                logger.debug("Warning: Folder with id %s not found", selected_folder)
-                self._database_obj.folders_table_list = []
-        folder_total = len(self._database_obj.folders_table_list)
-        if selected_folder is None:
-            self._progress.show("adding files to processed list...")
-        for (
-            parameters_dict
-        ) in self._database_obj.folders_table_list:  # create list of active directories
-            file_total = 0
-            file_count = 0
-            folder_count += 1
-            self._progress.update_message(
-                "adding files to processed list...\n\n"
-                + " folder "
-                + str(folder_count)
-                + " of "
-                + str(folder_total)
-                + " file "
-                + str(file_count)
-                + " of "
-                + str(file_total)
-            )
-            os.chdir(os.path.abspath(parameters_dict["folder_name"]))
-            files = [f for f in os.listdir(".") if os.path.isfile(f)]
-            file_total = len(files)
-            filtered_files = []
-            for f in files:
-                file_count += 1
-                self._progress.update_message(
-                    "checking files for already processed\n\n"
-                    + str(folder_count)
-                    + " of "
-                    + str(folder_total)
-                    + " file "
-                    + str(file_count)
-                    + " of "
-                    + str(file_total)
+        try:
+            folders = self._get_folders_to_process(selected_folder)
+            folder_total = len(folders)
+            if selected_folder is None:
+                self._progress.show("adding files to processed list...")
+
+            folder_count = 0
+            for parameters_dict in folders:
+                folder_count += 1
+                self._process_single_folder(
+                    parameters_dict=parameters_dict,
+                    folder_count=folder_count,
+                    folder_total=folder_total,
                 )
-                with open(f, "rb") as file_handle:
-                    file_checksum = hashlib.md5(file_handle.read()).hexdigest()
-                if (
-                    self._database_obj.processed_files.find_one(
-                        file_name=os.path.join(os.getcwd(), f),
-                        file_checksum=file_checksum,
-                    )
-                    is None
-                ):
-                    filtered_files.append(f)
-            file_total = len(filtered_files)
-            file_count = 0
-            for filename in filtered_files:
-                logger.debug("Processing file: %s", filename)
-                file_count += 1
-                self._progress.update_message(
-                    "adding files to processed list...\n\n"
-                    + " folder "
-                    + str(folder_count)
-                    + " of "
-                    + str(folder_total)
-                    + " file "
-                    + str(file_count)
-                    + " of "
-                    + str(file_total)
-                )
-                with open(filename, "rb") as file_handle:
-                    file_checksum = hashlib.md5(file_handle.read()).hexdigest()
-                self._database_obj.processed_files.insert(
-                    {
-                        "file_name": str(os.path.abspath(filename)),
-                        "file_checksum": file_checksum,
-                        "folder_id": parameters_dict["id"],
-                        "folder_alias": parameters_dict["alias"],
-                        "copy_destination": "N/A",
-                        "ftp_destination": "N/A",
-                        "email_destination": "N/A",
-                        "sent_date_time": datetime.datetime.now(),
-                        "resend_flag": False,
-                    }
-                )
-        self._progress.hide()
-        os.chdir(starting_folder)
-        if self._set_button_states_callback:
-            self._set_button_states_callback()
-        if selected_folder is None:
-            if self._on_operation_end:
+
+        finally:
+            self._progress.hide()
+            os.chdir(starting_folder)
+            if self._set_button_states_callback:
+                self._set_button_states_callback()
+            if selected_folder is None and self._on_operation_end:
                 self._on_operation_end()
+
+    def _get_folders_to_process(self, selected_folder: int | None) -> list:
+        """Return a list of folder parameter dicts to process."""
+        if selected_folder is None:
+            return list(self._database_obj.folders_table.find(folder_is_active=True))
+
+        folder_dict = self._database_obj.folders_table.find_one(id=selected_folder)
+        if folder_dict:
+            return [folder_dict]
+
+        logger.debug("Warning: Folder with id %s not found", selected_folder)
+        return []
+
+    def _checksum_of_file(self, path: str) -> str:
+        """Compute MD5 checksum for given file path."""
+        with open(path, "rb") as fh:
+            return hashlib.md5(fh.read()).hexdigest()
+
+    def _progress_message(
+        self,
+        prefix: str,
+        folder_count: int,
+        folder_total: int,
+        file_count: int,
+        file_total: int,
+    ) -> str:
+        return (
+            prefix
+            + "\n\n folder "
+            + str(folder_count)
+            + " of "
+            + str(folder_total)
+            + " file "
+            + str(file_count)
+            + " of "
+            + str(file_total)
+        )
+
+    def _process_single_folder(
+        self, parameters_dict: dict, folder_count: int, folder_total: int
+    ) -> None:
+        """Process a single folder: find unprocessed files and insert records."""
+        # Change into folder
+        self._progress.update_message(
+            self._progress_message(
+                "adding files to processed list...",
+                folder_count,
+                folder_total,
+                0,
+                0,
+            )
+        )
+        os.chdir(os.path.abspath(parameters_dict["folder_name"]))
+
+        # List files and filter those not already processed
+        files = [f for f in os.listdir(".") if os.path.isfile(f)]
+        file_total = len(files)
+        filtered_files: list[str] = []
+        file_count = 0
+        for f in files:
+            file_count += 1
+            self._progress.update_message(
+                self._progress_message(
+                    "checking files for already processed",
+                    folder_count,
+                    folder_total,
+                    file_count,
+                    file_total,
+                )
+            )
+            checksum = self._checksum_of_file(f)
+            if self._database_obj.processed_files.find_one(
+                file_name=os.path.join(os.getcwd(), f), file_checksum=checksum
+            ) is None:
+                filtered_files.append(f)
+
+        file_total = len(filtered_files)
+        file_count = 0
+        for filename in filtered_files:
+            logger.debug("Processing file: %s", filename)
+            file_count += 1
+            self._progress.update_message(
+                self._progress_message(
+                    "adding files to processed list...",
+                    folder_count,
+                    folder_total,
+                    file_count,
+                    file_total,
+                )
+            )
+            checksum = self._checksum_of_file(filename)
+            self._database_obj.processed_files.insert(
+                {
+                    "file_name": str(os.path.abspath(filename)),
+                    "file_checksum": checksum,
+                    "folder_id": parameters_dict["id"],
+                    "folder_alias": parameters_dict["alias"],
+                    "copy_destination": "N/A",
+                    "ftp_destination": "N/A",
+                    "email_destination": "N/A",
+                    "sent_date_time": datetime.datetime.now(),
+                    "resend_flag": False,
+                }
+            )
 
     def database_import_wrapper(self, backup_path: str) -> None:
         """Import database from a backup.

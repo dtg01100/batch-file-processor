@@ -100,56 +100,82 @@ def _parse_db2_output(output: str) -> tuple[list[str], list[tuple]]:
     """
     lines = output.splitlines()
 
-    sep_idx = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped and all(c in "- " for c in stripped):
-            sep_idx = i
-            break
-
+    sep_idx = _find_separator_line_index(lines)
     if sep_idx is None:
         return [], []
 
     sep_line = lines[sep_idx]
     header_line = lines[sep_idx - 1] if sep_idx > 0 else ""
 
-    col_starts = []
+    col_starts = _compute_col_starts(sep_line)
+    if not col_starts:
+        return [], []
+
+    col_slices = _col_starts_to_slices(col_starts)
+
+    description = _parse_header_names(header_line, col_slices)
+    rows = _parse_data_rows(lines[sep_idx + 1 :], col_slices)
+
+    return description, rows
+
+
+def _find_separator_line_index(lines: list[str]) -> int | None:
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped and all(c in "- " for c in stripped):
+            return i
+    return None
+
+
+def _compute_col_starts(sep_line: str) -> list[int]:
+    starts: list[int] = []
     j = 0
     while j < len(sep_line):
         if sep_line[j] == "-":
-            col_starts.append(j)
+            starts.append(j)
             while j < len(sep_line) and sep_line[j] == "-":
                 j += 1
         else:
             j += 1
+    return starts
 
-    if not col_starts:
-        return [], []
 
-    col_slices = []
+def _col_starts_to_slices(col_starts: list[int]) -> list[tuple[int, int | None]]:
+    slices: list[tuple[int, int | None]] = []
     for k, start in enumerate(col_starts):
         end = col_starts[k + 1] if k + 1 < len(col_starts) else None
-        col_slices.append((start, end))
+        slices.append((start, end))
+    return slices
 
-    description = []
+
+def _parse_header_names(
+    header_line: str,
+    col_slices: list[tuple[int, int | None]],
+) -> list[str]:
+    names: list[str] = []
     for start, end in col_slices:
         name = header_line[start:end].strip() if start < len(header_line) else ""
-        description.append(name)
+        names.append(name)
+    return names
 
-    rows = []
-    for line in lines[sep_idx + 1 :]:
+
+def _parse_data_rows(
+    lines: list[str],
+    col_slices: list[tuple[int, int | None]],
+) -> list[tuple]:
+    rows: list[tuple] = []
+    for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
         if "RECORD(S) SELECTED" in stripped:
             continue
-        row = []
+        row: list[str] = []
         for start, end in col_slices:
             val = line[start:end].strip() if start < len(line) else ""
             row.append(val)
         rows.append(tuple(row))
-
-    return description, rows
+    return rows
 
 
 def _parse_error(output: str) -> str:
@@ -425,7 +451,8 @@ class Connection:
             timeout: Connection timeout in seconds (default: 10).
 
         Raises:
-            OperationalError: If authentication fails or SSH connection cannot be established.
+            OperationalError: If authentication fails or SSH connection
+            cannot be established.
 
         """
         self._host = host

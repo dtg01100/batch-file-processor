@@ -1,7 +1,5 @@
 # tests/unit/dispatch/observability/test_audit_logger.py
-import queue as queue_lib
 
-import pytest
 
 
 class TestAuditLogger:
@@ -17,10 +15,10 @@ class TestAuditLogger:
             event_status="success",
         )
         logger.log_event(event)
-        assert not logger._queue.empty()
+        assert logger._queue.empty() is False
 
     def test_log_step_creates_event(self):
-        from dispatch.observability.audit_logger import AuditEvent, AuditLogger
+        from dispatch.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         logger.log_step(
@@ -37,7 +35,7 @@ class TestAuditLogger:
         assert evt.duration_ms == 150
 
     def test_log_step_with_error(self):
-        from dispatch.observability.audit_logger import AuditEvent, AuditLogger
+        from dispatch.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         err = ValueError("bad input")
@@ -54,11 +52,36 @@ class TestAuditLogger:
         assert evt.error_type == "ValueError"
         assert evt.error_message == "bad input"
 
-    def test_get_queue_returns_queue(self):
+    def test_drain_returns_all_events(self):
         from dispatch.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
-        assert logger.get_queue() is logger._queue
+        logger.log_step(
+            correlation_id="abc",
+            folder_id=1,
+            file_name="test.edi",
+            step="validation",
+            status="success",
+            duration_ms=10,
+        )
+        logger.log_step(
+            correlation_id="abc",
+            folder_id=1,
+            file_name="test.edi",
+            step="convert",
+            status="success",
+            duration_ms=20,
+        )
+        events = logger.drain()
+        assert len(events) == 2
+        assert logger._queue.empty()
+
+    def test_drain_empty_queue(self):
+        from dispatch.observability.audit_logger import AuditLogger
+
+        logger = AuditLogger()
+        events = logger.drain()
+        assert events == []
 
     def test_audit_event_has_timestamp(self):
         from dispatch.observability.audit_logger import AuditEvent

@@ -37,7 +37,8 @@ def _discover_format_values() -> list[tuple[str, str]]:
     import os
     import pkgutil
 
-    # Mapping from internal names (from filenames) to display values (for legacy compatibility)
+    # Mapping from internal names (from filenames) to display values
+# (for legacy compatibility)
     DISPLAY_VALUES = {
         "scannerware": "ScannerWare",
         "scansheet_type_a": "ScanSheet_Type_A",
@@ -432,7 +433,8 @@ class FolderConfiguration:
             format_name: The convert format name (e.g., "csv", "ScannerWare")
 
         Returns:
-            Optional[Dict[str, Any]]: Plugin configuration for the format, or None if not found
+            Optional[Dict[str, Any]]: Plugin configuration for the format,
+            or None if not found
 
         """
         return self.plugin_configurations.get(format_name.lower())
@@ -802,7 +804,9 @@ class FolderConfiguration:
                     "invoice_date_custom_format": normalize_bool(
                         self.invoice_date.custom_format_enabled
                     ),
-                    "invoice_date_custom_format_string": self.invoice_date.custom_format_string,
+                    "invoice_date_custom_format_string": (
+                self.invoice_date.custom_format_string
+            ),
                     "retail_uom": normalize_bool(self.invoice_date.retail_uom),
                 }
             )
@@ -814,7 +818,9 @@ class FolderConfiguration:
                 {
                     "estore_store_number": self.backend_specific.estore_store_number,
                     "estore_Vendor_OId": self.backend_specific.estore_vendor_oid,
-                    "estore_vendor_NameVendorOID": self.backend_specific.estore_vendor_namevendoroid,
+                    "estore_vendor_NameVendorOID": (
+                self.backend_specific.estore_vendor_namevendoroid
+            ),
                     "fintech_division_id": self.backend_specific.fintech_division_id,
                 }
             )

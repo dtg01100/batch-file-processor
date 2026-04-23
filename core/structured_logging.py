@@ -546,41 +546,41 @@ class StructuredLogAdapter(logging.LoggerAdapter):
 
         Injects context variables into the extra dict.
         """
-        # Ensure extra dict exists
-        extra: dict[str, Any] = dict(kwargs.get("extra") or {})
+        extra = self._ensure_extra(kwargs)
+        self._inject_context_fields(extra)
+        self._merge_defaults(extra)
         kwargs["extra"] = extra
+        return msg, kwargs
 
-        # Auto-inject correlation_id
+    def _ensure_extra(self, kwargs: MutableMapping[str, Any]) -> dict[str, Any]:
+        return dict(kwargs.get("extra") or {})
+
+    def _inject_context_fields(self, extra: dict[str, Any]) -> None:
         if self.auto_correlation and "correlation_id" not in extra:
             corr_id = get_correlation_id()
             if corr_id:
                 extra["correlation_id"] = corr_id
 
-        # Auto-inject trace_id
         if "trace_id" not in extra:
             trace_id = get_trace_id()
             if trace_id:
                 extra["trace_id"] = trace_id
 
-        # Auto-inject component
         if self.auto_component and "component" not in extra:
             component = get_component()
             if component:
                 extra["component"] = component
 
-        # Auto-inject operation
         if self.auto_operation and "operation" not in extra:
             operation = get_operation()
             if operation:
                 extra["operation"] = operation
 
-        # Merge with default extra
+    def _merge_defaults(self, extra: dict[str, Any]) -> None:
         if self.extra:
             for key, value in self.extra.items():
                 if key not in extra:
                     extra[key] = value
-
-        return msg, kwargs
 
 
 # =============================================================================
@@ -792,19 +792,62 @@ def log_backend_call(
         extra["retry_count"] = retry_count
 
     extra.update(kwargs)
+    extra = _build_backend_extra(
+        extra, error=error, status_code=status_code, duration_ms=duration_ms
+    )
+    _emit_backend_log(
+        logger,
+        backend_type,
+        operation,
+        extra,
+        success=success,
+        error=error,
+        status_code=status_code,
+        duration_ms=duration_ms,
+    )
 
-    # Determine log level based on outcome
+
+def _build_backend_extra(
+    base_extra: dict[str, Any],
+    *,
+    error: Exception | None,
+    status_code: int | str | None,
+    duration_ms: float | None,
+) -> dict[str, Any]:
+    # Redact sensitive error message if present; attach structured error
+    extra = dict(base_extra)
     if error:
         error_message = str(error)
-        # Redact sensitive data from error messages
         if any(
             sensitive in error_message.lower()
             for sensitive in ["password", "secret", "token", "key", "credential"]
         ):
-            error_message = redact_sensitive_data({"error": error_message}).get(
+            redacted = redact_sensitive_data({"error": error_message}).get(
                 "error", "[REDACTED]"
             )
+            error_message = redacted
         extra["error"] = {"type": type(error).__name__, "message": error_message}
+
+    if status_code is not None:
+        extra["status_code"] = status_code
+    if duration_ms is not None:
+        extra["duration_ms"] = round(duration_ms, 2)
+    return extra
+
+
+def _emit_backend_log(
+    logger: logging.Logger,
+    backend_type: str,
+    operation: str,
+    extra: dict[str, Any],
+    *,
+    success: bool | None = None,
+    error: Exception | None = None,
+    status_code: int | str | None = None,
+    duration_ms: float | None = None,
+) -> None:
+    if error:
+        error_message = extra.get("error", {}).get("message", str(error))
         logger.error(
             "[BACKEND ERROR] %s %s failed: %s",
             backend_type,
@@ -813,7 +856,9 @@ def log_backend_call(
             extra=extra,
             exc_info=True,
         )
-    elif success is False:
+        return
+
+    if success is False:
         logger.warning(
             "[BACKEND] %s %s failed with status %s",
             backend_type,
@@ -821,7 +866,9 @@ def log_backend_call(
             status_code or "unknown",
             extra=extra,
         )
-    elif success:
+        return
+
+    if success:
         logger.info(
             "[BACKEND] %s %s completed in %.2fms",
             backend_type,
@@ -829,13 +876,14 @@ def log_backend_call(
             duration_ms or 0,
             extra=extra,
         )
-    else:
-        logger.debug(
-            "[BACKEND] %s %s started",
-            backend_type,
-            operation,
-            extra=extra,
-        )
+        return
+
+    logger.debug(
+        "[BACKEND] %s %s started",
+        backend_type,
+        operation,
+        extra=extra,
+    )
 
 
 def log_database_call(
@@ -1425,69 +1473,98 @@ class JSONFormatter(logging.Formatter):
             JSON-compatible representation of the value
 
         """
+        # Fast-paths
         if value is None:
             return None
 
-        # Primitive types
-        if isinstance(value, (str, int, float, bool)):
-            return value
+        # Delegate to small handlers to keep this function simple
+        handlers = (
+            _handle_primitive,
+            _handle_date_like,
+            _handle_decimal,
+            _handle_bytes,
+            _handle_enum,
+            _handle_path,
+            _handle_exception,
+            _handle_dataclass,
+            _handle_mapping,
+            _handle_sequence,
+        )
 
-        # datetime/date
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, date):
-            return value.isoformat()
+        for h in handlers:
+            handled, result = h(value)
+            if handled:
+                # For dataclass handler, dataclass returns nested structure to
+                # re-serialize
+                if h is _handle_dataclass:
+                    return self._serialize_value(result)
+                return result
 
-        # Decimal
-        if isinstance(value, Decimal):
-            return float(value)
+        return _safe_str(value)
 
-        # bytes
-        if isinstance(value, bytes):
-            if len(value) > 100:
-                return f"<bytes:{len(value)}>"
-            try:
-                return value.decode("utf-8", errors="replace")
-            except Exception:
-                return f"<bytes:{len(value)}>"
 
-        # Enum
-        if isinstance(value, Enum):
-            return {"name": value.name, "value": value.value}
+def _is_primitive(value: Any) -> bool:
+    return isinstance(value, (str, int, float, bool))
 
-        # Path
-        if isinstance(value, Path):
-            return str(value)
 
-        # Exception
-        if isinstance(value, BaseException):
-            return {
-                "type": type(value).__name__,
-                "message": str(value),
-                "traceback": (
-                    traceback.format_exception(type(value), value, value.__traceback__)
-                    if value.__traceback__ and LOG_PAYLOADS_ON_DEBUG
-                    else None
-                ),
-            }
+def _handle_primitive(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (str, int, float, bool)):
+        return True, value
+    return False, None
 
-        # Dataclass
-        if is_dataclass(value) and not isinstance(value, type):
-            return self._serialize_value(asdict(value))
 
-        # dict
-        if isinstance(value, dict):
-            return {k: self._serialize_value(v) for k, v in value.items()}
+def _handle_date_like(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (datetime, date)):
+        return True, value.isoformat()
+    return False, None
 
-        # list/tuple/set
-        if isinstance(value, (list, tuple, set)):
-            return [self._serialize_value(v) for v in value]
 
-        # Fallback: string representation
-        try:
-            return str(value)
-        except Exception:
-            return "<unserializable>"
+def _handle_decimal(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Decimal):
+        return True, float(value)
+    return False, None
+
+
+def _handle_bytes(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, bytes):
+        return True, _serialize_bytes(value)
+    return False, None
+
+
+def _handle_enum(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Enum):
+        return True, {"name": value.name, "value": value.value}
+    return False, None
+
+
+def _handle_path(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Path):
+        return True, str(value)
+    return False, None
+
+
+def _handle_exception(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, BaseException):
+        return True, _serialize_exception(value)
+    return False, None
+
+
+def _handle_dataclass(value: Any) -> tuple[bool, Any]:
+    if is_dataclass(value) and not isinstance(value, type):
+        return True, asdict(value)
+    return False, None
+
+
+def _handle_mapping(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, dict):
+        return True, {k: value[k] for k in value}
+    return False, None
+
+
+def _handle_sequence(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (list, tuple, set)):
+        return True, list(value)
+    return False, None
 
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON.
@@ -1499,114 +1576,7 @@ class JSONFormatter(logging.Formatter):
             JSON string representation
 
         """
-        # Build base fields from record
-        log_data: dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(
-                record.created, tz=timezone.utc
-            ).isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
-
-        # Standard fields - use getattr to safely access extra attributes
-        if getattr(record, "correlation_id", None):
-            log_data["correlation_id"] = getattr(record, "correlation_id")
-        if getattr(record, "trace_id", None):
-            log_data["trace_id"] = getattr(record, "trace_id")
-        if getattr(record, "component", None):
-            log_data["component"] = getattr(record, "component")
-        if getattr(record, "operation", None):
-            log_data["operation"] = getattr(record, "operation")
-        if getattr(record, "module", None):
-            log_data["module"] = getattr(record, "module")
-        if getattr(record, "function", None):
-            log_data["function"] = getattr(record, "function")
-        if getattr(record, "duration_ms", None) is not None:
-            log_data["duration_ms"] = getattr(record, "duration_ms")
-
-        # Error info
-        if getattr(record, "error", None):
-            log_data["error"] = self._serialize_value(getattr(record, "error"))
-
-        # Input/output summaries
-        if getattr(record, "input_summary", None):
-            log_data["input_summary"] = self._serialize_value(
-                getattr(record, "input_summary")
-            )
-        if getattr(record, "output_summary", None):
-            log_data["output_summary"] = self._serialize_value(
-                getattr(record, "output_summary")
-            )
-
-        # Event type
-        if getattr(record, "event", None):
-            log_data["event"] = getattr(record, "event")
-
-        # Context
-        if getattr(record, "context", None):
-            log_data["context"] = self._serialize_value(getattr(record, "context"))
-
-        # File operation fields
-        if getattr(record, "file_operation", None):
-            log_data["file_operation"] = getattr(record, "file_operation")
-            if getattr(record, "file_path", None):
-                log_data["file_path"] = getattr(record, "file_path")
-            if getattr(record, "file_name", None):
-                log_data["file_name"] = getattr(record, "file_name")
-            if getattr(record, "file_size", None):
-                log_data["file_size"] = getattr(record, "file_size")
-            if getattr(record, "file_type", None):
-                log_data["file_type"] = getattr(record, "file_type")
-
-        # Backend call fields
-        if getattr(record, "backend_type", None):
-            log_data["backend_type"] = getattr(record, "backend_type")
-            if getattr(record, "backend_operation", None):
-                log_data["backend_operation"] = getattr(record, "backend_operation")
-            if getattr(record, "endpoint", None):
-                log_data["endpoint"] = getattr(record, "endpoint")
-            if getattr(record, "status_code", None):
-                log_data["status_code"] = getattr(record, "status_code")
-            if getattr(record, "request_size", None):
-                log_data["request_size"] = getattr(record, "request_size")
-            if getattr(record, "response_size", None):
-                log_data["response_size"] = getattr(record, "response_size")
-            if getattr(record, "retry_count", None) is not None:
-                log_data["retry_count"] = getattr(record, "retry_count")
-
-        # Success indicator
-        if getattr(record, "success", None) is not None:
-            log_data["success"] = getattr(record, "success")
-
-        # Step and decision
-        if getattr(record, "step", None):
-            log_data["step"] = getattr(record, "step")
-        if getattr(record, "decision", None):
-            log_data["decision"] = getattr(record, "decision")
-        if getattr(record, "data_shape", None):
-            log_data["data_shape"] = getattr(record, "data_shape")
-
-        # Exception info from record
-        if record.exc_info:
-            exc_type, exc_value, exc_tb = record.exc_info
-            log_data["exception"] = {
-                "type": exc_type.__name__ if exc_type else None,
-                "message": str(exc_value) if exc_value else None,
-            }
-            if LOG_PAYLOADS_ON_DEBUG and exc_tb:
-                log_data["exception"]["traceback"] = "".join(
-                    traceback.format_exception(exc_type, exc_value, exc_tb)
-                )
-
-        # Source location
-        log_data["source"] = {
-            "pathname": record.pathname,
-            "lineno": record.lineno,
-            "funcName": record.funcName,
-        }
-
-        # Serialize to JSON
+        log_data = self._build_log_data(record)
         return json.dumps(
             log_data,
             indent=self.indent,
@@ -1614,3 +1584,139 @@ class JSONFormatter(logging.Formatter):
             ensure_ascii=self.ensure_ascii,
             default=self._serialize_value,
         )
+
+
+    def _build_log_data(self, record: logging.LogRecord) -> dict[str, Any]:
+        base = _build_base_record(record)
+
+        # add optional attributes
+        _add_optional_attrs_to_base(record, base, [
+            "correlation_id",
+            "trace_id",
+            "component",
+            "operation",
+            "module",
+            "function",
+            "duration_ms",
+        ])
+
+        # structured fields
+        for key in ["error", "input_summary", "output_summary", "event", "context"]:
+            val = getattr(record, key, None)
+            if val is not None:
+                base[key] = self._serialize_value(val)
+
+        # grouped optional fields
+        if getattr(record, "file_operation", None):
+            base.update(
+                _collect_attrs(
+                    record,
+                    [
+                        "file_operation",
+                        "file_path",
+                        "file_name",
+                        "file_size",
+                        "file_type",
+                    ],
+                )
+            )
+
+        if getattr(record, "backend_type", None):
+            base.update(
+                _collect_attrs(
+                    record,
+                    [
+                        "backend_type",
+                        "backend_operation",
+                        "endpoint",
+                        "status_code",
+                        "request_size",
+                        "response_size",
+                        "retry_count",
+                    ],
+                )
+            )
+
+        for attr in ["success", "step", "decision", "data_shape"]:
+            val = getattr(record, attr, None)
+            if val is not None:
+                base[attr] = val
+
+        _maybe_add_exception_info(record, base)
+        base["source"] = {
+            "pathname": record.pathname,
+            "lineno": record.lineno,
+            "funcName": record.funcName,
+        }
+        return base
+
+
+def _build_base_record(record: logging.LogRecord) -> dict[str, Any]:
+    return {
+        "timestamp": datetime.fromtimestamp(
+            record.created, tz=timezone.utc
+        ).isoformat(),
+        "level": record.levelname,
+        "logger": record.name,
+        "message": record.getMessage(),
+    }
+
+
+def _add_optional_attrs_to_base(
+    record: logging.LogRecord, base: dict[str, Any], attrs: list[str]
+) -> None:
+    for attr in attrs:
+        val = getattr(record, attr, None)
+        if val is not None:
+            base[attr] = val
+
+
+def _maybe_add_exception_info(record: logging.LogRecord, base: dict[str, Any]) -> None:
+    if record.exc_info:
+        exc_type, exc_value, exc_tb = record.exc_info
+        exc_obj = {
+            "type": exc_type.__name__ if exc_type else None,
+            "message": str(exc_value) if exc_value else None,
+        }
+        if LOG_PAYLOADS_ON_DEBUG and exc_tb:
+            exc_obj["traceback"] = "".join(
+                traceback.format_exception(exc_type, exc_value, exc_tb)
+            )
+        base["exception"] = exc_obj
+
+
+def _collect_attrs(record: logging.LogRecord, attrs: list[str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for a in attrs:
+        val = getattr(record, a, None)
+        if val is not None:
+            result[a] = val
+    return result
+
+
+def _serialize_bytes(b: bytes) -> Any:
+    if len(b) > 100:
+        return f"<bytes:{len(b)}>"
+    try:
+        return b.decode("utf-8", errors="replace")
+    except Exception:
+        return f"<bytes:{len(b)}>"
+
+
+def _serialize_exception(exc: BaseException) -> dict[str, Any]:
+    return {
+        "type": type(exc).__name__,
+        "message": str(exc),
+        "traceback": (
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+            if exc.__traceback__ and LOG_PAYLOADS_ON_DEBUG
+            else None
+        ),
+    }
+
+
+def _safe_str(value: Any) -> str:
+    try:
+        return str(value)
+    except Exception:
+        return "<unserializable>"

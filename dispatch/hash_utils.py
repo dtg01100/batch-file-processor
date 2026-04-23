@@ -41,7 +41,9 @@ def generate_match_lists(processed_files: list[dict]) -> tuple[list, list, set]:
 
 
 def generate_file_hash(
-    file_path: str, max_retries: int = HASH_CALC_MAX_RETRIES, retry_delay_base: float = 1.0
+    file_path: str,
+    max_retries: int = HASH_CALC_MAX_RETRIES,
+    retry_delay_base: float = 1.0,
 ) -> str:
     """Generate MD5 hash of file contents with retry logic.
 

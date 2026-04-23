@@ -655,7 +655,8 @@ class EDIConverterStep:
         correlation_id: str,
         start_time: float,
     ):
-        """Run the sequence of pre-execution checks. Returns module or ConverterResult on early return."""
+        """Run the sequence of pre-execution checks.
+        Returns module or ConverterResult on early return."""
         is_noop, result = self._is_noop_conversion(
             convert_to_format, input_path, input_basename, correlation_id, start_time
         )
@@ -750,7 +751,8 @@ class EDIConverterStep:
         correlation_id: str,
         start_time: float,
     ) -> ConverterResult:
-        """Centralized conversion error handling that logs and records the error and returns a failure result."""
+        """Centralized conversion error handling that logs and
+        records the error and returns a failure result."""
         duration_ms = (time.perf_counter() - start_time) * 1000
         error_msg = f"Conversion failed: {exc}"
         # If this is an ImportError wrapped, log appropriately

@@ -1,8 +1,6 @@
 # tests/unit/dispatch/test_error_handler_alert_integration.py
 from unittest.mock import MagicMock
 
-import pytest
-
 from dispatch.error_handler import ErrorHandler
 
 

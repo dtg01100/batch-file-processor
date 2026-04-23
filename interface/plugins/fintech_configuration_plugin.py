@@ -25,7 +25,8 @@ class FintechConfigurationPlugin(ConfigurationPlugin):
     """
     Fintech configuration plugin implementing the ConfigurationPlugin interface.
 
-    Provides support for Fintech format configuration with specific fields and validation.
+    Provides support for Fintech format configuration with specific
+    fields and validation.
     """
 
     @classmethod

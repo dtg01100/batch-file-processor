@@ -203,7 +203,8 @@ def filter_edi_file_by_category(
         output_file: Path to output EDI file
         upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
         filter_categories: Comma-separated categories or "ALL"
-        filter_mode: "include" (keep only these categories) or "exclude" (remove these categories)
+        filter_mode: "include" (keep only these categories) or "exclude"
+        (remove these categories)
 
     Returns:
         True if any filtering was applied, False if no filtering occurred

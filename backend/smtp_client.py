@@ -45,7 +45,9 @@ class RealSMTPClient:
         self.config = config or {}
         self._connection: smtplib.SMTP | None = None
 
-    def connect(self, host: str, port: int = 587, timeout: float = SMTP_TIMEOUT_SECONDS) -> None:
+    def connect(
+        self, host: str, port: int = 587, timeout: float = SMTP_TIMEOUT_SECONDS
+    ) -> None:
         """Connect to SMTP server.
 
         Args:

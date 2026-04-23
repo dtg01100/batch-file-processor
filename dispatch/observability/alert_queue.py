@@ -16,9 +16,17 @@ class AlertQueue:
         if queue_path is None:
             import appdirs
 
-            queue_path = Path(appdirs.user_data_dir()) / "Batch File Sender" / "alert_queue.jsonl"
+            queue_path = (
+            Path(appdirs.user_data_dir())
+            / "Batch File Sender"
+            / "alert_queue.jsonl"
+        )
         self._queue_path = Path(queue_path)
-        self._failures_path = Path(failures_path) if failures_path else self._queue_path.parent / "alert_failures.log"
+        self._failures_path = (
+            Path(failures_path)
+            if failures_path
+            else self._queue_path.parent / "alert_failures.log"
+        )
         self._ensure_paths()
 
     def _ensure_paths(self) -> None:
@@ -48,7 +56,10 @@ class AlertQueue:
     def mark_failed(self, alert: dict[str, Any], error: str) -> None:
         self._failures_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._failures_path, "a", encoding="utf-8") as f:
-            f.write(f"{datetime.now().isoformat()} FAILED: {json.dumps(alert)} error: {error}\n")
+            f.write(
+            f"{datetime.now().isoformat()} FAILED:"
+            f" {json.dumps(alert)} error: {error}\n"
+        )
 
     @property
     def queue_path(self) -> Path:

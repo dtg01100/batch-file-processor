@@ -1638,7 +1638,7 @@ class TestOrchestratorProgressPhases:
             "GE*1*1~\n"
             "IEA*1*000000001~\n"
         )
-        
+
         test_file2 = input_folder / "test2.edi"
         test_file2.write_text(
             "ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *20240101*1200*U*00401*000000002*0*T*:~\n"
@@ -1657,11 +1657,11 @@ class TestOrchestratorProgressPhases:
             "folder_id": 1,
             "resend_flag": 0,  # Already processed, NOT marked for resend
         })
-        
+
         # Insert another with resend_flag=1
         temp_database.processed_files.insert({
             "file_name": "test2.edi",
-            "file_checksum": "def456",  # Fake checksum  
+            "file_checksum": "def456",  # Fake checksum
             "folder_id": 1,
             "resend_flag": 1,  # Marked for resend
         })
@@ -1695,7 +1695,7 @@ class TestOrchestratorProgressPhases:
             folder_num=1,
             folder_total=1,
         )
-        
+
         # Should complete without error
         assert result.success is True
         # Files will be discovered and filtered based on actual checksums

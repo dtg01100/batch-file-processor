@@ -25,7 +25,6 @@ from core.structured_logging import (
     log_with_context,
 )
 from core.utils import capture_records, normalize_bool, normalize_convert_to_format
-from dispatch.edi_validator import EDIValidator
 from dispatch.error_handler import ErrorHandler
 from dispatch.feature_flags import get_strict_testing_mode
 from dispatch.interfaces import (
@@ -1061,7 +1060,8 @@ class DispatchOrchestrator:
 
         Kept as a separate method to keep _apply_conversion concise.
         """
-        # The converter API expects: (input_path, folder, settings, upc_dict, context=...)
+        # The converter API expects: (input_path, folder, settings,
+        # upc_dict, context=...)
         return converter_step.execute(
             current_file,
             context.effective_folder,
@@ -1702,7 +1702,8 @@ class DispatchOrchestrator:
         It creates a DispatchOrchestrator and processes all active folders.
 
         Args:
-            database_connection: Database connection (not used directly, kept for compatibility)
+            database_connection: Database connection (not used directly,
+            kept for compatibility)
             folders_database: Folders database interface
             run_log: Run log for recording processing activity
             emails_table: Emails table for storing log references
@@ -1767,7 +1768,8 @@ class DispatchOrchestrator:
     def _iterate_folders(
         orchestrator: "DispatchOrchestrator", folders: list, run_log, processed_files
     ) -> bool:
-        """Iterate over folders and run processing, returning whether any errors occurred.
+        """Iterate over folders and run processing, returning whether
+    any errors occurred.
 
         Uses single-pass discovery and processing: files are discovered and
         processed immediately for each folder, eliminating the pre-discovery phase.
@@ -1790,7 +1792,11 @@ class DispatchOrchestrator:
                 if hasattr(run_log, "write"):
                     try:
                         run_log.write(
-                            f"ERROR processing folder {folder.get('alias', 'unknown')}: {folder_error}\r\n".encode()
+                            (
+                                f"ERROR processing folder"
+                                f" {folder.get('alias', 'unknown')}:"
+                                f" {folder_error}\r\n"
+                            ).encode()
                         )
                     except Exception:
                         # best-effort logging; avoid masking original error

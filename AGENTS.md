@@ -23,7 +23,7 @@ deactivate
 
 ## Project Overview
 
-Batch file processor — Python/PyQt6 GUI application for processing EDI/batch files with email, FTP, and copy backends.
+Batch file processor — Python/PyQt5 GUI application for processing EDI/batch files with email, FTP, and copy backends.
 
 ## Key Commands
 
@@ -36,7 +36,7 @@ Batch file processor — Python/PyQt6 GUI application for processing EDI/batch f
 
 ## Module Structure
 
-- `interface/` — PyQt6 GUI (see `interface/AGENTS.md`)
+- `interface/` — PyQt5 GUI (see `interface/AGENTS.md`)
 - `dispatch/` — Core file processing (see `dispatch/AGENTS.md`)
 - `tests/` — Test suite (see `tests/AGENTS.md`)
 - `convert_*.py` — Conversion backends

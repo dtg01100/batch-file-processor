@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import queue as queue_lib
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -66,5 +66,9 @@ class AuditLogger:
         )
         self.log_event(event)
 
-    def get_queue(self) -> queue_lib.Queue[AuditEvent]:
-        return self._queue
+    def drain(self) -> list[AuditEvent]:
+        """Drain and return all queued events. Useful for testing."""
+        events = []
+        while not self._queue.empty():
+            events.append(self._queue.get_nowait())
+        return events

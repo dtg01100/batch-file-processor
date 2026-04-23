@@ -1,13 +1,13 @@
 # Batch File Processor
 
-A PyQt6 desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
+A PyQt5 desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- PyQt6
+- PyQt5
 - SQLite3
 
 ### Installation
@@ -71,7 +71,7 @@ batch-file-processor/
 ├── core/           # Core utilities, EDI parser, database abstraction
 ├── dispatch/       # Pipeline orchestration and file processing
 ├── backend/        # FTP, SMTP, and copy backend clients
-├── interface/      # PyQt6 UI layer
+├── interface/      # PyQt5 UI layer
 ├── docs/           # Documentation (architecture, testing, migrations, etc.)
 ├── tests/          # Test suite (unit, integration, e2e)
 ├── migrations/     # Database migration scripts

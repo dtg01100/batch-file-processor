@@ -47,7 +47,10 @@ class ResendService:
             Total number of unique processed files.
 
         """
-        sql = "SELECT COUNT(DISTINCT file_name || '-' || folder_id) AS cnt FROM processed_files"
+        sql = (
+        "SELECT COUNT(DISTINCT file_name || '-' || folder_id)"
+        " AS cnt FROM processed_files"
+    )
         cur = self._db.raw_connection.execute(sql, [])
         row = cur.fetchone()
         return row["cnt"] if row else 0
@@ -211,7 +214,8 @@ class ResendService:
         date_from: str | None = None,
         date_to: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Get files sorted by sent_date_time (most recent first), with processed_at fallback."""
+        """Get files sorted by sent_date_time (most recent first),
+        with processed_at fallback."""
         where_clauses = []
         params: list[Any] = []
 
@@ -228,7 +232,10 @@ class ResendService:
                 params = [search_value]
             else:
                 where_clauses.append(
-                    "(pf.file_name LIKE ? OR pf.invoice_numbers LIKE ? OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?)"
+                    (
+                    "(pf.file_name LIKE ? OR pf.invoice_numbers LIKE ?"
+                    " OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?)"
+                )
                 )
                 params = [search_value, search_value, search_value]
 
@@ -240,9 +247,7 @@ class ResendService:
             where_clauses.append("COALESCE(pf.sent_date_time, pf.processed_at) <= ?")
             params.append(date_to)
 
-        where_clause = ""
-        if where_clauses:
-            where_clause = "WHERE " + " AND ".join(where_clauses)
+        where_clause = self._build_where_clause(where_clauses)
 
         sql = f"""
             SELECT pf.*, COALESCE(f.alias, pf.folder_alias, '') AS resolved_folder_alias
@@ -260,7 +265,22 @@ class ResendService:
         folder_ids = list(dict.fromkeys(line["folder_id"] for line in processed_lines))
         folder_aliases = self._get_folder_alias_batch(folder_ids)
 
-        file_list = []
+        return self._build_file_list(processed_lines, folder_aliases, check_file_exists)
+
+    def _build_where_clause(self, clauses: list[str]) -> str:
+        """Build SQL WHERE clause from individual clauses."""
+        if not clauses:
+            return ""
+        return "WHERE " + " AND ".join(clauses)
+
+    def _build_file_list(
+        self,
+        processed_lines: list[dict[str, Any]],
+        folder_aliases: dict[int, str],
+        check_file_exists: bool,
+    ) -> list[dict[str, Any]]:
+        """Construct the deduplicated file list from processed lines."""
+        file_list: list[dict[str, Any]] = []
         seen_files = set()
         for processed_line in processed_lines:
             file_key = (processed_line["file_name"], processed_line["folder_id"])

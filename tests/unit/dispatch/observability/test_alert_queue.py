@@ -1,8 +1,5 @@
 # tests/unit/dispatch/observability/test_alert_queue.py
 import json
-from pathlib import Path
-
-import pytest
 
 
 class TestAlertQueue:

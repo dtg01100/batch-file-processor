@@ -1,5 +1,4 @@
 # tests/unit/interface/services/test_smtp_alert_service.py
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
