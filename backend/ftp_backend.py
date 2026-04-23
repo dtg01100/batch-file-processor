@@ -6,6 +6,7 @@ injectable client support for testing.
 
 import ftplib
 import os
+from typing import Any
 
 from backend.backend_base import BackendBase
 from backend.ftp_client import create_ftp_client
@@ -91,9 +92,9 @@ class FTPBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        settings_dict: dict,
+        settings: dict,
         filename: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> bool:
         """Send file via FTP/FTPS.
 
@@ -157,26 +158,29 @@ class FTPBackend(BackendBase):
             True if successful
 
         """
+        client = self._client
+        assert client is not None, "FTP client must be set before calling _send_file"
+
         logger.debug(
             "Connecting to ftp server: %s",
             process_parameters["ftp_server"],
         )
-        self._client.connect(
+        client.connect(
             str(process_parameters["ftp_server"]),
             process_parameters["ftp_port"],
         )
         logger.debug("Logging in to %s", process_parameters["ftp_server"])
-        self._client.login(
+        client.login(
             process_parameters["ftp_username"],
             process_parameters["ftp_password"],
         )
 
         logger.debug("Sending File %s...", filename_no_path)
 
-        _ensure_remote_directory(self._client, process_parameters["ftp_folder"])
+        _ensure_remote_directory(client, process_parameters["ftp_folder"])
 
         with open(filename, "rb") as send_file:
-            self._client.storbinary("stor " + filename_no_path, send_file)
+            client.storbinary("stor " + filename_no_path, send_file)
 
         logger.info("Successfully sent file %s", filename_no_path)
         log_file_operation(
@@ -194,8 +198,9 @@ class FTPBackend(BackendBase):
         """Get backend name for logging."""
         return "ftp"
 
-    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get FTP endpoint for logging."""
+        del settings  # unused, kept for base class interface
         server = process_parameters.get("ftp_server", "")
         port = process_parameters.get("ftp_port", "")
         folder = process_parameters.get("ftp_folder", "")
@@ -212,11 +217,12 @@ class FTPBackend(BackendBase):
     def _prepare_for_retry(
         self,
         process_parameters: dict,
-        settings_dict: dict,
+        settings: dict,
         filename: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Prepare for retry by resetting state."""
+        del process_parameters, settings, filename, kwargs  # unused
         self._client = None
 
     def send(

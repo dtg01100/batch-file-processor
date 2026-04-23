@@ -82,6 +82,18 @@ class FTPClientProtocol(Protocol):
         """
         ...
 
+    def mkd(self, directory: str) -> str:
+        """Create a directory on the FTP server.
+
+        Args:
+            directory: Directory path to create
+
+        Returns:
+            Path of the newly created directory
+
+        """
+        ...
+
 
 @runtime_checkable
 class SMTPClientProtocol(Protocol):

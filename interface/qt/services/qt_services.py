@@ -72,7 +72,7 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type] - PyQt5 stubs incorrect, flags work at runtime
             QMessageBox.StandardButton.No,
         )
         return result == QMessageBox.StandardButton.Yes
@@ -88,7 +88,7 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type] - PyQt5 stubs incorrect, flags work at runtime
             QMessageBox.StandardButton.Cancel,
         )
         return result == QMessageBox.StandardButton.Ok

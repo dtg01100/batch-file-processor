@@ -259,7 +259,7 @@ class ImportThread(QThread):
                 None,
                 title,
                 message,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type] - PyQt5 stubs incorrect, flags work at runtime
                 QMessageBox.StandardButton.No,
             )
             return reply == QMessageBox.StandardButton.Yes
