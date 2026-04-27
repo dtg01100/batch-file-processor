@@ -16,6 +16,22 @@ from core.structured_logging import get_logger, log_file_operation
 logger = get_logger(__name__)
 
 
+def _is_valid_ftp_path(path: str) -> bool:
+    """Validate FTP path for security issues.
+
+    Args:
+        path: Path to validate
+
+    Returns:
+        True if path is safe for FTP operations
+    """
+    if not path:
+        return False
+    if ".." in path:
+        return False
+    return True
+
+
 def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None:
     """Ensure the remote directory exists, creating it if necessary.
 
@@ -23,7 +39,13 @@ def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None
         client: FTP client instance
         remote_dir: Remote directory path to ensure exists
 
+    Raises:
+        ValueError: If remote_dir is invalid or contains path traversal
+
     """
+    if not _is_valid_ftp_path(remote_dir):
+        raise ValueError(f"Invalid FTP folder path: {remote_dir}")
+
     if remote_dir and remote_dir != "/":
         path_parts = [
             part for part in remote_dir.replace("\\", "/").strip("/").split("/") if part
@@ -86,7 +108,7 @@ class FTPBackend(BackendBase):
         super().__init__(disable_retry=disable_retry)
         self.ftp_client = ftp_client
         self._client = None
-        self._use_tls_options = [True, False]
+        self._use_tls_options = [False, True]
         self._current_tls_index = 0
 
     def _execute(
@@ -179,8 +201,12 @@ class FTPBackend(BackendBase):
 
         _ensure_remote_directory(client, process_parameters["ftp_folder"])
 
+        safe_filename = os.path.basename(filename_no_path)
+        if not safe_filename or safe_filename.startswith("."):
+            raise ValueError(f"Invalid filename for FTP upload: {filename_no_path}")
+
         with open(filename, "rb") as send_file:
-            client.storbinary("stor " + filename_no_path, send_file)
+            client.storbinary("stor " + safe_filename, send_file)
 
         logger.info("Successfully sent file %s", filename_no_path)
         log_file_operation(

@@ -9,26 +9,26 @@ across all backend implementations (email, FTP, HTTP, copy). It handles:
 - Connection cleanup in finally blocks
 
 Thread Safety:
-    BackendBase instances are NOT thread-safe. Each backend operation should use
-    its own backend instance. The instance variables (_correlation_id, _counter)
-    are mutated during execute() calls.
+    BackendBase instances are thread-safe. Instance variables (_correlation_id,
+    _counter) are protected by a lock. Each backend operation uses its own
+    lock to prevent race conditions in multi-threaded scenarios.
 
-    For multi-threaded scenarios:
-    - Create separate backend instances per thread or per operation
-    - Do not share backend instances across concurrent operations
-    - The class constants (MAX_RETRIES, MAX_DELAY, INITIAL_DELAY) are read-only
+    The class constants (MAX_RETRIES, MAX_DELAY, INITIAL_DELAY) are read-only
+    and safe to share across threads.
 
     Example of thread-safe usage:
         import threading
         from backend.email_backend import EmailBackend
 
         def send_email(file_path):
-            # Each thread creates its own backend instance
+            # Each thread can safely use the same backend instance
+            # or use separate instances - both are safe
             backend = EmailBackend()
             backend.send(params, settings, file_path)
 """
 
 import os
+import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -94,6 +94,7 @@ class BackendBase(ABC):
         self._correlation_id = None
         self._counter = 0
         self._disable_retry = disable_retry
+        self._lock = threading.Lock()
 
     def execute(
         self,
@@ -124,21 +125,23 @@ class BackendBase(ABC):
             Exception: If operation fails after MAX_RETRIES attempts
 
         """
-        self._correlation_id = os.urandom(4).hex()
-        self._counter = 0
+        with self._lock:
+            self._correlation_id = os.urandom(4).hex()
+            self._counter = 0
 
         # Log file read operation
         try:
             file_size = os.path.getsize(filename)
         except OSError:
             file_size = 0
+        correlation_id_for_log = self._correlation_id
         log_file_operation(
             logger,
             "read",
             filename,
             file_size=file_size,
             file_type="edi",
-            correlation_id=self._correlation_id,
+            correlation_id=correlation_id_for_log,
         )
 
         # Execute with retry logic
@@ -157,7 +160,7 @@ class BackendBase(ABC):
                     endpoint=self._get_endpoint(process_parameters, settings),
                     success=True,
                     duration_ms=duration_ms,
-                    correlation_id=self._correlation_id,
+                    correlation_id=correlation_id_for_log,
                 )
 
                 return result
@@ -175,33 +178,37 @@ class BackendBase(ABC):
                     error=error,
                     duration_ms=duration_ms,
                     retry_count=self._counter,
-                    correlation_id=self._correlation_id,
+                    correlation_id=correlation_id_for_log,
                 )
 
-                # Check if we should retry
-                if self._counter >= self.MAX_RETRIES:
-                    logger.error(
-                        "Retry limit reached (%d), passing exception to dispatch",
-                        self.MAX_RETRIES,
-                    )
-                    raise
+                with self._lock:
+                    # Check if we should retry
+                    if self._counter >= self.MAX_RETRIES:
+                        logger.error(
+                            "Retry limit reached (%d), passing exception to dispatch",
+                            self.MAX_RETRIES,
+                        )
+                        raise
 
-                # Check if this is a non-retryable error
-                if self._is_non_retryable_error(error):
-                    raise
+                    # Check if this is a non-retryable error
+                    if self._is_non_retryable_error(error):
+                        raise
 
-                # Retry with backoff
-                self._counter += 1
+                    # Retry with backoff
+                    self._counter += 1
+                    current_counter = self._counter
+
                 delay = (
                     0.001
                     if self._disable_retry
                     else min(
-                        self.INITIAL_DELAY * (2 ** (self._counter - 1)), self.MAX_DELAY
+                        self.INITIAL_DELAY * (2 ** (current_counter - 1)),
+                        self.MAX_DELAY,
                     )
                 )
                 logger.warning(
                     "Encountered an error. Retry number %d: %s",
-                    self._counter,
+                    current_counter,
                     error,
                 )
                 if delay > 0:
@@ -238,14 +245,26 @@ class BackendBase(ABC):
         if isinstance(error, TimeoutError):
             return True
         if isinstance(error, OSError):
-            if getattr(error, "errno", None) in (
+            errno = getattr(error, "errno", None)
+            if errno is not None and errno in (
                 113,  # ECONNREFUSED (Linux)
-                61,  # ECONNREFUSED (macOS)
+                61,   # ECONNREFUSED (macOS)
                 111,  # ECONNREFUSED (some Linux)
-                2,  # ENOENT - No such file or directory
-                9,  # EBADF - Bad file descriptor
-                13,  # EACCES - Permission denied
-                1,  # EPERM - Operation not permitted
+                2,    # ENOENT - No such file or directory
+                9,    # EBADF - Bad file descriptor
+                13,   # EACCES - Permission denied
+                1,    # EPERM - Operation not permitted
+                110,  # ETIMEDOUT - Connection timed out
+                104,  # ECONNRESET - Connection reset by peer
+                101,  # ENETUNREACH - Network is unreachable
+                64,   # EHOSTDOWN - Host is down
+                65,   # EHOSTUNREACH - No route to host
+                99,   # EADDRNOTAVAIL - Cannot assign requested address
+                22,   # EINVAL - Invalid argument
+                87,   # WSAEINVAL (Windows) - Invalid argument
+                10049,  # WSAADDRNOTAVAIL (Windows)
+                10060,  # WSAETIMEDOUT (Windows)
+                10054,  # WSAECONNRESET (Windows)
             ):
                 return True
         return False

@@ -125,6 +125,7 @@ class FileProcessor:
         self.converter_step = converter_step
         self.file_system = file_system
         self._audit_logger = audit_logger
+        self._cleanup_failures: list[str] = []
 
     def set_audit_logger(self, audit_logger: Any) -> None:
         """Set the audit logger for the file processor.
@@ -792,6 +793,7 @@ conversion_step: Converter step
                     logger.debug("Cleaned up temp directory: %s", temp_dir)
             except OSError as e:
                 logger.warning("Failed to clean up temp dir %s: %s", temp_dir, e)
+                self._cleanup_failures.append(temp_dir)
 
         for temp_file in context.temp_files:
             try:
@@ -800,6 +802,7 @@ conversion_step: Converter step
                     logger.debug("Cleaned up temp file: %s", temp_file)
             except OSError as e:
                 logger.warning("Failed to clean up temp file %s: %s", temp_file, e)
+                self._cleanup_failures.append(temp_file)
 
         context.temp_dirs.clear()
         context.temp_files.clear()
