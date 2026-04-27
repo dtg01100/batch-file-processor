@@ -13,7 +13,7 @@ Import via::
 # FolderConfiguration is the authoritative folder domain model.
 # It lives in interface/models/ because it predates this separation;
 # we re-export it here so all new code can import from core.domain.
-from interface.models.folder_configuration import (  # noqa: F401
+from interface.models.folder_configuration import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     BackendType,
@@ -27,3 +27,18 @@ from interface.models.folder_configuration import (  # noqa: F401
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
 )
+
+__all__ = [
+    "ARecordPaddingConfiguration",
+    "BackendSpecificConfiguration",
+    "BackendType",
+    "ConvertFormat",
+    "CopyConfiguration",
+    "CSVConfiguration",
+    "EDIConfiguration",
+    "EmailConfiguration",
+    "FolderConfiguration",
+    "FTPConfiguration",
+    "InvoiceDateConfiguration",
+    "UPCOverrideConfiguration",
+]

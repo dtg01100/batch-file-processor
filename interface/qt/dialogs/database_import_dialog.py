@@ -181,7 +181,7 @@ class DatabaseImportDialog(BaseDialog):
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, message: str) -> None:  # noqa: FBT001 - Qt signal handler, 'message' param required but not used
+    def _on_finished(self, success: bool, _message: str) -> None:
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -302,7 +302,7 @@ class ImportThread(QThread):
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003 - Qt signal requires bool argument
+            self.finished.emit(True, "Import completed successfully")
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")

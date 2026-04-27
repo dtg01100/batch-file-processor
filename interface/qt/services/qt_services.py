@@ -293,10 +293,7 @@ class QtProgressService(QObject):
         overlay.setObjectName("qt_progress_overlay")
         overlay.setAutoFillBackground(True)
         # Ensure stylesheet background gets painted even with global QFrame styles.
-        overlay.setAttribute(
-            Qt.WidgetAttribute.WA_StyledBackground,
-            True,  # noqa: FBT003 - Qt attribute requires boolean argument for WA_StyledBackground
-        )
+        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         overlay.setStyleSheet(
             f"QFrame#qt_progress_overlay "
             f"{{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
@@ -865,9 +862,9 @@ class QtProgressService(QObject):
         """Resize the overlay to match the parent widget."""
         self._overlay.setGeometry(self._parent.rect())
 
-    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:  # noqa: N802 - Qt override, 'a0'/'a1' are conventional Qt names
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
         """Resize overlay when the parent widget is resized."""
         parent = getattr(self, "_parent", None)
-        if a0 is parent and a1 and a1.type() == QEvent.Type.Resize:
+        if obj is parent and event and event.type() == QEvent.Type.Resize:
             self._sync_geometry()
-        return super().eventFilter(a0, a1)
+        return super().eventFilter(obj, event)

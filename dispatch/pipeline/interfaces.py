@@ -102,13 +102,13 @@ class LegacyValidatorAdapter:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by adapter
+        context: dict[str, Any],
     ) -> tuple[bool, str, list[str]]:
         """Execute validation via the legacy .validate() method.
 
         Args:
             input_path: Path to the file to validate
-            context: Unused context (for interface compatibility)
+            context: Context (unused; required for PipelineStep protocol compatibility)
 
         Returns:
             Tuple of (success, input_path, errors) where errors come
@@ -142,13 +142,13 @@ class ValidatorStep:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by this wrapper
+        context: dict[str, Any],
     ) -> tuple[bool, str, list[str]]:
         """Execute validation step.
 
         Args:
             input_path: Path to file to validate
-            context: Additional context (unused)
+            context: Additional context (unused; required for PipelineStep protocol compatibility)
 
         Returns:
             Tuple of (success, input_path, errors)
@@ -174,13 +174,13 @@ class NoOpStep:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by design
+        context: dict[str, Any],
     ) -> tuple[bool, str, list[str]]:
         """Execute no-op step.
 
         Args:
             input_path: Path to pass through
-            context: Unused context
+            context: Additional context (unused; required for PipelineStep protocol compatibility)
 
         Returns:
             Tuple of (True, input_path, [])

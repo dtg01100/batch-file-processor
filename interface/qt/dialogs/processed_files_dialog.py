@@ -224,7 +224,7 @@ class ProcessedFilesDialog(BaseDialog):
             self._database_obj,
         )
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802 - Qt override, clear naming preferred
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Escape:
             self.reject()
         else:

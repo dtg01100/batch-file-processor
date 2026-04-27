@@ -251,7 +251,7 @@ class FintechConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
+from .convert_base import create_edi_convert_wrapper
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(FintechConverter, format_name="fintech")

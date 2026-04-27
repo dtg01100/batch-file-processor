@@ -83,6 +83,7 @@ class DatabaseConnector:
                 self._query_runner.close()
                 logger.debug("Database connection closed")
             except AttributeError:
+                # Ignore if connection was already closed or was None
                 pass
             self._query_runner = None
             self._db_initialized = False

@@ -280,6 +280,9 @@ class ErrorHandler:
                     processing_context=context,
                 )
             except Exception:
+                # Errors in error recording are silently ignored to avoid
+                # cascading failures. The original error is already logged
+                # or will be recorded via other paths.
                 pass
 
     def record_error_to_logs(

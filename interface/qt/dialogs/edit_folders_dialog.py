@@ -187,11 +187,12 @@ class EditFoldersDialog(BaseDialog):
             normalize_bool(config.get("process_edi"))
             or bool(config.get("convert_to_format"))
         )
-        edi_check.blockSignals(True)  # noqa: FBT003 - prevent signal cascade during programmatic state change
+        # Prevent toggling the signal handler while programmatically changing state
+        edi_check.blockSignals(True)
         try:
             edi_check.setChecked(want_convert)
         finally:
-            edi_check.blockSignals(False)  # noqa: FBT003 - re-enable signals after programmatic state change
+            edi_check.blockSignals(False)
 
         self.dynamic_edi_builder._clear_dynamic_edi()
         if want_convert:

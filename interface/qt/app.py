@@ -439,6 +439,7 @@ class QtBatchFileSenderApp:
                 single_table = self._database.session_database["single_table"]
                 single_table.drop()
         except Exception:
+            # Cleanup failure is non-fatal; continue with main operation
             pass
 
         try:

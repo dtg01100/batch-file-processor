@@ -130,6 +130,7 @@ class QtRunCoordinator:
             try:
                 self._app._os_module.chdir(original_folder)
             except Exception:
+                # Returning to cwd is best-effort; original folder may not exist
                 pass
 
         # Send reports if configured

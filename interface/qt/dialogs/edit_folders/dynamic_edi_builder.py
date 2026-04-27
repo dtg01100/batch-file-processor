@@ -226,7 +226,8 @@ class DynamicEDIBuilder:
                     # Already a plain value -- keep as-is
                     self._saved_upc_override[key] = widget
             except RuntimeError:
-                pass  # widget already deleted
+                # Widget may have been deleted during form cleanup; ignore
+                pass
 
     def _restore_upc_override_as_plain_values(self) -> None:
         """Write saved UPC override values as plain Python values into self.fields.
@@ -341,7 +342,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 - Qt signal handler, 'checked' param required but not used
+    def _on_edi_check_toggled(self, checked: bool) -> None:
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return

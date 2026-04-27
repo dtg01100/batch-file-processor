@@ -125,6 +125,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                     if input_edi_dict["record_type"] == "A":
                         invoice_list.append(input_edi_dict["invoice_number"][-7:])
                 except TypeError:
+                    # capture_records may return None for malformed lines
                     pass
         logger.debug(
             "Extracted %d invoice numbers from %s",
@@ -291,6 +292,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 self.query_object.close()
                 logger.debug("Database connection closed")
             except AttributeError:
+                # Ignore if connection was already closed or was None
                 pass
 
     def _generate_barcode(
@@ -361,7 +363,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
+from .convert_base import create_edi_convert_wrapper
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

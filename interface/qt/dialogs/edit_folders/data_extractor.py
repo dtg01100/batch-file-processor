@@ -183,7 +183,7 @@ class QtFolderDataExtractor:
             if isinstance(widget, QComboBox):
                 return self._coerce_number(widget.currentText(), default)
         except RuntimeError:
-            # Widget has been deleted
+            # Widget may have been deleted during cleanup; return default
             pass
         return default
 

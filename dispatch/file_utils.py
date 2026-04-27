@@ -10,6 +10,10 @@ import re
 
 from core.structured_logging import get_logger
 
+# Backward-compatible re-export: callers use do_clear_old_files from this module.
+# Import directly from core.utils.file_utils in new code.
+from core.utils.file_utils import clear_old_files as do_clear_old_files
+
 logger = get_logger(__name__)
 
 # Precompiled regex for stripping invalid filename characters
@@ -213,6 +217,4 @@ def build_processed_file_record(
     }
 
 
-from core.utils.file_utils import (  # noqa: E402 - needed for backward compat re-exports
-    clear_old_files as do_clear_old_files,  # noqa: F401 - re-exported for backward compat, callers use do_clear_old_files
-)
+__all__ = ["do_clear_old_files"]

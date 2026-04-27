@@ -276,7 +276,9 @@ class RunLogHandler(logging.Handler):
                 self.run_log.write((message + "\r\n").encode())
             elif hasattr(self.run_log, "append"):
                 self.run_log.append(message)
-        except Exception:  # noqa: BLE001 - fallthrough logging, error already recorded by handleError
+        except Exception:
+            # Intentional fallthrough: errors in run_log writing are handled
+            # by the base class handleError to avoid masking original exception
             self.handleError(record)
 
     def close(self) -> None:

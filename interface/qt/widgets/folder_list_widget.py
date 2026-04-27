@@ -566,7 +566,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)  # noqa: FBT003 - Qt setProperty requires boolean argument
+        btn.setProperty("compact", True)
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

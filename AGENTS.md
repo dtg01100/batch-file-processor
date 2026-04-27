@@ -48,3 +48,40 @@ Batch file processor — Python/PyQt5 GUI application for processing EDI/batch f
 - Virtual environment: `.venv/` (managed by uv or pip)
 - Dependencies: `requirements.txt`, `requirements-dev.txt`
 - Config: `pyproject.toml`
+
+## Code Style
+
+### noqa Comments — Always Justify
+
+When adding `# noqa` suppressions, always include a justification comment explaining **why** the suppression is needed. Never leave a bare `# noqa`.
+
+**Good:**
+```python
+context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by adapter
+```
+
+**Bad:**
+```python
+context: dict[str, Any],  # noqa: ARG001
+```
+
+### Justification Requirements by Error Type
+
+| Error Code | Meaning | When Appropriate |
+|------------|---------|------------------|
+| `ARG001` | Unused argument | Required by protocol/interface but not used in implementation |
+| `FBT001/FBT003` | Qt boolean-to-int conversion | Qt signal handlers that require specific signatures |
+| `N802` | Qt method override naming | Qt method overrides using Qt conventional parameter names |
+| `E402` | Module import at module level | Backward compatibility re-exports |
+| `F401` | Unused import | Re-exports for backward compatibility |
+| `BLE001` | Bare except clause | Intentional exception fallthrough in logging |
+| `type: ignore[arg-type]` | PyQt5 stub incompatibilities | PyQt5 type stubs are incorrect, code works at runtime |
+
+### Resolution Before Suppression
+
+Always try to fix the underlying issue first. Suppressions should be a last resort when:
+- The code is correct but linter/type checker is wrong
+- External API requires specific signatures
+- Type stubs are incorrect (document which)
+
+Document the reason clearly so future maintainers understand why the suppression exists.
