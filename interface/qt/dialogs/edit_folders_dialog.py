@@ -667,6 +667,20 @@ class EditFoldersDialog(BaseDialog):
             return "Backends"
         return "Other"
 
+    def _format_grouped_errors(self, errors_by_section: dict[str, list[str]]) -> str:
+        """Format grouped validation errors into a readable message."""
+        lines: list[str] = []
+        for section, messages in errors_by_section.items():
+            if not messages:
+                continue
+            lines.append(f"{section}:")
+            for message in messages:
+                lines.append(f"- {message}")
+            lines.append("")
+        while lines and not lines[-1]:
+            lines.pop()
+        return "\n".join(lines)
+
     def _create_validator(self) -> FolderSettingsValidator:
         if self._validator is not None:
             return self._validator

@@ -75,6 +75,9 @@ class DatabaseConnectionMixin(ABC):
         self.query_object = connector.query_runner
         self._db_initialized = connector.is_initialized
         self._db_connector = connector
+        # Expose ssh_key_filename on the mixin for backward compatibility
+        self.ssh_key_filename = connector.ssh_key_filename
+        self.as400_password = connector.as400_password
         logger.debug(
             "Database connection initialized for %s (ssh_key_filename=%s)",
             self.__class__.__name__,

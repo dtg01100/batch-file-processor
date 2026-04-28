@@ -320,7 +320,18 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -366,7 +377,18 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -413,7 +435,18 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -481,7 +514,18 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -534,7 +578,18 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -583,7 +638,18 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -632,7 +698,18 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -681,7 +758,18 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -734,7 +822,18 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -800,7 +899,18 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -867,7 +977,18 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -933,7 +1054,18 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -996,7 +1128,18 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1059,7 +1202,18 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1129,7 +1283,18 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1180,7 +1345,18 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1228,7 +1404,18 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1307,7 +1494,18 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1376,7 +1574,18 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1424,7 +1633,18 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
@@ -1473,7 +1693,18 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
         )
 
         def patched_init(self, context):
-            self.query_object = query_object
+            # Create customer lookup service with the test query runner
+            from dispatch.services.customer_lookup_service import (
+                CustomerLookupService,
+            )
+            from dispatch.services.uom_lookup_service import UOMLookupService
+            from dispatch.converters.convert_to_jolley_custom import (
+                BASIC_CUSTOMER_QUERY_SQL,
+            )
+            self._customer_service = CustomerLookupService(
+                query_object, BASIC_CUSTOMER_QUERY_SQL
+            )
+            self._uom_service = UOMLookupService(query_object)
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}

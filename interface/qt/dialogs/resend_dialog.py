@@ -803,6 +803,16 @@ class ResendDialog(BaseDialog):
         self._cancel_file_check_worker()
         super().closeEvent(event)
 
+    def deleteLater(self) -> None:
+        """Handle widget deletion — cancel file check worker if running.
+
+        This ensures the worker thread is stopped before the widget is
+        destroyed, preventing crashes during test teardown when Qt cleanup
+        happens while a worker is still running.
+        """
+        self._cancel_file_check_worker()
+        super().deleteLater()
+
 
 def show_resend_dialog(parent: QWidget, database_connection: Any) -> None:
     """Show the resend configuration dialog.

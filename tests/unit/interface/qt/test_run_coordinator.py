@@ -98,11 +98,12 @@ def test_process_directories_writes_validation_report_when_enabled(
         "enable_interval_backups": False,
         "backup_counter": 0,
         "backup_counter_maximum": 10,
+        "enable_reporting": True,
+        "report_edi_errors": True,
     }
     app._database.get_oversight_or_default.return_value = {
         "logs_directory": str(logs_dir),
         "enable_reporting": True,
-        "report_edi_errors": True,
     }
 
     folders_table = MagicMock()

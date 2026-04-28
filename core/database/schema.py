@@ -180,7 +180,8 @@ def ensure_schema(database_connection) -> None:
             ftp_port INTEGER,
             ftp_folder TEXT,
             ftp_username TEXT,
-            ftp_password TEXT
+            ftp_password TEXT,
+            alert_on_failure INTEGER
         )
         """,
         # folders (main configuration table)
@@ -263,7 +264,8 @@ def ensure_schema(database_connection) -> None:
             error_message TEXT,
             convert_format TEXT,
             sent_to TEXT,
-            edi_format TEXT
+            edi_format TEXT,
+            alert_on_failure INTEGER
         )
         """,
         # processed_files (legacy tracking of processed files)

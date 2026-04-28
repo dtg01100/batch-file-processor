@@ -188,9 +188,9 @@ class DatabaseImportDialog(BaseDialog):
 
         if success:
             self._db_label.setText("Import Completed")
-            self.show_info("Import Complete", message)
+            self.show_info("Import Complete", _message)
         else:
-            self.show_error("Import Failed", message)
+            self.show_error("Import Failed", _message)
 
         # Re-enable buttons
         self._import_button.setEnabled(True)
@@ -224,6 +224,22 @@ class DatabaseImportDialog(BaseDialog):
             thread.terminate()
             thread.wait(3000)
         super().closeEvent(event)
+
+    def deleteLater(self) -> None:
+        """Handle widget deletion — terminate import thread if still running.
+
+        This ensures the thread is stopped before the widget is destroyed,
+        preventing crashes during test teardown.
+        """
+        thread = getattr(self, "_import_thread", None)
+        if (
+            thread is not None
+            and callable(getattr(thread, "isRunning", None))
+            and thread.isRunning()
+        ):
+            thread.terminate()
+            thread.wait(3000)
+        super().deleteLater()
 
 
 class ImportThread(QThread):

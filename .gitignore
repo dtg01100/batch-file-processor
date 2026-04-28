@@ -62,7 +62,6 @@ docs/_build/
 # PyBuilder
 target/
 
-
 /session.db
 /edi_converter_scratch_folder
 /errors
@@ -128,3 +127,7 @@ settings_dialog_screenshot.png
 
 # Test result artifacts
 test_results/
+
+# CLIO (managed automatically)
+.clio/*
+!.clio/instructions.md
