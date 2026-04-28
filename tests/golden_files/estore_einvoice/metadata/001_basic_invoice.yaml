@@ -1,0 +1,8 @@
+description: basic_invoice
+format: estore_einvoice
+parameters:
+  as400_address: ${AS400_ADDRESS}
+  as400_password: ${AS400_PASSWORD}
+  as400_username: ${AS400_USERNAME}
+  convert_to_format: estore_einvoice
+test_id: '001'

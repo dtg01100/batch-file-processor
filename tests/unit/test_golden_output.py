@@ -487,7 +487,7 @@ def run_converter(
         input_file: Path to input EDI file
         output_dir: Directory for output
         format_name: Format to convert to
-        params: Converter parameters
+        params: Converter parameters (may include database credentials)
 
     Returns:
         Raw bytes of converter output
@@ -499,6 +499,21 @@ def run_converter(
     module_name = f"dispatch.converters.convert_to_{format_name}"
     module = __import__(module_name, fromlist=["edi_convert"])
     edi_convert = module.edi_convert
+
+    # Extract database credentials from params for settings_dict
+    # Database-dependent converters need credentials in settings_dict
+    # Copy params to avoid modifying the original (params.pop removes keys)
+    params_copy = dict(params)
+    settings_dict: dict[str, Any] = {}
+    db_credentials = [
+        "as400_username",
+        "as400_address",
+        "as400_password",
+        "ssh_key_filename",
+    ]
+    for cred in db_credentials:
+        if cred in params_copy:
+            settings_dict[cred] = params_copy.pop(cred)
 
     # Create a temp input file to ensure we have a valid path
     with tempfile.TemporaryDirectory() as temp_workdir:
@@ -516,8 +531,8 @@ def run_converter(
         result = edi_convert(
             temp_input,
             temp_output,
-            {},  # settings_dict
-            params,
+            settings_dict,
+            params_copy,
             {},  # upc_lookup
         )
 

@@ -1,0 +1,8 @@
+description: basic_invoice
+format: jolley_custom
+parameters:
+  as400_address: ${AS400_ADDRESS}
+  as400_password: ${AS400_PASSWORD}
+  as400_username: ${AS400_USERNAME}
+  convert_to_format: jolley_custom
+test_id: '001'

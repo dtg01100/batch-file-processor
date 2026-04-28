@@ -1,0 +1,8 @@
+test_id: "002"
+description: "credit_memo"
+format: "jolley_custom"
+parameters:
+  convert_to_format: "jolley_custom"
+  as400_username: "${AS400_USERNAME}"
+  as400_address: "${AS400_ADDRESS}"
+  as400_password: "${AS400_PASSWORD}"

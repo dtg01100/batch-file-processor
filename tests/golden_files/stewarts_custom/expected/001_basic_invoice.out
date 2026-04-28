@@ -1,0 +1,18 @@
+"Invoice Details"
+""
+"Delivery Date","Terms","Invoice Number","Due Date","PO Number"
+"04/27/26","ACH","   4573208","04/27/26"
+"Ship To:","60670 0
+BESSERY QUALITY MARKET VT
+1398 NORTH AVENUE
+BURLINGTON, VT, 05401, 
+US","Bill To:","60670
+BESSERY QUALITY MARKET VT
+1398 NORTH AVENUE
+BURLINGTON, VT, 05401, 
+US"
+""
+"Invoice Number","Store Number","Item Number","Description","UPC #","Quantity","UOM","Price","Amount"
+"   4573208","0"," VI001","Test Item One            ","987654321098","99","?","$ 0  . 1","$0"
+"Sales Tax                ","000000000000","1","EA","$      0.00","$      0.00"
+"","","","","","","","Total:","$    911..53"

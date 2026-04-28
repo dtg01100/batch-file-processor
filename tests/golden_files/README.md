@@ -114,11 +114,25 @@ Golden files should NOT be updated when:
 
 The following formats have working golden file tests:
 
+### Non-Database Formats
+
 - `scannerware` - Scannerware EDI format (4 test cases)
 - `tweaks` - EDI tweaks processing (3 test cases)
 - `csv` - CSV output (3 test cases)
 
 ### Database-Dependent Formats
+
+The following formats require AS400 database credentials:
+
+| Format | Description | Test Cases |
+|--------|-------------|------------|
+| `jolley_custom` | Jolley custom CSV | 1 |
+| `stewarts_custom` | Stewart's custom CSV | 1 |
+| `fintech` | Fintech format | 1 |
+| `estore_einvoice` | Estore E-Invoice | 1 |
+| `estore_einvoice_generic` | Generic E-Invoice | 1 |
+
+**Note:** `scansheet_type_a` was removed because it produces ZIP-based Excel files with non-deterministic timestamps, making byte-for-byte comparison unreliable.
 
 Some converters require AS400 database credentials to run. These can be provided via environment variables without committing secrets.
 
@@ -162,8 +176,9 @@ The test framework automatically resolves `${VAR}` patterns from environment var
 | `estore_einvoice_generic` | Generic E-Invoice | as400_username, as400_address, as400_password |
 | `fintech` | Fintech format | as400_username, as400_address, as400_password |
 | `jolley_custom` | Jolley custom | as400_username, as400_address, as400_password |
-| `scansheet_type_a` | Scansheet Type A | as400_username, as400_address, as400_password |
 | `stewarts_custom` | Stewart's custom | as400_username, as400_address, as400_password |
+
+**Note:** `scansheet_type_a` produces ZIP-based Excel files with non-deterministic timestamps, so it was removed from golden file tests.
 
 ## CI/CD Integration
 
