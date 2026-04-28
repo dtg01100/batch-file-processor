@@ -135,6 +135,7 @@ test_results/
 # Environment variables and credentials (never commit these)
 .env
 .env.*
+!.env.example
 *.env
 credentials*.txt
 secrets*.txt
