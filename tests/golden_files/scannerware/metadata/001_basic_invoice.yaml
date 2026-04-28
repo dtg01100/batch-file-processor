@@ -1,0 +1,12 @@
+test_id: "001"
+description: "basic_invoice"
+format: "scannerware"
+parameters:
+  convert_to_format: "scannerware"
+  a_record_padding: "      "
+  append_a_records: false
+  force_txt_file_ext: false
+  invoice_date_offset: 0
+notes: |
+  Basic invoice with one A record, one B record, and one C record.
+  Tests fixed-width output format with standard parameters.

@@ -1,0 +1,11 @@
+test_id: "003"
+description: "upc_override"
+format: "tweaks"
+parameters:
+  convert_to_format: "tweaks"
+  override_upc: true
+  override_upc_level: 1
+  override_upc_category_filter: "ALL"
+notes: |
+  Tests UPC override functionality in tweaks converter. The UPC lookup table
+  is used to override UPC numbers based on vendor item number.

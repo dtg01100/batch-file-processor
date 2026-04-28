@@ -1,0 +1,8 @@
+test_id: "002"
+description: "a_record_padding"
+format: "tweaks"
+parameters:
+  convert_to_format: "tweaks"
+notes: |
+  Tests tweaks converter with A-record data. This test uses numeric invoice
+  number and vendor data to test the tweaks EDI transformation.

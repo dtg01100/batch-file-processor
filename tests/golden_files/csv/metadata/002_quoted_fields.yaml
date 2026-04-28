@@ -1,0 +1,8 @@
+test_id: "002"
+description: "quoted_fields"
+format: "csv"
+parameters:
+  convert_to_format: "csv"
+notes: |
+  Tests CSV converter with quoted fields containing delimiters.
+  Verifies proper escaping of commas and double quotes in CSV output.

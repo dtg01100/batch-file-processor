@@ -1,0 +1,9 @@
+test_id: "004"
+description: "a_record_padding"
+format: "scannerware"
+parameters:
+  convert_to_format: "scannerware"
+  a_record_padding: "CUSTOM"
+notes: |
+  Tests A-record padding functionality. The padding value "CUSTOM" is used
+  to pad the A-record header to 6 characters.

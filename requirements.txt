@@ -1,3 +1,7 @@
+# Version Constraints
+# Python 3.11 maximum - target system does not support 3.12+
+# PyQt5 5.15 maximum - target system does not support Qt6
+
 altgraph>=0.17.2
 pytest>=7.4.3
 pytest-timeout>=2.2.0

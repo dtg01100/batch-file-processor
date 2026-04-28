@@ -1,0 +1,9 @@
+test_id: "003"
+description: "date_offset"
+format: "scannerware"
+parameters:
+  convert_to_format: "scannerware"
+  invoice_date_offset: 7
+notes: |
+  Tests invoice date offset functionality. Input date 012525 (Jan 25, 2025)
+  is offset by +7 days to produce 020125 (Feb 1, 2025) in the output.

@@ -1,0 +1,8 @@
+test_id: "002"
+description: "credit_memo"
+format: "scannerware"
+parameters:
+  convert_to_format: "scannerware"
+notes: |
+  Credit memo with two B records (line items) and one C record (charge).
+  Tests handling of multiple line items in fixed-width format.

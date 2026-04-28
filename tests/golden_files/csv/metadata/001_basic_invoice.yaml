@@ -1,0 +1,8 @@
+test_id: "001"
+description: "basic_invoice"
+format: "csv"
+parameters:
+  convert_to_format: "csv"
+notes: |
+  Basic invoice converted to CSV format.
+  Tests standard CSV output with quoted fields.

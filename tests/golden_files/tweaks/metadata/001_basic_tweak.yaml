@@ -1,0 +1,8 @@
+test_id: "001"
+description: "basic_tweak"
+format: "tweaks"
+parameters:
+  convert_to_format: "tweaks"
+notes: |
+  Basic EDI tweak with A, B, and C records.
+  Tests standard tweak processing without special options.

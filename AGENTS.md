@@ -41,6 +41,52 @@ pip install -r requirements.txt
 ./.venv/bin/pytest -m "not qt" -n auto
 ```
 
+## Version Constraints
+
+**CRITICAL: This project targets Python 3.11 and Qt5.**
+
+- **Python 3.11** is the maximum supported version (target system does not support 3.12+)
+- **Qt5/PyQt5** is the maximum supported version (target system does not support Qt6)
+- Do NOT update to Python 3.12, 3.13, or newer
+- Do NOT update to PyQt6 or Qt6
+
+## PyInstaller Windows Build
+
+This project is packaged for Windows using PyInstaller via the `batonogov/pyinstaller-windows` Docker container.
+
+### Build Files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile.windows.build` | Docker build file for Windows executable |
+| `main_interface.spec` | PyInstaller spec file for Windows build |
+| `Dockerfile` | Linux dev environment (Python 3.11) |
+
+### Build Process
+
+```bash
+# Build Windows executable via Docker
+docker build -f Dockerfile.windows.build -t batch-file-processor .
+
+# Output: dist/Batch File Sender.exe
+```
+
+### Spec File Details
+
+The `main_interface.spec` file includes:
+- All PyQt5 modules (QtCore, QtGui, QtWidgets, QtNetwork, etc.)
+- All backend modules (email, FTP, copy)
+- All dispatch converters (scannerware, csv, tweaks, etc.)
+- All interface modules (Qt dialogs, operations, services)
+
+### Hidden Imports
+
+PyInstaller cannot detect these imports automatically, so they are explicitly listed:
+- PyQt5.sip and all Qt modules
+- All backend modules (database, FTP, SMTP, copy)
+- All converters in `dispatch.converters.*`
+- Archive modules for legacy support
+
 ---
 
 ## Architecture
@@ -338,6 +384,42 @@ Each module should have:
 | Use bare `# noqa` | Unclear why linting is suppressed | Always justify noqa comments |
 | Import from `dispatch` root | Old pattern, breaks encapsulation | Import from `dispatch.module` |
 | Hardcode converter/backend names | Reduces flexibility | Use dynamic import patterns |
+
+---
+
+## PyInstaller Windows Build
+
+The project is packaged for Windows using PyInstaller via the `batonogov/pyinstaller-windows:v4.0.1` Docker container.
+
+### Build Files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile.windows.build` | Docker build file targeting Python 3.11 |
+| `main_interface.spec` | PyInstaller spec with all hidden imports |
+| `Dockerfile` | Linux development environment |
+
+### Build Process
+
+```bash
+# Build Windows executable via Docker
+docker build -f Dockerfile.windows.build -t batch-file-processor .
+
+# Output: dist/Batch File Sender.exe
+```
+
+### Spec File Requirements
+
+The `main_interface.spec` explicitly lists hidden imports because PyInstaller cannot detect them from:
+- Dynamic imports (`importlib.import_module()`)
+- Plugin discovery patterns
+- Qt signal/slot connections
+
+**Required hidden imports:**
+- PyQt5 modules: QtCore, QtGui, QtWidgets, QtNetwork, QtSvg, QtXml, QtPrintSupport, sip
+- Backend modules: database_obj, ftp_client, smtp_client, copy_backend, email_backend, ftp_backend
+- Converters: All modules in `dispatch.converters.*`
+- Archive: Legacy modules for backward compatibility
 
 ---
 
