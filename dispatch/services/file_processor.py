@@ -414,7 +414,7 @@ class FileProcessor:
                 context.effective_folder,
             )
             return self._handle_validation_result(
-                validation_output, current_file, file_basename, result
+                validation_output, current_file, file_basename, result, context
             )
         except Exception as e:
             return self._handle_validation_error(e, file_basename, result, current_file)
@@ -425,6 +425,7 @@ class FileProcessor:
         current_file: str,
         file_basename: str,
         result: FileResult,
+        context: ProcessingContext | None = None,
     ) -> tuple[bool, str]:
         """Handle validation step result.
 
@@ -433,6 +434,7 @@ class FileProcessor:
             current_file: Current file path
             file_basename: File basename
             result: File result to update
+            context: Processing context (needed for force_edi_validation check)
 
         Returns:
             Tuple of (continue_processing, current_file)
@@ -467,6 +469,14 @@ class FileProcessor:
                 result.errors.extend(str(e) for e in errors_or_file)
             elif isinstance(errors_or_file, str):
                 result.errors.append(errors_or_file)
+            # Check if we should force continue despite validation failure
+            force_continue = False
+            if context and context.effective_folder:
+                force_continue = normalize_bool(
+                    context.effective_folder.get("force_edi_validation", False)
+                )
+            if force_continue:
+                return True, current_file
             return False, current_file
 
         new_file = errors_or_file if isinstance(errors_or_file, str) else current_file

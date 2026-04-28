@@ -456,12 +456,14 @@ class TestLoggingLevels:
             "ftp_port": 21,
             "ftp_username": "u",
             "ftp_password": "p",
-            "ftp_folder": "",
+            "ftp_folder": "/upload",
         }
 
         with caplog.at_level(logging.DEBUG, logger="backend.ftp_backend"):
-            with patch("backend.ftp_backend.time.sleep"):
-                ftp_backend.do(params, {}, test_file, ftp_client=mock_client)
+            with patch("backend.backend_base.time.sleep"):
+                ftp_backend.do(
+                    params, {}, test_file, ftp_client=mock_client, disable_retry=True
+                )
 
         connect_messages = [
             r.message
@@ -495,7 +497,7 @@ class TestLoggingLevels:
         }
 
         with caplog.at_level(logging.DEBUG):
-            with patch("backend.email_backend.time.sleep"):
+            with patch("backend.backend_base.time.sleep"):
                 email_backend.do(params, settings, test_file, smtp_client=mock_client)
 
         # Verify the email was actually dispatched through the mock client

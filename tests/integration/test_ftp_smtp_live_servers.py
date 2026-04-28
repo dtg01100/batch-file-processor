@@ -376,13 +376,10 @@ class TestFTPLiveServer:
             "process_backend_ftp": True,
         }
 
-        # Suppress the sleep delay to keep the test fast
-        original_sleep = ftp_backend.time.sleep
-        ftp_backend.time.sleep = lambda _: None
-        try:
-            result = ftp_backend.do(params, {}, filepath, ftp_client=mock)
-        finally:
-            ftp_backend.time.sleep = original_sleep
+        # Use disable_retry=True to skip sleep delays in retry logic
+        result = ftp_backend.do(
+            params, {}, filepath, ftp_client=mock, disable_retry=True
+        )
 
         assert result is True
         assert (

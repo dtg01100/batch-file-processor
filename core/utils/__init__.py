@@ -28,6 +28,8 @@ from core.edi.edi_transformer import (
 )
 from core.edi.upc_utils import (
     calc_check_digit,
+)
+from core.edi.upc_utils import (
     convert_upce_to_upca as convert_UPCE_to_UPCA,
 )
 
@@ -41,7 +43,9 @@ from .date_utils import (
 )
 from .file_utils import (
     clear_old_files,
-    clear_old_files as do_clear_old_files,  # do_clear_old_files: compat alias for legacy callers
+)
+from .file_utils import (
+    clear_old_files as do_clear_old_files,  # do_clear_old_files: compat alias
 )
 from .format_utils import normalize_convert_to_format
 from .safe_parse import safe_float, safe_int

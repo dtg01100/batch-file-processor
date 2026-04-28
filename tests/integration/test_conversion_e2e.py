@@ -709,9 +709,10 @@ class TestConvertToYellowdogCSV:
         # Get test database query runner
         db_path, query_runner = invfetcher_test_db
 
-        # Patch create_query_runner to return our test query runner
-        with patch.object(
-            convert_to_yellowdog_csv, "create_query_runner", return_value=query_runner
+        # Patch create_query_runner_from_settings where it's imported
+        with patch(
+            "core.database.query_runner.create_query_runner_from_settings",
+            return_value=query_runner,
         ):
             result = convert_to_yellowdog_csv.edi_convert(
                 edi_file,
@@ -814,9 +815,9 @@ class TestConvertToEstoreEinvoiceGeneric:
 
         output_path = str(tmp_path / "output_estore_generic")
 
-        # Mock the query_runner to avoid database dependency
+        # Mock create_query_runner_from_settings where it's imported
         with patch(
-            "dispatch.converters.convert_to_estore_einvoice_generic.create_query_runner"
+            "core.database.query_runner.create_query_runner_from_settings"
         ):
             result = convert_to_estore_einvoice_generic.edi_convert(
                 edi_file,
@@ -927,8 +928,10 @@ class TestConvertToScansheetTypeA:
 
         output_path = str(tmp_path / "output_scansheet")
 
-        # Mock the QueryRunner at the source to avoid database dependency
-        with patch("core.database.create_query_runner") as mock_create:
+        # Mock create_query_runner_from_settings where it's imported
+        with patch(
+            "core.database.query_runner.create_query_runner_from_settings"
+        ) as mock_create:
             mock_qr = MagicMock()
             mock_qr.run_arbitrary_query.return_value = [
                 [

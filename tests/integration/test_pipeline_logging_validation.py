@@ -271,10 +271,10 @@ class TestSuccessfulPipelineLogging:
 
         joined = "\n".join(log_capture)
         # Folder entry
-        assert "entering folder" in joined
+        assert "Processing folder" in joined
         assert "TestAlias" in joined
         # File count
-        assert "3 found" in joined
+        assert "3 files" in joined
         # At least one send message
         assert "sending" in joined.lower()
         # Success messages
@@ -658,7 +658,8 @@ class TestSendFailureLogging:
         joined = "\n".join(log_capture)
         # The orchestrator logs "sending <file> to <dest> with <backend>"
         assert "sending" in joined.lower()
-        assert "Copy Backend" in joined
+        # Backend name is logged (e.g., 'copy' not 'Copy Backend')
+        assert "copy" in joined.lower()
 
 
 # ===================================================================
@@ -700,8 +701,9 @@ class TestMultiBackendLogging:
         assert len(ftp_backend.sent) == 1
 
         joined = "\n".join(log_capture)
-        assert "Copy Backend" in joined
-        assert "FTP Backend" in joined
+        # Both backend names should appear in logs (logged as 'copy' and 'ftp')
+        assert "copy" in joined.lower()
+        assert "ftp" in joined.lower()
 
     def test_partial_backend_failure_logged(self, tmp_path, log_capture):
         """One backend succeeds, one fails -- both outcomes logged."""

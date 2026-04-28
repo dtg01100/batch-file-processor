@@ -37,7 +37,7 @@ FTP_PARAMS = {
     "ftp_port": 21,
     "ftp_username": "user",
     "ftp_password": "pass",
-    "ftp_folder": "",
+    "ftp_folder": "/upload",
 }
 
 EMAIL_PARAMS = {
@@ -121,7 +121,7 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Connection refused"))
         mock_client.add_error(ftplib.error_temp("Connection refused"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -133,7 +133,7 @@ class TestFTPRetryLogic:
         mock_client = MockFTPClient()
         mock_client.add_error(ftplib.error_perm("530 Login incorrect"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -146,7 +146,7 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Temporary failure"))
         mock_client.add_error(ftplib.error_temp("Temporary failure"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -163,7 +163,7 @@ class TestFTPRetryLogic:
         for _ in range(22):
             mock_client.add_error(ftplib.error_temp("Server unavailable"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             with pytest.raises(Exception):
                 ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
@@ -171,7 +171,7 @@ class TestFTPRetryLogic:
         """Successful first attempt must not call time.sleep at all."""
         mock_client = MockFTPClient()
 
-        with patch("backend.ftp_backend.time.sleep") as mock_sleep:
+        with patch("backend.backend_base.time.sleep") as mock_sleep:
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -183,7 +183,7 @@ class TestFTPRetryLogic:
         # One transient error should cause one retry and one sleep call.
         mock_client.add_error(ftplib.error_temp("Transient error"))
 
-        with patch("backend.ftp_backend.time.sleep") as mock_sleep:
+        with patch("backend.backend_base.time.sleep") as mock_sleep:
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -194,7 +194,7 @@ class TestFTPRetryLogic:
         mock_client = MockFTPClient()
         mock_client.add_error(ftplib.error_temp("Retry me"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -210,7 +210,7 @@ class TestFTPRetryLogic:
         mock_client_b = MockFTPClient()
         mock_client_b.add_error(ftplib.error_temp("Second call error"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result_a = ftp_backend.do(
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client_a
             )
@@ -227,7 +227,7 @@ class TestFTPRetryLogic:
         for _ in range(10):
             mock_client.add_error(ftplib.error_temp("Always failing"))
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert result is True
@@ -236,7 +236,7 @@ class TestFTPRetryLogic:
         """storbinary command must contain the base filename."""
         mock_client = MockFTPClient()
 
-        with patch("backend.ftp_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
 
         assert len(mock_client.files_sent) == 1

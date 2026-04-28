@@ -1657,3 +1657,63 @@ def _safe_str(value: Any) -> str:
         return str(value)
     except Exception:
         return "<unserializable>"
+
+
+def _handle_primitive(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (str, int, float, bool)):
+        return True, value
+    return False, None
+
+
+def _handle_date_like(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (datetime, date)):
+        return True, value.isoformat()
+    return False, None
+
+
+def _handle_decimal(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Decimal):
+        return True, float(value)
+    return False, None
+
+
+def _handle_bytes(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, bytes):
+        return True, _serialize_bytes(value)
+    return False, None
+
+
+def _handle_enum(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Enum):
+        return True, {"name": value.name, "value": value.value}
+    return False, None
+
+
+def _handle_path(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, Path):
+        return True, str(value)
+    return False, None
+
+
+def _handle_exception(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, BaseException):
+        return True, _serialize_exception(value)
+    return False, None
+
+
+def _handle_dataclass(value: Any) -> tuple[bool, Any]:
+    if is_dataclass(value) and not isinstance(value, type):
+        return True, asdict(value)
+    return False, None
+
+
+def _handle_mapping(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, dict):
+        return True, {k: value[k] for k in value}
+    return False, None
+
+
+def _handle_sequence(value: Any) -> tuple[bool, Any]:
+    if isinstance(value, (list, tuple, set)):
+        return True, list(value)
+    return False, None
