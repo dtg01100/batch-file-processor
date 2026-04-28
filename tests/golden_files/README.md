@@ -120,25 +120,50 @@ The following formats have working golden file tests:
 
 ### Database-Dependent Formats
 
-The following formats require AS400 database credentials to run:
+Some converters require AS400 database credentials to run. These can be provided via environment variables without committing secrets.
 
-- `estore_einvoice` - Estore E-Invoice format (requires `as400_username`, `as400_address`)
-- `estore_einvoice_generic` - Generic E-Invoice format (requires `as400_username`, `as400_address`)
-- `fintech` - Fintech format (requires database connection for PO lookup)
-- `jolley_custom` - Jolley custom format (requires database connection)
-- `scansheet_type_a` - Scansheet Type A format (requires database connection)
-- `simplified_csv` - Simplified CSV format (working, no DB required)
-- `stewarts_custom` - Stewart's custom format (requires database connection)
-- `yellowdog_csv` - Yellowdog CSV format (working, no DB required)
+#### Environment Variables
 
-To add golden files for database-dependent formats, provide AS400 credentials in the metadata:
+Set credentials in environment variables:
+```bash
+export AS400_USERNAME=your_username
+export AS400_PASSWORD=your_password
+export AS400_ADDRESS=your_address
+```
+
+#### Metadata Configuration
+
+In metadata YAML files, reference environment variables using `${VAR}` syntax:
+
 ```yaml
+test_id: "001"
+description: "basic_invoice"
+format: "jolley_custom"
 parameters:
   convert_to_format: "jolley_custom"
-  as400_username: "your_username"
-  as400_address: "your_address"
-  as400_password: "your_password"
+  as400_username: "${AS400_USERNAME}"
+  as400_address: "${AS400_ADDRESS}"
+  as400_password: "${AS400_PASSWORD}"
 ```
+
+The test framework automatically resolves `${VAR}` patterns from environment variables. Missing variables resolve to empty string.
+
+#### Security Notes
+
+- **Never commit credentials** - The `.gitignore` excludes `.env`, `.env.*`, `credentials*.txt`, and `secrets*.txt` files
+- Use environment variables or a local `.env` file (gitignored) for development
+- In CI, set credentials via secure environment variables
+
+#### Available Database-Dependent Formats
+
+| Format | Description | Required Credentials |
+|--------|-------------|---------------------|
+| `estore_einvoice` | Estore E-Invoice | as400_username, as400_address, as400_password |
+| `estore_einvoice_generic` | Generic E-Invoice | as400_username, as400_address, as400_password |
+| `fintech` | Fintech format | as400_username, as400_address, as400_password |
+| `jolley_custom` | Jolley custom | as400_username, as400_address, as400_password |
+| `scansheet_type_a` | Scansheet Type A | as400_username, as400_address, as400_password |
+| `stewarts_custom` | Stewart's custom | as400_username, as400_address, as400_password |
 
 ## CI/CD Integration
 

@@ -157,6 +157,40 @@ def format_diff_report(test_case: GoldenTestCase, diff_info: dict[str, Any]) -> 
     return "\n".join(lines)
 
 
+def resolve_env_vars(value: str | dict[str, Any] | list[Any] | None) -> str | dict[str, Any] | list[Any] | None:
+    """Resolve environment variable references in strings.
+
+    Supports ${VAR} and $VAR syntax. Missing variables resolve to empty string.
+
+    Args:
+        value: String, dict, list, or None to resolve
+
+    Returns:
+        Value with environment variables resolved
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        # Pattern matches ${VAR} or $VAR
+        pattern = r"\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)"
+
+        def replace_var(match: re.Match) -> str:
+            # Group 1 is ${VAR}, group 2 is $VAR
+            var_name = match.group(1) or match.group(2)
+            return os.environ.get(var_name, "")
+
+        return re.sub(pattern, replace_var, value)
+
+    if isinstance(value, dict):
+        return {k: resolve_env_vars(v) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [resolve_env_vars(item) for item in value]
+
+    return value
+
+
 def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
     """Load test case metadata from YAML file.
 
@@ -164,7 +198,7 @@ def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
         metadata_file: Path to metadata YAML file
 
     Returns:
-        Dictionary with metadata fields
+        Dictionary with metadata fields, with environment variables resolved
     """
     # Try multiple yaml sources
     yaml_module = None
@@ -193,7 +227,89 @@ def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
         return {}
 
     with open(metadata_file, "r", encoding="utf-8") as f:
-        return yaml_module.safe_load(f) or {}
+        metadata = yaml_module.safe_load(f) or {}
+
+    # Resolve environment variables in parameters
+    if "parameters" in metadata:
+        metadata["parameters"] = resolve_env_vars(metadata["parameters"])
+
+    return metadata
+
+
+def load_test_cases() -> list[GoldenTestCase]:
+    """Discover all golden file test cases.
+
+    Returns:
+        List of GoldenTestCase objects for all discovered test cases
+    """
+    # Path from tests/unit/test_golden_output.py to tests/golden_files/
+    golden_dir = Path(__file__).parent.parent / "golden_files"
+    test_cases: list[GoldenTestCase] = []
+
+    if not golden_dir.exists():
+        return test_cases
+
+    # Find all format directories
+    for format_dir in sorted(golden_dir.iterdir()):
+        if not format_dir.is_dir() or format_dir.name.startswith("."):
+            continue
+
+        format_name = format_dir.name
+        inputs_dir = format_dir / "inputs"
+        expected_dir = format_dir / "expected"
+        metadata_dir = format_dir / "metadata"
+
+        if not inputs_dir.exists() or not expected_dir.exists():
+            continue
+
+        # Find test case files
+        for input_file in sorted(inputs_dir.iterdir()):
+            if input_file.suffix not in (".edi", ".txt", ".csv"):
+                continue
+
+            # Parse test ID from filename
+            # Format: <id>_<description>.ext
+            match = re.match(r"^(\d+)_(.+?)(\.[^.]+)$", input_file.name)
+            if not match:
+                continue
+
+            test_id = match.group(1)
+            description = match.group(2)
+            ext = match.group(3)
+
+            # Expected file has .out extension
+            expected_name = f"{test_id}_{description}.out"
+            expected_file = expected_dir / expected_name
+
+            # Metadata file
+            metadata_file = (
+                metadata_dir / f"{test_id}_{description}.yaml"
+                if metadata_dir.exists()
+                else None
+            )
+
+            if not expected_file.exists():
+                continue
+
+            # Load metadata (env vars are resolved in load_test_case_metadata)
+            params = {}
+            if metadata_file and metadata_file.exists():
+                metadata = load_test_case_metadata(str(metadata_file))
+                params = metadata.get("parameters", {})
+
+            test_cases.append(
+                GoldenTestCase(
+                    test_id=test_id,
+                    description=description,
+                    format_name=format_name,
+                    input_file=str(input_file),
+                    expected_file=str(expected_file),
+                    metadata_file=str(metadata_file) if metadata_file else "",
+                    params=params,
+                )
+            )
+
+    return test_cases
 
 
 def load_test_cases() -> list[GoldenTestCase]:
@@ -489,6 +605,95 @@ class TestCompareBytesFunction:
 
         assert match is True
         assert info["match"] is True
+
+
+class TestResolveEnvVars:
+    """Unit tests for the resolve_env_vars function."""
+
+    def test_simple_string_no_vars(self):
+        """Test that strings without variables pass through unchanged."""
+        result = resolve_env_vars("plain string")
+        assert result == "plain string"
+
+    def test_brace_syntax(self):
+        """Test ${VAR} syntax is resolved."""
+        import os
+        os.environ["TEST_VAR"] = "hello"
+        try:
+            result = resolve_env_vars("prefix_${TEST_VAR}_suffix")
+            assert result == "prefix_hello_suffix"
+        finally:
+            del os.environ["TEST_VAR"]
+
+    def test_dollar_syntax(self):
+        """Test $VAR syntax is resolved."""
+        import os
+        os.environ["TEST_VAR"] = "world"
+        try:
+            result = resolve_env_vars("hello $TEST_VAR")
+            assert result == "hello world"
+        finally:
+            del os.environ["TEST_VAR"]
+
+    def test_missing_var_resolves_to_empty(self):
+        """Test that missing environment variables resolve to empty string."""
+        result = resolve_env_vars("before_${NONEXISTENT_VAR}_after")
+        assert result == "before__after"
+
+    def test_dict_values(self):
+        """Test that dictionary values are resolved recursively."""
+        import os
+        os.environ["DB_USER"] = "admin"
+        os.environ["DB_PASS"] = "secret"
+        try:
+            result = resolve_env_vars({
+                "username": "${DB_USER}",
+                "password": "${DB_PASS}",
+                "host": "localhost",
+            })
+            assert result == {
+                "username": "admin",
+                "password": "secret",
+                "host": "localhost",
+            }
+        finally:
+            del os.environ["DB_USER"]
+            del os.environ["DB_PASS"]
+
+    def test_list_values(self):
+        """Test that list values are resolved."""
+        import os
+        os.environ["ITEM1"] = "first"
+        os.environ["ITEM2"] = "second"
+        try:
+            result = resolve_env_vars(["${ITEM1}", "plain", "${ITEM2}"])
+            assert result == ["first", "plain", "second"]
+        finally:
+            del os.environ["ITEM1"]
+            del os.environ["ITEM2"]
+
+    def test_none_value(self):
+        """Test that None passes through unchanged."""
+        result = resolve_env_vars(None)
+        assert result is None
+
+    def test_nested_structure(self):
+        """Test deeply nested structures are resolved."""
+        import os
+        os.environ["DEEP_VAL"] = "found"
+        try:
+            result = resolve_env_vars({
+                "level1": {
+                    "level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]
+                }
+            })
+            assert result == {
+                "level1": {
+                    "level2": ["found", {"nested": "found"}]
+                }
+            }
+        finally:
+            del os.environ["DEEP_VAL"]
 
 
 class TestFormatCoverage:

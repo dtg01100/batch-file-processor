@@ -131,3 +131,10 @@ test_results/
 # CLIO (managed automatically)
 .clio/*
 !.clio/instructions.md
+
+# Environment variables and credentials (never commit these)
+.env
+.env.*
+*.env
+credentials*.txt
+secrets*.txt
