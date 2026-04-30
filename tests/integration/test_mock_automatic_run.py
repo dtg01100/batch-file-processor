@@ -20,4 +20,4 @@ def test_run_mock_automatic_creates_expected_artifacts(tmp_path: Path) -> None:
     assert len(result.run_log_files) >= 1
 
     run_log_text = result.run_log_files[0].read_text(encoding="utf-8")
-    assert "[MOCK] DispatchOrchestrator.process_folder called" in run_log_text
+    assert "[MOCK] DispatchOrchestrator.discover_and_process_folder called" in run_log_text

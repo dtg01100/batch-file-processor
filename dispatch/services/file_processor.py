@@ -408,6 +408,15 @@ class FileProcessor:
         if not self.validator_step:
             return True, current_file
 
+        # Respect folder-level validation settings (mirrors orchestrator._should_validate)
+        should_validate = (
+            normalize_bool(context.effective_folder.get("process_edi", False))
+            or normalize_bool(context.effective_folder.get("split_edi", False))
+            or normalize_bool(context.effective_folder.get("force_edi_validation", False))
+        )
+        if not should_validate:
+            return True, current_file
+
         try:
             validation_output = self.validator_step.execute(
                 current_file,

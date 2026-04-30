@@ -148,7 +148,8 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             "alias": "Null Byte Test",
             "process_backend_copy": True,
             "copy_to_directory": str(workspace / "output"),
-            "convert_to_format": "csv",
+            # No convert_to_format: file passes through unchanged so the test
+            # focuses on filename handling rather than EDI conversion.
         }
         db.folders_table.insert(folder_config)
 
@@ -409,7 +410,8 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
             "alias": "Permissions Test",
             "process_backend_copy": True,
             "copy_to_directory": str(workspace / "output"),
-            "convert_to_format": "csv",
+            # No convert_to_format: file passes through unchanged so the test
+            # focuses on file permissions rather than EDI conversion.
         }
         db.folders_table.insert(folder_config)
 

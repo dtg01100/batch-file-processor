@@ -639,13 +639,15 @@ class FolderPipelineExecutor:
         return {}
 
     def _log_message(self, run_log: Any, message: str) -> None:
-        """Write message to run log.
+        """Write message to run log and Python logging.
 
         Args:
             run_log: Log target (file-like object or None)
             message: Message to log
         """
         self._log_messages.append(message)
+        # Emit to Python logging so pytest log capture fixtures can capture it
+        logger.info(message)
         if hasattr(run_log, "write"):
             try:
                 run_log.write(f"{message}\r\n".encode())

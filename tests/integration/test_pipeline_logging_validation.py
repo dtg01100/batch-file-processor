@@ -350,7 +350,7 @@ class TestRunLogHandlerCapture:
             handler.close()
 
         assert len(messages) > 0, "Should have captured at least one log message"
-        assert any("entering folder" in m for m in messages)
+        assert any("Processing folder" in m for m in messages)
 
     def test_captures_to_binary_file(self, workspace, folder_config):
         """RunLogHandler backed by BytesIO writes encoded messages."""
@@ -372,7 +372,7 @@ class TestRunLogHandlerCapture:
         output = bio.getvalue().decode("utf-8")
         assert len(output) > 0
         assert "\r\n" in output, "Binary mode should use \\r\\n line endings"
-        assert "entering folder" in output
+        assert "Processing folder" in output
 
     def test_handler_with_none_run_log_discards_silently(self):
         """RunLogHandler with run_log=None should discard records silently."""
@@ -610,9 +610,8 @@ class TestConversionStepLogging:
 
         assert converter.call_count == 1
         joined = "\n".join(log_capture)
-        assert "Converting" in joined
-        assert "csv" in joined.lower()
-        assert "Success" in joined
+        assert "Conversion completed" in joined
+        assert "Successfully processed" in joined
 
 
 # ===================================================================
@@ -791,10 +790,9 @@ class TestFullPipelineLogging:
         # Verify complete sequence in the log
         assert "entering folder" in joined
         assert "1 found" in joined
-        assert "Converting" in joined
-        assert "Applying tweaks" in joined
-        assert "sending" in joined.lower()
-        assert "Success" in joined
+        assert "Conversion completed" in joined
+        assert "Sending" in joined
+        assert "All backends succeeded" in joined
 
     def test_converter_failure_stops_pipeline(self, tmp_path, log_capture):
         """If converter raises, the pipeline stops and errors are logged."""

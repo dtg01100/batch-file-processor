@@ -49,20 +49,29 @@ class MockRunResult:
     run_log_files: list[Path]
 
 
-def _mock_orchestrator_process_folder(*args, **kwargs):
-    """Mock replacement for DispatchOrchestrator.process_folder used by harness."""
-    # Bound-method patch can pass (self, folder, run_log, processed_files)
-    # or (folder, run_log, processed_files) depending on call path.
-    if len(args) >= 3 and hasattr(args[0], "config"):
+def _mock_orchestrator_discover_and_process_folder(*args, **kwargs):
+    """Mock replacement for DispatchOrchestrator.discover_and_process_folder.
+
+    When patching on the class (DispatchOrchestrator.discover_and_process_folder),
+    the orchestrator instance is passed as args[0]. When patching on an instance
+    (orch.patch(...)), the orchestrator is NOT included in args.
+    We detect which case we're in by checking if args[0] has a 'config' attribute.
+    """
+    # Detect whether we're bound-method or class-method patched
+    if args and hasattr(args[0], "config"):
+        # Class-level patch: args[0] is orchestrator instance
+        orch = args[0]
         folder = args[1]
         run_log = args[2]
     else:
-        folder = args[0]
-        run_log = args[1]
+        # Instance-level patch or no self passed
+        folder = args[0] if len(args) > 0 else kwargs.get("folder")
+        run_log = args[1] if len(args) > 1 else kwargs.get("run_log")
 
     alias = folder.get("alias", folder.get("folder_name", "unknown"))
     run_log.write(
-        f"[MOCK] DispatchOrchestrator.process_folder called for {alias}\n".encode()
+        f"[MOCK] DispatchOrchestrator.discover_and_process_folder "
+        f"called for {alias}\n".encode()
     )
     run_log.write(b"[MOCK] no real conversions or backends were executed\n")
 
@@ -132,8 +141,8 @@ def run_mock_automatic(base_dir: str | os.PathLike[str]) -> MockRunResult:
             "interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)
         ):
             with patch(
-                "dispatch.orchestrator.DispatchOrchestrator.process_folder",
-                side_effect=_mock_orchestrator_process_folder,
+                "dispatch.orchestrator.DispatchOrchestrator.discover_and_process_folder",
+                side_effect=_mock_orchestrator_discover_and_process_folder,
             ):
                 app.initialize(args=["--automatic"])
                 app.run()
