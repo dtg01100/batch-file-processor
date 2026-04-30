@@ -103,17 +103,22 @@ def _normalize_legacy_v32_values(database_connection) -> None:
             except Exception:
                 logger.debug("Column %s may not exist yet; skipping", col)
 
-        # Historically some v32 databases stored a human-friendly display name
-        # in `convert_to_format` (eg. "Estore eInvoice Generic"). Do NOT
-        # mutate the stored display value during migration: runtime code
-        # already normalizes this value when building the effective folder
-        # (see dispatch/orchestrator.normalize_convert_to_format). Mutating
-        # the stored value here caused diffs between pre/post migration
-        # snapshots in concurrent test runs and also changes user-visible
-        # data unnecessarily. Leave the DB value as-is.
-        #
-        # Kept for historical reference: normalization should happen at read
-        # time, not as an intrusive migration step.
+        # Normalize convert_to_format via Python for full correctness
+        try:
+            rows = cursor.execute(
+                f"SELECT id, convert_to_format FROM {_quote_identifier(table)} "
+                f"WHERE convert_to_format IS NOT NULL AND convert_to_format != ''"
+            ).fetchall()
+            for row_id, fmt in rows:
+                normalized = normalize_convert_to_format(fmt)
+                if normalized != fmt:
+                    cursor.execute(
+                        f"UPDATE {_quote_identifier(table)} "
+                        f"SET convert_to_format = ? WHERE id = ?",
+                        (normalized, row_id),
+                    )
+        except Exception:
+            logger.debug("Table %s or column may not exist yet; skipping", table)
 
     database_connection.raw_connection.commit()
 
