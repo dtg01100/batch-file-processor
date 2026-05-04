@@ -148,7 +148,7 @@ class ValidatorStep:
 
         Args:
             input_path: Path to file to validate
-            context: Additional context (unused; required for PipelineStep protocol compatibility)
+            context: Additional context (unused; required for PipelineStep protocol)
 
         Returns:
             Tuple of (success, input_path, errors)
@@ -180,7 +180,7 @@ class NoOpStep:
 
         Args:
             input_path: Path to pass through
-            context: Additional context (unused; required for PipelineStep protocol compatibility)
+            context: Additional context (unused; required for PipelineStep protocol)
 
         Returns:
             Tuple of (True, input_path, [])

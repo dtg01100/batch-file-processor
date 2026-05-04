@@ -68,7 +68,7 @@ class SearchWidget(QWidget):
             or bool(self._pending_filter)
         )
         self._debounce_timer.stop()
-        # Suppress textChanged signal during programmatic clear to avoid triggering filters
+        # Suppress textChanged signal during programmatic clear
         self._entry.blockSignals(True)
         self._entry.clear()
         self._entry.blockSignals(False)
