@@ -13,7 +13,6 @@ Tests validate:
 
 import os
 import sys
-import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path

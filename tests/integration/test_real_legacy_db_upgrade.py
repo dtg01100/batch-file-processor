@@ -26,7 +26,6 @@ from backend.database import sqlite_wrapper
 from core.constants import CURRENT_DATABASE_VERSION
 from core.database import schema
 from core.utils.bool_utils import normalize_bool
-from core.utils.format_utils import normalize_convert_to_format
 from migrations import folders_database_migrator
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures")

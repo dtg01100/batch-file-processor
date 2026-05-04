@@ -60,7 +60,6 @@ def _mock_orchestrator_discover_and_process_folder(*args, **kwargs):
     # Detect whether we're bound-method or class-method patched
     if args and hasattr(args[0], "config"):
         # Class-level patch: args[0] is orchestrator instance
-        orch = args[0]
         folder = args[1]
         run_log = args[2]
     else:

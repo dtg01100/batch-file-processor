@@ -371,7 +371,7 @@ class FolderConfigurationPydantic(BaseModel):
     prepend_date_files: bool = Field(default=False)
 
     @model_validator(mode="after")
-    def validate_edi_options(cls, values):
+    def validate_edi_options(cls, values):  # noqa: N805
         if values.prepend_date_files and not values.split_edi:
             raise ValueError("prepend_date_files requires split_edi to be true")
         return values

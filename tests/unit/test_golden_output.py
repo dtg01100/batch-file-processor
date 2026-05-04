@@ -275,7 +275,7 @@ def load_test_cases() -> list[GoldenTestCase]:
 
             test_id = match.group(1)
             description = match.group(2)
-            ext = match.group(3)
+            _ = match.group(3)  # ext not needed, expected file uses .out
 
             # Expected file has .out extension
             expected_name = f"{test_id}_{description}.out"
@@ -292,82 +292,6 @@ def load_test_cases() -> list[GoldenTestCase]:
                 continue
 
             # Load metadata (env vars are resolved in load_test_case_metadata)
-            params = {}
-            if metadata_file and metadata_file.exists():
-                metadata = load_test_case_metadata(str(metadata_file))
-                params = metadata.get("parameters", {})
-
-            test_cases.append(
-                GoldenTestCase(
-                    test_id=test_id,
-                    description=description,
-                    format_name=format_name,
-                    input_file=str(input_file),
-                    expected_file=str(expected_file),
-                    metadata_file=str(metadata_file) if metadata_file else "",
-                    params=params,
-                )
-            )
-
-    return test_cases
-
-
-def load_test_cases() -> list[GoldenTestCase]:
-    """Discover all golden file test cases.
-
-    Returns:
-        List of GoldenTestCase objects for all discovered test cases
-    """
-    # Path from tests/unit/test_golden_output.py to tests/golden_files/
-    golden_dir = Path(__file__).parent.parent / "golden_files"
-    test_cases: list[GoldenTestCase] = []
-
-    if not golden_dir.exists():
-        return test_cases
-
-    # Find all format directories
-    for format_dir in sorted(golden_dir.iterdir()):
-        if not format_dir.is_dir() or format_dir.name.startswith("."):
-            continue
-
-        format_name = format_dir.name
-        inputs_dir = format_dir / "inputs"
-        expected_dir = format_dir / "expected"
-        metadata_dir = format_dir / "metadata"
-
-        if not inputs_dir.exists() or not expected_dir.exists():
-            continue
-
-        # Find test case files
-        for input_file in sorted(inputs_dir.iterdir()):
-            if input_file.suffix not in (".edi", ".txt", ".csv"):
-                continue
-
-            # Parse test ID from filename
-            # Format: <id>_<description>.ext
-            match = re.match(r"^(\d+)_(.+?)(\.[^.]+)$", input_file.name)
-            if not match:
-                continue
-
-            test_id = match.group(1)
-            description = match.group(2)
-            ext = match.group(3)
-
-            # Expected file has .out extension
-            expected_name = f"{test_id}_{description}.out"
-            expected_file = expected_dir / expected_name
-
-            # Metadata file
-            metadata_file = (
-                metadata_dir / f"{test_id}_{description}.yaml"
-                if metadata_dir.exists()
-                else None
-            )
-
-            if not expected_file.exists():
-                continue
-
-            # Load metadata
             params = {}
             if metadata_file and metadata_file.exists():
                 metadata = load_test_case_metadata(str(metadata_file))

@@ -213,7 +213,7 @@ class DatabaseImportDialog(BaseDialog):
         setattr(result_event, "result", self.confirm_yes_no(title, message))
         result_event.set()
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         """Handle dialog close — terminate import thread if still running."""
         thread = getattr(self, "_import_thread", None)
         if (
