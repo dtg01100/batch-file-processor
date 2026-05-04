@@ -431,7 +431,7 @@ class TestRunValidation:
         result = FileResult(file_name="test.edi", checksum="")
         context = ProcessingContext(
             folder={},
-            effective_folder={},
+            effective_folder={"force_edi_validation": True},
             settings={},
             upc_dict={},
         )
@@ -460,7 +460,7 @@ class TestRunValidation:
         result = FileResult(file_name="test.edi", checksum="")
         context = ProcessingContext(
             folder={},
-            effective_folder={},
+            effective_folder={"process_edi": True},
             settings={},
             upc_dict={},
         )
@@ -489,7 +489,7 @@ class TestRunValidation:
         result = FileResult(file_name="test.edi", checksum="")
         context = ProcessingContext(
             folder={},
-            effective_folder={},
+            effective_folder={"force_edi_validation": True},
             settings={},
             upc_dict={},
         )
