@@ -5,7 +5,7 @@ from typing import Tuple
 from core.utils import (
     calc_check_digit,
     convert_to_price,
-    convert_UPCE_to_UPCA,
+    convert_upce_to_upca,
     safe_int,
 )
 
@@ -40,7 +40,7 @@ class ItemProcessor:
         if upc_len == 11:
             upc_string = str(proposed_upc) + str(self._calc_check_digit(proposed_upc))
         elif upc_len == 8:
-            converted = convert_UPCE_to_UPCA(proposed_upc)
+            converted = convert_upce_to_upca(proposed_upc)
             upc_string = converted if isinstance(converted, str) else ""
         elif upc_len == 12:
             upc_string = str(proposed_upc)

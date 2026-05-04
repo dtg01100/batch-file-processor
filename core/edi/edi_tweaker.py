@@ -671,7 +671,7 @@ class EDITweaker:
                     ),
                 )
             elif upc_len == 8:
-                fields["upc_number"] = str(utils.convert_UPCE_to_UPCA(proposed_upc))
+                fields["upc_number"] = str(utils.convert_upce_to_upca(proposed_upc))
         else:
             fields["upc_number"] = self.config.upc_padding_pattern[
                 : self.config.upc_target_length

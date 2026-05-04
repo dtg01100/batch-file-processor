@@ -30,7 +30,7 @@ from core.edi.upc_utils import (
     calc_check_digit,
 )
 from core.edi.upc_utils import (
-    convert_upce_to_upca as convert_UPCE_to_UPCA,
+    convert_upce_to_upca,
 )
 
 from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
@@ -97,6 +97,6 @@ __all__ = [
     "dac_str_int_to_int",
     "detect_invoice_is_credit",
     "calc_check_digit",
-    "convert_UPCE_to_UPCA",
+    "convert_upce_to_upca",
     "do_clear_old_files",
 ]

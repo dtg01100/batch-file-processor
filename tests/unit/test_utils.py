@@ -777,57 +777,56 @@ class TestCalcCheckDigit:
 
 
 # =============================================================================
-# utils.convert_UPCE_to_UPCA() tests
+# utils.convert_upce_to_upca() tests
 # =============================================================================
 
 
 class TestConvertUPCEToUPCA:
-    """Tests for utils.convert_UPCE_to_UPCA() function."""
+    """Tests for utils.convert_upce_to_upca() function."""
 
     def test_six_digit_upce(self):
         """6-digit UPC-E should convert correctly."""
-        # Test value from the docstring: 04182635 -> 041800000265
-        result = utils.convert_UPCE_to_UPCA("04182635")
+        result = utils.convert_upce_to_upca("04182635")
         assert result == "041800000265"
 
     def test_seven_digit_upce(self):
         """7-digit UPC-E (with check digit) should truncate and convert."""
-        result = utils.convert_UPCE_to_UPCA("0418263")  # 7 digits
+        result = utils.convert_upce_to_upca("0418263")  # 7 digits
         assert isinstance(result, str) and len(result) == 12
 
     def test_eight_digit_upce(self):
         """8-digit UPC-E should truncate and convert."""
-        result = utils.convert_UPCE_to_UPCA("00418263")  # 8 digits
+        result = utils.convert_upce_to_upca("00418263")  # 8 digits
         assert isinstance(result, str) and len(result) == 12
 
     def test_invalid_length(self):
         """Invalid length should return empty string."""
-        result = utils.convert_UPCE_to_UPCA("1234")  # Too short
+        result = utils.convert_upce_to_upca("1234")  # Too short
         assert result == ""
 
     def test_d6_in_012(self):
         """Test d6 in 0,1,2 range."""
-        result = utils.convert_UPCE_to_UPCA("123456")
+        result = utils.convert_upce_to_upca("123456")
         assert result is not False
 
     def test_d6_equals_3(self):
         """Test d6 equals 3."""
-        result = utils.convert_UPCE_to_UPCA("123336")
+        result = utils.convert_upce_to_upca("123336")
         assert result is not False
 
     def test_d6_equals_4(self):
         """Test d6 equals 4."""
-        result = utils.convert_UPCE_to_UPCA("123446")
+        result = utils.convert_upce_to_upca("123446")
         assert result is not False
 
     def test_d6_greater_than_4(self):
         """Test d6 > 4."""
-        result = utils.convert_UPCE_to_UPCA("123556")
+        result = utils.convert_upce_to_upca("123556")
         assert result is not False
 
     def test_returns_twelve_characters(self):
         """Result should always be 12 characters."""
-        result = utils.convert_UPCE_to_UPCA("123456")
+        result = utils.convert_upce_to_upca("123456")
         if result:
             assert len(result) == 12
 

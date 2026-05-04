@@ -25,7 +25,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from core.structured_logging import get_logger
-from core.utils import calc_check_digit, convert_UPCE_to_UPCA, safe_int
+from core.utils import calc_check_digit, convert_upce_to_upca, safe_int
 
 logger = get_logger(__name__)
 
@@ -177,7 +177,7 @@ def process_upc_for_output(
     elif upc_len == 11:
         upc_string = str(proposed_upc) + str(calc_check_digit(proposed_upc))
     elif upc_len == 8:
-        converted = convert_UPCE_to_UPCA(proposed_upc)
+        converted = convert_upce_to_upca(proposed_upc)
         upc_string = converted if isinstance(converted, str) else ""
     elif upc_len < upc_target_length:
         # Pad short UPCs
