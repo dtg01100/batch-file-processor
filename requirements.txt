@@ -3,7 +3,7 @@
 # PyQt5 5.15 maximum - target system does not support Qt6
 
 altgraph>=0.17.2
-pytest>=7.4.3
+pytest>=9.0.3
 pytest-timeout>=2.2.0
 appdirs>=1.4.4
 attrs>=21.4.0
