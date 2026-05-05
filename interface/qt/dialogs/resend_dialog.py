@@ -683,7 +683,7 @@ class ResendDialog(BaseDialog):
         """Cancel existing file check worker safely."""
         if self._file_check_worker and self._file_check_worker.isRunning():
             self._file_check_worker.cancel()
-            self._file_check_worker.wait(3000)
+            self._file_check_worker.wait(5000)
             self._file_check_worker = None
 
     def _load_more(self) -> None:

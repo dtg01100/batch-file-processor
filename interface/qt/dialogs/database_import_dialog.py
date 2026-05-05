@@ -5,6 +5,7 @@ Replaces the tkinter-based database_import.py with a Qt implementation.
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from typing import Any, cast
@@ -30,6 +31,8 @@ from core.utils.bool_utils import normalize_bool
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 from migrations import folders_database_migrator
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseImportDialog(BaseDialog):
@@ -214,19 +217,19 @@ class DatabaseImportDialog(BaseDialog):
         result_event.set()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
-        """Handle dialog close — terminate import thread if still running."""
+        """Handle dialog close — cancel import thread if still running."""
         thread = getattr(self, "_import_thread", None)
         if (
             thread is not None
             and callable(getattr(thread, "isRunning", None))
             and thread.isRunning()
         ):
-            thread.terminate()
-            thread.wait(3000)
+            thread.cancel()
+            thread.wait(5000)
         super().closeEvent(event)
 
     def deleteLater(self) -> None:
-        """Handle widget deletion — terminate import thread if still running.
+        """Handle widget deletion — cancel import thread if still running.
 
         This ensures the thread is stopped before the widget is destroyed,
         preventing crashes during test teardown.
@@ -237,8 +240,8 @@ class DatabaseImportDialog(BaseDialog):
             and callable(getattr(thread, "isRunning", None))
             and thread.isRunning()
         ):
-            thread.terminate()
-            thread.wait(3000)
+            thread.cancel()
+            thread.wait(5000)
         super().deleteLater()
 
 
@@ -266,6 +269,11 @@ class ImportThread(QThread):
         self._platform = platform
         self._db_version = db_version
         self._backup_path = backup_path
+        self._is_cancelled = False
+
+    def cancel(self) -> None:
+        """Cooperatively cancel the import thread."""
+        self._is_cancelled = True
 
     def _confirm(self, title: str, message: str) -> bool:
         """Request confirmation from main thread using signals/slots."""
@@ -370,7 +378,8 @@ class ImportThread(QThread):
                     "Continue?",
                 ):
                     return False
-        except Exception:
+        except Exception as e:
+            logger.debug("Version compatibility check failed: %s", e)
             return False
         return True
 
@@ -430,6 +439,9 @@ class DbMigrationJob:
         for i, folder in enumerate(active_new_folders):
             if not isinstance(folder, dict):
                 continue
+            if thread._is_cancelled:  # Cooperative cancellation check
+                thread.finished.emit(False, "Import cancelled by user")
+                return
             self._migrate_folder(folder, target_folders, original_db)
             thread.progress.emit(
                 i + 1, total_folders, f"Migrated {i + 1}/{total_folders} folders"
