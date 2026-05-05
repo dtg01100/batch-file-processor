@@ -13,14 +13,14 @@ Usage:
 
 import os
 import re
+
+# Add project root to path for imports
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pytest
-
-# Add project root to path for imports
-import sys
 
 _project_root = Path(__file__).parent.parent.parent.parent
 if str(_project_root) not in sys.path:

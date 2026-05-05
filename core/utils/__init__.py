@@ -28,8 +28,6 @@ from core.edi.edi_transformer import (
 )
 from core.edi.upc_utils import (
     calc_check_digit,
-)
-from core.edi.upc_utils import (
     convert_upce_to_upca,
 )
 

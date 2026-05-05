@@ -345,7 +345,7 @@ class CSVConverter(BaseEDIConverter):
 
 # Import at bottom for backward compatibility. The module-level edi_convert()
 # function must exist at the same import path callers expect.
-from .convert_base import create_edi_convert_wrapper
+from .convert_base import create_edi_convert_wrapper  # noqa: E402
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(CSVConverter, format_name="csv")
