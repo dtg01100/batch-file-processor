@@ -107,6 +107,9 @@ winvenv/
 .pytest_cache/
 .ruff_cache/
 
+# Migrated database cache (created by test_real_legacy_db_upgrade.py)
+.migrated_db_cache
+
 # Executables
 *.exe
 wine_build.exit
