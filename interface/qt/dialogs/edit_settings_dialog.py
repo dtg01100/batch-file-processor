@@ -1,5 +1,6 @@
 """Qt reimplementation of EditSettingsDialog for editing application-wide settings."""
 
+import logging
 import os
 from typing import Any, Callable
 
@@ -21,6 +22,8 @@ from core import utils
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format
+
+logger = logging.getLogger(__name__)
 
 
 class EditSettingsDialog(BaseDialog):
@@ -348,7 +351,8 @@ class EditSettingsDialog(BaseDialog):
                 initial = self._logs_directory
             else:
                 initial = os.getcwd()
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to get initial log directory: %s", e)
             initial = os.path.expanduser("~")
 
         chosen = QFileDialog.getExistingDirectory(self, "Select Log Folder", initial)

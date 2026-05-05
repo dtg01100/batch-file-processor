@@ -129,9 +129,11 @@ class QtRunCoordinator:
             # Ensure we always return to original cwd
             try:
                 self._app._os_module.chdir(original_folder)
-            except Exception:
+            except Exception as e:
                 # Returning to cwd is best-effort; original folder may not exist
-                pass
+                logger.debug(
+                    "Failed to return to original cwd %s: %s", original_folder, e
+                )
 
         # Send reports if configured
         if self._app._utils_module.normalize_bool(reporting["enable_reporting"]):

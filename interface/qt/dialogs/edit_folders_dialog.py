@@ -4,6 +4,7 @@ Provides a PyQt5-based dialog for editing folder configuration settings.
 Uses a decomposed architecture with dedicated builders and handlers.
 """
 
+import logging
 import os
 from typing import Any, Callable
 
@@ -22,6 +23,8 @@ from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
 from interface.services.ftp_service import FTPServiceProtocol
 from interface.validation.folder_settings_validator import FolderSettingsValidator
+
+logger = logging.getLogger(__name__)
 
 
 class EditFoldersDialog(BaseDialog):
@@ -819,7 +822,8 @@ class EditFoldersDialog(BaseDialog):
         try:
             plugins = self.plugin_manager.get_configuration_plugins()
             return [p.get_format_name() for p in plugins]
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to get plugin format options: %s", e)
             return []
 
     def _apply_plugin_configurations(self, target: dict[str, Any]) -> None:
