@@ -1217,11 +1217,9 @@ class DispatchOrchestrator:
         )
 
         if normalize_bool(effective_folder.get("tweak_edi", False)):
-            if (
-                not effective_folder.get("convert_to_format")
-                or effective_folder["convert_to_format"] == ""
-            ):
-                effective_folder["convert_to_format"] = "tweaks"
+            # Always override convert_to_format when tweak_edi is enabled,
+            # even if a stale non-tweaks value exists from a prior profile.
+            effective_folder["convert_to_format"] = "tweaks"
             effective_folder["process_edi"] = True
 
         has_convert_target = bool(effective_folder.get("convert_to_format"))

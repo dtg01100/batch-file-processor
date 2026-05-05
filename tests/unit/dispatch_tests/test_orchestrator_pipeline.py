@@ -1345,6 +1345,30 @@ class TestOrchestratorPipelineHelpers:
         assert context.effective_folder["convert_edi"] is True
         assert context.effective_folder["process_edi"] is True
 
+    def test_build_processing_context_tweak_overrides_stale_non_tweaks_format(self):
+        """tweak_edi=True must override a stale convert_to_format from a prior profile.
+
+        When a user switches from e.g. eStore eInvoice to Tweak EDI, the database
+        retains the old convert_to_format value.  The orchestrator must discard it
+        and force 'tweaks' so the file is routed to convert_to_tweaks, not the
+        stale converter.
+        """
+        orchestrator = DispatchOrchestrator(DispatchConfig())
+
+        context = orchestrator._build_processing_context(
+            {
+                "process_edi": "False",
+                "tweak_edi": True,
+                "convert_to_format": "estore_einvoice",  # stale value
+            },
+            {},
+        )
+
+        assert context.effective_folder["convert_to_format"] == "tweaks"
+        assert context.effective_folder["process_edi"] is True
+        # convert_edi should be inferred True from tweak_edi
+        assert context.effective_folder["convert_edi"] is True
+
     def test_build_processing_context_infers_convert_when_mode_missing_both_gates(
         self, tmp_path
     ):
