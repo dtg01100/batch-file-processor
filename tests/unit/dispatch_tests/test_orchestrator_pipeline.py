@@ -573,7 +573,7 @@ class TestGetUPCDictionary:
 
         assert result == {}
         assert (
-            orchestrator._last_upc_lookup_error
+            orchestrator.upc_service.last_error
             == "fallback UPC query returned rows, but none were parseable"
         )
         assert "none were parseable" in caplog.text

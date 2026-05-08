@@ -26,7 +26,6 @@ from core.structured_logging import (
 )
 from core.utils import capture_records, normalize_bool, normalize_convert_to_format
 from dispatch.error_handler import ErrorHandler
-from dispatch.feature_flags import get_strict_testing_mode
 from dispatch.interfaces import (
     BackendInterface,
     DatabaseInterface,
@@ -565,49 +564,6 @@ class DispatchOrchestrator:
         self._log_error(run_log, error_msg)
         return result
 
-    def _init_progress_reporter(
-        self,
-        folder: dict,
-        total_files: int,
-        folder_num: int | None,
-        folder_total: int | None,
-    ) -> None:
-        """Initialize progress reporter for folder processing.
-
-        Calls the progress reporter's start_folder method with folder alias
-        and file counts. Handles both old and new progress reporter interfaces
-        (with/without folder_num and folder_total parameters).
-
-        Args:
-            folder: Folder configuration dictionary containing 'alias' or 'folder_name'.
-            total_files: Number of files to process in this folder.
-            folder_num: Current folder index (1-based), if available.
-            folder_total: Total number of folders to process, if available.
-
-        """
-        if not self.config.progress_reporter:
-            return
-
-        progress = self.config.progress_reporter
-        if not hasattr(progress, "start_folder"):
-            return
-
-        try:
-            progress.start_folder(
-                folder.get("alias", folder.get("folder_name", "")),
-                total_files,
-                folder_num=folder_num,
-                folder_total=folder_total,
-            )
-        except TypeError:
-            logger.warning(
-                "Progress reporter start_folder() missing optional parameters "
-                "(folder_num, folder_total). Update reporter signature."
-            )
-            progress.start_folder(
-                folder.get("alias", folder.get("folder_name", "")), total_files
-            )
-
     @staticmethod
     def _is_strict_database_lookup(settings: dict) -> bool:
         """Return True when database lookup mode requires fail-fast behavior."""
@@ -637,11 +593,6 @@ class DispatchOrchestrator:
             self.config.upc_dict = result
         return result
 
-    @property
-    def _last_upc_lookup_error(self) -> str | None:
-        """Return the last error from the UPC lookup service."""
-        return self.upc_service.last_error
-
     def _process_file_with_pipeline(
         self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
     ) -> FileResult:
@@ -667,151 +618,6 @@ class DispatchOrchestrator:
             run_log=run_log,
             effective_folder=context,
         )
-
-    def _execute_file_pipeline(
-        self,
-        file_path: str,
-        file_basename: str,
-        context: ProcessingContext,
-        result: FileResult,
-        run_log: Any,
-    ) -> None:
-        """Execute core file pipeline and update result in place.
-
-        Runs the file through checksum calculation, validation, splitting
-        (if enabled), conversion, and sending stages. The result
-        object is mutated in place to reflect processing outcomes.
-
-        Args:
-            file_path: Absolute path to the file being processed.
-            file_basename: Base name of the file (for logging).
-            context: ProcessingContext containing settings and temp tracking.
-            result: FileResult to update (mutated in place).
-            run_log: Optional run log for recording processing activity.
-
-        """
-        # calculate checksum and log
-        self._set_checksum_for_result(result, file_path, file_basename)
-
-        current_file = file_path
-
-        # validation
-        continue_processing, current_file = self._run_validation_pipeline(
-            current_file=current_file,
-            context=context,
-            result=result,
-            run_log=run_log,
-            file_basename=file_basename,
-        )
-        if not continue_processing:
-            return
-
-        # splitting path (may send split files)
-        if self._process_split_pipeline(
-            current_file=current_file,
-            file_path=file_path,
-            file_basename=file_basename,
-            context=context,
-            result=result,
-            run_log=run_log,
-        ):
-            return
-
-        # conversion
-        current_file, did_convert = self._apply_conversion(
-            current_file=current_file,
-            file_basename=file_basename,
-            original_file_path=file_path,
-            context=context,
-            run_log=run_log,
-            validation_passed=result.validated,
-        )
-        if did_convert:
-            result.converted = True
-
-        # send final output
-        self._send_single_pipeline_file(
-            current_file=current_file,
-            file_path=file_path,
-            file_basename=file_basename,
-            context=context,
-            result=result,
-            run_log=run_log,
-        )
-
-    def _send_single_pipeline_file(
-        self,
-        current_file: str,
-        file_path: str,
-        file_basename: str,
-        context: ProcessingContext,
-        result: FileResult,
-        run_log: Any,
-    ) -> None:
-        """Send a single (non-split) pipeline output file."""
-        enabled_backends = self.send_manager.get_enabled_backends(
-            context.effective_folder
-        )
-        if not enabled_backends:
-            result.sent = False
-            result.errors.append("No backends enabled")
-            return
-
-        result.sent = self._send_pipeline_file(
-            self._apply_file_rename(current_file, context),
-            context.effective_folder,
-            run_log,
-        )
-
-        if not result.sent:
-            self._record_send_failure(
-                result=result,
-                file_basename=file_basename,
-                current_file=current_file,
-                run_log=run_log,
-            )
-            return
-
-        self._log_success_with_invoices(
-            run_log=run_log,
-            file_basename=file_basename,
-            file_path=file_path,
-        )
-
-    def _cleanup_temp_artifacts(self, context: ProcessingContext) -> None:
-        """Best-effort cleanup for pipeline temporary directories and files."""
-        strict_testing_mode = get_strict_testing_mode()
-        cleanup_errors = []
-        logger.debug(
-            "Temp cleanup: %d dirs, %d files",
-            len(context.temp_dirs),
-            len(context.temp_files),
-        )
-
-        for temp_dir in context.temp_dirs:
-            try:
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir, ignore_errors=not strict_testing_mode)
-            except OSError as exc:
-                if strict_testing_mode:
-                    cleanup_errors.append(
-                        f"directory '{temp_dir}' could not be removed: {exc}"
-                    )
-
-        for temp_file in context.temp_files:
-            try:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-            except OSError as exc:
-                if strict_testing_mode:
-                    cleanup_errors.append(
-                        f"file '{temp_file}' could not be removed: {exc}"
-                    )
-
-        if cleanup_errors:
-            raise RuntimeError(
-                "Failed to clean up temporary artifacts: " + "; ".join(cleanup_errors)
-            )
 
     def _process_split_pipeline(
         self,

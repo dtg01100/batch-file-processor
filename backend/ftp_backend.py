@@ -181,7 +181,8 @@ class FTPBackend(BackendBase):
 
         """
         client = self._client
-        assert client is not None, "FTP client must be set before calling _send_file"
+        if client is None:
+            raise RuntimeError("FTP client must be set before calling _send_file")
 
         logger.debug(
             "Connecting to ftp server: %s",

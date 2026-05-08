@@ -1080,8 +1080,8 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
             # Ensure restore even on failure
             try:
                 _sff("debug_mode", False)
-            except Exception:
-                pass
+            except (ValueError, KeyError):
+                pass  # best-effort cleanup of test flag
             fail("set_feature_flag('debug_mode', True)", str(exc))
 
         # set_feature_flag with unknown name raises ValueError

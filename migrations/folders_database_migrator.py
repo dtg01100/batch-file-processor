@@ -1,5 +1,6 @@
 import logging
 import os
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +101,8 @@ def _normalize_legacy_v32_values(database_connection) -> None:
                     f"SET {_quote_identifier(col)} = 0 "
                     f"WHERE LOWER(CAST({_quote_identifier(col)} AS TEXT)) = 'false'"
                 )
-            except Exception:
-                logger.debug("Column %s may not exist yet; skipping", col)
+            except sqlite3.OperationalError as e:
+                logger.debug("Column %s may not exist yet; skipping: %s", col, e)
 
         # Normalize convert_to_format via Python for full correctness
         try:
@@ -117,8 +118,8 @@ def _normalize_legacy_v32_values(database_connection) -> None:
                         f"SET convert_to_format = ? WHERE id = ?",
                         (normalized, row_id),
                     )
-        except Exception:
-            logger.debug("Table %s or column may not exist yet; skipping", table)
+        except sqlite3.OperationalError as e:
+            logger.debug("Table %s or column may not exist yet; skipping: %s", table, e)
 
     database_connection.raw_connection.commit()
 
@@ -153,7 +154,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
     ]:
         try:
             cursor.execute(stmt)
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("Column may already exist: %s", e)
     for table, timestamp_col in [
         ("folders", "created_at"),
@@ -181,13 +182,13 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
     ]:
         try:
             cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("Column %s may already exist: %s", col, e)
     try:
         cursor.execute(
             "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT DEFAULT 'processed'"
         )
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         logger.debug("Column 'status' may already exist: %s", e)
     cursor.execute(
         "UPDATE 'processed_files' SET filename=file_name"
@@ -205,20 +206,20 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
     ]:
         try:
             cursor.execute(ddl)
-        except Exception:
+        except sqlite3.OperationalError:
             pass  # column referenced by index may not exist in this DB variant
     database_connection.raw_connection.commit()
 
     # --- v37: version table notes ---
     try:
         database_connection.query("ALTER TABLE 'version' ADD COLUMN 'notes' TEXT")
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         logger.debug("Column 'notes' may already exist: %s", e)
     try:
         database_connection.query("""
             UPDATE 'version' SET notes='administrative table duplicates folders table. Use folders table for all operations. administrative table deprecated.'
         """)
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         logger.debug("Could not set version notes: %s", e)
 
     # --- v38: edi_format column ---
@@ -228,7 +229,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                 f"ALTER TABLE '{_tbl}' ADD COLUMN 'edi_format' TEXT"
             )
             database_connection.query(f'UPDATE "{_tbl}" SET "edi_format" = "default"')
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("edi_format column may already exist in %s: %s", _tbl, e)
 
     # --- v39: add INTEGER PRIMARY KEY AUTOINCREMENT id to folders/administrative ---
@@ -257,7 +258,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
             cur.execute(f"DROP TABLE {qt}")
             cur.execute(f"ALTER TABLE {new_table} RENAME TO {qt}")
             cur.execute("COMMIT")
-        except Exception:
+        except sqlite3.Error:
             cur.execute("ROLLBACK")
             raise
 
@@ -323,7 +324,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                 database_connection.query(
                     f"UPDATE {_tbl} SET {qf} = 0 WHERE {qf} = 'False'"
                 )
-            except Exception:
+            except sqlite3.OperationalError:
                 pass
     try:
         database_connection.query(
@@ -340,7 +341,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
             "UPDATE settings SET enable_interval_backups = 0"
             " WHERE enable_interval_backups = 'False'"
         )
-    except Exception:
+    except sqlite3.OperationalError:
         pass
 
     # --- v42: normalize folder_name backslashes ---
@@ -353,7 +354,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                 folders_table.update(
                     {"id": folder["id"], "folder_name": normalized}, ["id"]
                 )
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         logger.debug("Error normalizing folder paths: %s", e)
 
     # --- v43: upc_target_length / upc_padding_pattern ---
@@ -362,13 +363,13 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
             cursor.execute(
                 f"ALTER TABLE '{_table}' ADD COLUMN 'upc_target_length' INTEGER DEFAULT 11"
             )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("Column upc_target_length may already exist: %s", e)
         try:
             cursor.execute(
                 f"ALTER TABLE '{_table}' ADD COLUMN 'upc_padding_pattern' TEXT"
             )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("Column upc_padding_pattern may already exist: %s", e)
     database_connection.raw_connection.commit()
 
@@ -396,7 +397,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                   AND convert_to_format IS NOT NULL
                   AND convert_to_format != ''
             """)
-        except Exception:
+        except sqlite3.OperationalError:
             pass
         try:
             # Any folder with tweak_edi=1 and no format: intent was always
@@ -409,7 +410,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                 WHERE tweak_edi = 1
                   AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
-        except Exception:
+        except sqlite3.OperationalError:
             pass
     database_connection.raw_connection.commit()
 
@@ -440,7 +441,7 @@ def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> No
                         f"UPDATE {qt} SET {qc} = {default_sql} WHERE {qc} IS NULL"
                     )
         _conn2.execute("COMMIT")
-    except Exception as e:
+    except sqlite3.OperationalError as e:
         _conn2.execute("ROLLBACK")
         raise RuntimeError(f"Failed to add HTTP backend columns: {e}") from e
 
@@ -1199,7 +1200,7 @@ def upgrade_database(
         ]:
             try:
                 cursor.execute(stmt)
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 logger.debug("Column may already exist: %s", e)
         # Populate NULL timestamps for existing rows (ensure_schema may have
         # already created the columns without a DEFAULT, leaving rows NULL).
@@ -1242,13 +1243,13 @@ def upgrade_database(
         ]:
             try:
                 cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 logger.debug("Column %s may already exist: %s", col, e)
         try:
             cursor.execute(
                 "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT DEFAULT 'processed'"
             )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             logger.debug("Column 'status' may already exist: %s", e)
         cursor.execute(
             "UPDATE 'processed_files' SET filename=file_name WHERE file_name IS NOT NULL AND filename IS NULL"
@@ -1278,7 +1279,7 @@ def upgrade_database(
         ]:
             try:
                 cursor.execute(ddl)
-            except Exception:
+            except sqlite3.OperationalError:
                 pass  # column referenced by index may not exist in this DB variant
         database_connection.raw_connection.commit()
 
@@ -1387,7 +1388,7 @@ def upgrade_database(
                 cursor.execute(f"DROP TABLE {quoted_table}")
                 cursor.execute(f"ALTER TABLE {new_table} RENAME TO {quoted_table}")
                 cursor.execute("COMMIT")
-            except Exception:
+            except sqlite3.Error:
                 cursor.execute("ROLLBACK")
                 raise
 
@@ -1487,7 +1488,7 @@ def upgrade_database(
                 database_connection.query(
                     f"UPDATE folders SET {quoted_field} = 0 WHERE {quoted_field} = 'False'"
                 )
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 print(f"Error normalizing field {field} in folders: {e}")
                 # Skip fields that don't exist in this version
 
@@ -1503,7 +1504,7 @@ def upgrade_database(
                 database_connection.query(
                     f"UPDATE administrative SET {quoted_field} = 0 WHERE {quoted_field} = 'False'"
                 )
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 print(f"Error normalizing field {field} in administrative: {e}")
                 # Skip fields that don't exist in this version
 
@@ -1521,7 +1522,7 @@ def upgrade_database(
             database_connection.query(
                 "UPDATE settings SET enable_interval_backups = 0 WHERE enable_interval_backups = 'False'"
             )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             print(f"Error normalizing settings table: {e}")
 
         update_version = dict(id=1, version="42", os=running_platform)
@@ -1542,7 +1543,7 @@ def upgrade_database(
                     folders_table.update(
                         {"id": folder["id"], "folder_name": normalized}, ["id"]
                     )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             print(f"Error normalizing folder paths: {e}")
 
         update_version = dict(id=1, version="43", os=running_platform)
@@ -1564,13 +1565,13 @@ def upgrade_database(
                 cursor.execute(
                     f"ALTER TABLE '{table}' ADD COLUMN 'upc_target_length' INTEGER DEFAULT 11"
                 )
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 logger.debug("Column upc_target_length may already exist: %s", e)
             try:
                 cursor.execute(
                     f"ALTER TABLE '{table}' ADD COLUMN 'upc_padding_pattern' TEXT"
                 )
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 logger.debug("Column upc_padding_pattern may already exist: %s", e)
         database_connection.raw_connection.commit()
 
@@ -1611,7 +1612,7 @@ def upgrade_database(
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                 """)
-            except Exception:
+            except sqlite3.OperationalError:
                 pass  # Column may not exist in older schemas
 
             try:
@@ -1624,7 +1625,7 @@ def upgrade_database(
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                 """)
-            except Exception:
+            except sqlite3.OperationalError:
                 pass  # Column may not exist in older schemas
 
         database_connection.raw_connection.commit()
@@ -1644,7 +1645,7 @@ def upgrade_database(
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
-        except Exception:
+        except sqlite3.OperationalError:
             pass
 
         try:
@@ -1654,17 +1655,17 @@ def upgrade_database(
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
-        except Exception:
+        except sqlite3.OperationalError:
             pass
 
         try:
             cursor.execute("UPDATE folders SET tweak_edi = 0")
-        except Exception:
+        except sqlite3.OperationalError:
             pass
 
         try:
             cursor.execute("UPDATE administrative SET tweak_edi = 0")
-        except Exception:
+        except sqlite3.OperationalError:
             pass
 
         database_connection.raw_connection.commit()
@@ -1734,7 +1735,7 @@ def upgrade_database(
                         f"  Repaired {fixed} folders using backup "
                         f"{os.path.basename(backup_path)}"
                     )
-                except Exception as e:
+                except sqlite3.OperationalError as e:
                     print(f"  Warning: could not repair from backup: {e}")
             else:
                 print(
@@ -1781,13 +1782,13 @@ def upgrade_database(
             conn.execute(
                 f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
             )
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             raise RuntimeError(
                 f"Failed to add column {quoted_column} to table {quoted_table}: {e}"
             ) from e
         try:
             conn.execute(f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}")
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             raise RuntimeError(
                 f"Failed to set default value for column {quoted_column} in table {quoted_table}: {e}"
             ) from e
@@ -1809,7 +1810,7 @@ def upgrade_database(
             for table_name in ("folders", "administrative"):
                 _ensure_column(table_name, "process_backend_http", "INTEGER", "0")
             conn.execute("COMMIT")
-        except Exception as e:
+        except sqlite3.OperationalError as e:
             conn.execute("ROLLBACK")
             raise RuntimeError(f"Failed to add process_backend_http column: {e}") from e
 
@@ -1880,7 +1881,7 @@ def upgrade_database(
 
                 conn.execute("COMMIT")
                 print("  Repair complete: HTTP backend column(s) added.")
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 conn.execute("ROLLBACK")
                 raise RuntimeError(f"Failed to repair HTTP backend columns: {e}") from e
         else:
@@ -1908,7 +1909,7 @@ def upgrade_database(
                         f"  Repair complete: replaced {total_null_updates} NULL HTTP value(s) with defaults."
                     )
                 conn.execute("COMMIT")
-            except Exception as e:
+            except sqlite3.OperationalError as e:
                 conn.execute("ROLLBACK")
                 raise RuntimeError(
                     f"Failed to repair HTTP backend NULL values: {e}"
