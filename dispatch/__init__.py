@@ -13,6 +13,7 @@ from dispatch.feature_flags import get_debug_mode, get_feature_flags, set_featur
 from dispatch.file_utils import build_output_filename, do_clear_old_files
 from dispatch.hash_utils import generate_file_hash, generate_match_lists
 from dispatch.interfaces import BackendInterface, DatabaseInterface, FileSystemInterface
+from dispatch.legacy_process import process
 from dispatch.log_sender import (
     EmailConfig,
     LogEntry,
@@ -62,6 +63,8 @@ __all__ = [
     "DispatchConfig",
     "FolderResult",
     "DispatchOrchestrator",
+    # Legacy process function
+    "process",
     # Preflight Validation
     "PreflightValidator",
     "PreflightResult",
