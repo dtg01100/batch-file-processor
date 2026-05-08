@@ -1,0 +1,726 @@
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+from migrations.migration_helpers import (
+    CURRENT_SCHEMA_VERSION,
+    _log_migration_step,
+    _normalize_legacy_v32_values,
+)
+
+
+def run_legacy_migrations(
+    database_connection,
+    config_folder,
+    running_platform,
+    db_version,
+    db_version_dict,
+    target_version=None,
+) -> dict:
+    """Run all v5→v32 migrations. Returns updated db_version_dict."""
+
+    if db_version_dict["version"] == "5":
+        folders_table = database_connection["folders"]
+        folders_table.create_column("convert_to_format", "String")
+        convert_to_csv_list = folders_table.find(process_edi=1)
+        for line in convert_to_csv_list:
+            line["convert_to_format"] = "csv"
+            folders_table.update(line, ["id"])
+        administrative_section = database_connection["administrative"]
+        administrative_section.create_column("convert_to_format", "String")
+        administrative_section_update_dict = administrative_section.find_one(id=1)
+        administrative_section_update_dict["convert_to_format"] = "csv"
+        administrative_section.update(administrative_section_update_dict, ["id"])
+
+        update_version = dict(id=1, version="6")
+        db_version.update(update_version, ["id"])
+        _log_migration_step("5", "6")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "6":
+        processed_table = database_connection["processed_files"]
+        processed_table.create_column("resend_flag", "Boolean")
+        database_connection.raw_connection.execute(
+            "UPDATE processed_files SET resend_flag = 0"
+        )
+        database_connection.commit()
+
+        update_version = dict(id=1, version="7")
+        db_version.update(update_version, ["id"])
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "7":
+        folders_table = database_connection["folders"]
+        administrative_section = database_connection["administrative"]
+        administrative_section.create_column("tweak_edi", "Boolean")
+        administrative_section_update_dict = administrative_section.find_one(id=1)
+        administrative_section_update_dict["tweak_edi"] = 0
+        administrative_section.update(administrative_section_update_dict, ["id"])
+
+        folders_table.create_column("tweak_edi", "Boolean")
+        for line in folders_table.all():
+            if line["pad_a_records"] == 0:
+                line["tweak_edi"] = 0
+                folders_table.update(line, ["id"])
+            else:
+                line["tweak_edi"] = 1
+                folders_table.update(line, ["id"])
+        update_version = dict(id=1, version="8")
+        db_version.update(update_version, ["id"])
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "8":
+        administrative_section = database_connection["administrative"]
+
+        administrative_section.create_column("single_add_folder_prior", "String")
+        administrative_section.create_column("batch_add_folder_prior", "String")
+        administrative_section.create_column("export_processed_folder_prior", "String")
+
+        administrative_section_update_dict = dict(
+            id=1,
+            single_add_folder_prior=os.path.join(os.getcwd()),
+            batch_add_folder_prior=os.path.join(os.getcwd()),
+            export_processed_folder_prior=os.path.join(os.getcwd()),
+        )
+
+        administrative_section.update(administrative_section_update_dict, ["id"])
+        update_version = dict(id=1, version="9")
+        db_version.update(update_version, ["id"])
+        _log_migration_step("8", "9")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "9":
+        administrative_section = database_connection["administrative"]
+        administrative_section.create_column("report_edi_errors", "Boolean")
+        administrative_section_update_dict = dict(id=1, report_edi_errors=0)
+        administrative_section.update(administrative_section_update_dict, ["id"])
+        update_version = dict(id=1, version="10")
+        db_version.update(update_version, ["id"])
+        _log_migration_step("9", "10")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "10":
+        folders_table = database_connection["folders"]
+        administrative_section = database_connection["administrative"]
+        administrative_section.create_column("split_edi", "Boolean")
+        administrative_section_update_dict = administrative_section.find_one(id=1)
+        administrative_section_update_dict["split_edi"] = 0
+        administrative_section.update(administrative_section_update_dict, ["id"])
+
+        folders_table.create_column("split_edi", "Boolean")
+        for line in folders_table.all():
+            line["split_edi"] = 0
+            folders_table.update(line, ["id"])
+        update_version = dict(id=1, version="11")
+        db_version.update(update_version, ["id"])
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "11":
+        administrative_section = database_connection["administrative"]
+
+        database_connection.query("DROP TABLE IF EXISTS settings")
+        database_connection.query("""
+            CREATE TABLE settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                enable_email INTEGER,
+                email_address TEXT,
+                email_username TEXT,
+                email_password TEXT,
+                email_smtp_server TEXT,
+                smtp_port INTEGER,
+                backup_counter INTEGER,
+                backup_counter_maximum INTEGER,
+                enable_interval_backups INTEGER
+            )
+        """)
+
+        settings_table = database_connection["settings"]
+        administrative_section_dict = administrative_section.find_one(id=1)
+
+        email_state = (
+            1 if administrative_section_dict.get("enable_reporting") == 1 else 0
+        )
+
+        settings_table.insert(
+            dict(
+                enable_email=email_state,
+                email_address=administrative_section_dict.get(
+                    "report_email_address", ""
+                ),
+                email_username=administrative_section_dict.get(
+                    "report_email_username", ""
+                ),
+                email_password=administrative_section_dict.get(
+                    "report_email_password", ""
+                ),
+                email_smtp_server=administrative_section_dict.get(
+                    "report_email_smtp_server", "smtp.gmail.com"
+                ),
+                smtp_port=int(
+                    administrative_section_dict.get("reporting_smtp_port", 587)
+                ),
+                backup_counter=0,
+                backup_counter_maximum=200,
+                enable_interval_backups=1,
+            )
+        )
+        update_version = dict(id=1, version="12")
+        db_version.update(update_version, ["id"])
+        _log_migration_step("11", "12")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "12":
+        administrative_section = database_connection["administrative"]
+        config_folder_path = config_folder if config_folder else os.getcwd()
+
+        administrative_section.create_column("logs_directory", "String")
+        administrative_section.create_column("edi_converter_scratch_folder", "String")
+        administrative_section.create_column("errors_folder", "String")
+
+        administrative_section_update_dict = dict(
+            id=1,
+            logs_directory=os.path.join(config_folder_path, "run_logs"),
+            edi_converter_scratch_folder=os.path.join(
+                config_folder_path, "edi_converter_scratch_folder"
+            ),
+            errors_folder=os.path.join(config_folder_path, "errors"),
+        )
+        administrative_section.update(administrative_section_update_dict, ["id"])
+        update_version = dict(id=1, version="13")
+        db_version.update(update_version, ["id"])
+        _log_migration_step("12", "13")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "13":
+        database_connection.query(
+            'update "folders" set "convert_to_format"="", "process_edi"=0 where "convert_to_format"="insight"'
+        )
+        update_version = dict(id=1, version="14", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("13", "14")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "14":
+        database_connection.query(
+            "alter table 'folders' add column 'force_edi_validation'"
+        )
+        database_connection.query('UPDATE "folders" SET "force_edi_validation" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'force_edi_validation'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "force_edi_validation" = 0'
+        )
+        update_version = dict(id=1, version="15", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("14", "15")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "15":
+        database_connection.query("alter table 'folders' add column 'append_a_records'")
+        database_connection.query('UPDATE "folders" SET "append_a_records" = 0')
+        database_connection.query(
+            "alter table 'folders' add column 'a_record_append_text'"
+        )
+        database_connection.query('UPDATE "folders" SET "a_record_append_text" = ""')
+        database_connection.query(
+            "alter table 'folders' add column 'force_txt_file_ext'"
+        )
+        database_connection.query('UPDATE "folders" SET "force_txt_file_ext" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'append_a_records'"
+        )
+        database_connection.query('UPDATE "administrative" SET "append_a_records" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'a_record_append_text'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "a_record_append_text" = ""'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'force_txt_file_ext'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "force_txt_file_ext" = 0'
+        )
+        update_version = dict(id=1, version="16", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("15", "16")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "16":
+        database_connection.query(
+            "alter table 'folders' add column 'invoice_date_offset'"
+        )
+        database_connection.query('UPDATE "folders" SET "invoice_date_offset" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'invoice_date_offset'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "invoice_date_offset" = 0'
+        )
+        update_version = dict(id=1, version="17", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("16", "17")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "17":
+        database_connection.query("alter table 'settings' add column 'odbc_driver'")
+        database_connection.query(
+            'UPDATE "settings" SET "odbc_driver" = "Select ODBC Driver..."'
+        )
+        database_connection.query("alter table 'settings' add column 'as400_username'")
+        database_connection.query('UPDATE "settings" SET "as400_username" = ""')
+        database_connection.query("alter table 'settings' add column 'as400_password'")
+        database_connection.query('UPDATE "settings" SET "as400_password" = ""')
+        database_connection.query("alter table 'settings' add column 'as400_address'")
+        database_connection.query('UPDATE "settings" SET "as400_address" = ""')
+        update_version = dict(id=1, version="18", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("17", "18")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "18":
+        database_connection.query("alter table 'folders' add column 'retail_uom'")
+        database_connection.query('UPDATE "folders" SET "retail_uom" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'retail_uom'"
+        )
+        database_connection.query('UPDATE "administrative" SET "retail_uom" = 0')
+        update_version = dict(id=1, version="19", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("18", "19")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "19":
+        database_connection.query("alter table 'folders' add column 'force_each_upc'")
+        database_connection.query('UPDATE "folders" SET "force_each_upc" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'force_each_upc'"
+        )
+        database_connection.query('UPDATE "administrative" SET "force_each_upc" = 0')
+        update_version = dict(id=1, version="20", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("19", "20")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "20":
+        database_connection.query(
+            "alter table 'folders' add column 'include_item_numbers'"
+        )
+        database_connection.query('UPDATE "folders" SET "include_item_numbers" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'include_item_numbers'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "include_item_numbers" = 0'
+        )
+        update_version = dict(id=1, version="21", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("20", "21")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "21":
+        try:
+            database_connection.query(
+                "alter table 'folders' add column 'include_item_description'"
+            )
+            database_connection.query(
+                'UPDATE "folders" SET "include_item_description" = 0'
+            )
+        except RuntimeError:
+            logger.debug("Column already exists, skipping (idempotent)")
+        database_connection.query(
+            "alter table 'administrative' add column 'include_item_description'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "include_item_description" = 0'
+        )
+        update_version = dict(id=1, version="22", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("21", "22")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "22":
+        try:
+            database_connection.query(
+                "alter table 'folders' add column 'simple_csv_sort_order'"
+            )
+            database_connection.query(
+                'UPDATE "folders" SET "simple_csv_sort_order" = CSV_SORT_ORDER'
+            )
+        except RuntimeError:
+            logger.debug("Column already exists, skipping (idempotent)")
+        database_connection.query(
+            "alter table 'administrative' add column 'simple_csv_sort_order'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "simple_csv_sort_order" = CSV_SORT_ORDER'
+        )
+        update_version = dict(id=1, version="23", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("22", "23")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "23":
+        database_connection.query(
+            "alter table 'folders' add column 'a_record_padding_length'"
+        )
+        database_connection.query('UPDATE "folders" SET "a_record_padding_length" = 6')
+        database_connection.query(
+            "alter table 'administrative' add column 'a_record_padding_length'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "a_record_padding_length" = 6'
+        )
+        database_connection.query(
+            "alter table 'folders' add column 'invoice_date_custom_format_string'"
+        )
+        database_connection.query(
+            'UPDATE "folders" SET "invoice_date_custom_format_string" = "%Y%m%d"'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'invoice_date_custom_format_string'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "invoice_date_custom_format_string" = "%Y%m%d"'
+        )
+        database_connection.query(
+            "alter table 'folders' add column 'invoice_date_custom_format'"
+        )
+        database_connection.query(
+            'UPDATE "folders" SET "invoice_date_custom_format" = 0'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'invoice_date_custom_format'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "invoice_date_custom_format" = 0'
+        )
+        update_version = dict(id=1, version="24", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("23", "24")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "24":
+        try:
+            database_connection.query(
+                "alter table 'folders' add column 'split_prepaid_sales_tax_crec'"
+            )
+            database_connection.query(
+                'UPDATE "folders" SET "split_prepaid_sales_tax_crec" = 0'
+            )
+        except RuntimeError:
+            logger.debug("Column already exists, skipping (idempotent)")
+        database_connection.query(
+            "alter table 'administrative' add column 'split_prepaid_sales_tax_crec'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "split_prepaid_sales_tax_crec" = 0'
+        )
+        update_version = dict(id=1, version="25", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("24", "25")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "25":
+        try:
+            database_connection.query(
+                "alter table 'folders' add column 'estore_store_number'"
+            )
+            database_connection.query('UPDATE "folders" SET "estore_store_number" = 0')
+            database_connection.query(
+                "alter table 'folders' add column 'estore_Vendor_OId'"
+            )
+            database_connection.query('UPDATE "folders" SET "estore_Vendor_OId" = 0')
+            database_connection.query(
+                "alter table 'folders' add column 'estore_vendor_NameVendorOID'"
+            )
+            database_connection.query(
+                'UPDATE "folders" SET "estore_vendor_NameVendorOID" = REPLACEME_PLACEHOLDER'
+            )
+        except RuntimeError:
+            logger.debug("Column already exists, skipping (idempotent)")
+        database_connection.query(
+            "alter table 'administrative' add column 'estore_store_number'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "estore_store_number" = 0'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'estore_Vendor_OId'"
+        )
+        database_connection.query('UPDATE "administrative" SET "estore_Vendor_OId" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'estore_vendor_NameVendorOID'"
+        )
+        database_connection.query(
+            "UPDATE 'administrative' SET 'estore_vendor_NameVendorOID' = REPLACEME_PLACEHOLDER"
+        )
+        update_version = dict(id=1, version="26", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("25", "26")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "26":
+        database_connection.query(
+            "alter table 'folders' add column 'prepend_date_files'"
+        )
+        database_connection.query('UPDATE "folders" SET "prepend_date_files" = 0')
+        database_connection.query(
+            "alter table 'administrative' add column 'prepend_date_files'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "prepend_date_files" = 0'
+        )
+        update_version = dict(id=1, version="27", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("26", "27")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "27":
+        database_connection.query("alter table 'folders' add column 'rename_file'")
+        database_connection.query('UPDATE "folders" SET "rename_file" = ""')
+        database_connection.query(
+            "alter table 'administrative' add column 'rename_file'"
+        )
+        database_connection.query('UPDATE "administrative" SET "rename_file" = ""')
+        update_version = dict(id=1, version="28", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("27", "28")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "28":
+        database_connection.query(
+            "alter table 'folders' add column 'estore_c_record_OID'"
+        )
+        database_connection.query('UPDATE "folders" SET "estore_c_record_OID" = 10025')
+        database_connection.query(
+            "alter table 'administrative' add column 'estore_c_record_OID'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" SET "estore_c_record_OID" = 0'
+        )
+        update_version = dict(id=1, version="29", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("28", "29")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "29":
+        database_connection.query(
+            "alter table 'folders' add column 'override_upc_bool'"
+        )
+        database_connection.query('UPDATE "folders" set "override_upc_bool"=0')
+        database_connection.query(
+            "alter table 'folders' add column 'override_upc_level'"
+        )
+        database_connection.query('UPDATE "folders" set "override_upc_level"=1')
+        database_connection.query(
+            "alter table 'folders' add column 'override_upc_category_filter'"
+        )
+        database_connection.query(
+            'UPDATE "folders" set "override_upc_category_filter"="ALL"'
+        )
+        database_connection.query(
+            'update "folders" set "override_upc_bool"=1, "override_upc_level"=1 where "force_each_upc"=1'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'override_upc_bool'"
+        )
+        database_connection.query('UPDATE "administrative" set "override_upc_bool"=0')
+        database_connection.query(
+            "alter table 'administrative' add column 'override_upc_level'"
+        )
+        database_connection.query('UPDATE "administrative" set "override_upc_level"=1')
+        database_connection.query(
+            "alter table 'administrative' add column 'override_upc_category_filter'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" set "override_upc_category_filter"="ALL"'
+        )
+        update_version = dict(id=1, version="30", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("29", "30")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "30":
+        database_connection.query(
+            "alter table 'folders' add column 'split_edi_include_invoices'"
+        )
+        database_connection.query('UPDATE "folders" set "split_edi_include_invoices"=1')
+        database_connection.query(
+            "alter table 'folders' add column 'split_edi_include_credits'"
+        )
+        database_connection.query('UPDATE "folders" set "split_edi_include_credits"=1')
+        database_connection.query(
+            "alter table 'administrative' add column 'split_edi_include_invoices'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" set "split_edi_include_invoices"=1'
+        )
+        database_connection.query(
+            "alter table 'administrative' add column 'split_edi_include_credits'"
+        )
+        database_connection.query(
+            'UPDATE "administrative" set "split_edi_include_credits"=1'
+        )
+        update_version = dict(id=1, version="31", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("30", "31")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "31":
+        database_connection.query(
+            "alter table 'folders' add column 'fintech_division_id'"
+        )
+        database_connection.query('UPDATE "folders" set "fintech_division_id"=0')
+        database_connection.query(
+            "alter table 'administrative' add column 'fintech_division_id'"
+        )
+        database_connection.query('UPDATE "administrative" set "fintech_division_id"=0')
+        update_version = dict(id=1, version="32", os=running_platform)
+        db_version.update(update_version, ["id"])
+        _log_migration_step("31", "32")
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    db_version_dict = db_version.find_one(id=1)
+    if target_version and int(db_version_dict["version"]) >= int(target_version):
+        return db_version_dict
+
+    if db_version_dict["version"] == "32":
+        # Normalize legacy string booleans and convert_to_format display names
+        # before any subsequent migration logic depends on correct types.
+        _normalize_legacy_v32_values(database_connection)
+
+        from migrations.add_plugin_config_column import apply_migration
+
+        if not apply_migration(database_connection):
+            raise RuntimeError("Plugin config migration failed")
+
+        # When target_version is set to an intermediate value (used by tests),
+        # bump to v33 so the individual migration blocks can be reached.
+        if target_version and int(target_version) < int(CURRENT_SCHEMA_VERSION):
+            update_version = dict(id=1, version="33", os=running_platform)
+            db_version.update(update_version, ["id"])
+            _log_migration_step("32", "33")
+
+    db_version_dict = db_version.find_one(id=1)
+    return db_version_dict
