@@ -7,6 +7,9 @@ extracted from dispatch.py for testability.
 import datetime
 import os
 import re
+import shutil
+import tempfile
+from typing import Any
 
 from core.structured_logging import get_logger
 
@@ -217,4 +220,125 @@ def build_processed_file_record(
     }
 
 
-__all__ = ["do_clear_old_files"]
+def extract_invoice_numbers(
+    file_path: str,
+    file_system: Any = None,
+) -> str:
+    """Extract invoice numbers from EDI A-records in a file.
+
+    Args:
+        file_path: Path to the EDI file
+        file_system: Optional file system interface (e.g., RealFileSystem).
+            If None, uses built-in open().
+
+    Returns:
+        Comma-separated string of invoice numbers, or empty string
+
+    """
+    from core.edi.edi_parser import capture_records
+
+    try:
+        if file_system:
+            content_bytes = file_system.read_file(file_path)
+            content = (
+                content_bytes.decode("utf-8", errors="replace")
+                if isinstance(content_bytes, bytes)
+                else content_bytes
+            )
+        else:
+            with open(file_path, "r", errors="replace") as f:
+                content = f.read()
+
+        seen: dict[str, None] = {}
+        for line in content.splitlines():
+            try:
+                rec = capture_records(line)
+                if rec and rec.get("record_type") == "A":
+                    inv_num = rec.get("invoice_number", "").strip()
+                    if inv_num:
+                        seen[inv_num] = None
+            except (ValueError, KeyError):
+                continue
+
+        return ", ".join(seen)
+    except (OSError, ValueError, KeyError) as e:
+        logger.exception(
+            "Failed to extract invoice numbers from %s: %s", file_path, e
+        )
+        return ""
+
+
+def apply_file_rename(file_path: str, rename_template: str, temp_dirs: list[str]) -> str:
+    """Apply file rename if a template is configured.
+
+    Creates a temp copy with the new name (tracked in temp_dirs for cleanup)
+    and returns its path. If rename_template is empty, returns the original path.
+
+    Args:
+        file_path: Current file path
+        rename_template: Template for new filename (supports %datetime%)
+        temp_dirs: List to track created temp directories for cleanup
+
+    Returns:
+        Path to renamed file copy, or original path if no rename
+
+    Raises:
+        ValueError: If the template is absolute or contains path traversal
+
+    """
+    rename_template = rename_template.strip()
+    if not rename_template:
+        return file_path
+
+    original_basename = os.path.basename(file_path)
+    date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
+    ext = original_basename.split(".")[-1] if "." in original_basename else ""
+    new_name = rename_template.replace("%datetime%", date_time)
+    if ext:
+        new_name = f"{new_name}.{ext}"
+
+    new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
+
+    temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
+    temp_dirs.append(temp_dir)
+
+    if not new_name or new_name == ".." or os.path.isabs(new_name):
+        raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
+
+    full_dest = os.path.join(temp_dir, new_name)
+    real_full_dest = os.path.realpath(full_dest)
+    if not real_full_dest.startswith(os.path.realpath(temp_dir) + os.sep):
+        raise ValueError(f"Path traversal attempt detected: {new_name}")
+
+    shutil.copy2(file_path, full_dest)
+    logger.debug("Renamed %s → %s for send", original_basename, new_name)
+    return full_dest
+
+
+def write_to_run_log(run_log: Any, message: str, prefix: str = "") -> None:
+    """Write a message to a run log buffer.
+
+    Handles both StringIO (write/encode) and list (append) targets.
+
+    Args:
+        run_log: Log target (StringIO, list, or None)
+        message: Message to write
+        prefix: Optional prefix (e.g., "ERROR: ")
+
+    """
+    full_message = f"{prefix}{message}" if prefix else message
+    if hasattr(run_log, "write"):
+        try:
+            run_log.write(f"{full_message}\r\n".encode())
+        except Exception:
+            pass
+    elif hasattr(run_log, "append"):
+        run_log.append(full_message)
+
+
+__all__ = [
+    "do_clear_old_files",
+    "extract_invoice_numbers",
+    "apply_file_rename",
+    "write_to_run_log",
+]

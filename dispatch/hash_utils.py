@@ -96,63 +96,6 @@ def generate_file_hash(
     return generated_checksum
 
 
-def check_file_against_processed(
-    file_path: str, file_checksum: str, name_dict: dict[str, str], resend_set: set[str]
-) -> tuple[bool, bool]:
-    """Check if file should be sent based on processed files records.
-
-    Args:
-        file_path: Path to the file being checked
-        file_checksum: MD5 checksum of the file
-        name_dict: Dictionary mapping checksums to file names
-        resend_set: Set of checksums marked for resend
-
-    Returns:
-        tuple of (match_found, should_send)
-        - match_found: True if checksum exists in name_dict
-        - should_send: True if file should be sent (new or resend)
-
-    """
-    match_found = file_checksum in name_dict
-    should_send = not match_found or file_checksum in resend_set
-
-    return match_found, should_send
-
-
-def process_file_hash_entry(source_file_struct: tuple) -> tuple[str, str, int, bool]:
-    """Process a single file hash entry from the hash thread structure.
-
-    This function replicates the behavior of the original generate_file_hash
-    function from dispatch.py lines 37-67.
-
-    Args:
-        source_file_struct: Tuple of (file_path, index_number, processed_files_list,
-                          hash_dict, name_dict, resend_set)
-
-    Returns:
-        tuple of (file_name, file_checksum, index_number, send_file)
-
-    """
-    file_path, index_number, processed_files_list, hash_dict, name_dict, resend_set = (
-        source_file_struct
-    )
-
-    file_name = os.path.abspath(file_path)
-    file_checksum = generate_file_hash(file_name)
-
-    # Check if file matches existing processed files
-    match_found = file_checksum in name_dict
-
-    # Determine if file should be sent
-    send_file = False
-    if not match_found:
-        send_file = True
-    if file_checksum in resend_set:
-        send_file = True
-
-    return file_name, file_checksum, index_number, send_file
-
-
 def build_hash_dictionaries(
     folder_temp_processed_files_list: list[dict],
 ) -> tuple[dict[str, str], dict[str, str], set[str]]:

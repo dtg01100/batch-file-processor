@@ -9,10 +9,8 @@ import pytest
 
 from dispatch.hash_utils import (
     build_hash_dictionaries,
-    check_file_against_processed,
     generate_file_hash,
     generate_match_lists,
-    process_file_hash_entry,
 )
 
 
@@ -163,140 +161,6 @@ class TestGenerateFileHash:
                 generate_file_hash("/tmp/nonexistent", max_retries=3)
 
             assert mock_open.call_count == 3
-
-
-class TestCheckFileAgainstProcessed:
-    """Tests for check_file_against_processed function."""
-
-    def test_new_file(self):
-        """Test checking a new file (not in name_dict)."""
-        name_dict = {"hash1": "file1.txt"}
-        resend_set = set()
-
-        match_found, should_send = check_file_against_processed(
-            "new_file.txt", "new_hash", name_dict, resend_set
-        )
-
-        assert match_found is False
-        assert should_send is True
-
-    def test_existing_file_no_resend(self):
-        """Test checking an existing file without resend flag."""
-        name_dict = {"hash1": "file1.txt"}
-        resend_set = set()
-
-        match_found, should_send = check_file_against_processed(
-            "file1.txt", "hash1", name_dict, resend_set
-        )
-
-        assert match_found is True
-        assert should_send is False
-
-    def test_existing_file_with_resend(self):
-        """Test checking an existing file with resend flag."""
-        name_dict = {"hash1": "file1.txt"}
-        resend_set = {"hash1"}
-
-        match_found, should_send = check_file_against_processed(
-            "file1.txt", "hash1", name_dict, resend_set
-        )
-
-        assert match_found is True
-        assert should_send is True
-
-    def test_empty_dictionaries(self):
-        """Test with empty dictionaries."""
-        match_found, should_send = check_file_against_processed(
-            "file.txt", "hash1", {}, set()
-        )
-
-        assert match_found is False
-        assert should_send is True
-
-
-class TestProcessFileHashEntry:
-    """Tests for process_file_hash_entry function."""
-
-    def test_process_new_file(self):
-        """Test processing a new file entry."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-            f.write("test content")
-            temp_path = f.name
-
-        try:
-            source_struct = (
-                temp_path,  # file_path
-                0,  # index_number
-                [],  # processed_files_list
-                {},  # hash_dict
-                {},  # name_dict
-                set(),  # resend_set
-            )
-
-            file_name, file_checksum, index_number, send_file = process_file_hash_entry(
-                source_struct
-            )
-
-            assert file_name == os.path.abspath(temp_path)
-            assert len(file_checksum) == 32
-            assert index_number == 0
-            assert send_file is True  # New file should be sent
-        finally:
-            os.unlink(temp_path)
-
-    def test_process_existing_file_no_resend(self):
-        """Test processing an existing file without resend."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-            f.write("test content")
-            temp_path = f.name
-
-        try:
-            expected_hash = hashlib.md5(b"test content").hexdigest()
-
-            source_struct = (
-                temp_path,
-                5,
-                [],
-                {},
-                {expected_hash: "existing_file.txt"},  # name_dict with this hash
-                set(),  # No resend
-            )
-
-            file_name, file_checksum, index_number, send_file = process_file_hash_entry(
-                source_struct
-            )
-
-            assert file_checksum == expected_hash
-            assert index_number == 5
-            assert send_file is False  # Existing file, no resend
-        finally:
-            os.unlink(temp_path)
-
-    def test_process_existing_file_with_resend(self):
-        """Test processing an existing file with resend flag."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-            f.write("test content")
-            temp_path = f.name
-
-        try:
-            expected_hash = hashlib.md5(b"test content").hexdigest()
-
-            source_struct = (
-                temp_path,
-                3,
-                [],
-                {},
-                {expected_hash: "existing_file.txt"},
-                {expected_hash},  # Resend set includes this hash
-            )
-
-            file_name, file_checksum, index_number, send_file = process_file_hash_entry(
-                source_struct
-            )
-
-            assert send_file is True  # Should send due to resend flag
-        finally:
-            os.unlink(temp_path)
 
 
 class TestBuildHashDictionaries:

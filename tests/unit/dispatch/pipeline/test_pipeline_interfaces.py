@@ -8,7 +8,6 @@ from dispatch.pipeline.interfaces import (
     LegacyValidatorAdapter,
     NoOpStep,
     PipelineStep,
-    ValidatorStep,
     wrap_as_pipeline_step,
 )
 
@@ -77,33 +76,6 @@ class TestLegacyValidatorAdapter:
 
         assert success is True
         assert output_path == "/test/file.txt"
-
-
-class TestValidatorStep:
-    """Tests for ValidatorStep."""
-
-    def test_execute_returns_tuple_format(self):
-        """Test execute returns (success, path, errors) tuple."""
-        validator = MockValidator(is_valid=True, errors=[])
-        step = ValidatorStep(validator)
-
-        result = step.execute("/input.edi", {})
-
-        assert isinstance(result, tuple)
-        assert len(result) == 3
-        assert result[0] is True
-        assert result[1] == "/input.edi"
-        assert result[2] == []
-
-    def test_execute_passes_validation_result(self):
-        """Test that validation result is properly translated."""
-        validator = MockValidator(is_valid=False, errors=["Missing UPC"])
-        step = ValidatorStep(validator)
-
-        success, _, errors = step.execute("/input.edi", {})
-
-        assert success is False
-        assert "Missing UPC" in errors
 
 
 class TestNoOpStep:

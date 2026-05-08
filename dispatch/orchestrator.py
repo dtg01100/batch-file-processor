@@ -7,7 +7,6 @@ coordinating validation, conversion, and sending of files.
 import datetime
 import logging
 import os
-import re
 import shutil
 import tempfile
 from io import StringIO
@@ -157,93 +156,6 @@ class DispatchOrchestrator:
             self.processed_count += result.files_processed
             self.error_count += result.files_failed
             return result
-
-    def process_folder_with_pipeline(
-        self,
-        folder: dict,
-        run_log: Any,
-        processed_files: DatabaseInterface | None = None,
-        upc_dict: dict | None = None,
-        pre_discovered_files: list[str] | None = None,
-        folder_num: int | None = None,
-        folder_total: int | None = None,
-    ) -> FolderResult:
-        """Process folder using new pipeline steps.
-
-        DEPRECATED: This method is kept for backward compatibility.
-        Use process_folder() instead which delegates to FolderPipelineExecutor.
-
-        Args:
-            folder: Folder configuration dictionary.
-            run_log: Run log for recording processing activity.
-            processed_files: Optional database of already processed files.
-            upc_dict: UPC dictionary for lookup.
-            pre_discovered_files: Optional list of files already discovered
-                (skips file discovery if provided).
-            folder_num: Current folder index (1-based) for progress reporting.
-            folder_total: Total number of folders for progress reporting.
-
-        Returns:
-            FolderResult with processing outcome.
-
-        """
-        result = FolderResult(
-            folder_name=folder.get("folder_name", ""), alias=folder.get("alias", "")
-        )
-
-        folder_path = folder.get("folder_name", "")
-        alias = folder.get("alias", folder_path)
-
-        logger.debug("Processing folder: %s (path=%s)", alias, folder_path)
-
-        self._log_message(run_log, f"entering folder: {alias}")
-
-        if not self._folder_exists(folder_path):
-            return self._folder_not_found_result(folder_path, run_log, result)
-
-        files = self._discover_folder_files(
-            folder_path=folder_path,
-            pre_discovered_files=pre_discovered_files,
-            processed_files=processed_files,
-            folder=folder,
-            run_log=run_log,
-        )
-
-        if files is None:
-            return result
-
-        logger.debug("After filter: %d files to process in %s", len(files), folder_path)
-
-        self._log_message(
-            run_log, f"{len(files)} found in {folder_path} (pipeline mode)"
-        )
-
-        total_files = len(files)
-        # Setup progress reporting
-        self._setup_folder_progress(
-            folder=folder,
-            total_files=total_files,
-            folder_num=folder_num,
-            folder_total=folder_total,
-        )
-
-        effective_upc_dict = upc_dict if upc_dict is not None else self.config.upc_dict
-
-        # Delegate actual per-file processing to a small wrapper to keep this
-        # method focused on orchestration.
-        self._process_folder_file_list(
-            files=files,
-            folder=folder,
-            effective_upc_dict=effective_upc_dict,
-            processed_files=processed_files,
-            run_log=run_log,
-            result=result,
-            total_files=total_files,
-        )
-
-        self._finalize_folder_result(result)
-
-        return result
 
     def discover_pending_files(
         self,
@@ -816,7 +728,9 @@ class DispatchOrchestrator:
         self, result: FileResult, file_path: str, file_basename: str
     ) -> None:
         """Calculate and set checksum on a FileResult and log debug info."""
-        result.checksum = self._calculate_checksum(file_path)
+        from core.utils.file_utils import calculate_file_checksum
+
+        result.checksum = calculate_file_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
 
     def _normalize_validation_output(
@@ -977,64 +891,13 @@ class DispatchOrchestrator:
             upc_dict=upc_dict,
         )
 
-    def _validate_rename_template(self, template: str) -> None:
-        """Validate the rename template for security issues.
-
-        Args:
-            template: The filename template to validate
-
-        Raises:
-            ValueError: If the template is absolute or contains path traversal
-
-        """
-        if os.path.isabs(template) or ".." in template:
-            raise ValueError(f"Invalid filename pattern in rename template: {template}")
-
     def _apply_file_rename(self, file_path: str, context: Any) -> str:
-        """Return a renamed copy of file_path if rename_file is configured.
+        """Apply file rename using the shared utility."""
+        from dispatch.file_utils import apply_file_rename
 
-        Creates a temp copy with the new name (tracked in context.temp_dirs
-        for automatic cleanup) and returns its path.  If rename_file is empty,
-        returns the original path unchanged.
-
-        Args:
-            file_path: Current file path
-            context: ProcessingContext with effective_folder and temp_dirs
-
-        Returns:
-            Path to send (renamed copy, or original if no rename configured)
-
-        """
+        temp_dirs = getattr(context, "temp_dirs", [])
         rename_template = context.effective_folder.get("rename_file", "").strip()
-        if not rename_template:
-            return file_path
-
-        original_basename = os.path.basename(file_path)
-        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
-        ext = original_basename.split(".")[-1] if "." in original_basename else ""
-        new_name = rename_template.replace("%datetime%", date_time)
-        if ext:
-            new_name = f"{new_name}.{ext}"
-        new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
-
-        temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
-        if hasattr(context, "temp_dirs"):
-            context.temp_dirs.append(temp_dir)
-
-        self._validate_rename_template(new_name)
-
-        if not new_name or new_name == ".." or os.path.isabs(new_name):
-            raise ValueError(f"Invalid filename from template: {new_name}")
-
-        full_dest = os.path.join(temp_dir, new_name)
-        real_full_dest = os.path.realpath(full_dest)
-        if not real_full_dest.startswith(os.path.realpath(temp_dir) + os.sep):
-            raise ValueError(f"Path traversal attempt detected: {new_name}")
-
-        dest_path = full_dest
-        shutil.copy2(file_path, dest_path)
-        logger.debug("Renamed %s → %s for send", original_basename, new_name)
-        return dest_path
+        return apply_file_rename(file_path, rename_template, temp_dirs)
 
     def _send_pipeline_file(
         self, file_path: str, folder: dict, run_log: Any = None
@@ -1202,10 +1065,12 @@ class DispatchOrchestrator:
             len(skipped_checksums),
         )
 
+        from core.utils.file_utils import calculate_file_checksum
+
         # Calculate checksums one at a time to enable per-file progress reporting
         file_checksums: dict[str, str] = {}
         for file_index, file_path in enumerate(files, start=1):
-            file_checksums[file_path] = self._calculate_checksum(file_path)
+            file_checksums[file_path] = calculate_file_checksum(file_path)
 
             # Report per-file progress if reporter supports it
             if progress_reporter and hasattr(
@@ -1274,68 +1139,11 @@ class DispatchOrchestrator:
                 }
             )
 
-    def _calculate_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file."""
-        from core.utils.file_utils import calculate_file_checksum
-
-        log_file_operation(
-            logger,
-            "read",
-            file_path,
-            correlation_id=get_or_create_correlation_id(),
-            file_type="edi",
-        )
-        logger.debug("Calculating checksum for: %s", file_path)
-        checksum = calculate_file_checksum(file_path)
-        log_file_operation(
-            logger,
-            "read",
-            file_path,
-            success=bool(checksum),
-            correlation_id=get_or_create_correlation_id(),
-            file_type="edi",
-        )
-        return checksum
-
     def _extract_invoice_numbers(self, file_path: str) -> str:
-        """Extract invoice numbers from EDI A-records in a file.
+        """Extract invoice numbers from EDI A-records in a file."""
+        from dispatch.file_utils import extract_invoice_numbers
 
-        Args:
-            file_path: Path to the EDI file
-
-        Returns:
-            Comma-separated string of invoice numbers, or empty string
-
-        """
-        try:
-            if self.config.file_system:
-                content_bytes = self.config.file_system.read_file(file_path)
-                content = (
-                    content_bytes.decode("utf-8", errors="replace")
-                    if isinstance(content_bytes, bytes)
-                    else content_bytes
-                )
-            else:
-                with open(file_path, "r", errors="replace") as f:
-                    content = f.read()
-
-            seen: dict[str, None] = {}
-            for line in content.splitlines():
-                try:
-                    rec = capture_records(line)
-                    if rec and rec.get("record_type") == "A":
-                        inv_num = rec.get("invoice_number", "").strip()
-                        if inv_num:
-                            seen[inv_num] = None
-                except (ValueError, KeyError):
-                    continue
-
-            return ", ".join(seen)
-        except (OSError, ValueError, KeyError) as e:
-            logger.exception(
-                "Failed to extract invoice numbers from %s: %s", file_path, e
-            )
-            return ""
+        return extract_invoice_numbers(file_path, self.config.file_system)
 
     def _should_validate(self, folder: dict) -> bool:
         """Check if a folder's files should be validated.
@@ -1354,13 +1162,9 @@ class DispatchOrchestrator:
         )
 
     def _log_message(self, run_log: Any, message: str) -> None:
-        """Log a message to the run log and Python logger.
+        """Log a message to the run log and Python logger."""
+        from dispatch.file_utils import write_to_run_log
 
-        Args:
-            run_log: Run log to write to
-            message:             Message to log
-
-        """
         log_with_context(
             logger,
             logging.INFO,
@@ -1368,19 +1172,12 @@ class DispatchOrchestrator:
             correlation_id=get_or_create_correlation_id(),
             operation="run_log",
         )
-        if hasattr(run_log, "write"):
-            run_log.write((message + "\r\n").encode())
-        elif hasattr(run_log, "append"):
-            run_log.append(message)
+        write_to_run_log(run_log, message)
 
     def _log_error(self, run_log: Any, message: str) -> None:
-        """Log an error message to the run log and Python logger.
+        """Log an error message to the run log and Python logger."""
+        from dispatch.file_utils import write_to_run_log
 
-        Args:
-            run_log: Run log to write to
-            message:             Error message to log
-
-        """
         log_with_context(
             logger,
             logging.ERROR,
@@ -1388,10 +1185,7 @@ class DispatchOrchestrator:
             correlation_id=get_or_create_correlation_id(),
             operation="run_log",
         )
-        if hasattr(run_log, "write"):
-            run_log.write(("ERROR: %s" % message + "\r\n").encode())
-        elif hasattr(run_log, "append"):
-            run_log.append("ERROR: %s" % message)
+        write_to_run_log(run_log, message, prefix="ERROR: ")
 
     def get_summary(self) -> str:
         """Get a summary of the processing run.

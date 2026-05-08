@@ -118,45 +118,6 @@ class LegacyValidatorAdapter:
         return success, input_path, errors
 
 
-class ValidatorStep:
-    """Wrapper to make any validator compatible with PipelineStep interface.
-
-    This class provides a clean way to wrap validators that return
-    (is_valid, errors) tuples into the pipeline step format that
-    returns (success, output_path, errors).
-
-    Example:
-        >>> validator = EDIValidator()
-        >>> step = ValidatorStep(validator)
-        >>> success, path, errors = step.execute("/file.edi", {})
-    """
-
-    def __init__(self, validator: Any) -> None:
-        """Initialize with a validator.
-
-        Args:
-            validator: Validator with .validate(path) returning (bool, list[str])
-        """
-        self._validator = validator
-
-    def execute(
-        self,
-        input_path: str,
-        context: dict[str, Any],
-    ) -> tuple[bool, str, list[str]]:
-        """Execute validation step.
-
-        Args:
-            input_path: Path to file to validate
-            context: Additional context (unused; required for PipelineStep protocol)
-
-        Returns:
-            Tuple of (success, input_path, errors)
-        """
-        is_valid, errors = self._validator.validate(input_path)
-        return is_valid, input_path, errors
-
-
 class NoOpStep:
     """A no-operation pipeline step that passes input through unchanged.
 

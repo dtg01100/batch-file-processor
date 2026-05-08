@@ -99,56 +99,6 @@ class BackendRetryMixin:
                             "Cleanup error in '%s': %s", operation_name, cleanup_error
                         )
 
-    def with_logging(
-        self,
-        operation: Callable[[], T],
-        logger_instance: Any,
-        operation_name: str,
-        context: dict[str, Any] | None = None,
-    ) -> T:
-        """Execute an operation with structured logging.
-
-        Args:
-            operation: Callable that performs the operation
-            logger_instance: Logger instance to use
-            operation_name: Name of operation for logging
-            context: Optional context dictionary for logging
-
-        Returns:
-            The return value from the operation
-
-        """
-        if context is None:
-            context = {}
-
-        log_with_context(
-            logger_instance,
-            logging.INFO,
-            f"Starting {operation_name}",
-            operation=operation_name,
-            context=context,
-        )
-
-        try:
-            result = operation()
-            log_with_context(
-                logger_instance,
-                logging.INFO,
-                f"{operation_name} completed successfully",
-                operation=operation_name,
-                context=context,
-            )
-            return result
-        except Exception as e:
-            log_with_context(
-                logger_instance,
-                logging.ERROR,
-                f"{operation_name} failed: {e}",
-                operation=operation_name,
-                context={**context, "error": str(e)},
-            )
-            raise
-
 
 # Module-level helper for functional-style backends
 def retry_with_backoff(

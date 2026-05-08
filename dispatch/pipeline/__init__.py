@@ -14,8 +14,6 @@ from dispatch.pipeline.converter import (
     ModuleLoaderProtocol,
 )
 from dispatch.pipeline.factory import (
-    create_minimal_pipeline,
-    create_pipeline_with_custom_steps,
     create_standard_pipeline,
 )
 from dispatch.pipeline.splitter import (
@@ -60,6 +58,4 @@ __all__ = [
     "SUPPORTED_FORMATS",
     # Factory
     "create_standard_pipeline",
-    "create_minimal_pipeline",
-    "create_pipeline_with_custom_steps",
 ]

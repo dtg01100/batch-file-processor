@@ -635,27 +635,14 @@ class FolderPipelineExecutor:
         return {}
 
     def _log_message(self, run_log: Any, message: str) -> None:
-        """Write message to run log and Python logging.
+        """Write message to run log and Python logging."""
+        from dispatch.file_utils import write_to_run_log
 
-        Args:
-            run_log: Log target (file-like object or None)
-            message: Message to log
-        """
         self._log_messages.append(message)
-        # Emit to Python logging so pytest log capture fixtures can capture it
         logger.info(message)
-        if hasattr(run_log, "write"):
-            try:
-                run_log.write(f"{message}\r\n".encode())
-            except Exception:
-                logger.warning("Failed to write to run_log: %s", message, exc_info=True)
+        write_to_run_log(run_log, message)
 
     def _log_error(self, run_log: Any, error_msg: str) -> None:
-        """Log an error message.
-
-        Args:
-            run_log: Log target
-            error_msg: Error message
-        """
+        """Log an error message."""
         self._log_message(run_log, f"ERROR: {error_msg}")
         logger.error(error_msg)

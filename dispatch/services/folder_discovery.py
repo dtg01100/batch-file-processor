@@ -239,10 +239,12 @@ class FolderDiscoveryService:
             len(skipped_checksums),
         )
 
+        from core.utils.file_utils import calculate_file_checksum
+
         # Calculate checksums one at a time to enable per-file progress reporting
         file_checksums: dict[str, str] = {}
         for idx, file_path in enumerate(files):
-            file_checksums[file_path] = self._calculate_checksum(file_path)
+            file_checksums[file_path] = calculate_file_checksum(file_path)
 
             if progress_reporter and hasattr(
                 progress_reporter, "update_discovery_file"
@@ -265,16 +267,8 @@ class FolderDiscoveryService:
 
         return pending_files
 
-    def _calculate_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file."""
-        from core.utils.file_utils import calculate_file_checksum
-
-        return calculate_file_checksum(file_path)
-
     def _log_message(self, run_log: Any, message: str) -> None:
         """Write a message to the run log if available."""
-        if hasattr(run_log, "write"):
-            try:
-                run_log.write(f"{message}\r\n".encode())
-            except Exception:
-                logger.debug("Failed to write to run log: %s", message)
+        from dispatch.file_utils import write_to_run_log
+
+        write_to_run_log(run_log, message)

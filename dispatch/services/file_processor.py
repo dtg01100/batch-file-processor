@@ -8,11 +8,8 @@ through the validation, splitting, conversion, and sending pipeline. It handles:
 - Send operations coordination
 """
 
-import datetime
 import os
-import re
 import shutil
-import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -262,7 +259,9 @@ class FileProcessor:
         """
         import time
 
-        result.checksum = self._calculate_checksum(file_path)
+        from core.utils.file_utils import calculate_file_checksum
+
+        result.checksum = calculate_file_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
         current_file = file_path
 
@@ -695,43 +694,11 @@ conversion_step: Converter step
         self._log_success(file_basename, file_path, run_log)
 
     def _apply_rename(self, file_path: str, context: ProcessingContext) -> str:
-        """Apply file rename if configured.
+        """Apply file rename using the shared utility."""
+        from dispatch.file_utils import apply_file_rename
 
-        Args:
-            file_path: Current file path
-            context: Processing context
-
-        Returns:
-            Possibly renamed file path
-
-        """
         rename_template = context.effective_folder.get("rename_file", "").strip()
-        if not rename_template:
-            return file_path
-
-        original_basename = os.path.basename(file_path)
-        date_time = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d")
-        ext = original_basename.split(".")[-1] if "." in original_basename else ""
-        new_name = rename_template.replace("%datetime%", date_time)
-        if ext:
-            new_name = f"{new_name}.{ext}"
-
-        new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
-
-        temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
-        context.temp_dirs.append(temp_dir)
-
-        if not new_name or new_name == ".." or os.path.isabs(new_name):
-            raise ValueError(f"Invalid filename pattern in rename template: {new_name}")
-
-        full_dest = os.path.join(temp_dir, new_name)
-        real_full_dest = os.path.realpath(full_dest)
-        if not real_full_dest.startswith(os.path.realpath(temp_dir) + os.sep):
-            raise ValueError(f"Path traversal attempt detected: {new_name}")
-
-        shutil.copy2(file_path, full_dest)
-        logger.debug("Renamed %s → %s for send", original_basename, new_name)
-        return full_dest
+        return apply_file_rename(file_path, rename_template, context.temp_dirs)
 
     def _send_to_backends(
         self,
@@ -825,67 +792,8 @@ conversion_step: Converter step
         context.temp_dirs.clear()
         context.temp_files.clear()
 
-    def _calculate_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file."""
-        from core.utils.file_utils import calculate_file_checksum
-
-        log_file_operation(
-            logger,
-            "read",
-            file_path,
-            correlation_id=get_or_create_correlation_id(),
-            file_type="edi",
-        )
-        logger.debug("Calculating checksum for: %s", file_path)
-        checksum = calculate_file_checksum(file_path)
-        log_file_operation(
-            logger,
-            "read",
-            file_path,
-            success=bool(checksum),
-            correlation_id=get_or_create_correlation_id(),
-            file_type="edi",
-        )
-        return checksum
-
     def _extract_invoice_numbers(self, file_path: str) -> str:
-        """Extract invoice numbers from EDI A-records.
+        """Extract invoice numbers from EDI A-records."""
+        from dispatch.file_utils import extract_invoice_numbers
 
-        Args:
-            file_path: Path to the EDI file
-
-        Returns:
-            Comma-separated string of invoice numbers
-
-        """
-        try:
-            if self.file_system:
-                content_bytes = self.file_system.read_file(file_path)
-                content = (
-                    content_bytes.decode("utf-8", errors="replace")
-                    if isinstance(content_bytes, bytes)
-                    else content_bytes
-                )
-            else:
-                with open(file_path, "r", errors="replace") as f:
-                    content = f.read()
-
-            from core.edi.edi_parser import capture_records
-
-            seen: dict[str, None] = {}
-            for line in content.splitlines():
-                try:
-                    rec = capture_records(line)
-                    if rec and rec.get("record_type") == "A":
-                        inv_num = rec.get("invoice_number", "").strip()
-                        if inv_num:
-                            seen[inv_num] = None
-                except (ValueError, KeyError):
-                    continue
-
-            return ", ".join(seen)
-        except (OSError, ValueError, KeyError) as e:
-            logger.exception(
-                "Failed to extract invoice numbers from %s: %s", file_path, e
-            )
-            return ""
+        return extract_invoice_numbers(file_path, self.file_system)

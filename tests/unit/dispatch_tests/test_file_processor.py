@@ -212,26 +212,19 @@ class TestCalculateChecksum:
 
     def test_calculate_checksum_default(self, temp_file):
         """Test checksum calculation uses default MD5."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        processor = FileProcessor(send_manager, error_handler)
+        from core.utils.file_utils import calculate_file_checksum
 
-        checksum = processor._calculate_checksum(temp_file)
+        checksum = calculate_file_checksum(temp_file)
 
         expected = hashlib.md5(b"test content for checksum").hexdigest()
         assert checksum == expected
 
     def test_calculate_checksum_with_file_system(self, temp_file):
-        """Test checksum calculation delegates to shared utility."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        mock_fs = MagicMock()
+        """Test checksum calculation works with direct file I/O."""
+        from core.utils.file_utils import calculate_file_checksum
 
-        processor = FileProcessor(send_manager, error_handler, file_system=mock_fs)
+        checksum = calculate_file_checksum(temp_file)
 
-        checksum = processor._calculate_checksum(temp_file)
-
-        # Delegates to shared calculate_file_checksum (direct file I/O)
         expected = hashlib.md5(b"test content for checksum").hexdigest()
         assert checksum == expected
 

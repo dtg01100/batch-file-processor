@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -581,98 +582,6 @@ class TestGetUPCDictionary:
 
 
 # =============================================================================
-# Tests: Process Folder With Pipeline
-# =============================================================================
-
-
-class TestProcessFolderWithPipeline:
-    """Tests for process_folder_with_pipeline method."""
-
-    def test_process_folder_pipeline_enabled(self, input_folder: Path):
-        """Test processing with pipeline enabled."""
-        backend = CaptureBackend()
-
-        config = DispatchConfig(
-            backends={"copy": backend},
-            settings={},
-        )
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {
-            "folder_name": str(input_folder),
-            "alias": "Test",
-            "process_backend_copy": True,
-        }
-        run_log = SimpleRunLog()
-
-        result = orchestrator.process_folder_with_pipeline(folder, run_log)
-
-        assert result.folder_name == str(input_folder)
-        assert result.alias == "Test"
-        assert result.files_processed == 1
-        assert result.success is True
-        assert len(backend.received) == 1
-
-    def test_pipeline_steps_called_correctly(self, input_folder: Path):
-        """Test that pipeline steps are called correctly."""
-        validator = FakeValidationStep(should_pass=True)
-        converter = FakeConverterStep(output_path=str(input_folder / "converted.edi"))
-        backend = CaptureBackend()
-
-        config = DispatchConfig(
-            backends={"copy": backend},
-            validator_step=validator,
-            converter_step=converter,
-            settings={},
-        )
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {
-            "folder_name": str(input_folder),
-            "alias": "Test",
-            "process_edi": "True",
-            "convert_edi": True,
-            "process_backend_copy": True,
-        }
-        run_log = SimpleRunLog()
-
-        orchestrator.process_folder_with_pipeline(folder, run_log)
-
-        assert validator.call_count == 1
-        assert converter.call_count == 1
-
-    def test_pipeline_folder_not_found(self, tmp_path: Path):
-        """Test pipeline processing with non-existent folder."""
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {"folder_name": str(tmp_path / "notexists"), "alias": "Test"}
-        run_log = SimpleRunLog()
-
-        result = orchestrator.process_folder_with_pipeline(folder, run_log)
-
-        assert result.success is False
-        assert result.files_failed == 1
-        assert "not found" in result.errors[0].lower()
-
-    def test_pipeline_empty_folder(self, tmp_path: Path):
-        """Test pipeline processing with empty folder."""
-        empty_folder = tmp_path / "empty"
-        empty_folder.mkdir()
-
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {"folder_name": str(empty_folder), "alias": "Test"}
-        run_log = SimpleRunLog()
-
-        result = orchestrator.process_folder_with_pipeline(folder, run_log)
-
-        assert result.success is True
-        assert result.files_processed == 0
-
-
-# =============================================================================
 # Tests: Process File With Pipeline
 # =============================================================================
 
@@ -889,21 +798,19 @@ class TestProcessedFilesAndCleanupBehavior:
         files = [str(input_folder / "a.edi"), str(input_folder / "b.edi")]
 
         # Mock checksum calculation to return predictable values
-        original_calculate = orchestrator._calculate_checksum
-        checksums = {
+        file_to_checksum = {
             "checksum-a": str(input_folder / "a.edi"),
             "checksum-b": str(input_folder / "b.edi"),
         }
-        file_to_checksum = {v: k for k, v in checksums.items()}
+        file_to_checksum_rev = {v: k for k, v in file_to_checksum.items()}
 
         def mock_calculate(file_path):
-            return file_to_checksum.get(file_path, original_calculate(file_path))
+            return file_to_checksum_rev.get(file_path, "unknown")
 
-        orchestrator._calculate_checksum = mock_calculate
-
-        filtered = orchestrator._filter_processed_files(
-            files, temp_database.processed_files, {"id": 42}
-        )
+        with patch("core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate):
+            filtered = orchestrator._filter_processed_files(
+                files, temp_database.processed_files, {"id": 42}
+            )
 
         assert filtered == [str(input_folder / "b.edi")]
 
@@ -1496,14 +1403,12 @@ class TestOrchestratorProgressPhases:
         def mock_calculate(file_path):
             return file_to_checksum.get(file_path, "other")
 
-        orchestrator._calculate_checksum = mock_calculate
-        orchestrator._discovery_service._calculate_checksum = mock_calculate
-
-        pending_lists, total_pending = orchestrator.discover_pending_files(
-            folders,
-            processed_files=temp_database.processed_files,
-            progress_reporter=progress,
-        )
+        with patch("core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate):
+            pending_lists, total_pending = orchestrator.discover_pending_files(
+                folders,
+                processed_files=temp_database.processed_files,
+                progress_reporter=progress,
+            )
 
         assert pending_lists == [
             [str(folder_a / "new.edi")],

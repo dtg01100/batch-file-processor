@@ -400,12 +400,14 @@ class TestOrchestratorHelperMethods:
 
     def test_calculate_checksum(self, tmp_path):
         """Test checksum calculation uses shared utility."""
+        from core.utils.file_utils import calculate_file_checksum
+
         test_file = tmp_path / "file.edi"
         test_file.write_bytes(b"test content")
         config = DispatchConfig()
         orchestrator = DispatchOrchestrator(config)
 
-        checksum = orchestrator._calculate_checksum(str(test_file))
+        checksum = calculate_file_checksum(str(test_file))
 
         expected = hashlib.md5(b"test content").hexdigest()
         assert checksum == expected
@@ -587,14 +589,13 @@ class TestOrchestratorEdgeCases:
 
     def test_large_file(self, tmp_path):
         """Test checksum calculation handles large files."""
+        from core.utils.file_utils import calculate_file_checksum
+
         large_content = b"x" * 10_000_000  # 10 MB
         test_file = tmp_path / "large.edi"
         test_file.write_bytes(large_content)
 
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        checksum = orchestrator._calculate_checksum(str(test_file))
+        checksum = calculate_file_checksum(str(test_file))
 
         assert len(checksum) == 32
         assert checksum == hashlib.md5(large_content).hexdigest()
