@@ -123,6 +123,331 @@ def _normalize_legacy_v32_values(database_connection) -> None:
     database_connection.raw_connection.commit()
 
 
+def _migrate_v33_to_v50(database_connection, db_version, running_platform) -> None:
+    """Apply all schema changes from v33 through v50 in a single pass.
+
+    Called from the v32 migration step so that production databases (which are
+    all at v32 or below) jump directly to v50 without stepping through each
+    individual intermediate version.  The individual v33–v50 steps remain in
+    upgrade_database() for backward-compatibility with test fixtures that create
+    databases at intermediate versions.
+
+    All operations are idempotent: ALTER TABLE statements are wrapped in
+    try/except so that columns that already exist are silently skipped.
+    """
+    import datetime
+
+    now = datetime.datetime.now().isoformat()
+    cursor = database_connection.raw_connection.cursor()
+
+    # --- v33: timestamp columns ---
+    for stmt in [
+        f"ALTER TABLE 'folders' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+        f"ALTER TABLE 'folders' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+        f"ALTER TABLE 'administrative' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+        f"ALTER TABLE 'administrative' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+        f"ALTER TABLE 'processed_files' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+        "ALTER TABLE 'processed_files' ADD COLUMN 'processed_at' TEXT",
+        f"ALTER TABLE 'settings' ADD COLUMN 'created_at' TEXT DEFAULT '{now}'",
+        f"ALTER TABLE 'settings' ADD COLUMN 'updated_at' TEXT DEFAULT '{now}'",
+    ]:
+        try:
+            cursor.execute(stmt)
+        except Exception as e:
+            logger.debug("Column may already exist: %s", e)
+    for table, timestamp_col in [
+        ("folders", "created_at"),
+        ("folders", "updated_at"),
+        ("administrative", "created_at"),
+        ("administrative", "updated_at"),
+        ("processed_files", "created_at"),
+        ("settings", "created_at"),
+        ("settings", "updated_at"),
+    ]:
+        cursor.execute(
+            f"UPDATE '{table}' SET {timestamp_col} = ? WHERE {timestamp_col} IS NULL",
+            (now,),
+        )
+    database_connection.raw_connection.commit()
+
+    # --- v34: extra processed_files columns ---
+    for col in [
+        "filename",
+        "original_path",
+        "processed_path",
+        "error_message",
+        "convert_format",
+        "sent_to",
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
+        except Exception as e:
+            logger.debug("Column %s may already exist: %s", col, e)
+    try:
+        cursor.execute(
+            "ALTER TABLE 'processed_files' ADD COLUMN 'status' TEXT DEFAULT 'processed'"
+        )
+    except Exception as e:
+        logger.debug("Column 'status' may already exist: %s", e)
+    cursor.execute(
+        "UPDATE 'processed_files' SET filename=file_name"
+        " WHERE file_name IS NOT NULL AND filename IS NULL"
+    )
+    database_connection.raw_connection.commit()
+
+    # --- v35: indexes ---
+    for ddl in [
+        "CREATE INDEX IF NOT EXISTS idx_folders_active ON folders(folder_is_active)",
+        "CREATE INDEX IF NOT EXISTS idx_folders_alias ON folders(alias)",
+        "CREATE INDEX IF NOT EXISTS idx_processed_files_folder ON processed_files(folder_id)",
+        "CREATE INDEX IF NOT EXISTS idx_processed_files_status ON processed_files(status)",
+        "CREATE INDEX IF NOT EXISTS idx_processed_files_created ON processed_files(created_at)",
+    ]:
+        try:
+            cursor.execute(ddl)
+        except Exception:
+            pass  # column referenced by index may not exist in this DB variant
+    database_connection.raw_connection.commit()
+
+    # --- v37: version table notes ---
+    try:
+        database_connection.query("ALTER TABLE 'version' ADD COLUMN 'notes' TEXT")
+    except Exception as e:
+        logger.debug("Column 'notes' may already exist: %s", e)
+    try:
+        database_connection.query("""
+            UPDATE 'version' SET notes='administrative table duplicates folders table. Use folders table for all operations. administrative table deprecated.'
+        """)
+    except Exception as e:
+        logger.debug("Could not set version notes: %s", e)
+
+    # --- v38: edi_format column ---
+    for _tbl in ("folders", "administrative"):
+        try:
+            database_connection.query(
+                f"ALTER TABLE '{_tbl}' ADD COLUMN 'edi_format' TEXT"
+            )
+            database_connection.query(f'UPDATE "{_tbl}" SET "edi_format" = "default"')
+        except Exception as e:
+            logger.debug("edi_format column may already exist in %s: %s", _tbl, e)
+
+    # --- v39: add INTEGER PRIMARY KEY AUTOINCREMENT id to folders/administrative ---
+    def _rebuild_with_pk(conn, table_name) -> None:
+        cur = conn.cursor()
+        qt = _quote_identifier(table_name)
+        cur.execute(f"PRAGMA table_info({qt})")
+        existing = [row[1] for row in cur.fetchall()]
+        if "id" in existing:
+            return
+        cur.execute(f"PRAGMA table_info({qt})")
+        old_columns = [(row[1], row[2]) for row in cur.fetchall()]
+        col_defs = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+        for col_name, col_type in old_columns:
+            col_defs.append(f"{_quote_identifier(col_name)} {col_type}")
+        columns_sql = ", ".join(col_defs)
+        old_cols = ", ".join([_quote_identifier(c[0]) for c in old_columns])
+        new_table = _quote_identifier(f"{table_name}_new")
+        cur.execute("BEGIN")
+        try:
+            cur.execute(f"DROP TABLE IF EXISTS {new_table}")
+            cur.execute(f"CREATE TABLE {new_table} ({columns_sql})")
+            cur.execute(
+                f"INSERT INTO {new_table} ({old_cols}) SELECT {old_cols} FROM {qt}"
+            )
+            cur.execute(f"DROP TABLE {qt}")
+            cur.execute(f"ALTER TABLE {new_table} RENAME TO {qt}")
+            cur.execute("COMMIT")
+        except Exception:
+            cur.execute("ROLLBACK")
+            raise
+
+    _conn = database_connection.raw_connection
+    _rebuild_with_pk(_conn, "folders")
+    _rebuild_with_pk(_conn, "administrative")
+
+    # --- v40: backend columns ---
+    def _existing_cols(table_name):
+        c = database_connection.raw_connection.cursor()
+        c.execute(f"PRAGMA table_info({_quote_identifier(table_name)})")
+        return {row[1] for row in c.fetchall()}
+
+    def _ensure_col(table_name, column_name, sql_type, default_sql) -> None:
+        if column_name in _existing_cols(table_name):
+            return
+        qt = _quote_identifier(table_name)
+        qc = _quote_identifier(column_name)
+        database_connection.query(f"ALTER TABLE {qt} ADD COLUMN {qc} {sql_type}")
+        database_connection.query(f"UPDATE {qt} SET {qc} = {default_sql}")
+
+    for _table in ("folders", "administrative"):
+        _ensure_col(_table, "process_backend_email", "INTEGER", "0")
+        _ensure_col(_table, "process_backend_ftp", "INTEGER", "0")
+        _ensure_col(_table, "email_to", "TEXT", "''")
+        _ensure_col(_table, "ftp_server", "TEXT", "''")
+        _ensure_col(_table, "ftp_port", "INTEGER", "21")
+        _ensure_col(_table, "ftp_folder", "TEXT", "''")
+        _ensure_col(_table, "ftp_username", "TEXT", "''")
+        _ensure_col(_table, "ftp_password", "TEXT", "''")
+
+    # --- v41: normalize string booleans ---
+    _bool_fields = [
+        "folder_is_active",
+        "process_edi",
+        "calculate_upc_check_digit",
+        "include_a_records",
+        "include_c_records",
+        "include_headers",
+        "filter_ampersand",
+        "pad_a_records",
+        "tweak_edi",
+        "split_edi",
+        "force_edi_validation",
+        "append_a_records",
+        "force_txt_file_ext",
+        "prepend_date_files",
+        "override_upc_bool",
+        "split_edi_include_invoices",
+        "split_edi_include_credits",
+        "process_backend_copy",
+        "process_edi_output",
+        "process_backend_email",
+        "process_backend_ftp",
+    ]
+    for _field in _bool_fields:
+        qf = _quote_identifier(_field)
+        for _tbl in ("folders", "administrative"):
+            try:
+                database_connection.query(
+                    f"UPDATE {_tbl} SET {qf} = 1 WHERE {qf} = 'True'"
+                )
+                database_connection.query(
+                    f"UPDATE {_tbl} SET {qf} = 0 WHERE {qf} = 'False'"
+                )
+            except Exception:
+                pass
+    try:
+        database_connection.query(
+            "UPDATE settings SET enable_email = 1 WHERE enable_email = 'True'"
+        )
+        database_connection.query(
+            "UPDATE settings SET enable_email = 0 WHERE enable_email = 'False'"
+        )
+        database_connection.query(
+            "UPDATE settings SET enable_interval_backups = 1"
+            " WHERE enable_interval_backups = 'True'"
+        )
+        database_connection.query(
+            "UPDATE settings SET enable_interval_backups = 0"
+            " WHERE enable_interval_backups = 'False'"
+        )
+    except Exception:
+        pass
+
+    # --- v42: normalize folder_name backslashes ---
+    try:
+        folders_table = database_connection["folders"]
+        for folder in folders_table.all():
+            folder_name = folder.get("folder_name")
+            if folder_name and "\\" in folder_name:
+                normalized = folder_name.replace("\\", "/")
+                folders_table.update(
+                    {"id": folder["id"], "folder_name": normalized}, ["id"]
+                )
+    except Exception as e:
+        logger.debug("Error normalizing folder paths: %s", e)
+
+    # --- v43: upc_target_length / upc_padding_pattern ---
+    for _table in ("folders", "settings"):
+        try:
+            cursor.execute(
+                f"ALTER TABLE '{_table}' ADD COLUMN 'upc_target_length' INTEGER DEFAULT 11"
+            )
+        except Exception as e:
+            logger.debug("Column upc_target_length may already exist: %s", e)
+        try:
+            cursor.execute(
+                f"ALTER TABLE '{_table}' ADD COLUMN 'upc_padding_pattern' TEXT"
+            )
+        except Exception as e:
+            logger.debug("Column upc_padding_pattern may already exist: %s", e)
+    database_connection.raw_connection.commit()
+
+    # --- v44+v45: retire tweak_edi flag ---
+    #
+    # tweak_edi=1 means the folder was actively sending Tweaked EDI regardless
+    # of the process_edi value.  The old code ran tweaks unconditionally when
+    # tweak_edi=True, bypassing the process_edi gate entirely.  We must honour
+    # that intent for ALL tweak_edi=1 folders — including those where process_edi
+    # was 0 — by mapping them to convert_to_format='tweaks' and enabling
+    # conversion.  There is no "disabled + tweaks" state in the new code.
+    for _table in ("folders", "administrative"):
+        try:
+            # Any folder with tweak_edi=1 and a non-empty format: the stored
+            # format was ignored at runtime (conversion was skipped when
+            # process_edi='False'); the effective output was always Tweaked EDI.
+            # Map to convert_to_format='tweaks' so recipients keep getting the
+            # same file they were getting before the upgrade.
+            cursor.execute(f"""
+                UPDATE {_table}
+                SET convert_to_format = 'tweaks',
+                    process_edi       = 1,
+                    tweak_edi         = 0
+                WHERE tweak_edi = 1
+                  AND convert_to_format IS NOT NULL
+                  AND convert_to_format != ''
+            """)
+        except Exception:
+            pass
+        try:
+            # Any folder with tweak_edi=1 and no format: intent was always
+            # EDI tweaks.  Same result.
+            cursor.execute(f"""
+                UPDATE {_table}
+                SET convert_to_format = 'tweaks',
+                    process_edi       = 1,
+                    tweak_edi         = 0
+                WHERE tweak_edi = 1
+                  AND (convert_to_format IS NULL OR convert_to_format = '')
+            """)
+        except Exception:
+            pass
+    database_connection.raw_connection.commit()
+
+    # --- v49+v50: HTTP backend columns ---
+    _http_columns = {
+        "process_backend_http": ("INTEGER", "0"),
+        "http_url": ("TEXT", "''"),
+        "http_headers": ("TEXT", "''"),
+        "http_field_name": ("TEXT", "'file'"),
+        "http_auth_type": ("TEXT", "''"),
+        "http_api_key": ("TEXT", "''"),
+    }
+    _conn2 = database_connection.raw_connection
+    _conn2.execute("BEGIN")
+    try:
+        for _table in ("folders", "administrative"):
+            qt = _quote_identifier(_table)
+            _existing_http = {
+                row[1] for row in _conn2.execute(f"PRAGMA table_info({qt})")
+            }
+            for col_name, (sql_type, default_sql) in _http_columns.items():
+                qc = _quote_identifier(col_name)
+                if col_name not in _existing_http:
+                    _conn2.execute(f"ALTER TABLE {qt} ADD COLUMN {qc} {sql_type}")
+                    _conn2.execute(f"UPDATE {qt} SET {qc} = {default_sql}")
+                else:
+                    _conn2.execute(
+                        f"UPDATE {qt} SET {qc} = {default_sql} WHERE {qc} IS NULL"
+                    )
+        _conn2.execute("COMMIT")
+    except Exception as e:
+        _conn2.execute("ROLLBACK")
+        raise RuntimeError(f"Failed to add HTTP backend columns: {e}") from e
+
+    update_version = dict(id=1, version=CURRENT_SCHEMA_VERSION, os=running_platform)
+    db_version.update(update_version, ["id"])
+
+
 def upgrade_database(
     database_connection, config_folder, running_platform, target_version=None
 ) -> None:
@@ -830,9 +1155,21 @@ def upgrade_database(
         if not apply_migration(database_connection):
             raise RuntimeError("Plugin config migration failed")
 
-        update_version = dict(id=1, version="33", os=running_platform)
-        db_version.update(update_version, ["id"])
-        _log_migration_step("32", "33")
+        # All production databases are at v32 or below.  Run the full v33–v50
+        # schema update in a single consolidated step so that no production DB
+        # ever needs to step through the individual intermediate versions.
+        # When target_version is set to an intermediate value (used by tests),
+        # fall back to the old single-step bump so the individual migration
+        # blocks can be reached and target_version is still honoured.
+        if not target_version or int(target_version) >= int(CURRENT_SCHEMA_VERSION):
+            _migrate_v33_to_v50(
+                database_connection, db_version, running_platform
+            )
+            _log_migration_step("32", CURRENT_SCHEMA_VERSION)
+        else:
+            update_version = dict(id=1, version="33", os=running_platform)
+            db_version.update(update_version, ["id"])
+            _log_migration_step("32", "33")
 
     db_version_dict = db_version.find_one(id=1)
     if target_version and int(db_version_dict["version"]) >= int(target_version):
@@ -1246,59 +1583,39 @@ def upgrade_database(
         # Make convert_to_format the single source of truth for conversion mode.
         #
         # tweak_edi is a now-deprecated flag that formerly ran a separate "tweaks"
-        # post-processing step.  Rules for retiring it:
+        # post-processing step.  The old code ran tweaks unconditionally when
+        # tweak_edi=True, bypassing the process_edi gate entirely — so even
+        # folders with process_edi='False' were actively sending Tweaked EDI.
         #
-        #   • tweak_edi=1 + process_edi=1/NULL + convert_to_format non-empty:
-        #     Stored format IS the intended target.  Honour it: ensure process_edi=1
-        #     so conversion runs, then clear tweak_edi.
+        # Rule: tweak_edi=1 always maps to convert_to_format='tweaks' + process_edi=1,
+        # regardless of the process_edi value.  There is no "disabled + tweaks" state
+        # in the new code; if tweak_edi was enabled the folder was sending files.
         #
-        #   • tweak_edi=1 + process_edi=1/NULL + convert_to_format empty/null:
-        #     The folder wanted EDI tweaks.  Set convert_to_format='tweaks',
-        #     ensure process_edi=1, and clear tweak_edi.
-        #
-        #   • tweak_edi=1 + process_edi=0 (explicitly disabled):
-        #     The user disabled EDI processing.  Respect that choice: only clear
-        #     the deprecated tweak_edi flag; do NOT change process_edi or
-        #     convert_to_format.  The folder continues to pass through files.
+        # Note: the stored convert_to_format is overridden to 'tweaks' even when it
+        # was non-empty, because the old code never applied the stored format when
+        # process_edi='False' — the effective output was always Tweaked EDI.
         cursor = database_connection.raw_connection.cursor()
 
         for table in ("folders", "administrative"):
             try:
-                # Case A (enabled): real format already stored and processing was
-                # enabled or unset – honour the stored format.
-                # Do NOT touch folders where process_edi was explicitly set to 0;
-                # those folders intentionally disabled conversion and must keep
-                # passing through.
+                # All tweak_edi=1 folders with a stored format: the format was
+                # irrelevant at runtime (conversion was skipped when process_edi
+                # was false); map to 'tweaks' so recipients keep getting the
+                # same Tweaked EDI they were receiving before the upgrade.
                 cursor.execute(f"""
                     UPDATE {table}
-                    SET process_edi = 1,
-                        tweak_edi   = 0
+                    SET convert_to_format = 'tweaks',
+                        process_edi       = 1,
+                        tweak_edi         = 0
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
-                      AND (process_edi IS NULL OR process_edi != 0)
                 """)
             except Exception:
                 pass  # Column may not exist in older schemas
 
             try:
-                # Case A (disabled): real format stored but processing was
-                # explicitly off.  Only retire the deprecated tweak_edi flag;
-                # leave process_edi=0 and convert_to_format untouched.
-                cursor.execute(f"""
-                    UPDATE {table}
-                    SET tweak_edi = 0
-                    WHERE tweak_edi = 1
-                      AND convert_to_format IS NOT NULL
-                      AND convert_to_format != ''
-                      AND process_edi = 0
-                """)
-            except Exception:
-                pass  # Column may not exist in older schemas
-
-            try:
-                # Case B (enabled): no format stored – the intent was EDI tweaks.
-                # Only promote when processing was enabled or unset.
+                # All tweak_edi=1 folders with no format: intent was EDI tweaks.
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
@@ -1306,20 +1623,6 @@ def upgrade_database(
                         tweak_edi         = 0
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
-                      AND (process_edi IS NULL OR process_edi != 0)
-                """)
-            except Exception:
-                pass  # Column may not exist in older schemas
-
-            try:
-                # Case B (disabled): no format stored and processing was
-                # explicitly off.  Only retire the deprecated tweak_edi flag.
-                cursor.execute(f"""
-                    UPDATE {table}
-                    SET tweak_edi = 0
-                    WHERE tweak_edi = 1
-                      AND (convert_to_format IS NULL OR convert_to_format = '')
-                      AND process_edi = 0
                 """)
             except Exception:
                 pass  # Column may not exist in older schemas

@@ -436,11 +436,12 @@ class TestMigrationContents:
         db_conn.close()
 
     def test_v45_clear_stale_convert_to_format_for_tweak_edi(self, tmp_path):
-        """Test that v45 migration handles convert_to_format for folders with tweak_edi=True.
+        """Test that v45 migration maps all tweak_edi=1 folders to convert_to_format='tweaks'.
 
-        The migration honors non-empty convert_to_format (does not clear it) when
-        tweak_edi=1, since the stored format is the intended conversion target.
-        Folders with tweak_edi=1 and empty convert_to_format get convert_to_format='tweaks'.
+        The old code ran tweaks regardless of process_edi or convert_to_format, so the
+        effective output was always Tweaked EDI.  The migration must preserve that by
+        setting convert_to_format='tweaks' and process_edi=1 for every tweak_edi=1 folder,
+        overriding any previously-stored format value.
         """
         db_path = str(tmp_path / "test_v45.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
@@ -478,30 +479,26 @@ class TestMigrationContents:
 
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
-        # Check migration results
+        # All tweak_edi=1 folders get convert_to_format='tweaks' and process_edi=1,
+        # because the stored format was irrelevant — the old code always sent Tweaked EDI.
         folders = list(db_conn["folders"].all())
-        # Folder 1: tweak_edi=True with non-empty format -> format is honored
-        assert folders[0]["convert_to_format"] == "eStore eInvoice"
-        assert folders[0]["tweak_edi"] == 0
-        # Folder 2: tweak_edi=True with non-empty format -> format is honored
-        assert folders[1]["convert_to_format"] == "csv"
-        assert folders[1]["tweak_edi"] == 0
-        # Folder 3: tweak_edi=True with empty format -> gets 'tweaks'
-        assert folders[2]["convert_to_format"] == "tweaks"
-        assert folders[2]["tweak_edi"] == 0
+        for folder in folders:
+            assert folder["convert_to_format"] == "tweaks", (
+                f"Folder {folder['alias']!r} should have convert_to_format='tweaks', "
+                f"got {folder['convert_to_format']!r}"
+            )
+            assert folder["tweak_edi"] == 0
+            assert folder["process_edi"] == 1
 
         db_conn.close()
 
-    def test_v45_clears_tweak_edi_process_edi_unchanged(self, tmp_path):
-        """v44→v48 migration chain: tweak_edi is cleared, process_edi is never altered.
+    def test_v45_promotes_tweak_edi_regardless_of_process_edi(self, tmp_path):
+        """v44 migration: tweak_edi=1 always maps to process_edi=1 + convert_to_format='tweaks'.
 
-        Starting from v44:
-        - v45 clears tweak_edi (retiring the deprecated flag)
-        - v48 is a version-bump only; it does NOT touch process_edi
-
-        Folders with process_edi=0 keep process_edi=0 regardless of convert_to_format.
-        Disabling a folder (process_edi=0) is an explicit user choice that migration
-        must not override.
+        The old code ran tweaks unconditionally when tweak_edi=True, bypassing process_edi
+        entirely.  Folders with process_edi=0 + tweak_edi=1 were actively sending Tweaked
+        EDI — they were NOT disabled.  The migration must promote them to process_edi=1 so
+        recipients keep receiving the same file.
         """
         db_path = str(tmp_path / "test_v45_disabled.db")
         db_conn = sqlite_wrapper.Database.connect(db_path)
@@ -509,7 +506,8 @@ class TestMigrationContents:
 
         db_conn["version"].insert(dict(version="44", os="Linux"))
         # Folder: process_edi=0 + tweak_edi=1 + non-empty format
-        # After migration: process_edi stays 0 — disabled is an intentional state.
+        # The stored format was never used (process_edi was false, so conversion was
+        # skipped).  The effective output was Tweaked EDI.  Map to 'tweaks'.
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled",
@@ -520,7 +518,7 @@ class TestMigrationContents:
             )
         )
         # Folder: process_edi=0 + tweak_edi=1 + empty format
-        # After migration: process_edi stays 0.
+        # Same: tweaks ran regardless, map to 'tweaks'.
         db_conn["folders"].insert(
             dict(
                 folder_name="/test_disabled_empty",
@@ -535,17 +533,17 @@ class TestMigrationContents:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
-        # Both folders remain disabled — migration must not flip process_edi.
-        assert (
-            folders["Disabled"]["process_edi"] == 0
-        ), "process_edi=0 must not be promoted — disabling a folder is intentional"
+        # Both folders promoted: tweak_edi=1 signals active processing.
+        assert folders["Disabled"]["process_edi"] == 1, (
+            "process_edi=0 + tweak_edi=1 must be promoted: folder was sending Tweaked EDI"
+        )
         assert folders["Disabled"]["tweak_edi"] == 0
-        assert folders["Disabled"]["convert_to_format"] == "csv"
-        assert (
-            folders["DisabledEmpty"]["process_edi"] == 0
-        ), "process_edi=0 with no format must remain 0"
+        assert folders["Disabled"]["convert_to_format"] == "tweaks"
+        assert folders["DisabledEmpty"]["process_edi"] == 1, (
+            "process_edi=0 + tweak_edi=1 (no format) must be promoted"
+        )
         assert folders["DisabledEmpty"]["tweak_edi"] == 0
-        assert folders["DisabledEmpty"]["convert_to_format"] in ("", None)
+        assert folders["DisabledEmpty"]["convert_to_format"] == "tweaks"
 
         db_conn.close()
 
@@ -859,7 +857,13 @@ class TestV32UpgradeIntegration:
             ), f"Column '{col}' still has string boolean values after migration"
 
     def test_disabled_folders_remain_disabled_after_upgrade(self, migrated_db_conn):
-        """The 380 originally-disabled folders must not become enabled during migration."""
+        """Folders disabled without tweak_edi must remain disabled after migration.
+
+        Originally 380 folders had process_edi='False'.  110 of those also had
+        tweak_edi=1, meaning they were actively sending Tweaked EDI — they must be
+        promoted to process_edi=1.  The remaining 270 had no tweak activity and
+        must stay disabled.
+        """
         cur = migrated_db_conn.cursor()
 
         # No string remnants
@@ -869,13 +873,13 @@ class TestV32UpgradeIntegration:
         )
         assert cur.fetchone()[0] == 0
 
-        # Exactly 150 folders were originally enabled; none of the 380 disabled
-        # ones should have been promoted to process_edi=1.
+        # 150 originally-enabled + 110 tweak_edi promoted = 260 enabled.
         cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 1")
-        assert cur.fetchone()[0] <= 150
+        assert cur.fetchone()[0] == 260
 
+        # 380 originally-disabled − 110 tweak_edi promoted = 270 remain disabled.
         cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 0")
-        assert cur.fetchone()[0] == 380
+        assert cur.fetchone()[0] == 270
 
     def test_convert_to_format_normalized_after_upgrade(self, migrated_db_conn):
         """Display-name convert_to_format values must be replaced by canonical tokens."""
@@ -895,11 +899,17 @@ class TestV32UpgradeIntegration:
                 cur.fetchone()[0] == 0
             ), f"Display name '{old_name}' still present after migration"
 
-        # Normalized canonical tokens must be present with correct counts
+        # Normalized canonical tokens must be present with correct counts.
+        # Note: folders that also had tweak_edi=1 are remapped to 'tweaks' by the
+        # migration (the stored format was never used — conversion was skipped when
+        # process_edi='False').  Counts reflect only the non-tweak_edi folders:
+        #   estore_einvoice_generic: 15 folders, all had tweak_edi=1 → moved to 'tweaks'
+        #   yellowdog_csv: 14 total, 4 had tweak_edi=1 → 10 remain
+        #   scansheet_type_a: 2 total, 1 had tweak_edi=1 → 1 remains
         expected = {
-            "estore_einvoice_generic": 15,
-            "yellowdog_csv": 14,
-            "scansheet_type_a": 2,
+            "estore_einvoice_generic": 0,
+            "yellowdog_csv": 10,
+            "scansheet_type_a": 1,
             "scannerware": 1,
         }
         for token, expected_count in expected.items():
@@ -932,7 +942,11 @@ class TestV32UpgradeIntegration:
         assert cur.fetchone()[0] == 0
 
     def test_tweaks_format_not_assigned_to_disabled_folders(self, migrated_db_conn):
-        """Disabled folders must never receive convert_to_format='tweaks'."""
+        """convert_to_format='tweaks' must only appear on enabled (process_edi=1) folders.
+
+        All tweak_edi=1 folders are promoted to process_edi=1 by the migration, so
+        there should be no disabled folder with format='tweaks'.
+        """
         cur = migrated_db_conn.cursor()
         cur.execute(
             "SELECT COUNT(*) FROM folders"
