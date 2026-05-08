@@ -249,19 +249,36 @@ class TestDispatchOrchestrator:
         assert result.files_failed == 0
         assert "Processing folder" in caplog.text
 
-    def test_process_file_success(self):
-        """Test successful file processing."""
-        mock_fs = MockFileSystem(
-            dirs=["/data/input"], files={"/data/input/file.edi": b"test content"}
-        )
+    def test_process_file_success(self, tmp_path):
+        """Test file processing with enabled backend."""
+        test_file = tmp_path / "file.edi"
+        test_file.write_bytes(b"test content")
 
         mock_backend = MockBackend(should_succeed=True)
-        config = DispatchConfig(file_system=mock_fs, backends={"copy": mock_backend})
+        config = DispatchConfig(backends={"copy": mock_backend})
         orchestrator = DispatchOrchestrator(config)
 
-        folder = {"folder_name": "/data/input", "process_backend_copy": True}
+        folder = {"folder_name": str(tmp_path), "process_backend_copy": True}
 
-        result = orchestrator.process_file("/data/input/file.edi", folder)
+        result = orchestrator.process_file(str(test_file), folder)
+
+        assert result.file_name == str(test_file)
+        assert len(result.checksum) == 32  # MD5 hash length
+
+    def test_process_file_no_backends(self, tmp_path):
+        """Test file processing with no enabled backends."""
+        test_file = tmp_path / "file.edi"
+        test_file.write_bytes(b"test content")
+
+        config = DispatchConfig()
+        orchestrator = DispatchOrchestrator(config)
+
+        folder = {
+            "folder_name": str(tmp_path),
+            # No backends enabled
+        }
+
+        result = orchestrator.process_file(str(test_file), folder)
 
         assert result.file_name == "/data/input/file.edi"
         assert len(result.checksum) == 32  # MD5 hash length
@@ -381,13 +398,14 @@ class TestOrchestratorHelperMethods:
 
         assert len(files) == 2
 
-    def test_calculate_checksum(self):
-        """Test checksum calculation."""
-        mock_fs = MockFileSystem(files={"/data/file.edi": b"test content"})
-        config = DispatchConfig(file_system=mock_fs)
+    def test_calculate_checksum(self, tmp_path):
+        """Test checksum calculation uses shared utility."""
+        test_file = tmp_path / "file.edi"
+        test_file.write_bytes(b"test content")
+        config = DispatchConfig()
         orchestrator = DispatchOrchestrator(config)
 
-        checksum = orchestrator._calculate_checksum("/data/file.edi")
+        checksum = orchestrator._calculate_checksum(str(test_file))
 
         expected = hashlib.md5(b"test content").hexdigest()
         assert checksum == expected
@@ -567,18 +585,16 @@ class TestOrchestratorEdgeCases:
 
         assert result.alias == ""
 
-    def test_large_file(self):
-        """Test processing large file."""
+    def test_large_file(self, tmp_path):
+        """Test checksum calculation handles large files."""
         large_content = b"x" * 10_000_000  # 10 MB
+        test_file = tmp_path / "large.edi"
+        test_file.write_bytes(large_content)
 
-        mock_fs = MockFileSystem(
-            dirs=["/data/input"], files={"/data/input/large.edi": large_content}
-        )
-
-        config = DispatchConfig(file_system=mock_fs)
+        config = DispatchConfig()
         orchestrator = DispatchOrchestrator(config)
 
-        checksum = orchestrator._calculate_checksum("/data/input/large.edi")
+        checksum = orchestrator._calculate_checksum(str(test_file))
 
         assert len(checksum) == 32
         assert checksum == hashlib.md5(large_content).hexdigest()

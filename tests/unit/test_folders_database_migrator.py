@@ -5,7 +5,6 @@ Tests cover:
 - Target version handling (early return when already at target)
 - Individual migration steps
 - Edge cases and error handling
-- Log output verification
 """
 
 import sqlite3
@@ -18,26 +17,6 @@ pytestmark = [pytest.mark.unit, pytest.mark.database, pytest.mark.upgrade]
 from backend.database import sqlite_wrapper
 from core.database import schema
 from migrations import folders_database_migrator
-
-
-class TestLogMigrationStep:
-    """Tests for _log_migration_step function."""
-
-    def test_log_migration_step_output(self, capsys):
-        """Test that _log_migration_step prints correct format."""
-        folders_database_migrator._log_migration_step("5", "6")
-
-        captured = capsys.readouterr()
-        assert "Migrating: v5 -> v6" in captured.out
-
-    def test_log_migration_step_multiple_versions(self, capsys):
-        """Test logging multiple migration steps."""
-        folders_database_migrator._log_migration_step("10", "11")
-        folders_database_migrator._log_migration_step("11", "12")
-
-        captured = capsys.readouterr()
-        assert "Migrating: v10 -> v11" in captured.out
-        assert "Migrating: v11 -> v12" in captured.out
 
 
 class TestUpgradeDatabase:

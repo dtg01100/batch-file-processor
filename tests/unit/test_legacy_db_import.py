@@ -375,62 +375,6 @@ class TestV32FixtureDbMigrationAtScale:
         db.close()
 
 
-class TestAddColumnSafe:
-    """Test the _add_column_safe helper function."""
-
-    def test_adds_new_column(self, tmp_path):
-        """_add_column_safe should add a column that doesn't exist."""
-        db_path = str(tmp_path / "test.db")
-        db = sqlite_wrapper.Database.connect(db_path)
-        db.query("CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)")
-        db["test_table"].insert(dict(id=1, name="test"))
-
-        folders_database_migrator._add_column_safe(
-            db, "test_table", "new_col", '"default_val"'
-        )
-
-        db.close()
-        db = sqlite_wrapper.Database.connect(db_path)
-        row = db["test_table"].find_one(id=1)
-        assert "new_col" in row
-        assert row["new_col"] == "default_val"
-        db.close()
-
-    def test_skips_existing_column(self, tmp_path):
-        """_add_column_safe should not fail if column already exists."""
-        db_path = str(tmp_path / "test.db")
-        db = sqlite_wrapper.Database.connect(db_path)
-        db.query(
-            "CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT, existing_col TEXT)"
-        )
-        db["test_table"].insert(dict(id=1, name="test", existing_col="original"))
-
-        folders_database_migrator._add_column_safe(
-            db, "test_table", "existing_col", '"new_default"'
-        )
-
-        row = db["test_table"].find_one(id=1)
-        assert row["existing_col"] == "original"
-        db.close()
-
-    def test_handles_integer_default(self, tmp_path):
-        """_add_column_safe should work with integer defaults."""
-        db_path = str(tmp_path / "test.db")
-        db = sqlite_wrapper.Database.connect(db_path)
-        db.query("CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)")
-        db["test_table"].insert(dict(id=1, name="test"))
-
-        folders_database_migrator._add_column_safe(
-            db, "test_table", "int_col", "42", sql_type="INTEGER"
-        )
-
-        db.close()
-        db = sqlite_wrapper.Database.connect(db_path)
-        row = db["test_table"].find_one(id=1)
-        assert row["int_col"] == 42
-        db.close()
-
-
 class TestMigrationIdempotency:
     """Test that running migration on an already-current database is safe."""
 

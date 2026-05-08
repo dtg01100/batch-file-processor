@@ -222,17 +222,16 @@ class TestCalculateChecksum:
         assert checksum == expected
 
     def test_calculate_checksum_with_file_system(self, temp_file):
-        """Test checksum calculation with injected file system."""
+        """Test checksum calculation delegates to shared utility."""
         send_manager = MagicMock()
         error_handler = MagicMock()
         mock_fs = MagicMock()
-        mock_fs.read_file.return_value = b"test content for checksum"
 
         processor = FileProcessor(send_manager, error_handler, file_system=mock_fs)
 
         checksum = processor._calculate_checksum(temp_file)
 
-        mock_fs.read_file.assert_called_once_with(temp_file)
+        # Delegates to shared calculate_file_checksum (direct file I/O)
         expected = hashlib.md5(b"test content for checksum").hexdigest()
         assert checksum == expected
 

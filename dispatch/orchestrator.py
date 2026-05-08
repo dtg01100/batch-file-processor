@@ -5,7 +5,6 @@ coordinating validation, conversion, and sending of files.
 """
 
 import datetime
-import hashlib
 import logging
 import os
 import re
@@ -1276,15 +1275,9 @@ class DispatchOrchestrator:
             )
 
     def _calculate_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file.
+        """Calculate MD5 checksum of a file."""
+        from core.utils.file_utils import calculate_file_checksum
 
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            MD5 checksum as hex string
-
-        """
         log_file_operation(
             logger,
             "read",
@@ -1293,19 +1286,12 @@ class DispatchOrchestrator:
             file_type="edi",
         )
         logger.debug("Calculating checksum for: %s", file_path)
-
-        if self.config.file_system:
-            content = self.config.file_system.read_file(file_path)
-        else:
-            with open(file_path, "rb") as f:
-                content = f.read()
-
-        checksum = hashlib.md5(content).hexdigest()
+        checksum = calculate_file_checksum(file_path)
         log_file_operation(
             logger,
             "read",
             file_path,
-            success=True,
+            success=bool(checksum),
             correlation_id=get_or_create_correlation_id(),
             file_type="edi",
         )

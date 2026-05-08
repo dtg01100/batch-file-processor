@@ -11,7 +11,6 @@ Responsibilities:
 - Report discovery progress
 """
 
-import hashlib
 import os
 from typing import Any
 
@@ -268,15 +267,9 @@ class FolderDiscoveryService:
 
     def _calculate_checksum(self, file_path: str) -> str:
         """Calculate MD5 checksum of a file."""
-        md5_hash = hashlib.md5()
-        try:
-            with open(file_path, "rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    md5_hash.update(chunk)
-            return md5_hash.hexdigest()
-        except OSError as e:
-            logger.warning("Failed to calculate checksum for %s: %s", file_path, e)
-            return ""
+        from core.utils.file_utils import calculate_file_checksum
+
+        return calculate_file_checksum(file_path)
 
     def _log_message(self, run_log: Any, message: str) -> None:
         """Write a message to the run log if available."""

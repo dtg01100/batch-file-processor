@@ -3,11 +3,33 @@
 This module provides file system operations like cleanup and maintenance.
 """
 
+import hashlib
 import os
 
 from core.structured_logging import get_logger, log_file_operation
 
 logger = get_logger(__name__)
+
+
+def calculate_file_checksum(file_path: str) -> str:
+    """Calculate MD5 checksum of a file using chunked reading.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        MD5 hex digest string, or empty string on error
+
+    """
+    md5_hash = hashlib.md5()
+    try:
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                md5_hash.update(chunk)
+        return md5_hash.hexdigest()
+    except OSError as e:
+        logger.warning("Failed to calculate checksum for %s: %s", file_path, e)
+        return ""
 
 
 def clear_old_files(folder_path: str, maximum_files: int) -> None:

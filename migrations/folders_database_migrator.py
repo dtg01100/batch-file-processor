@@ -18,8 +18,6 @@ from migrations.migration_helpers import (  # noqa: F401 - re-exports for backwa
     CSV_SORT_ORDER,
     CURRENT_SCHEMA_VERSION,
     REPLACEME_PLACEHOLDER,
-    _add_column_safe,
-    _log_migration_step,
     _normalize_legacy_v32_values,
 )
 from migrations.modern_migrations import migrate_v33_to_v50, run_modern_migrations

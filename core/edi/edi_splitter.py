@@ -9,7 +9,13 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
-from core.edi.edi_splitting_utils import _col_to_excel, filter_b_records_by_category
+
+# Re-export for backward compatibility (test imports from this module).
+from core.edi.edi_splitting_utils import (  # noqa: F401 - backward compat re-export
+    _col_to_excel,
+    filter_b_records_by_category,
+    filter_edi_file_by_category,
+)
 
 
 @runtime_checkable
@@ -183,141 +189,6 @@ class SplitResult:
     skipped_invoices: int
     total_lines_written: int
     original_invoice_count: int = 0
-
-
-def filter_edi_file_by_category(
-    input_file: str,
-    output_file: str,
-    upc_dict: dict,
-    filter_categories: str,
-    filter_mode: str = "include",
-) -> bool:
-    """Filter EDI file by item category, dropping invoices without matching B records.
-
-    Reads an EDI file, filters B records based on category, and writes the result
-    to an output file. Invoices (A + B + C records) that have no B records after
-    filtering are completely removed.
-
-    Args:
-        input_file: Path to input EDI file
-        output_file: Path to output EDI file
-        upc_dict: Dictionary mapping item numbers to [category, upc1, upc2, upc3, upc4]
-        filter_categories: Comma-separated categories or "ALL"
-        filter_mode: "include" (keep only these categories) or "exclude"
-        (remove these categories)
-
-    Returns:
-        True if any filtering was applied, False if no filtering occurred
-
-    """
-    if filter_categories == "ALL":
-        _copy_file(input_file, output_file)
-        return False
-
-    lines = _read_lines(input_file)
-    if not lines:
-        _write_invoices(output_file, [])
-        return False
-
-    invoices = _group_lines_by_invoice(lines)
-    filtered_invoices, any_filtered = _filter_invoices(
-        invoices,
-        upc_dict,
-        filter_categories,
-        filter_mode,
-    )
-    _write_invoices(output_file, filtered_invoices)
-    return any_filtered
-
-
-def _copy_file(input_file: str, output_file: str) -> None:
-    """Copy input text file to output file."""
-    with open(input_file, "r", encoding="utf-8") as infile:
-        content = infile.read()
-    with open(output_file, "w", encoding="utf-8") as outfile:
-        outfile.write(content)
-
-
-def _read_lines(input_file: str) -> list[str]:
-    """Read all text lines from an input file."""
-    with open(input_file, "r", encoding="utf-8") as infile:
-        return infile.readlines()
-
-
-def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
-    """Group EDI lines into invoice chunks starting with A records."""
-    invoices = []
-    current_invoice = []
-
-    for line in lines:
-        if line.startswith("A"):
-            if current_invoice:
-                invoices.append(current_invoice)
-            current_invoice = [line]
-        elif line.strip():
-            current_invoice.append(line)
-
-    if current_invoice:
-        invoices.append(current_invoice)
-
-    return invoices
-
-
-def _split_invoice_records(
-    invoice_lines: list[str],
-) -> tuple[str | None, list[str], list[str]]:
-    """Split invoice lines into A record, B records, and C records."""
-    a_record = None
-    b_records = []
-    c_records = []
-
-    for line in invoice_lines:
-        if line.startswith("A"):
-            a_record = line
-        elif line.startswith("B"):
-            b_records.append(line)
-        elif line.startswith("C"):
-            c_records.append(line)
-
-    return a_record, b_records, c_records
-
-
-def _filter_invoices(
-    invoices: list[list[str]],
-    upc_dict: dict,
-    filter_categories: str,
-    filter_mode: str,
-) -> tuple[list[list[str]], bool]:
-    """Filter B records per invoice and drop invoices with no remaining B records."""
-    filtered_invoices = []
-    any_filtered = False
-
-    for invoice_lines in invoices:
-        a_record, b_records, c_records = _split_invoice_records(invoice_lines)
-        filtered_b_records = filter_b_records_by_category(
-            b_records, upc_dict, filter_categories, filter_mode
-        )
-
-        if len(filtered_b_records) != len(b_records):
-            any_filtered = True
-
-        if not filtered_b_records:
-            any_filtered = True
-            continue
-
-        filtered_invoice = [a_record] + filtered_b_records
-        if c_records:
-            filtered_invoice.extend(c_records)
-        filtered_invoices.append(filtered_invoice)
-
-    return filtered_invoices, any_filtered
-
-
-def _write_invoices(output_file: str, invoices: list[list[str]]) -> None:
-    """Write invoice line groups to output file."""
-    with open(output_file, "w") as outfile:
-        for invoice in invoices:
-            outfile.writelines(invoice)
 
 
 def _build_split_filename(

@@ -9,7 +9,6 @@ to reduce its size and improve cohesion. These helpers deal with:
 - Temporary artifact cleanup
 """
 
-import hashlib
 import os
 import shutil
 from typing import Any
@@ -84,20 +83,10 @@ class FileProcessingHelpers:
             return []
 
     def calculate_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file.
+        """Calculate MD5 checksum of a file."""
+        from core.utils.file_utils import calculate_file_checksum
 
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            MD5 hex digest string
-
-        """
-        md5_hash = hashlib.md5()
-        with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                md5_hash.update(chunk)
-        return md5_hash.hexdigest()
+        return calculate_file_checksum(file_path)
 
     def extract_invoice_numbers(self, file_path: str) -> str:
         """Extract invoice numbers from an EDI file.
