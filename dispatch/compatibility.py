@@ -159,8 +159,8 @@ def __getattr__(name: str) -> Any:
     _import_map = {
         # Core components
         "DispatchOrchestrator": "dispatch.orchestrator",
-        "DispatchConfig": "dispatch.orchestrator",
-        "FolderResult": "dispatch.orchestrator",
+        "DispatchConfig": "dispatch.results",
+        "FolderResult": "dispatch.results",
         "FileResult": "dispatch.orchestrator",
         # Validators
         "EDIValidator": "dispatch.edi_validator",

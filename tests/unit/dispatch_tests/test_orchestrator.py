@@ -6,12 +6,11 @@ from unittest.mock import MagicMock
 
 from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import (
-    DispatchConfig,
     DispatchOrchestrator,
     FileResult,
-    FolderResult,
 )
 from dispatch.pipeline.validator import EDIValidationStep
+from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import MockBackend
 
 

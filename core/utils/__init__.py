@@ -19,7 +19,18 @@ This package contains small, focused utility modules organized by functionality:
 #   from core.edi.edi_parser import capture_records
 #   from core.edi.edi_transformer import convert_to_price, etc.
 #   from core.edi.upc_utils import calc_check_digit, etc.
+from core.database.c_record_generator import CRecGenerator
 from core.edi.edi_parser import EDIParseError, capture_records
+
+# Legacy re-exports from split modules (backward compatibility).
+# Import directly from source modules in new code:
+#   from core.edi.edi_splitting_utils import do_split_edi, filter_b_records_by_category
+#   from core.database.c_record_generator import CRecGenerator
+from core.edi.edi_splitting_utils import (
+    do_split_edi,
+    filter_b_records_by_category,
+    filter_edi_file_by_category,
+)
 from core.edi.edi_transformer import (
     convert_to_price,
     convert_to_price_decimal,
@@ -32,6 +43,7 @@ from core.edi.upc_utils import (
 )
 
 from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
+from .csv_utils import add_row
 from .date_utils import (
     dactime_from_datetime,
     dactime_from_invtime,
@@ -46,22 +58,11 @@ from .file_utils import (
     clear_old_files as do_clear_old_files,  # do_clear_old_files: compat alias
 )
 from .format_utils import normalize_convert_to_format
-from .safe_parse import safe_float, safe_int
+from .safe_parse import qty_to_int, safe_float, safe_int
 from .timing_utils import context_timer
-
-# Legacy imports from utils.py - these are actually defined in core/utils/utils.py
-# Functions from core.edi modules should be imported directly from their source modules:
-#   from core.edi.edi_parser import capture_records
-#   from core.edi.edi_transformer import convert_to_price, dac_str_int_to_int, etc.
-#   from core.edi.upc_utils import calc_check_digit, convert_upce_to_upca, etc.
 from .utils import (
-    add_row,
     apply_retail_uom_transform,
     apply_upc_override,
-    do_split_edi,
-    filter_b_records_by_category,
-    filter_edi_file_by_category,
-    qty_to_int,
 )
 
 __all__ = [
@@ -78,6 +79,8 @@ __all__ = [
     "prettify_dates",
     "safe_int",
     "safe_float",
+    "qty_to_int",
+    "add_row",
     "clear_old_files",
     # Legacy utils - functions actually defined in core/utils/utils.py
     "apply_retail_uom_transform",
@@ -85,8 +88,6 @@ __all__ = [
     "do_split_edi",
     "filter_b_records_by_category",
     "filter_edi_file_by_category",
-    "add_row",
-    "qty_to_int",
     "EDIParseError",
     # Backward-compatible re-exports from core.edi
     "capture_records",
@@ -97,4 +98,6 @@ __all__ = [
     "calc_check_digit",
     "convert_upce_to_upca",
     "do_clear_old_files",
+    # Database-backed utilities
+    "CRecGenerator",
 ]

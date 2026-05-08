@@ -76,3 +76,26 @@ def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> flo
         except ValueError:
             return default
     return default
+
+
+def qty_to_int(qty: str) -> int:
+    """Convert a quantity string to an integer, handling negative values.
+
+    Args:
+        qty: A string representing a quantity, may start with '-' for negative values.
+
+    Returns:
+        The integer value of the quantity, or 0 if conversion fails.
+
+    Examples:
+        qty_to_int("5") → 5
+        qty_to_int("-3") → -3
+        qty_to_int("invalid") → 0
+
+    """
+    try:
+        if qty.startswith("-"):
+            return -int(qty[1:])
+        return int(qty)
+    except ValueError:
+        return 0

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
-from core.utils.utils import _col_to_excel, filter_b_records_by_category
+from core.edi.edi_splitting_utils import _col_to_excel, filter_b_records_by_category
 
 
 @runtime_checkable

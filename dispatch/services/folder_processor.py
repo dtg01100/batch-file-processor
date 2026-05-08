@@ -29,7 +29,7 @@ import datetime
 import logging
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from core.structured_logging import (
     get_logger,
@@ -39,9 +39,7 @@ from core.structured_logging import (
 )
 from core.utils.bool_utils import normalize_bool
 from core.utils.format_utils import normalize_convert_to_format
-
-if TYPE_CHECKING:
-    from dispatch.orchestrator import FolderResult
+from dispatch.results import FolderResult
 
 logger = get_logger(__name__)
 
@@ -149,8 +147,6 @@ class FolderPipelineExecutor:
         Returns:
             FolderResult with processing outcome
         """
-        from dispatch.orchestrator import FolderResult
-
         folder = request.folder
         folder_path = folder.get("folder_name", "")
         alias = folder.get("alias", "")

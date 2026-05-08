@@ -31,7 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
-from dispatch.orchestrator import FolderResult
+from dispatch.results import FolderResult
 from interface.operations.folder_manager import FolderManager
 from interface.qt.app import QtBatchFileSenderApp
 

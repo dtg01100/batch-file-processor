@@ -17,8 +17,9 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e]
 
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FolderResult
+from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
+from dispatch.results import FolderResult
 
 # =============================================================================
 # EDI sample content

@@ -22,7 +22,7 @@ from dispatch.log_sender import (
     NullUIService,
     SMTPEmailService,
 )
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.orchestrator import DispatchOrchestrator
 from dispatch.preflight_validator import (
     PreflightIssue,
     PreflightResult,
@@ -41,6 +41,7 @@ from dispatch.processed_files_tracker import (
     ProcessedFileRecord,
     ProcessedFilesTracker,
 )
+from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import SendManager
 
 __all__ = [
@@ -59,6 +60,7 @@ __all__ = [
     "SendManager",
     "ErrorHandler",
     "DispatchConfig",
+    "FolderResult",
     "DispatchOrchestrator",
     # Preflight Validation
     "PreflightValidator",

@@ -1269,8 +1269,8 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
         from dispatch.orchestrator import DispatchConfig as _DC
         from dispatch.orchestrator import DispatchOrchestrator as _DO
         from dispatch.orchestrator import FileResult as _FiR
-        from dispatch.orchestrator import FolderResult as _FR
         from dispatch.orchestrator import ProcessingContext as _PC
+        from dispatch.results import FolderResult as _FR
 
         ok("dispatch.orchestrator imported")
     except Exception as exc:
