@@ -88,7 +88,7 @@ class DynamicEDIBuilder:
         set_correlation_id(self._correlation_id)
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Dynamic EDI Builder initialized",
             correlation_id=self._correlation_id,
             component="dynamic_edi_builder",
@@ -243,7 +243,7 @@ class DynamicEDIBuilder:
         """Clear dynamic EDI widgets and clean up field references."""
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Clearing dynamic EDI widgets",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -351,7 +351,7 @@ class DynamicEDIBuilder:
         self._edi_option_processing = True
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             f"EDI option toggled to: {'Convert EDI' if checked else 'Do Nothing'}",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -429,7 +429,7 @@ class DynamicEDIBuilder:
         """Handle convert format selection changes."""
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             f"Convert format changed to: {fmt}",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",
@@ -479,7 +479,7 @@ class DynamicEDIBuilder:
 
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Clearing convert sub widgets",
             correlation_id=get_correlation_id(),
             component="dynamic_edi_builder",

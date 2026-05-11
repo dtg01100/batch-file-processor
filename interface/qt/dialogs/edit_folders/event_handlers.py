@@ -82,7 +82,7 @@ class EventHandlers:
         set_correlation_id(self._correlation_id)
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Event handlers initialized for edit folders dialog",
             correlation_id=self._correlation_id,
             component="edit_folders_dialog",
@@ -241,7 +241,7 @@ class EventHandlers:
         selected_alias = current_item.text()
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             f"Copying config from folder: {selected_alias}",
             correlation_id=get_correlation_id(),
             component="edit_folders_dialog",
@@ -281,7 +281,7 @@ class EventHandlers:
         path = self.folder_config.get("folder_name", "Unknown")
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Showing folder path dialog",
             correlation_id=get_correlation_id(),
             component="edit_folders_dialog",
@@ -301,7 +301,7 @@ class EventHandlers:
 
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Opening copy directory selection dialog",
             correlation_id=get_correlation_id(),
             component="edit_folders_dialog",
@@ -329,7 +329,7 @@ class EventHandlers:
         """Handle OK button click - validate and apply settings."""
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "OK button clicked - validating and applying settings",
             correlation_id=get_correlation_id(),
             component="edit_folders_dialog",
@@ -347,7 +347,7 @@ class EventHandlers:
         """Handle Cancel button click."""
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Cancel button clicked - discarding changes",
             correlation_id=get_correlation_id(),
             component="edit_folders_dialog",

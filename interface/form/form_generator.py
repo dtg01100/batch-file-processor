@@ -59,7 +59,7 @@ class FormGenerator(ABC):
         set_correlation_id(self._correlation_id)
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Form generator initialized",
             correlation_id=self._correlation_id,
             component="form_generator",
@@ -485,7 +485,7 @@ class QtFormGenerator(FormGenerator):
         is_valid = len(all_errors) == 0
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             f"Form validation {'succeeded' if is_valid else 'failed'}",
             correlation_id=get_correlation_id(),
             component="form_generator",
@@ -562,7 +562,7 @@ class FormGeneratorFactory:
         correlation_id = get_correlation_id() or generate_correlation_id()
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             f"Creating form generator for framework: {framework}",
             correlation_id=correlation_id,
             component="form_generator",

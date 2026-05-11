@@ -73,7 +73,7 @@ class QtAppBootstrapService:
         parsed_args, _unknown = launch_options.parse_known_args(args)
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Parsed command line arguments",
             correlation_id=correlation_id,
             component="qt_bootstrap",
@@ -101,7 +101,7 @@ class QtAppBootstrapService:
                 ) from error
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Config directories setup complete",
             correlation_id=get_correlation_id(),
             component="qt_bootstrap",
@@ -116,7 +116,7 @@ class QtAppBootstrapService:
     def build_ui_runtime(self) -> None:
         log_with_context(
             logger,
-            logging.DEBUG,  # DEBUG
+            logging.DEBUG,
             "Building Qt UI runtime",
             correlation_id=get_correlation_id(),
             component="qt_bootstrap",
