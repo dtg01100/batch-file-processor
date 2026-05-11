@@ -9,6 +9,7 @@ import os
 from backend.backend_base import BackendBase
 from backend.http_client import create_http_client
 from backend.protocols import HTTPClientProtocol
+from core.exceptions import BackendSendError
 from core.structured_logging import get_logger, log_backend_call, log_file_operation
 
 logger = get_logger(__name__)
@@ -47,6 +48,21 @@ def _build_url_with_query(url: str, api_key: str) -> str:
     """
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}api_key={api_key}"
+
+
+def _redact_api_key_from_url(url: str) -> str:
+    """Redact API key from URL for safe logging.
+
+    Args:
+        url: URL potentially containing api_key query parameter
+
+    Returns:
+        URL with api_key value replaced by '***'
+
+    """
+    import re
+
+    return re.sub(r"([?&]api_key=)[^&]*", r"\1***", url)
 
 
 def _add_bearer_auth(headers: dict[str, str], api_key: str) -> dict[str, str]:
@@ -148,9 +164,15 @@ class HTTPBackend(BackendBase):
             parsed_headers = _add_bearer_auth(parsed_headers, api_key)
             final_url = url
         elif auth_type == "query" and api_key:
+            logger.warning(
+                "Using query parameter auth — API key may appear in "
+                "server/proxy logs. Consider switching to 'bearer' auth type."
+            )
             final_url = _build_url_with_query(url, api_key)
         else:
             final_url = url
+
+        log_url = _redact_api_key_from_url(final_url)
 
         file_basename = os.path.basename(filename)
         file_size = os.path.getsize(filename)
@@ -159,12 +181,12 @@ class HTTPBackend(BackendBase):
             files = {field_name: (file_basename, f)}
             data: dict = {}
 
-            logger.debug("HTTP POSTing file %s to %s", file_basename, final_url)
+            logger.debug("HTTP POSTing file %s to %s", file_basename, log_url)
             log_backend_call(
                 logger,
                 "http",
                 "upload",
-                endpoint=final_url,
+                endpoint=log_url,
                 success=None,
                 correlation_id=self._correlation_id,
             )
@@ -189,7 +211,7 @@ class HTTPBackend(BackendBase):
                 logger.info(
                     "Successfully sent file %s via HTTP to %s",
                     file_basename,
-                    final_url,
+                    log_url,
                 )
                 return True
             else:
@@ -206,7 +228,7 @@ class HTTPBackend(BackendBase):
                     success=False,
                     correlation_id=self._correlation_id,
                 )
-                raise Exception(error_msg)
+                raise BackendSendError(error_msg)
 
     def _get_backend_name(self) -> str:
         """Get backend name for logging."""
