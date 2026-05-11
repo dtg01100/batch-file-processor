@@ -4,12 +4,11 @@ This module provides a reusable mixin class that implements
 retry logic with exponential backoff for backend operations.
 """
 
-import logging
 import time
 from typing import Any, Callable, TypeVar
 
 from core.constants import DEFAULT_MAX_RETRIES
-from core.structured_logging import get_logger, log_with_context
+from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
 

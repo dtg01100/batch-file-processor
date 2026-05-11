@@ -268,7 +268,11 @@ def extract_invoice_numbers(
         return ""
 
 
-def apply_file_rename(file_path: str, rename_template: str, temp_dirs: list[str]) -> str:
+def apply_file_rename(
+    file_path: str,
+    rename_template: str,
+    temp_dirs: list[str],
+) -> str:
     """Apply file rename if a template is configured.
 
     Creates a temp copy with the new name (tracked in temp_dirs for cleanup)

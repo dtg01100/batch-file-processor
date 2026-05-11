@@ -461,11 +461,14 @@ class FileProcessor:
             errors_or_file = current_file
         else:
             logger.warning(
-                "Unexpected validation output type: %s",
+                "Unexpected validation output type: %s, treating as invalid",
                 type(validation_output).__name__,
             )
-            is_valid = True
-            errors_or_file = current_file
+            is_valid = False
+            errors_or_file = [
+                f"Validator returned unexpected type: "
+                f"{type(validation_output).__name__}"
+            ]
 
         result.validated = is_valid
         if not is_valid:
@@ -772,8 +775,6 @@ conversion_step: Converter step
         for temp_dir in context.temp_dirs:
             try:
                 if os.path.exists(temp_dir):
-                    import shutil
-
                     shutil.rmtree(temp_dir)
                     logger.debug("Cleaned up temp directory: %s", temp_dir)
             except OSError as e:

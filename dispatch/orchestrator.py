@@ -7,7 +7,6 @@ coordinating validation, conversion, and sending of files.
 import datetime
 import logging
 import os
-import shutil
 import tempfile
 from io import StringIO
 from typing import Any
@@ -18,10 +17,9 @@ from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
     log_backend_call,
-    log_file_operation,
     log_with_context,
 )
-from core.utils import capture_records, normalize_bool, normalize_convert_to_format
+from core.utils import normalize_bool, normalize_convert_to_format
 from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import DatabaseInterface
 from dispatch.results import DispatchConfig, FolderResult
@@ -368,27 +366,6 @@ class DispatchOrchestrator:
             total_files=total_files,
             folder_num=folder_num,
             folder_total=folder_total,
-        )
-
-    def _process_folder_file_list(
-        self,
-        files: list[str],
-        folder: dict,
-        effective_upc_dict: dict,
-        processed_files: DatabaseInterface | None,
-        run_log: Any,
-        result: FolderResult,
-        total_files: int,
-    ) -> None:
-        """Wrapper delegating to the per-file loop processor."""
-        self._process_folder_files(
-            files=files,
-            folder=folder,
-            effective_upc_dict=effective_upc_dict,
-            processed_files=processed_files,
-            run_log=run_log,
-            result=result,
-            total_files=total_files,
         )
 
     def _folder_not_found_result(
