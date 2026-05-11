@@ -342,6 +342,7 @@ class ErrorHandler:
 
         """
         return (
+            # \r\n for legacy Windows run-log reader compatibility
             f"At: {time.ctime()}\r\n"
             f"From module: {error_source}\r\n"
             f"For object: {filename}\r\n"
@@ -376,7 +377,7 @@ class ErrorHandler:
             if self.error_log:
                 try:
                     self.error_log.write(error_msg)
-                except Exception:
+                except Exception:  # fallback to stderr if error_log write also fails
                     sys.stderr.write(error_msg)
             else:
                 sys.stderr.write(error_msg)

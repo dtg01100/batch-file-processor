@@ -39,5 +39,5 @@ class AuditBackgroundWriter:
                 continue
             try:
                 self._db.audit_log_table.insert(event.to_dict())
-            except Exception:
+            except Exception:  # background writer must not crash; logs and continues
                 logger.error("Failed to write audit event", exc_info=True)

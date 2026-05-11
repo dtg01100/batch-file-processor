@@ -205,7 +205,13 @@ def __getattr__(name: str) -> Any:
         module_path = _import_map[name]
         import importlib
 
-        module = importlib.import_module(module_path)
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError:
+            raise ImportError(
+                f"Failed to import '{name}' from '{module_path}'. "
+                f"The module may have been moved or removed."
+            ) from None
         return getattr(module, name)
 
     raise AttributeError(f"module 'dispatch.compatibility' has no attribute '{name}'")

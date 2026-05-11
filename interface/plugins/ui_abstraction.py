@@ -620,7 +620,7 @@ class QtTextEditWidget(QtWidgetBase):
             import json
 
             return json.loads(self.widget.toPlainText())
-        except Exception:
+        except Exception:  # malformed JSON or empty input returns empty dict
             return {}
 
     def set_enabled(self, *, enabled: bool) -> None:

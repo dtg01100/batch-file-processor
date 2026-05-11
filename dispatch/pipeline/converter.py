@@ -769,10 +769,10 @@ class EDIConverterStep:
             duration_ms,
         )
         errors = [error_msg]
-        # Record via error handler
+        # Record via error handler (non-fatal if recording itself fails)
         try:
             self._record_error(input_path, error_msg)
-        except Exception:
+        except Exception:  # best-effort error recording; original error already handled
             logger.warning(
                 "Failed to record conversion error for %s: %s", input_path, error_msg
             )

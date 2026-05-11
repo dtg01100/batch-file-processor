@@ -480,7 +480,7 @@ def ensure_schema(database_connection) -> None:
             )
 
         logger.info("Migration: added plugin_configurations column to folders table")
-    except Exception:
+    except Exception:  # idempotent migration; column may already exist on legacy DBs
         logger.info(
             "Folders plugin_configurations column migration skipped (may already exist)"
         )
@@ -497,12 +497,10 @@ def ensure_schema(database_connection) -> None:
             )
 
         logger.info("Migration: added invoice_numbers column to processed_files table")
-    except Exception:
+    except Exception:  # idempotent migration; column may already exist on legacy DBs
         logger.info(
-
-                "Processed_files invoice_numbers column"
-                " migration skipped (may already exist)"
-
+            "Processed_files invoice_numbers column"
+            " migration skipped (may already exist)"
         )
 
     logger.info("Database schema initialization complete")
@@ -575,7 +573,7 @@ def _apply_statement_to_connection(
         database_connection.query(stmt)
         if object_name:
             logger.debug("Schema object created/verified: %s", object_name)
-    except Exception:
+    except Exception:  # best-effort; fallback to raw conn if dataset wrapper fails
         # be tolerant: older dataset impl or DB state may raise; ensure best-effort
         try:
             if raw_conn is not None:
@@ -586,7 +584,7 @@ def _apply_statement_to_connection(
                         "Schema object created/verified (via raw conn): %s",
                         object_name,
                     )
-        except Exception:
+        except Exception:  # best-effort; DB may be locked or schema already exists
             logger.info(
                 "Schema statement skipped (may already exist or DB locked): %s",
                 object_name or "unknown",

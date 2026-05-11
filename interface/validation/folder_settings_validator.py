@@ -135,7 +135,7 @@ class FolderSettingsValidator:
                     password=password,
                     folder=folder,
                 )
-            except Exception:
+            except Exception:  # treat any connection error as non-validating
                 conn_result = None
 
             if conn_result is None or not getattr(conn_result, "success", False):

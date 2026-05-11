@@ -548,7 +548,7 @@ class FolderPipelineExecutor:
                         "status": "processed",
                     }
                 )
-        except Exception:
+        except Exception:  # non-fatal; file was processed, just failed to record in DB
             logger.warning(
                 "Failed to record processed file to database: %s", file_result.file_name
             )
@@ -591,13 +591,13 @@ class FolderPipelineExecutor:
                 alias=folder_name,
                 total_files=total_files,
             )
-        except TypeError:
+        except TypeError:  # some reporters accept kwargs, others positional-only
             try:
                 progress.start_folder(
                     folder_name,
                     total_files,
                 )
-            except Exception:
+            except Exception:  # non-fatal; continues without progress reporting
                 logger.warning(
                     "Progress reporter failed to start folder: %s",
                     folder_name,
