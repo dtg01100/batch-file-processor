@@ -265,24 +265,6 @@ class TestDispatchOrchestrator:
         assert result.file_name == str(test_file)
         assert len(result.checksum) == 32  # MD5 hash length
 
-    def test_process_file_no_backends(self, tmp_path):
-        """Test file processing with no enabled backends."""
-        test_file = tmp_path / "file.edi"
-        test_file.write_bytes(b"test content")
-
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {
-            "folder_name": str(tmp_path),
-            # No backends enabled
-        }
-
-        result = orchestrator.process_file(str(test_file), folder)
-
-        assert result.file_name == "/data/input/file.edi"
-        assert len(result.checksum) == 32  # MD5 hash length
-
     def test_process_file_no_backends(self):
         """Test file processing with no enabled backends."""
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"test content"})
@@ -404,8 +386,6 @@ class TestOrchestratorHelperMethods:
 
         test_file = tmp_path / "file.edi"
         test_file.write_bytes(b"test content")
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
 
         checksum = calculate_file_checksum(str(test_file))
 

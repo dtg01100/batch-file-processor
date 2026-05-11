@@ -14,10 +14,10 @@ Example:
 
 from typing import Any
 
-from dispatch.results import DispatchConfig
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.splitter import EDISplitterStep
 from dispatch.pipeline.validator import EDIValidationStep
+from dispatch.results import DispatchConfig
 
 
 def create_standard_pipeline(
