@@ -1,3 +1,23 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "batch-file-processor"
+version = "0.0.0"
+description = "Batch file processor with EDI support"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = [
+    "backend*",
+    "core*",
+    "dispatch*",
+    "interface*",
+    "scripts*",
+    "adapters*",
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py311']

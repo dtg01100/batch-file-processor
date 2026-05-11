@@ -135,6 +135,9 @@ settings_dialog_screenshot.png
 # Test result artifacts
 test_results/
 
+# Generated test artifacts and parity check outputs
+tests/_tmp/
+
 # CLIO (managed automatically)
 .clio/*
 !.clio/instructions.md

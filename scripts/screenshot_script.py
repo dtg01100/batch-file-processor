@@ -2,8 +2,10 @@
 import os
 import sys
 
-os.chdir("/workspaces/batch-file-processor")
-sys.path.insert(0, "/workspaces/batch-file-processor")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(script_dir)
+os.chdir(project_dir)
+sys.path.insert(0, project_dir)
 
 from PyQt5.QtWidgets import QApplication, QWidget
 
