@@ -224,7 +224,8 @@ def _qmark_to_positional(sql: str, params: tuple) -> tuple[str, list]:
         Tuple of (sql_with_literals, empty_list).
 
     Raises:
-        ProgrammingError: If the number of ? placeholders doesn't match params length.
+        ProgrammingError: If the number of ? placeholders doesn't match
+            params length, or if a parameter type is unsupported.
 
     """
     if not params:
@@ -238,14 +239,23 @@ def _qmark_to_positional(sql: str, params: tuple) -> tuple[str, list]:
     for i, param in enumerate(params):
         if param is None:
             result += "NULL"
-        elif isinstance(param, (int, float)):
+        elif isinstance(param, bool):
+            result += "1" if param else "0"
+        elif isinstance(param, int):
             result += str(param)
+        elif isinstance(param, float):
+            result += repr(param)
+        elif isinstance(param, bytes):
+            safe = param.decode("utf-8", errors="replace").replace("'", "''")
+            result += f"'{safe}'"
         elif isinstance(param, str):
-            escaped = param.replace("'", "''")
-            result += f"'{escaped}'"
+            safe = param.replace("'", "''")
+            result += f"'{safe}'"
         else:
-            escaped = str(param).replace("'", "''")
-            result += f"'{escaped}'"
+            raise ProgrammingError(
+                f"Unsupported parameter type at position {i}: {type(param).__name__}. "
+                f"Supported types: None, bool, int, float, str, bytes."
+            )
         result += parts[i + 1]
     return result, []
 
@@ -256,8 +266,8 @@ def _qmark_to_positional(sql: str, params: tuple) -> tuple[str, list]:
 def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
     """Execute SQL on IBM i via qsh db2.
 
-    Writes the SQL to a temporary file on the remote system, executes it
-    via `qsh -c "db2 -f ..."`, then cleans up the temp file.
+    Writes the SQL to a temporary file on the remote system via stdin,
+    executes it via `qsh -c "db2 -f ..."`, then cleans up the temp file.
 
     Args:
         ssh: Active paramiko SSH client connected to the IBM i system.
@@ -274,8 +284,11 @@ def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
     if not sql.endswith(";"):
         sql = sql + ";"
 
-    escaped_sql = sql.replace("\\", "\\\\").replace("'", "'\\''")
-    ssh.exec_command(f"printf '%s\\n' '{escaped_sql}' > {remote_sql}")
+    # Write SQL to remote file via stdin to avoid fragile shell escaping
+    stdin, _stdout, stderr_write = ssh.exec_command(f"cat > {remote_sql}")
+    stdin.write(sql)
+    stdin.close()
+    stderr_write.channel.recv_exit_status()
 
     try:
         # Use -t flag for semicolon-terminated statements (allows multiline SQL)
