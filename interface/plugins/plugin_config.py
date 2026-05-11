@@ -31,7 +31,7 @@ Example:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal, Union
+from typing import Any, ClassVar, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +64,9 @@ class ConfigField:
     default: Any
     required: bool = False
     help: str = ""
-    options: list[Union[str, tuple]] = field(default_factory=list)
-    min_value: Union[int, float] | None = None
-    max_value: Union[int, float] | None = None
+    options: list[str | tuple] = field(default_factory=list)
+    min_value: int | float | None = None
+    max_value: int | float | None = None
     placeholder: str = ""
     validator: str | None = None
     visible_if: dict[str, Any] | None = None
@@ -117,7 +117,7 @@ class PluginConfigMixin:
     PLUGIN_ID: str | None = None
     PLUGIN_NAME: str | None = None
     PLUGIN_DESCRIPTION: str = ""
-    CONFIG_FIELDS: list[Union[ConfigField, dict[str, Any]]] = []
+    CONFIG_FIELDS: ClassVar[list["ConfigField | dict[str, Any]"]] = []
 
     @classmethod
     def get_config_fields(cls) -> list[ConfigField]:
@@ -190,10 +190,10 @@ class PluginConfigMixin:
             if not isinstance(value, bool):
                 errors.append(f"{cfg_field.label} must be a boolean")
         elif cfg_field.type == "integer":
-            valid, int_errors = cls._validate_integer_field(cfg_field, value)
+            _valid, int_errors = cls._validate_integer_field(cfg_field, value)
             errors.extend(int_errors)
         elif cfg_field.type == "float":
-            valid, float_errors = cls._validate_float_field(cfg_field, value)
+            _, float_errors = cls._validate_float_field(cfg_field, value)
             errors.extend(float_errors)
         elif cfg_field.type == "select":
             valid_options = [
@@ -254,7 +254,7 @@ class PluginConfigMixin:
 
         """
         if hasattr(self, "parameters_dict"):
-            params = getattr(self, "parameters_dict")
+            params = self.parameters_dict
             if isinstance(params, dict):
                 return params.get(key, default)
         return default
@@ -263,8 +263,8 @@ class PluginConfigMixin:
 class PluginRegistry:
     """Registry for discovering and managing plugins."""
 
-    _convert_plugins: dict[str, type] = {}
-    _send_plugins: dict[str, type] = {}
+    _convert_plugins: ClassVar[dict[str, type]] = {}
+    _send_plugins: ClassVar[dict[str, type]] = {}
 
     @classmethod
     def register_convert_plugin(cls, plugin_class: type) -> None:

@@ -398,7 +398,7 @@ class TestSendManagerWithMockBackend:
     ):
         """MockBackend receives csv file send call with correct path."""
         content = b"a,b\n1,2\n"
-        filepath, results = self._send(
+        _filepath, results = self._send(
             send_manager, folder_cfg, tmp_path, "report.csv", content
         )
 
@@ -411,7 +411,7 @@ class TestSendManagerWithMockBackend:
     ):
         """MockBackend receives xml file send call."""
         content = b"<root/>"
-        filepath, results = self._send(
+        _filepath, results = self._send(
             send_manager, folder_cfg, tmp_path, "data.xml", content
         )
 

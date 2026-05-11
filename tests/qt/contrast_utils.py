@@ -4,13 +4,11 @@ Provides functions to test that UI elements have sufficient color contrast
 for accessibility compliance.
 """
 
-from typing import Tuple
-
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QWidget
 
 
-def get_widget_colors(widget: QWidget, role: int) -> Tuple[QColor, QColor]:
+def get_widget_colors(widget: QWidget, role: int) -> tuple[QColor, QColor]:
     """Get the foreground and background colors for a widget.
 
     Args:
@@ -24,7 +22,6 @@ def get_widget_colors(widget: QWidget, role: int) -> Tuple[QColor, QColor]:
     fg = palette.color(role)
     bg = palette.color(QPalette.Base)
     return fg, bg
-
 
 def luminance(color: QColor) -> float:
     """Calculate relative luminance of a color.
@@ -41,7 +38,6 @@ def luminance(color: QColor) -> float:
 
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
-
 def contrast_ratio(fg: QColor, bg: QColor) -> float:
     """Calculate WCAG contrast ratio between two colors.
 
@@ -56,9 +52,8 @@ def contrast_ratio(fg: QColor, bg: QColor) -> float:
 
     return (lighter + 0.05) / (darker + 0.05)
 
-
 def assert_contrast_ratio(
-    widget: QWidget, role: int = None, min_ratio: float = 4.5, message: str = None
+    widget: QWidget, role: int | None = None, min_ratio: float = 4.5, message: str | None = None
 ) -> None:
     """Assert that a widget has sufficient color contrast.
 

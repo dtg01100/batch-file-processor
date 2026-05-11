@@ -11,7 +11,6 @@ import tempfile
 from io import StringIO
 from typing import Any
 
-from core.constants import FOLDER_DEFAULTS
 from core.structured_logging import (
     CorrelationContext,
     get_logger,
@@ -19,7 +18,8 @@ from core.structured_logging import (
     log_backend_call,
     log_with_context,
 )
-from core.utils import normalize_bool, normalize_convert_to_format
+from core.utils import normalize_bool
+from core.utils.folder_utils import build_effective_folder
 from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import DatabaseInterface
 from dispatch.results import DispatchConfig, FolderResult
@@ -93,19 +93,11 @@ class DispatchOrchestrator:
         folder_deps = FolderProcessingDependencies(
             file_processor=self.file_processor,
             progress_reporter=config.progress_reporter,
-            get_upc_dictionary=lambda: self._get_upc_dictionary(),
+            get_upc_dictionary=lambda: self._get_upc_dictionary(self.config.settings),
             file_system=config.file_system,
             settings=config.settings,
         )
         self._folder_executor = FolderPipelineExecutor(folder_deps)
-
-        logger.debug(
-            "DispatchOrchestrator initialized (pipeline_steps: "
-            "validator=%s, splitter=%s, converter=%s)",
-            bool(config.validator_step),
-            bool(config.splitter_step),
-            bool(config.converter_step),
-        )
 
     def process_folder(
         self,
@@ -556,7 +548,7 @@ class DispatchOrchestrator:
         )
 
     def _format_send_error(
-        self, backend_name: str, error_message: str, is_split_file: bool = False
+        self, backend_name: str, error_message: str, is_split_file: bool = False  # noqa: FBT001,FBT002 - boolean flag for error formatting
     ) -> str:
         """Format a send error message for a specific backend."""
         file_type = "split file" if is_split_file else "file"
@@ -626,7 +618,7 @@ class DispatchOrchestrator:
         context: ProcessingContext,
         run_log: Any,
         *,
-        validation_passed: bool = True,
+        _validation_passed: bool = True,
     ) -> tuple[str, bool]:
         """Apply the converter step for a single file path.
 
@@ -684,7 +676,7 @@ class DispatchOrchestrator:
         self,
         converter_step: Any,
         current_file: str,
-        original_file_path: str,
+        _original_file_path: str,
         context: ProcessingContext,
     ) -> str | None:
         """Execute the configured converter step and return converted path or None.
@@ -798,68 +790,11 @@ class DispatchOrchestrator:
             enabled.append(f"Email: {folder.get('email_to', 'N/A')}")
         return enabled
 
-    def _normalize_edi_flags(
-        self, effective_folder: dict, *, has_convert_target: bool
-    ) -> None:
-        """Normalize EDI-related flags in the folder dict.
-
-        Modifies effective_folder in place.
-
-        Args:
-            effective_folder: Folder configuration dictionary
-            has_convert_target: Whether a conversion target is configured
-
-        """
-        process_edi_raw = effective_folder.get("process_edi")
-        process_edi_bool = (
-            normalize_bool(process_edi_raw) if process_edi_raw is not None else False
-        )
-
-        if "convert_edi" not in effective_folder:
-            if process_edi_raw is None:
-                effective_folder["convert_edi"] = has_convert_target
-            else:
-                effective_folder["convert_edi"] = process_edi_bool
-
-        if effective_folder.get("convert_edi", False):
-            effective_folder["process_edi"] = True
-
-        if "process_edi" not in effective_folder and (
-            effective_folder.get("split_edi", False)
-            or effective_folder.get("convert_edi", False)
-        ):
-            effective_folder["process_edi"] = True
-
     def _build_processing_context(
         self, folder: dict, upc_dict: dict
     ) -> ProcessingContext:
         """Build non-mutating per-file processing context."""
-        effective_folder = folder.copy()
-
-        # Apply defaults for fields that may be NULL in the database.
-        for key, default in FOLDER_DEFAULTS.items():
-            if effective_folder.get(key) is None:
-                effective_folder[key] = default
-
-        # upc_target_length of 0 is not meaningful -- treat as default (11).
-        if not effective_folder.get("upc_target_length"):
-            effective_folder["upc_target_length"] = FOLDER_DEFAULTS["upc_target_length"]
-
-        effective_folder["convert_to_format"] = normalize_convert_to_format(
-            effective_folder.get("convert_to_format", "")
-        )
-
-        if normalize_bool(effective_folder.get("tweak_edi", False)):
-            # Always override convert_to_format when tweak_edi is enabled,
-            # even if a stale non-tweaks value exists from a prior profile.
-            effective_folder["convert_to_format"] = "tweaks"
-            effective_folder["process_edi"] = True
-
-        has_convert_target = bool(effective_folder.get("convert_to_format"))
-
-        self._normalize_edi_flags(
-            effective_folder, has_convert_target=has_convert_target
-        )
+        effective_folder = build_effective_folder(folder)
 
         return ProcessingContext(
             folder=folder,
@@ -1009,7 +944,7 @@ class DispatchOrchestrator:
         folder: dict,
         folder_index: int | None = None,
         folder_total: int | None = None,
-        folder_name: str | None = None,
+        _folder_name: str | None = None,
         progress_reporter: Any | None = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.

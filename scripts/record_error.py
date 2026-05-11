@@ -60,3 +60,4 @@ def do(
         run_log.append(message)
         errors_log.append(message)
         return run_log, errors_log
+    return None

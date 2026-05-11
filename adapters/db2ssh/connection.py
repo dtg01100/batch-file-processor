@@ -159,7 +159,7 @@ class DB2SSHConnection:
                 columns = [desc[0] for desc in cursor.description]
                 results = []
                 for row in cursor.fetchall():
-                    row_dict = dict(zip(columns, row))
+                    row_dict = dict(zip(columns, row, strict=False))
                     results.append(row_dict)
 
                 duration_ms = (time.perf_counter() - start_time) * 1000

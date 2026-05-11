@@ -7,7 +7,7 @@ sections for plugins and the core system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 from ..plugins.config_schemas import ConfigurationSchema
 from ..plugins.section_registry import SectionRegistry
@@ -66,7 +66,7 @@ class QtSectionFactory(SectionFactory):
     Creates Qt-specific configuration section widgets.
     """
 
-    _section_type_map = {
+    _section_type_map: ClassVar[dict[str, type]] = {
         "default": QtConfigSectionWidget,
         "collapsible": QtCollapsibleSectionWidget,
         "tabbed": TabbedSectionWidget,
@@ -126,7 +126,7 @@ class SectionFactoryRegistry:
     and provides a centralized way to create sections.
     """
 
-    _factories: dict[str, SectionFactory] = {}
+    _factories: ClassVar[dict[str, "SectionFactory"]] = {}
 
     @classmethod
     def register_factory(cls, framework: str, factory: SectionFactory) -> None:

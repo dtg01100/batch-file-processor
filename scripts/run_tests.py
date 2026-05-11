@@ -125,7 +125,7 @@ def list_suites() -> None:
     """List available test suites."""
     print(f"{Colors.BLUE}Available Test Suites:{Colors.NC}")
     print()
-    for name, (marker, title, description) in TEST_SUITES.items():
+    for name, (_marker, title, description) in TEST_SUITES.items():
         print(f"  {name:15} - {title}")
         print(f"{'':17}  {description}")
         print()
@@ -147,7 +147,7 @@ Examples:
 
     parser.add_argument(
         "suite",
-        choices=list(TEST_SUITES.keys()) + ["all", "quick", "ci", "list", "help"],
+        choices=[*list(TEST_SUITES.keys()), "all", "quick", "ci", "list", "help"],
         help="Test suite to run",
     )
 
@@ -205,17 +205,16 @@ Examples:
         print_warning("Running all tests may exceed timeout limits")
         return run_tests(None, "All Tests", args, extra_args)
 
-    elif args.suite == "quick":
+    if args.suite == "quick":
         print(f"{Colors.BLUE}Running quick test suite (unit + fast)...{Colors.NC}")
         return run_tests("unit or fast", "Quick Tests", args, extra_args)
 
-    elif args.suite == "ci":
+    if args.suite == "ci":
         print(f"{Colors.BLUE}Running CI test suite (excludes slow tests)...{Colors.NC}")
         return run_tests("not slow", "CI Tests", args, extra_args)
 
-    else:
-        marker, title, _ = TEST_SUITES[args.suite]
-        return run_tests(marker, title, args, extra_args)
+    marker, title, _ = TEST_SUITES[args.suite]
+    return run_tests(marker, title, args, extra_args)
 
 
 if __name__ == "__main__":

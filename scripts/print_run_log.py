@@ -16,7 +16,6 @@ def do(filename) -> None:
         textwrap.wrap(filename, width=75, replace_whitespace=False)
     )
     if platform.system() == "Windows":  # if we are on windows, print via this section
-        import sys
 
         import win32print  # as this module is only available under windows, import it here to prevent errors
 
@@ -25,10 +24,7 @@ def do(filename) -> None:
         # raw_data could equally be raw PCL/PS read from
         #  some print-to-file operation
         #
-        if sys.version_info >= (3,):
-            raw_data = bytes(formatted_log)
-        else:
-            raw_data = formatted_log
+        raw_data = bytes(formatted_log)
 
         h_printer = win32print.OpenPrinter(printer_name)
         try:

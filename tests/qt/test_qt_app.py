@@ -275,7 +275,7 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": "/nonexistent/path"}
 
         def _raise_io(*args, **kwargs):
-            raise IOError("no write")
+            raise OSError("no write")
 
         monkeypatch.setattr("builtins.open", _raise_io)
 
@@ -1041,7 +1041,7 @@ class TestQtBatchFileSenderApp:
         app._log_critical_error = MagicMock()
 
         def mock_mkdir(path):
-            raise IOError("Permission denied")
+            raise OSError("Permission denied")
 
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
@@ -1051,10 +1051,10 @@ class TestQtBatchFileSenderApp:
         app._check_logs_directory = MagicMock(return_value=False)
 
         # Should not crash, just log
-        try:
+        import contextlib
+
+        with contextlib.suppress(Exception):
             app._process_directories(folders_table)
-        except Exception:
-            pass  # May throw but should have logged
 
         app._log_critical_error.assert_called_once()
 

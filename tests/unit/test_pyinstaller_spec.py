@@ -9,6 +9,7 @@ These tests verify that:
 
 import ast
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -71,11 +72,10 @@ def _get_hook_hidden_imports() -> set[str]:
                             if (
                                 isinstance(target, ast.Name)
                                 and target.id == "hiddenimports"
-                            ):
-                                if isinstance(node.value, ast.List):
-                                    for elt in node.value.elts:
-                                        if isinstance(elt, ast.Constant):
-                                            hidden_imports.add(elt.value)
+                            ) and isinstance(node.value, ast.List):
+                                for elt in node.value.elts:
+                                    if isinstance(elt, ast.Constant):
+                                        hidden_imports.add(elt.value)
         except Exception:
             pass
     return hidden_imports
@@ -150,7 +150,7 @@ class TestSpecFileConfiguration:
 class TestPyQt5Runtime:
     """PyQt5 runtime modules must be in hiddenimports."""
 
-    REQUIRED_PYQT5 = [
+    REQUIRED_PYQT5: ClassVar[list[str]] = [
         "PyQt5.sip",
         "PyQt5.QtCore",
         "PyQt5.QtGui",

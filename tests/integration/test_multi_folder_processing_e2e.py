@@ -132,8 +132,8 @@ class TestSequentialMultiFolderProcessing:
             {"convert_to_type": "csv", "convert_edi": True},
         ]
 
-        for i, (folder, cfg) in enumerate(
-            zip(multiple_folders_workspace["folders"][:3], configs)
+        for _i, (folder, cfg) in enumerate(
+            zip(multiple_folders_workspace["folders"][:3], configs, strict=False)
         ):
             folder_config = folder["config"].copy()
             folder_config.update(cfg)
@@ -249,7 +249,7 @@ class TestResourceContention:
 
         # All files should be in shared output (in subdirectories)
         all_files = list(shared_output.glob("**/*.edi"))
-        assert len(all_files) == 15  # 5 folders × 3 files
+        assert len(all_files) == 15  # 5 folders x 3 files
 
     def test_database_locking_during_multi_folder(
         self, multiple_folders_workspace, temp_database
@@ -274,7 +274,7 @@ class TestResourceContention:
             # Add folder id to config
             folder_cfg = folder_config["config"].copy()
             folder_cfg["id"] = (
-                folder_config["folders_id"] if "folders_id" in folder_config else None
+                folder_config.get("folders_id", None)
             )
             result = orchestrator.process_folder(
                 folder_cfg, run_log, temp_database.processed_files
@@ -457,7 +457,7 @@ class TestLargeScaleMultiFolder:
 
         # Verify outputs
         total_outputs = sum(len(list(f["output"].glob("*.edi"))) for f in folders)
-        assert total_outputs == 40  # 20 folders × 2 files
+        assert total_outputs == 40  # 20 folders x 2 files
 
 
 @pytest.mark.e2e

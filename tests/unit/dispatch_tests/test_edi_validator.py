@@ -11,7 +11,7 @@ from dispatch.edi_validator import EDIValidator, RealFileSystem
 class MockFileSystem:
     """Mock file system for testing."""
 
-    def __init__(self, files: dict[str, str] = None):
+    def __init__(self, files: dict[str, str] | None = None):
         """Initialize with optional file contents.
 
         Args:
@@ -71,7 +71,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/file.edi")
+        is_valid, _errors = validator.validate("/test/file.edi")
 
         assert is_valid is False
 
@@ -82,7 +82,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/file.edi")
+        is_valid, _errors = validator.validate("/test/file.edi")
 
         assert is_valid is False
 
@@ -94,7 +94,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         # Should be valid but have warnings
         assert is_valid is True
@@ -109,7 +109,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         # Blank UPC is a minor error (warning), file is still valid
         assert is_valid is True
@@ -123,7 +123,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         assert is_valid is True
         assert any("Missing pricing" in w for w in warnings)
@@ -223,7 +223,7 @@ class TestRealFileSystem:
             fs = RealFileSystem()
             fs.write_file_text(temp_path, "new content")
 
-            with open(temp_path, "r") as f:
+            with open(temp_path) as f:
                 assert f.read() == "new content"
         finally:
             os.unlink(temp_path)
@@ -311,7 +311,7 @@ class TestRealFileSystem:
             fs.copy_file(src, dst)
 
             assert os.path.exists(dst)
-            with open(dst, "r") as f:
+            with open(dst) as f:
                 assert f.read() == "content"
 
     def test_remove_file(self):
@@ -417,7 +417,7 @@ class TestUPCRegressions:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         assert is_valid is True
         assert any("Suppressed UPC" in w for w in warnings)
@@ -431,7 +431,7 @@ class TestUPCRegressions:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         assert is_valid is True
         assert any("Blank UPC" in w for w in warnings)
@@ -444,7 +444,7 @@ class TestUPCRegressions:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
+        is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         assert is_valid is True
         assert any("Missing pricing" in w for w in warnings)
@@ -474,7 +474,7 @@ class TestEDIValidatorEdgeCases:
         mock_fs = MockFileSystem({"/test/empty.edi": ""})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/empty.edi")
+        is_valid, _errors = validator.validate("/test/empty.edi")
 
         assert is_valid is False
 
@@ -483,7 +483,7 @@ class TestEDIValidatorEdgeCases:
         mock_fs = MockFileSystem({"/test/single.edi": "AHEADER"})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/single.edi")
+        is_valid, _errors = validator.validate("/test/single.edi")
 
         assert is_valid is True
 
@@ -492,7 +492,7 @@ class TestEDIValidatorEdgeCases:
         mock_fs = MockFileSystem({"/test/whitespace.edi": "   \n   \n   "})
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/whitespace.edi")
+        is_valid, _errors = validator.validate("/test/whitespace.edi")
 
         assert is_valid is False
 
@@ -503,7 +503,7 @@ class TestEDIValidatorEdgeCases:
         )
 
         validator = EDIValidator(file_system=mock_fs)
-        is_valid, errors = validator.validate("/test/unicode.edi")
+        is_valid, _errors = validator.validate("/test/unicode.edi")
 
         # Should handle unicode without error
         assert isinstance(is_valid, bool)

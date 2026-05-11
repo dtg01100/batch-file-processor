@@ -75,7 +75,7 @@ class ScannerWareConverter(BaseEDIConverter):
         context.user_data["output_path"] = output_path
 
         # Open output file in binary mode (matching original behavior)
-        context.output_file = open(output_path, "wb")
+        context.output_file = open(output_path, "wb")  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
@@ -217,6 +217,6 @@ if __name__ == "__main__":
             },
             {},  # upc_lookup
         )
-        with open(new_outfile, "r", encoding="utf-8") as new_outfile_handle:
+        with open(new_outfile, encoding="utf-8") as new_outfile_handle:
             for entry in new_outfile_handle.readlines():
                 print(repr(entry))

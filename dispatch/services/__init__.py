@@ -21,20 +21,20 @@ from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
 
 __all__ = [
+    "CLIProgressReporter",
     # File Processor
     "FileProcessor",
     "FileResult",
-    "ProcessingContext",
     # Folder Discovery
     "FolderDiscoveryService",
-    # Progress Reporting
-    "ProgressReportingService",
-    # UPC Service
-    "UPCLookupService",
+    "LoggingProgressReporter",
+    "NullProgressReporter",
+    "ProcessingContext",
     # Progress Reporter
     "ProgressReporter",
+    # Progress Reporting
+    "ProgressReportingService",
     "UIProgressReporter",
-    "CLIProgressReporter",
-    "NullProgressReporter",
-    "LoggingProgressReporter",
+    # UPC Service
+    "UPCLookupService",
 ]

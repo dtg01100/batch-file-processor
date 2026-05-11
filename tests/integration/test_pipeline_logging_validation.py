@@ -82,7 +82,6 @@ class CompositeConverterStep:
         )
 
 
-
 MINIMAL_EDI = (
     "HDRA0000000000000000  000000000000000test.edi\n"
     "A0000000000  0000000100100000000000\n"

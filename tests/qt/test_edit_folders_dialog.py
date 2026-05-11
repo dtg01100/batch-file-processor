@@ -587,7 +587,7 @@ class TestCopyConfigFromOtherButton:
                 "convert_to_format": "csv",
             }
         )
-        settings_provider = lambda: {"folders": [source]}  # noqa: E731
+        settings_provider = lambda: {"folders": [source]}
         dialog = create_dialog(
             qtbot,
             sample_folder_config,
@@ -614,7 +614,7 @@ class TestCopyConfigFromOtherButton:
                 "convert_to_format": "csv",
             }
         )
-        settings_provider = lambda: {"folders": [source]}  # noqa: E731
+        settings_provider = lambda: {"folders": [source]}
         dialog = create_dialog(
             qtbot,
             sample_folder_config,

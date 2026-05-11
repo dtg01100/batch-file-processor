@@ -35,7 +35,7 @@ from dispatch.services.item_processing import ItemProcessor
 logger = get_logger(__name__)
 
 
-class DatabaseConnectionMixin(ABC):
+class DatabaseConnectionMixin(ABC):  # noqa: B024 - concrete base class with mixin behavior
     """Mixin for converters that require database connections.
 
     Provides common database initialization logic using QueryRunner.
@@ -108,7 +108,7 @@ class CustomerLookupMixin(ABC):
 
     """
 
-    header_fields_dict: dict[str, Any] = {}
+    header_fields_dict: dict[str, Any]
 
     def _get_customer_query_sql(self) -> str:
         """Return the SQL query template for customer lookup.
@@ -131,7 +131,7 @@ class CustomerLookupMixin(ABC):
         )
 
     def _build_customer_header_dict(
-        self, header_fields: dict[str, Any], header_fields_list: list[str]
+        self, header_fields: dict[str, Any], _header_fields_list: list[str]
     ) -> dict[str, Any]:
         """Build customer header dictionary from query results.
 
@@ -198,7 +198,7 @@ class UOMLookupMixin(ABC):
 
     """
 
-    uom_lookup_list: list[dict[str, Any]] = []
+    uom_lookup_list: list[dict[str, Any]]
 
     def _get_uom_query_sql(self) -> str:
         """Return the SQL query template for UOM lookup.
@@ -311,7 +311,7 @@ class UOMLookupMixin(ABC):
             return "?"
 
 
-class ItemProcessingMixin(ABC):
+class ItemProcessingMixin(ABC):  # noqa: B024 - concrete base class with mixin behavior
     """Mixin for converters that process line items.
 
     Provides common item total calculation and UPC generation logic.
@@ -450,7 +450,7 @@ STEWARTS_CUSTOMER_QUERY_SQL = _build_customer_query_sql(
 
 
 def build_jolley_header_dict(
-    header_fields: dict[str, Any], header_fields_list: list[str]
+    header_fields: dict[str, Any], _header_fields_list: list[str]
 ) -> dict[str, Any]:
     """Build Jolley-specific customer header dictionary with corporate fallback.
 

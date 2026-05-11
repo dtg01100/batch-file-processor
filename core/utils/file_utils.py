@@ -83,7 +83,5 @@ def clear_old_files(folder_path: str, maximum_files: int) -> None:
                 error=e,
                 context={"reason": "cleanup", "max_files": maximum_files},
             )
-            logger.warning(
-                "Failed to delete old file %s: %s", oldest_path, e
-            )
+            logger.warning("Failed to delete old file %s: %s", oldest_path, e)
             break  # Stop trying if we can't delete

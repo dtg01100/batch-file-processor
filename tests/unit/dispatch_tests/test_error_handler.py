@@ -304,7 +304,7 @@ class TestRealFileSystem:
 
             fs.write_file_text(path, "content")
 
-            with open(path, "r") as f:
+            with open(path) as f:
                 assert f.read() == "content"
 
     def test_dir_exists(self):

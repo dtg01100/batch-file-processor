@@ -207,7 +207,7 @@ def main() -> None:
 
         db.commit()
 
-        current_version, current_db_os = get_database_version(current_db)
+        current_version, _current_db_os = get_database_version(current_db)
         print(f"Current database version: {current_version}")
 
         current_folders = get_folder_count(current_db, active_only=True)
@@ -229,7 +229,7 @@ def main() -> None:
         legacy_db_conn.commit()
 
         # Check the new version
-        new_version, new_os = get_database_version(working_legacy_db)
+        new_version, _new_os = get_database_version(working_legacy_db)
         print("Migration complete!")
         print(f"  Old version: {version}")
         print(f"  New version: {new_version}")

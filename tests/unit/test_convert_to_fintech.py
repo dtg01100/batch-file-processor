@@ -215,7 +215,7 @@ class TestConvertToFintechHeaders(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             header_row = next(reader)
             expected_headers = [
@@ -265,7 +265,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             assert "DIV001" in content
 
@@ -298,7 +298,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             assert "CUSTOM_DIV" in content
 
@@ -350,7 +350,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Find data row
@@ -403,7 +403,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -443,7 +443,7 @@ class TestConvertToFintechTaxRecords(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # C records should have quantity = 1, uom = EA, item_number = 0
@@ -500,7 +500,7 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -615,7 +615,7 @@ class TestConvertToFintechDateHandling(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -686,7 +686,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
 
         # Should create file with just header row
         assert os.path.exists(result)
-        with open(result, "r") as f:
+        with open(result) as f:
             lines = f.readlines()
             # Should have header + no data (or just header if no B records)
             assert len(lines) >= 1
@@ -807,7 +807,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -842,7 +842,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -877,7 +877,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] == "DIV001"]
@@ -945,7 +945,7 @@ class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have header + 2 data rows
@@ -1013,7 +1013,7 @@ class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have header + 2 data rows (one per invoice)

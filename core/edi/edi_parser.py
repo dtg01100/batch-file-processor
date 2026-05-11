@@ -185,12 +185,11 @@ def capture_records(line: str, parser=None) -> dict | None:
 
     if line.startswith("A"):
         return _parse_a_record(line)
-    elif line.startswith("B"):
+    if line.startswith("B"):
         return _parse_b_record(line)
-    elif line.startswith("C"):
+    if line.startswith("C"):
         return _parse_c_record(line)
-    else:
-        return None  # Invalid record type
+    return None  # Invalid record type
 
 
 def parse_a_record(line: str) -> ARecord:

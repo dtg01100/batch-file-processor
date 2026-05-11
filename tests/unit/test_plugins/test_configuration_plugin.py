@@ -5,7 +5,7 @@ Tests for the ConfigurationPlugin interface and its implementations.
 """
 
 import unittest
-from typing import Any, Dict, List
+from typing import Any
 
 from interface.models.folder_configuration import ConvertFormat, CSVConfiguration
 from interface.plugins import ConfigurationPlugin
@@ -62,7 +62,7 @@ class TestConfigurationPluginInterface(unittest.TestCase):
                 return ConvertFormat.CSV
 
             @classmethod
-            def get_config_fields(cls) -> List[FieldDefinition]:
+            def get_config_fields(cls) -> list[FieldDefinition]:
                 return [
                     FieldDefinition(
                         name="test_field",
@@ -72,21 +72,21 @@ class TestConfigurationPluginInterface(unittest.TestCase):
                     )
                 ]
 
-            def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+            def validate_config(self, config: dict[str, Any]) -> ValidationResult:
                 from interface.plugins.validation_framework import ValidationResult
 
                 return ValidationResult(success=True, errors=[])
 
-            def create_config(self, data: Dict[str, Any]) -> Any:
+            def create_config(self, data: dict[str, Any]) -> Any:
                 return data
 
-            def serialize_config(self, config: Any) -> Dict[str, Any]:
+            def serialize_config(self, config: Any) -> dict[str, Any]:
                 return config
 
-            def deserialize_config(self, data: Dict[str, Any]) -> Any:
+            def deserialize_config(self, data: dict[str, Any]) -> Any:
                 return data
 
-            def initialize(self, config: Dict[str, Any] = None) -> None:
+            def initialize(self, config: dict[str, Any] | None = None) -> None:
                 pass
 
             def activate(self) -> None:
@@ -104,7 +104,6 @@ class TestConfigurationPluginInterface(unittest.TestCase):
         self.assertIsInstance(schema, ConfigurationSchema)
         self.assertEqual(len(schema.fields), 1)
         self.assertEqual(schema.fields[0].name, "test_field")
-
 
 class TestCSVConfigurationPlugin(unittest.TestCase):
     """Tests for CSVConfigurationPlugin implementation."""
@@ -298,7 +297,6 @@ class TestCSVConfigurationPlugin(unittest.TestCase):
         # Test activate/deactivate
         self.plugin.activate()
         self.plugin.deactivate()
-
 
 if __name__ == "__main__":
     unittest.main()

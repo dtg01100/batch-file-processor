@@ -9,9 +9,7 @@ from core.structured_logging import redact_sensitive_data
 
 
 class SMTPAlertService:
-    def __init__(
-        self, smtp_service: Any, settings: dict, recipients: str
-    ) -> None:
+    def __init__(self, smtp_service: Any, settings: dict, recipients: str) -> None:
         self._smtp = smtp_service
         self._settings = settings
         self._recipients = recipients
@@ -89,9 +87,7 @@ class SMTPAlertService:
 
         if processing_context.get("settings"):
             sanitized = redact_sensitive_data(processing_context["settings"])
-            lines.extend(
-                ["", "PROCESSING CONTEXT", "-" * 30, str(sanitized)]
-            )
+            lines.extend(["", "PROCESSING CONTEXT", "-" * 30, str(sanitized)])
 
         lines.extend(
             [

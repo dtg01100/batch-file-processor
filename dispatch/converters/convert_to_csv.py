@@ -102,7 +102,7 @@ class CSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -145,10 +145,7 @@ class CSVConverter(BaseEDIConverter):
 
         if record_type == "A" and not user_data["inc_arec"]:
             return False
-        if record_type == "C" and not user_data["inc_crec"]:
-            return False
-
-        return True
+        return not (record_type == "C" and not user_data["inc_crec"])
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header).
@@ -309,8 +306,7 @@ class CSVConverter(BaseEDIConverter):
                 upc_target_length=user_data["upc_target_length"],
                 upc_padding=user_data["upc_padding_pattern"],
             )
-        else:
-            return fields["upc_number"]
+        return fields["upc_number"]
 
     @staticmethod
     def _process_quantity(qty_str: str) -> str:

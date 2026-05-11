@@ -8,7 +8,7 @@ IFolderRepository, enabling testing without actual database connections.
 """
 
 import os
-from typing import Protocol, runtime_checkable
+from typing import ClassVar, Protocol, runtime_checkable
 
 from core.ports.repositories import IFolderRepository, ISettingsRepository
 
@@ -108,7 +108,7 @@ class FolderManager:
 
     """
 
-    SKIP_LIST = [
+    SKIP_LIST: ClassVar[list[str]] = [
         "folder_name",
         "alias",
         "id",

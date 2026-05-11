@@ -131,7 +131,7 @@ class EDIValidator:
         except Exception as e:
             logger.error("Exception during validation of %s: %s", file_path, e)
             self.has_errors = True
-            error_msg = f"Validation error: {str(e)}"
+            error_msg = f"Validation error: {e!s}"
             self.errors.write(error_msg + "\r\n")
             error_list.append(error_msg)
             return False, error_list
@@ -193,7 +193,7 @@ class EDIValidator:
 
         except Exception as e:
             self.has_errors = True
-            error_msg = f"Validation error: {str(e)}"
+            error_msg = f"Validation error: {e!s}"
             self.errors.write(error_msg + "\r\n")
             errors.append(error_msg)
             return False, errors, warnings
@@ -303,7 +303,7 @@ class EDIValidator:
 
         except Exception as e:
             self.has_errors = True
-            issues.append(f"Error checking EDI issues: {str(e)}")
+            issues.append(f"Error checking EDI issues: {e!s}")
             return issues
 
     def _edi_item_context(
@@ -356,7 +356,7 @@ class EDIValidator:
         return msgs
 
     def _check_edi_issues_with_warnings(
-        self, file_path: str, content: str, errors: list[str], warnings: list[str]
+        self, _file_path: str, content: str, errors: list[str], warnings: list[str]
     ) -> None:
         """Check for EDI issues and categorize as errors or warnings.
 
@@ -385,7 +385,7 @@ class EDIValidator:
                     f" desc: {description!r})"
                 )
 
-            # Warnings (minor errors)
+                # Warnings (minor errors)
                 if proposed_upc != "           ":
                     try:
                         int(proposed_upc)
@@ -410,7 +410,7 @@ class EDIValidator:
 
         except Exception as e:
             self.has_errors = True
-            errors.append(f"Error checking EDI issues: {str(e)}")
+            errors.append(f"Error checking EDI issues: {e!s}")
 
     def get_error_log(self) -> str:
         """Get the current error log contents.
@@ -446,7 +446,7 @@ class RealFileSystem:
             File contents as string
 
         """
-        with open(path, "r", encoding=encoding) as f:
+        with open(path, encoding=encoding) as f:
             return f.read()
 
     def read_file(self, path: str) -> bytes:

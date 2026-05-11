@@ -1,7 +1,6 @@
 # tests/unit/dispatch/observability/test_audit_logger.py
 
 
-
 class TestAuditLogger:
     def test_log_event_non_blocking(self):
         from dispatch.observability.audit_logger import AuditEvent, AuditLogger

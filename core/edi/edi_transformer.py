@@ -13,7 +13,7 @@ def dac_str_int_to_int(dacstr: str) -> int:
 
 def convert_to_price(value):
     return (
-        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
+        (value[:-2].lstrip("0") if value[:-2].lstrip("0") != "" else "0")
         + "."
         + value[-2:]
     )
@@ -23,7 +23,7 @@ def convert_to_price_decimal(value):
     if len(value) < 2:
         return 0
     retprice = (
-        (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
+        (value[:-2].lstrip("0") if value[:-2].lstrip("0") != "" else "0")
         + "."
         + value[-2:]
     )
@@ -48,7 +48,7 @@ def detect_invoice_is_credit(edi_process) -> bool:
         with open(edi_process, encoding="utf-8") as work_file:  # open input file
             first_line = work_file.readline()
             fields = capture_records(first_line)
-    except (OSError, IOError) as e:
+    except OSError as e:
         log_with_context(
             logger,
             logging.WARNING,
@@ -74,12 +74,9 @@ def detect_invoice_is_credit(edi_process) -> bool:
 
     if fields["record_type"] != "A":
         raise ValueError(
-            (
-            "[Invoice Type Detection]: Somehow ended up in the middle"
-            " of a file, this should not happen"
+
+                "[Invoice Type Detection]: Somehow ended up in the middle"
+                " of a file, this should not happen"
+
         )
-        )
-    if dac_str_int_to_int(fields["invoice_total"]) >= 0:
-        return False
-    else:
-        return True
+    return not dac_str_int_to_int(fields["invoice_total"]) >= 0

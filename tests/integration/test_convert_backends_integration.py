@@ -467,15 +467,9 @@ class TestInvoiceDateOffsetIntegration:
         format_string = config_dict["invoice_date_custom_format_string"]
 
         # Simulate date offset logic
-        if offset != 0:
-            effective_offset = offset
-        else:
-            effective_offset = 0
+        effective_offset = offset if offset != 0 else 0
 
-        if custom_format:
-            date_format = format_string
-        else:
-            date_format = "%m/%d/%Y"
+        date_format = format_string if custom_format else "%m/%d/%Y"
 
         assert effective_offset == 7
         assert date_format == "%Y-%m-%d"

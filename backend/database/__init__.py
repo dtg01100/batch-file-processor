@@ -33,9 +33,9 @@ from backend.database.sqlite_wrapper import Database, Table, connect
 
 __all__ = [
     "Database",
-    "Table",
-    "connect",
-    "DatabaseObj",
     "DatabaseConnectionProtocol",
+    "DatabaseObj",
+    "Table",
     "TableProtocol",
+    "connect",
 ]

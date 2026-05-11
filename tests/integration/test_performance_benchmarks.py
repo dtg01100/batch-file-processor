@@ -237,7 +237,7 @@ class TestDatabasePerformance:
                 {
                     "folder_name": f"/folder/{i}",
                     "alias": f"Folder {i}",
-                    "folder_is_active": True if i % 2 == 0 else False,
+                    "folder_is_active": i % 2 == 0,
                 }
             )
 
@@ -561,7 +561,7 @@ class TestConcurrentProcessing:
         # All should succeed
         assert all(r.success for r in results)
 
-        print(f"\nParallel processing (5 folders × 20 files): {elapsed:.3f}s")
+        print(f"\nParallel processing (5 folders x 20 files): {elapsed:.3f}s")
 
         # Parallel should be faster than sequential
         assert_perf_threshold(elapsed < 30.0, "Should complete in under 30 seconds")

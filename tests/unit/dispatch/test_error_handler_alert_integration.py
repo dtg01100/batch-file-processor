@@ -35,7 +35,9 @@ class TestErrorHandlerAlertIntegration:
 
     def test_record_error_alert_never_crashes_processing(self):
         mock_dispatcher = MagicMock()
-        mock_dispatcher.dispatch_error_alert.side_effect = RuntimeError("Dispatcher broken")
+        mock_dispatcher.dispatch_error_alert.side_effect = RuntimeError(
+            "Dispatcher broken"
+        )
         handler = ErrorHandler(alert_dispatcher=mock_dispatcher)
         handler.record_error(
             folder="/",

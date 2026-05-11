@@ -102,7 +102,7 @@ class LegacyValidatorAdapter:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],
+        _context: dict[str, Any],
     ) -> tuple[bool, str, list[str]]:
         """Execute validation via the legacy .validate() method.
 
@@ -135,7 +135,7 @@ class NoOpStep:
     def execute(
         self,
         input_path: str,
-        context: dict[str, Any],
+        _context: dict[str, Any],
     ) -> tuple[bool, str, list[str]]:
         """Execute no-op step.
 
@@ -178,10 +178,10 @@ def wrap_as_pipeline_step(step: Any) -> PipelineStep:
     if isinstance(step, PipelineStep):
         return step
 
-    if hasattr(step, "validate") and callable(getattr(step, "validate")):
+    if hasattr(step, "validate") and callable(step.validate):
         return LegacyValidatorAdapter(step)
 
-    if hasattr(step, "execute") and callable(getattr(step, "execute")):
+    if hasattr(step, "execute") and callable(step.execute):
         return step
 
     raise TypeError(

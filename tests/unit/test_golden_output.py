@@ -149,15 +149,15 @@ def format_diff_report(test_case: GoldenTestCase, diff_info: dict[str, Any]) -> 
         )
         lines.append(f"  Missing hex: {diff_info['missing_bytes_hex']}")
     else:
-        lines.append(
-            f"  Output has {diff_info['extra_at_end']} extra bytes at end"
-        )
+        lines.append(f"  Output has {diff_info['extra_at_end']} extra bytes at end")
         lines.append(f"  Extra hex: {diff_info['extra_bytes_hex']}")
 
     return "\n".join(lines)
 
 
-def resolve_env_vars(value: str | dict[str, Any] | list[Any] | None) -> str | dict[str, Any] | list[Any] | None:
+def resolve_env_vars(
+    value: str | dict[str, Any] | list[Any] | None,
+) -> str | dict[str, Any] | list[Any] | None:
     """Resolve environment variable references in strings.
 
     Supports ${VAR} and $VAR syntax. Missing variables resolve to empty string.
@@ -205,7 +205,8 @@ def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
 
     # Try standard import first
     try:
-        import yaml  # noqa: F401
+        import yaml
+
         yaml_module = yaml
     except ImportError:
         pass
@@ -214,6 +215,7 @@ def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
     if yaml_module is None:
         try:
             from invoke.vendor import yaml as invoke_yaml
+
             yaml_module = invoke_yaml
         except ImportError:
             pass
@@ -226,7 +228,7 @@ def load_test_case_metadata(metadata_file: str) -> dict[str, Any]:
     if not os.path.exists(metadata_file):
         return {}
 
-    with open(metadata_file, "r", encoding="utf-8") as f:
+    with open(metadata_file, encoding="utf-8") as f:
         metadata = yaml_module.safe_load(f) or {}
 
     # Resolve environment variables in parameters
@@ -332,10 +334,7 @@ def get_supported_formats() -> list[str]:
 
 # Parametrize all tests with discovered test cases
 _test_cases = load_test_cases()
-_test_ids = [
-    f"{tc.format_name}-{tc.test_id}_{tc.description}"
-    for tc in _test_cases
-]
+_test_ids = [f"{tc.format_name}-{tc.test_id}_{tc.description}" for tc in _test_cases]
 
 
 class TestGoldenOutput:
@@ -557,6 +556,7 @@ class TestResolveEnvVars:
     def test_brace_syntax(self):
         """Test ${VAR} syntax is resolved."""
         import os
+
         os.environ["TEST_VAR"] = "hello"
         try:
             result = resolve_env_vars("prefix_${TEST_VAR}_suffix")
@@ -567,6 +567,7 @@ class TestResolveEnvVars:
     def test_dollar_syntax(self):
         """Test $VAR syntax is resolved."""
         import os
+
         os.environ["TEST_VAR"] = "world"
         try:
             result = resolve_env_vars("hello $TEST_VAR")
@@ -582,14 +583,17 @@ class TestResolveEnvVars:
     def test_dict_values(self):
         """Test that dictionary values are resolved recursively."""
         import os
+
         os.environ["DB_USER"] = "admin"
         os.environ["DB_PASS"] = "secret"
         try:
-            result = resolve_env_vars({
-                "username": "${DB_USER}",
-                "password": "${DB_PASS}",
-                "host": "localhost",
-            })
+            result = resolve_env_vars(
+                {
+                    "username": "${DB_USER}",
+                    "password": "${DB_PASS}",
+                    "host": "localhost",
+                }
+            )
             assert result == {
                 "username": "admin",
                 "password": "secret",
@@ -602,6 +606,7 @@ class TestResolveEnvVars:
     def test_list_values(self):
         """Test that list values are resolved."""
         import os
+
         os.environ["ITEM1"] = "first"
         os.environ["ITEM2"] = "second"
         try:
@@ -619,18 +624,13 @@ class TestResolveEnvVars:
     def test_nested_structure(self):
         """Test deeply nested structures are resolved."""
         import os
+
         os.environ["DEEP_VAL"] = "found"
         try:
-            result = resolve_env_vars({
-                "level1": {
-                    "level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]
-                }
-            })
-            assert result == {
-                "level1": {
-                    "level2": ["found", {"nested": "found"}]
-                }
-            }
+            result = resolve_env_vars(
+                {"level1": {"level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]}}
+            )
+            assert result == {"level1": {"level2": ["found", {"nested": "found"}]}}
         finally:
             del os.environ["DEEP_VAL"]
 
@@ -653,12 +653,16 @@ class TestFormatCoverage:
             expected_dir = format_dir / "expected"
 
             assert inputs_dir.exists(), f"{format_dir.name} missing inputs directory"
-            assert expected_dir.exists(), f"{format_dir.name} missing expected directory"
+            assert (
+                expected_dir.exists()
+            ), f"{format_dir.name} missing expected directory"
 
             # Count files
-            input_files = list(inputs_dir.glob("*.edi")) + list(
-                inputs_dir.glob("*.txt")
-            ) + list(inputs_dir.glob("*.csv"))
+            input_files = (
+                list(inputs_dir.glob("*.edi"))
+                + list(inputs_dir.glob("*.txt"))
+                + list(inputs_dir.glob("*.csv"))
+            )
             expected_files = list(expected_dir.glob("*.out"))
 
             assert len(input_files) > 0, f"{format_dir.name} has no input files"
@@ -688,12 +692,14 @@ class TestFormatCoverage:
                 metadata_file = metadata_dir / f"{name}.yaml"
 
                 # Metadata is optional but should exist if directory exists
-                if metadata_dir.exists():
-                    # Just check it's parseable
-                    if metadata_file.exists():
-                        metadata = load_test_case_metadata(str(metadata_file))
-                        # Basic validation
-                        assert "test_id" in metadata or "description" in metadata or not metadata
+                if metadata_dir.exists() and metadata_file.exists():
+                    metadata = load_test_case_metadata(str(metadata_file))
+                    # Basic validation
+                    assert (
+                        "test_id" in metadata
+                        or "description" in metadata
+                        or not metadata
+                    )
 
 
 class TestLoadTestCases:

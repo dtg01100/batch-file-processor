@@ -31,7 +31,7 @@ def create_b_record(vendor_item: int, upc: str = "01234567890") -> str:
         "B"  # record_type
         f"{upc[:11]:<11}"  # upc_number (11 chars)
         f"{'Test Item':<25}"  # description (25 chars)
-        f"{str(vendor_item):>6}"  # vendor_item (6 chars, right-aligned)
+        f"{vendor_item!s:>6}"  # vendor_item (6 chars, right-aligned)
         f"{'100':>6}"  # unit_cost (6 chars)
         f"{'01':<2}"  # combo_code (2 chars)
         f"{'1':>6}"  # unit_multiplier (6 chars)
@@ -839,10 +839,7 @@ class TestFilterUPCValidationIntegration:
             123456: ["5", "upc1", "upc2", "upc3", "upc4"],  # Actual category is 5
         }
 
-        if override_enabled:
-            filter_category = override_category  # Use 1 instead of actual category 5
-        else:
-            filter_category = "5"
+        filter_category = override_category if override_enabled else "5"
 
         result = filter_b_records_by_category(
             b_records,

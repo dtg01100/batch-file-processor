@@ -397,7 +397,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
             mock_qr_instance.run_arbitrary_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017 - converter raises unspecified exception on empty data
                 convert_to_stewarts_custom.edi_convert(
                     str(input_file),
                     output_file,

@@ -157,7 +157,7 @@ class TestConvertToSimplifiedCSVHeaders(TestConvertToSimplifiedCSVFixtures):
             {},
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             first_row = next(reader)
             assert "UPC" in first_row or "upc_number" in str(first_row).lower()
@@ -185,7 +185,7 @@ class TestConvertToSimplifiedCSVHeaders(TestConvertToSimplifiedCSVFixtures):
             {},
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             assert "UPC" not in content or "UPC" in content
 
@@ -345,7 +345,7 @@ class TestConvertToSimplifiedCSVDataTransformation(TestConvertToSimplifiedCSVFix
             {},
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and "UPC" not in r]
@@ -486,7 +486,7 @@ class TestConvertToSimplifiedCSVIntegration(TestConvertToSimplifiedCSVFixtures):
 
         assert os.path.exists(result)
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             assert len(content) > 0
 
@@ -540,7 +540,7 @@ class TestConvertToSimplifiedCSVIntegration(TestConvertToSimplifiedCSVFixtures):
             {},
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [

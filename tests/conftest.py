@@ -1,5 +1,6 @@
 """Pytest configuration for the test suite."""
 
+import contextlib
 import os
 import shutil
 import sys
@@ -71,10 +72,8 @@ def pytest_configure(config):
 
     for pattern in ["edi_converter_*", "edi_tweaker_*", "edi_rename_*"]:
         for path in glob.glob(f"/tmp/{pattern}"):
-            try:
+            with contextlib.suppress(Exception):
                 shutil.rmtree(path, ignore_errors=True)
-            except Exception:
-                pass
 
     # pytest-timeout option is only present when the plugin is installed.
     if not hasattr(config.option, "timeout_method"):

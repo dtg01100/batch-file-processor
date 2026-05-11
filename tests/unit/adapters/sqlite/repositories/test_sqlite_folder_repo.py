@@ -127,7 +127,7 @@ class TestFindByPath:
             {"id": 1, "folder_name": "/some/path"},
             {"id": 2, "folder_name": "/other/path"},
         ]
-        db, table = _make_db(folders)
+        db, _table = _make_db(folders)
         repo = SqliteFolderRepository(db)
 
         result = repo.find_by_path("/some/path")
@@ -137,7 +137,7 @@ class TestFindByPath:
 
     def test_normalises_trailing_slash(self):
         folders = [{"id": 1, "folder_name": "/some/path"}]
-        db, table = _make_db(folders)
+        db, _table = _make_db(folders)
         repo = SqliteFolderRepository(db)
 
         # os.path.normpath strips trailing slash
@@ -147,7 +147,7 @@ class TestFindByPath:
         assert result["id"] == 1
 
     def test_returns_none_when_not_found(self):
-        db, table = _make_db()
+        db, _table = _make_db()
         repo = SqliteFolderRepository(db)
 
         result = repo.find_by_path("/nonexistent")
@@ -214,7 +214,7 @@ class TestUpdate:
         table.update.assert_called_once_with({"id": 5, "alias": "Updated"}, ["id"])
 
     def test_raises_if_no_id(self):
-        db, table = _make_db()
+        db, _table = _make_db()
         repo = SqliteFolderRepository(db)
 
         with pytest.raises(ValueError, match="must contain 'id'"):

@@ -5,7 +5,8 @@ Qt edit folders dialog. Each column builder is responsible for creating and
 configuring the widgets for a specific section of the dialog.
 """
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from PyQt5.QtWidgets import (
     QCheckBox,

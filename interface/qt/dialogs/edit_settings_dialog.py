@@ -2,7 +2,8 @@
 
 import logging
 import os
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from PyQt5.QtWidgets import (
     QCheckBox,
@@ -498,6 +499,7 @@ class EditSettingsDialog(BaseDialog):
             errors_by_section[section].append(message)
             if first_invalid_widget is None and widget is not None:
                 first_invalid_widget = widget
+
         # Delegate section validations to helpers
         self._emails_section_validation(add_error)
         self._reporting_section_validation(add_error)
@@ -559,7 +561,7 @@ class EditSettingsDialog(BaseDialog):
                 self._disable_email_backends()
             if self._disable_folders_without_backends:
                 self._disable_folders_without_backends()
-            for folder_key, folder_data in self._settings_data.items():
+            for _folder_key, folder_data in self._settings_data.items():
                 if isinstance(folder_data, dict):
                     folder_data["folder_is_active"] = False
                     folder_data["process_backend_email"] = False

@@ -1,3 +1,4 @@
+import contextlib
 import glob
 import logging
 import os
@@ -26,13 +27,22 @@ def migrate_v33_to_v50(database_connection, db_version, running_platform) -> Non
         db_version.update(dict(id=1, version="33"), ["id"])
         db_version_dict = db_version.find_one(id=1)
     run_modern_migrations(
-        database_connection, None, running_platform,
-        db_version, db_version_dict, target_version=None,
+        database_connection,
+        None,
+        running_platform,
+        db_version,
+        db_version_dict,
+        target_version=None,
     )
 
 
 def run_modern_migrations(
-    database_connection, config_folder, running_platform, db_version, db_version_dict, target_version=None
+    database_connection,
+    config_folder,
+    running_platform,
+    db_version,
+    db_version_dict,
+    target_version=None,
 ) -> dict:
     """Run all v33→v50 individual migrations. Returns updated db_version_dict."""
     # --- v33 → v34 ---
@@ -127,10 +137,8 @@ def run_modern_migrations(
             "CREATE INDEX IF NOT EXISTS idx_processed_files_status ON processed_files(status)",
             "CREATE INDEX IF NOT EXISTS idx_processed_files_created ON processed_files(created_at)",
         ]:
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cursor.execute(ddl)
-            except sqlite3.OperationalError:
-                pass
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="36", os=running_platform)
@@ -236,6 +244,7 @@ def run_modern_migrations(
         return db_version_dict
 
     if str(db_version_dict["version"]) == "40":
+
         def _existing_columns(table_name):
             cursor = database_connection.raw_connection.cursor()
             quoted_table = _quote_identifier(table_name)
@@ -396,7 +405,7 @@ def run_modern_migrations(
         cursor = database_connection.raw_connection.cursor()
 
         for table in ("folders", "administrative"):
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
@@ -406,10 +415,8 @@ def run_modern_migrations(
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
                 """)
-            except sqlite3.OperationalError:
-                pass
 
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
@@ -418,8 +425,6 @@ def run_modern_migrations(
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                 """)
-            except sqlite3.OperationalError:
-                pass
 
         database_connection.raw_connection.commit()
 
@@ -432,35 +437,27 @@ def run_modern_migrations(
     if db_version_dict and str(db_version_dict["version"]) == "45":
         cursor = database_connection.raw_connection.cursor()
 
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             cursor.execute("""
                 UPDATE folders
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
-        except sqlite3.OperationalError:
-            pass
 
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             cursor.execute("""
                 UPDATE administrative
                 SET convert_to_format = 'tweaks'
                 WHERE tweak_edi = 1
                 AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
-        except sqlite3.OperationalError:
-            pass
 
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             cursor.execute("UPDATE folders SET tweak_edi = 0")
-        except sqlite3.OperationalError:
-            pass
 
-        try:
+        with contextlib.suppress(sqlite3.OperationalError):
             cursor.execute("UPDATE administrative SET tweak_edi = 0")
-        except sqlite3.OperationalError:
-            pass
 
         database_connection.raw_connection.commit()
 

@@ -70,10 +70,7 @@ def mock_progress_service():
 @pytest.fixture
 def qt_app():
     """Create QApplication instance for tests."""
-    if not QApplication.instance():
-        app = QApplication([])
-    else:
-        app = QApplication.instance()
+    app = QApplication([]) if not QApplication.instance() else QApplication.instance()
     return app
 
 

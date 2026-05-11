@@ -306,7 +306,7 @@ class TestConvertToYellowdogCSVHeaders(TestConvertToYellowdogCSVFixtures):
                 {},
             )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             first_row = next(reader)
             expected_headers = [
@@ -661,7 +661,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
                 {},
             )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             assert '"' in content or len(content) > 0
 
@@ -750,7 +750,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
                 {},
             )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             assert len(rows) >= 3

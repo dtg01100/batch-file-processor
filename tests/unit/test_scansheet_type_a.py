@@ -56,9 +56,11 @@ def run_scansheet_converter(
     }
 
     # Filter out credentials from params
-    filter_params = {k: v for k, v in params.items() if k not in [
-        "as400_username", "as400_address", "as400_password"
-    ]}
+    filter_params = {
+        k: v
+        for k, v in params.items()
+        if k not in ["as400_username", "as400_address", "as400_password"]
+    }
 
     output_path = os.path.join(output_dir, "output.xlsx")
 
@@ -117,10 +119,9 @@ def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:
             result["has_sheet1"] = "xl/worksheets/sheet1.xml" in result["files"]
 
             # Count media files (barcode images)
-            result["media_count"] = len([
-                f for f in result["files"]
-                if f.startswith("xl/media/")
-            ])
+            result["media_count"] = len(
+                [f for f in result["files"] if f.startswith("xl/media/")]
+            )
             result["barcode_images"] = result["media_count"]
 
             # Check for drawing references
@@ -139,7 +140,16 @@ def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:
                 ns = {"ns": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 
                 # Header values to exclude (these are column headers, not data)
-                header_values = {"UPC", "Item", "Description", "Pack", "U/M", "Qty", "Price", "Retail"}
+                header_values = {
+                    "UPC",
+                    "Item",
+                    "Description",
+                    "Pack",
+                    "U/M",
+                    "Qty",
+                    "Price",
+                    "Retail",
+                }
 
                 # Count cells with values
                 for elem in tree.iter():
@@ -169,10 +179,8 @@ def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:
                                         value = v_elem.text
 
                                     # Only count actual UPC values (not header text)
-                                    if value and value not in header_values:
-                                        # UPC values should be numeric (possibly with leading zeros)
-                                        if value.isdigit() and len(value) >= 6:
-                                            result["upc_values"].append(value)
+                                    if value and value not in header_values and value.isdigit() and len(value) >= 6:
+                                        result["upc_values"].append(value)
 
     except zipfile.BadZipFile:
         pass
@@ -284,7 +292,8 @@ CTABSales Tax                      000010000"""
         with zipfile.ZipFile(result, "r") as zf:
             # Find image files
             image_files = [
-                f for f in zf.namelist()
+                f
+                for f in zf.namelist()
                 if f.startswith("xl/media/") and f.endswith((".png", ".gif", ".jpg"))
             ]
 
@@ -295,17 +304,15 @@ CTABSales Tax                      000010000"""
 
                 # PNG files start with PNG signature
                 if img_file.endswith(".png"):
-                    assert img_data[:4] == b"\x89PNG", (
-                        f"Image file {img_file} does not have valid PNG signature"
-                    )
+                    assert (
+                        img_data[:4] == b"\x89PNG"
+                    ), f"Image file {img_file} does not have valid PNG signature"
 
 
 class TestScansheetTypeAContent:
     """Tests for scansheet_type_a content validation."""
 
-    def test_invoice_number_in_output(
-        self, tmp_path: Path
-    ) -> None:
+    def test_invoice_number_in_output(self, tmp_path: Path) -> None:
         """Test that invoice number from input appears in output."""
         invoice_num = "4573208"
         edi_content = f"""AVENDOR   {invoice_num}    260427     911.53
@@ -321,6 +328,6 @@ CTABSales Tax                      000010000"""
         with zipfile.ZipFile(result, "r") as zf:
             if "xl/worksheets/sheet1.xml" in zf.namelist():
                 sheet_content = zf.read("xl/worksheets/sheet1.xml").decode("utf-8")
-                assert invoice_num in sheet_content, (
-                    f"Invoice number {invoice_num} not found in output"
-                )
+                assert (
+                    invoice_num in sheet_content
+                ), f"Invoice number {invoice_num} not found in output"

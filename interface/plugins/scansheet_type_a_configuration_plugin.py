@@ -75,11 +75,11 @@ class ScanSheetTypeAConfigurationPlugin(ConfigurationPlugin):
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: dict[str, Any]) -> ScanSheetTypeAConfiguration:
+    def create_config(self, _data: dict[str, Any]) -> ScanSheetTypeAConfiguration:
         """Create a configuration instance from raw data."""
         return ScanSheetTypeAConfiguration()
 
-    def serialize_config(self, config: ScanSheetTypeAConfiguration) -> dict[str, Any]:
+    def serialize_config(self, _config: ScanSheetTypeAConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {}
 

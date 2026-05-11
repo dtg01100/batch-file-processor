@@ -273,12 +273,12 @@ class TestEmailValidatorEdgeCases:
 
     def test_single_email_list(self, validator):
         """Test list with single email."""
-        valid, invalid = validator.validate_list("a@test.com")
+        valid, _invalid = validator.validate_list("a@test.com")
         assert valid is True
 
     def test_trailing_separator(self, validator):
         """Test list with trailing separator."""
         # Trailing separator creates empty string after split
-        valid, invalid = validator.validate_list("a@test.com, ")
+        _valid, _invalid = validator.validate_list("a@test.com, ")
         # Empty string after stripping should be handled
         # This depends on implementation details

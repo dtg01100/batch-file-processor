@@ -195,7 +195,7 @@ class BaseEDIConverter(ABC):
         """Process the EDI file line by line.
 
         This is the core file processing loop that was previously duplicated
-        across all 10 convert backends (~40 lines × 10 = 400 lines).
+        across all 10 convert backends (~40 lines x 10 = 400 lines).
 
         Args:
             context: The conversion context containing file paths and state
@@ -227,7 +227,7 @@ class BaseEDIConverter(ABC):
         """Dispatch a record to the appropriate handler based on record type.
 
         This method implements the record type switching logic that was
-        previously duplicated across 9/10 backends (~30 lines × 9 = 270 lines).
+        previously duplicated across 9/10 backends (~30 lines x 9 = 270 lines).
 
         Args:
             record: The EDIRecord to process
@@ -252,7 +252,7 @@ class BaseEDIConverter(ABC):
             self._handle_unknown_record(record, context)
 
     def _should_process_record_type(
-        self, record_type: str, context: ConversionContext
+        self, _record_type: str, _context: ConversionContext
     ) -> bool:
         """Determine if a record type should be processed.
 
@@ -338,7 +338,9 @@ class BaseEDIConverter(ABC):
         """
         context.arec_header = record.fields
 
-    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_c_record(  # noqa: B027 - intentionally empty default implementation
+        self, record: EDIRecord, context: ConversionContext
+    ) -> None:
         """Process a C record (charge/tax record).
 
         Default implementation does nothing. Subclasses should override
@@ -367,7 +369,7 @@ class BaseEDIConverter(ABC):
             context.output_file.close()
             context.output_file = None
 
-    def _handle_unknown_record(
+    def _handle_unknown_record(  # noqa: B027 - intentionally empty default implementation
         self, record: EDIRecord, context: ConversionContext
     ) -> None:
         """Handle unknown record types.
@@ -381,7 +383,7 @@ class BaseEDIConverter(ABC):
 
         """
 
-    def _cleanup_on_error(self, context: ConversionContext, error: Exception) -> None:
+    def _cleanup_on_error(self, context: ConversionContext, _error: Exception) -> None:
         """Clean up resources when an error occurs.
 
         Args:
@@ -451,7 +453,7 @@ def create_csv_writer(
 def normalize_parameter(
     value: Any,
     default: Any = None,
-    truthy_values: tuple = ("True", "true", "1", "yes", "on"),
+    _truthy_values: tuple = ("True", "true", "1", "yes", "on"),
 ) -> Any:
     """Normalize a parameter value from folder configuration.
 

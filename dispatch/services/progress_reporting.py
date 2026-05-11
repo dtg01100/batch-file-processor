@@ -83,7 +83,7 @@ class ProgressReportingService:
                 folder.get("alias", folder.get("folder_name", "")), total_files
             )
 
-    def complete_folder(self, success: bool) -> None:
+    def complete_folder(self, success: bool) -> None:  # noqa: FBT001 - required by progress reporting interface
         """Notify progress reporter that folder processing is complete.
 
         Args:

@@ -79,8 +79,8 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         edi_process: str,
         output_filename: str,
         settings_dict: dict[str, Any],
-        parameters_dict: dict[str, Any],
-        upc_lut: dict[int, tuple],
+        _parameters_dict: dict[str, Any],
+        _upc_lut: dict[int, tuple],
     ) -> str:
         """Convert EDI file to ScanSheet Type A Excel format.
 
@@ -245,10 +245,10 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                         generated_barcode_path, width, height = self._generate_barcode(
                             upc_barcode_string, tempdir
                         )
-                        self.output_worksheet.column_dimensions["A"].width = int(
+                        self.output_worksheet.column_dimensions["A"].width = (
                             math.ceil(float(width) * 0.15)
                         )
-                        self.output_worksheet.row_dimensions[count].height = int(
+                        self.output_worksheet.row_dimensions[count].height = (
                             math.ceil(float(height) * 0.75)
                         )
                         img = OpenPyXlImage(generated_barcode_path)
@@ -263,10 +263,10 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                     logger.warning("Barcode error: %s", barcode_error)
                 if save_counter >= 100:
                     logger.debug(
-                        (
-                "saving intermediate workbook to free file handles"
-                " (batch of 100)"
-            )
+
+                            "saving intermediate workbook to free file handles"
+                            " (batch of 100)"
+
                     )
                     self.output_spreadsheet.save(self.output_spreadsheet_name)
                     logger.debug("intermediate save successful")
@@ -280,7 +280,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 barcodes_skipped,
             )
 
-    def _finalize_output(self, context: ConversionContext | None) -> None:
+    def _finalize_output(self, _context: ConversionContext | None) -> None:
         """Finalize output by closing database connection.
 
         Args:

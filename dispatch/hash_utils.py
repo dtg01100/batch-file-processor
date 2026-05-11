@@ -122,3 +122,27 @@ def build_hash_dictionaries(
     folder_name_dict = dict(name_list)
 
     return folder_hash_dict, folder_name_dict, resend_set
+
+
+def check_file_against_processed(
+    _file_name: str,
+    checksum: str,
+    name_dict: dict[str, str],
+    resend_set: set[str],
+) -> tuple[bool, bool]:
+    """Check if a file has been processed and whether it should be re-sent.
+
+    Args:
+        file_name: The filename to check (unused, kept for compatibility).
+        checksum: The file's checksum to look up.
+        name_dict: Dict mapping checksum -> file_name.
+        resend_set: Set of checksums flagged for resend.
+
+    Returns:
+        tuple of (match, should_send):
+        - match: True if the checksum was found in name_dict.
+        - should_send: True if new file (not in name_dict) or checksum is in resend_set.
+    """
+    match = checksum in name_dict
+    should_send = True if not match else checksum in resend_set
+    return match, should_send

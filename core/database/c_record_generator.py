@@ -4,7 +4,7 @@ Extracted from core/utils/utils.py to colocate database-backed generation
 with the rest of the database layer.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 
 class CRecGenerator:
@@ -94,10 +94,7 @@ class CRecGenerator:
 
         def _write_line(typestr: str, amount: int, wprocfile) -> None:
             descstr = typestr.ljust(25, " ")
-            if amount < 0:
-                amount_builder = amount - (amount * 2)
-            else:
-                amount_builder = amount
+            amount_builder = amount - amount * 2 if amount < 0 else amount
 
             amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
             if amount < 0:

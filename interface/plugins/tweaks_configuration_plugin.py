@@ -142,9 +142,8 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="A-Record Append Text",
                 description=(
-                "Text to append to A records"
-                " (use %po_str% for PO number lookup)"
-            ),
+                    "Text to append to A records" " (use %po_str% for PO number lookup)"
+                ),
                 default="",
             ),
             # Invoice Date Handling
@@ -224,9 +223,9 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="UPC Override Category Filter",
                 description=(
-                "Category filter for UPC override"
-                " (use ALL or comma-separated list)"
-            ),
+                    "Category filter for UPC override"
+                    " (use ALL or comma-separated list)"
+                ),
                 default="ALL",
             ),
             # UPC Padding

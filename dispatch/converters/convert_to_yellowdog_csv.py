@@ -89,18 +89,18 @@ class YellowDogConverter(BaseEDIConverter):
                 if strict_db_mode:
                     raise
                 logger.exception(
-                    (
-                "YellowDog could not initialize DB query runner;"
-                " continuing in optional mode"
-            )
+
+                        "YellowDog could not initialize DB query runner;"
+                        " continuing in optional mode"
+
                 )
 
         if query_runner is None and strict_db_mode:
             raise RuntimeError(
-                (
-                "YellowDog strict database_lookup_mode requires"
-                " a working AS400 query runner"
-            )
+
+                    "YellowDog strict database_lookup_mode requires"
+                    " a working AS400 query runner"
+
             )
 
         inv_fetcher_settings = dict(settings_dict)
@@ -114,7 +114,7 @@ class YellowDogConverter(BaseEDIConverter):
         self.brec_index = 0
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -157,7 +157,7 @@ class YellowDogConverter(BaseEDIConverter):
         self.arec_line = record.fields
         self.brec_index = 0
 
-    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
         """Process a B record (line item), adding to batch.
 
         Args:
@@ -167,7 +167,7 @@ class YellowDogConverter(BaseEDIConverter):
         """
         self.brec_lines.append(record.fields)
 
-    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_c_record(self, record: EDIRecord, _context: ConversionContext) -> None:
         """Process a C record (charge/tax), adding to batch.
 
         Args:

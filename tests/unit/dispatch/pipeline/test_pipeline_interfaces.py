@@ -69,7 +69,7 @@ class TestLegacyValidatorAdapter:
         validator = MockValidator(is_valid=True, errors=[])
         adapter = LegacyValidatorAdapter(validator)
 
-        success, output_path, errors = adapter.execute(
+        success, output_path, _errors = adapter.execute(
             "/test/file.txt",
             {"folder": {}, "settings": {}},
         )

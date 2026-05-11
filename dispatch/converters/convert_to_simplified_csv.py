@@ -74,7 +74,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -149,7 +149,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         context.csv_writer.writerow(column_list)
 
     def _should_process_record_type(
-        self, record_type: str, context: ConversionContext
+        self, record_type: str, _context: ConversionContext
     ) -> bool:
         """Only process B records for simplified CSV.
 

@@ -499,10 +499,10 @@ def ensure_schema(database_connection) -> None:
         logger.info("Migration: added invoice_numbers column to processed_files table")
     except Exception:
         logger.info(
-            (
+
                 "Processed_files invoice_numbers column"
                 " migration skipped (may already exist)"
-            )
+
         )
 
     logger.info("Database schema initialization complete")

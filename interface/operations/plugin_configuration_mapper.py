@@ -79,8 +79,8 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        is_valid: bool = True,
-        validation_errors: list[str] = None,
+        is_valid: bool = True,  # noqa: FBT001,FBT002 - required by plugin configuration interface
+        validation_errors: list[str] | None = None,
     ) -> None:
         """
         Initialize state for a plugin section.
@@ -107,8 +107,8 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        is_valid: bool = True,
-        validation_errors: list[str] = None,
+        is_valid: bool = True,  # noqa: FBT001,FBT002 - required by plugin configuration interface
+        validation_errors: list[str] | None = None,
     ) -> bool:
         """
         Update state for a plugin section.
@@ -353,7 +353,7 @@ class PluginConfigurationMapper:
                     ExtractedPluginConfig(
                         format_name=plugin.get_format_name(),
                         config={},
-                        validation_errors=[f"Error extracting configuration: {str(e)}"],
+                        validation_errors=[f"Error extracting configuration: {e!s}"],
                     )
                 )
 
@@ -418,8 +418,7 @@ class PluginConfigurationMapper:
         """
         if framework == "qt":
             return self._get_qt_widget_value(widget, field_name)
-        else:
-            raise ValueError(f"Unsupported UI framework: {framework}")
+        raise ValueError(f"Unsupported UI framework: {framework}")
 
     def _get_qt_list_widget_value(self, widget: Any) -> list[Any]:
         """Get selected values from a Qt list widget."""
@@ -543,7 +542,7 @@ class PluginConfigurationMapper:
                     )
             except Exception as e:
                 result.errors.append(
-                    f"Error populating plugin {plugin.get_format_name()}: {str(e)}"
+                    f"Error populating plugin {plugin.get_format_name()}: {e!s}"
                 )
 
         result.success = len(result.errors) == 0
@@ -705,7 +704,7 @@ class PluginConfigurationMapper:
                     )
             except Exception as e:
                 errors.append(
-                    f"Error validating plugin config for {format_name}: {str(e)}"
+                    f"Error validating plugin config for {format_name}: {e!s}"
                 )
 
         return errors
@@ -744,7 +743,7 @@ class PluginConfigurationMapper:
                     )
             except Exception as e:
                 errors.append(
-                    f"Error validating plugin config for {format_name}: {str(e)}"
+                    f"Error validating plugin config for {format_name}: {e!s}"
                 )
 
         return errors

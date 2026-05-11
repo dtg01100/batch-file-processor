@@ -5,7 +5,8 @@ that appear based on user selections in the EDI options dropdown.
 """
 
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, ClassVar, Optional
 
 from core.structured_logging import (
     generate_correlation_id,
@@ -195,7 +196,7 @@ class DynamicEDIBuilder:
         self.fields["edi_options_check"] = self.edi_options_check
         return self.edi_options_check
 
-    _UPC_OVERRIDE_KEYS = [
+    _UPC_OVERRIDE_KEYS: ClassVar[list[str]] = [
         "override_upc_bool",
         "override_upc_level",
         "override_upc_category_filter_entry",
@@ -252,8 +253,8 @@ class DynamicEDIBuilder:
         try:
             keys_to_remove = []
 
-        # Store items to remove in a list to avoid modifying
-        # the layout during iteration
+            # Store items to remove in a list to avoid modifying
+            # the layout during iteration
             items_to_remove = []
             while self.dynamic_layout.count():
                 items_to_remove.append(self.dynamic_layout.takeAt(0))
@@ -342,7 +343,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:
+    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 - Qt signal handler requires bool parameter
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return
@@ -540,8 +541,7 @@ class DynamicEDIBuilder:
             self._find_and_track_layout_keys(sub_layout, keys_to_remove)
             sub_layout.deleteLater()
 
-    # Mapping from legacy flat DB column names to TweaksConfigurationPlugin field names.
-    _TWEAKS_LEGACY_FIELD_MAP = {
+    _TWEAKS_LEGACY_FIELD_MAP: ClassVar[dict[str, str]] = {
         "pad_a_records": "pad_arec",
         "a_record_padding": "arec_padding",
         "a_record_padding_length": "arec_padding_len",

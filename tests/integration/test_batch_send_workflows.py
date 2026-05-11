@@ -12,7 +12,7 @@ Tests the DispatchOrchestrator end-to-end with MockBackend, covering:
 import hashlib
 import os
 from io import BytesIO
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import pytest
 
@@ -35,9 +35,9 @@ class InMemoryProcessedFiles:
     """
 
     def __init__(self):
-        self.records: List[Dict[str, Any]] = []
+        self.records: list[dict[str, Any]] = []
 
-    def find(self, folder_id: Optional[int] = None, **kwargs) -> List[Dict[str, Any]]:
+    def find(self, folder_id: Optional[int] = None, **kwargs) -> list[dict[str, Any]]:
         """Return records matching *folder_id* (and any extra kwargs)."""
         result = self.records
         if folder_id is not None:
@@ -46,25 +46,25 @@ class InMemoryProcessedFiles:
             result = [r for r in result if r.get(key) == value]
         return result
 
-    def find_one(self, **kwargs) -> Optional[Dict[str, Any]]:
+    def find_one(self, **kwargs) -> Optional[dict[str, Any]]:
         """Return the first record where all kwargs match, or None."""
         for r in self.records:
             if all(r.get(k) == v for k, v in kwargs.items()):
                 return r
         return None
 
-    def insert(self, record: Dict[str, Any]) -> None:
+    def insert(self, record: dict[str, Any]) -> None:
         """Insert a new record, assigning an auto-increment id."""
         record = dict(record)
         record["id"] = len(self.records) + 1
         self.records.append(record)
 
-    def insert_many(self, records: List[Dict[str, Any]]) -> None:
+    def insert_many(self, records: list[dict[str, Any]]) -> None:
         """Insert a batch of records."""
         for r in records:
             self.insert(r)
 
-    def update(self, record: Dict[str, Any], keys: List[str]) -> None:
+    def update(self, record: dict[str, Any], keys: list[str]) -> None:
         """Update the first record whose key fields match *record*."""
         for r in self.records:
             if all(r.get(k) == record.get(k) for k in keys):
@@ -191,7 +191,7 @@ class TestSingleFolderWorkflows:
 
     def test_folder_not_found_workflow(self, tmp_path):
         """Process a non-existent folder; verify FolderResult.success=False and error recorded."""
-        orch, backend = _build_orchestrator()
+        orch, _backend = _build_orchestrator()
         nonexistent = str(tmp_path / "does_not_exist")
 
         result = orch.process_folder(_folder_cfg(nonexistent), BytesIO())
@@ -452,7 +452,7 @@ class TestSingleFileMode:
 
     def test_single_mode_records_checksum(self, tmp_path):
         """FileResult.checksum matches the MD5 of the file content."""
-        orch, backend = _build_orchestrator()
+        orch, _backend = _build_orchestrator()
         content = b"checksum verification data"
         folder = str(tmp_path / "checksum_test")
         os.makedirs(folder)
@@ -464,7 +464,7 @@ class TestSingleFileMode:
 
     def test_single_mode_binary_file(self, tmp_path):
         """process_file() handles binary files correctly."""
-        orch, backend = _build_orchestrator()
+        orch, _backend = _build_orchestrator()
         content = bytes(range(256)) * 2
         folder = str(tmp_path / "binary_single")
         os.makedirs(folder)

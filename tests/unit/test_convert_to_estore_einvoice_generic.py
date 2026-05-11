@@ -86,7 +86,7 @@ class SQLiteTestConnection:
             columns = [column[0] for column in cursor.description]
             results = []
             for row in cursor.fetchall():
-                row_dict = dict(zip(columns, row))
+                row_dict = dict(zip(columns, row, strict=False))
                 results.append(row_dict)
             return results
         finally:
@@ -179,7 +179,7 @@ class SQLiteQueryRunnerWithTransform:
         """
         self._runner = query_runner
 
-    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_query(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute query with AS/400 -> SQLite transformation.
 
         Args:
@@ -558,7 +558,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             header_row = next(reader)
 
@@ -612,7 +612,7 @@ class TestEstoreEinvoiceGenericHeaderRecord(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             assert "001" in content
 
@@ -643,7 +643,7 @@ class TestEstoreEinvoiceGenericDetailRecord(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have Detail Type I
             assert ",I," in content or '"I"' in content
@@ -671,7 +671,7 @@ class TestEstoreEinvoiceGenericDetailRecord(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have GTIN Type UP
             assert "UP" in content
@@ -720,7 +720,7 @@ class TestEstoreEinvoiceGenericCRecords(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have Detail Type S for charges
             assert ",S," in content or '"S"' in content
@@ -769,7 +769,7 @@ class TestEstoreEinvoiceGenericShipperMode(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Parent should have Detail Type D
             assert "I" in content or ",I," in content
@@ -828,7 +828,7 @@ class TestEstoreEinvoiceGenericShipperMode(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have both D (parent) and C (child) types
             assert "I" in content
@@ -876,7 +876,7 @@ class TestEstoreEinvoiceGenericDateHandling(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have date in YYYYMMDD format
             assert "2025" in content or "20250125" in content
@@ -1033,7 +1033,7 @@ class TestEstoreEinvoiceGenericEdgeCases(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have data from both invoices
@@ -1083,7 +1083,7 @@ class TestEstoreEinvoiceGenericDataTransformation(TestEstoreEinvoiceGenericFixtu
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             assert "Extended Cost" in content
 
@@ -1126,7 +1126,7 @@ class TestEstoreEinvoiceGenericDataTransformation(TestEstoreEinvoiceGenericFixtu
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have multiplier in output
             assert "12" in content
@@ -1173,7 +1173,7 @@ class TestEstoreEinvoiceGenericPurchaseOrder(TestEstoreEinvoiceGenericFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have PO in output from test database
             assert "PO12345" in content
@@ -1264,7 +1264,7 @@ class TestEstoreEinvoiceGenericShipperModeRegression(TestEstoreEinvoiceGenericFi
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -1334,7 +1334,7 @@ class TestEstoreEinvoiceGenericShipperModeRegression(TestEstoreEinvoiceGenericFi
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 

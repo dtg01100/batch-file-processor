@@ -160,9 +160,28 @@ class PluginManager:
         module = importlib.import_module(module_name)
         self._extract_plugins_from_module(module, discovered)
 
+    def _is_concrete_plugin_subclass(self, obj: Any) -> bool:
+        """Return True if obj is a concrete (non-abstract) PluginBase subclass."""
+        return (
+            isinstance(obj, type)
+            and issubclass(obj, PluginBase)
+            and obj is not PluginBase
+            and not obj.__name__.startswith("_")
+            and not inspect.isabstract(obj)
+        )
+
+    def _is_concrete_config_plugin_subclass(self, obj: Any) -> bool:
+        """Return True if obj is a concrete ConfigurationPlugin subclass."""
+        return (
+            isinstance(obj, type)
+            and issubclass(obj, ConfigurationPlugin)
+            and obj is not ConfigurationPlugin
+            and not obj.__name__.startswith("_")
+            and not inspect.isabstract(obj)
+        )
+
     def _extract_plugins_from_module(self, module: Any, discovered: list[str]) -> None:
-        """
-        Extract plugin classes from a module.
+        """Extract plugin classes from a module.
 
         Args:
             module: Module to examine
@@ -170,34 +189,21 @@ class PluginManager:
 
         """
         for name, obj in module.__dict__.items():
-            if (
-                isinstance(obj, type)
-                and issubclass(obj, PluginBase)
-                and obj is not PluginBase
-                and not obj.__name__.startswith("_")
-                and not inspect.isabstract(obj)
-            ):
+            if self._is_concrete_plugin_subclass(obj):
                 plugin_id = obj.get_identifier()
                 if plugin_id not in self._plugin_classes:
                     self._plugin_classes[plugin_id] = obj
                     discovered.append(plugin_id)
 
-                # If it's a ConfigurationPlugin, also store in configuration plugin maps
-                if (
-                    isinstance(obj, type)
-                    and issubclass(obj, ConfigurationPlugin)
-                    and obj is not ConfigurationPlugin
-                    and not obj.__name__.startswith("_")
-                    and not inspect.isabstract(obj)
-                ):
-                    try:
-                        format_enum = obj.get_format_enum()
-                        if format_enum not in self._configuration_plugin_classes:
-                            self._configuration_plugin_classes[format_enum] = obj
-                    except Exception as e:
-                        logger.debug(
-                            "Error extracting configuration plugin %s: %s", name, e
-                        )
+            if self._is_concrete_config_plugin_subclass(obj):
+                try:
+                    format_enum = obj.get_format_enum()
+                    if format_enum not in self._configuration_plugin_classes:
+                        self._configuration_plugin_classes[format_enum] = obj
+                except Exception as e:
+                    logger.debug(
+                        "Error extracting configuration plugin %s: %s", name, e
+                    )
 
     def _ensure_initialized(self) -> None:
         """Ensure plugins are initialized before access."""

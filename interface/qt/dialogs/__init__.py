@@ -10,7 +10,7 @@ from interface.qt.dialogs.resend_dialog import ResendDialog, show_resend_dialog
 __all__ = [
     "BaseDialog",
     "DatabaseImportDialog",
-    "show_database_import_dialog",
     "ResendDialog",
+    "show_database_import_dialog",
     "show_resend_dialog",
 ]

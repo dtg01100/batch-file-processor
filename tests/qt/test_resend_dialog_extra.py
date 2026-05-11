@@ -35,7 +35,7 @@ def _make_dialog(qtbot, mock_database_obj, monkeypatch):
         @classmethod
         def question(cls, *_args, **_kwargs):
             cls.question_calls += 1
-            return None
+            return
 
     monkeypatch.setattr("interface.qt.dialogs.base_dialog.QMessageBox", FakeMessageBox)
     monkeypatch.setattr(

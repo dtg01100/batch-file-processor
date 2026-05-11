@@ -299,21 +299,21 @@ class NullUIService:
     def show_warning(self, title: str, message: str) -> None:
         """No-op -- silently ignores the warning message."""
 
-    def ask_yes_no(self, title: str, message: str) -> bool:
+    def ask_yes_no(self, _title: str, _message: str) -> bool:
         """Returns ``False`` (the safe/conservative default)."""
         return False
 
-    def ask_ok_cancel(self, title: str, message: str) -> bool:
+    def ask_ok_cancel(self, _title: str, _message: str) -> bool:
         """Returns ``False`` (the safe/conservative default)."""
         return False
 
     def ask_three_choices(
         self,
-        title: str,
-        message: str,
-        choice1: str,
-        choice2: str,
-        choice3: str,
+        _title: str,
+        _message: str,
+        _choice1: str,
+        _choice2: str,
+        _choice3: str,
     ) -> int:
         """Returns -1 (cancel/default indicator).
 
@@ -327,27 +327,27 @@ class NullUIService:
 
     def ask_directory(
         self,
-        title: str = "Select Directory",
-        initial_dir: str | None = None,
+        _title: str = "Select Directory",
+        _initial_dir: str | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
 
     def ask_open_filename(
         self,
-        title: str = "Open File",
-        initial_dir: str | None = None,
-        filetypes: list[tuple[str, str]] | None = None,
+        _title: str = "Open File",
+        _initial_dir: str | None = None,
+        _filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
 
     def ask_save_filename(
         self,
-        title: str = "Save File",
-        initial_dir: str | None = None,
-        default_ext: str = "",
-        filetypes: list[tuple[str, str]] | None = None,
+        _title: str = "Save File",
+        _initial_dir: str | None = None,
+        _default_ext: str = "",
+        _filetypes: list[tuple[str, str]] | None = None,
     ) -> str:
         """Returns an empty string (no selection)."""
         return ""
@@ -465,9 +465,9 @@ class QtUIService:
         clicked = msg_box.clickedButton()
         if clicked == btn1:
             return 0
-        elif clicked == btn2:
+        if clicked == btn2:
             return 1
-        elif clicked == btn3:
+        if clicked == btn3:
             return 2
         return -1
 

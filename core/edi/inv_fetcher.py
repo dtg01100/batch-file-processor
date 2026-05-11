@@ -20,7 +20,7 @@ class QueryRunnerProtocol(Protocol):
     for database operations.
     """
 
-    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_query(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results.
 
         Args:
@@ -53,7 +53,7 @@ class InvFetcher:
     """
 
     def __init__(
-        self, query_runner: QueryRunnerProtocol, settings: dict = None
+        self, query_runner: QueryRunnerProtocol, settings: dict | None = None
     ) -> None:
         """Initialize InvFetcher with query runner.
 
@@ -247,7 +247,7 @@ class InvFetcher:
                 if self._strict_database_lookup:
                     raise LookupError(
                         f"No UOM found for item {itemno} multiplier {uommult}"
-                    )
+                    ) from None
             return uom_result
 
     def _fetch_uom_from_item(self, itemno: int, uommult: int) -> str:
@@ -262,7 +262,6 @@ class InvFetcher:
 
         """
         return self._fetch_uom_from_item_impl(itemno, uommult)
-
 
     def _refresh_uom_lut_for_invoice(self, invno: int) -> None:
         """Populate self.uom_lut from invoice-level UOM table for given invoice."""
@@ -322,7 +321,6 @@ class InvFetcher:
                 exc_info=True,
             )
 
-
     def _fetch_uom_from_item_impl(self, itemno: int, uommult: int) -> str:
         """Implementation detail for fetching UOM from item master."""
         # Handle case where no query_runner is provided (for testing)
@@ -347,7 +345,7 @@ class InvFetcher:
             if qry_ret:
                 row = qry_ret[0]
                 if isinstance(row, dict):
-                    return list(row.values())[0]
+                    return next(iter(row.values()))
                 return row[0]
             if self._strict_database_lookup:
                 raise LookupError(

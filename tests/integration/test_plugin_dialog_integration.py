@@ -127,7 +127,7 @@ class TestQtEditFoldersDialogPluginIntegration:
 
         # Verify the method exists
         assert hasattr(EditFoldersDialog, "_get_plugin_convert_formats")
-        assert callable(getattr(EditFoldersDialog, "_get_plugin_convert_formats"))
+        assert callable(EditFoldersDialog._get_plugin_convert_formats)
 
 
 class TestDynamicEDIBuilderPluginIntegration:

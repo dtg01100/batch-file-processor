@@ -17,7 +17,7 @@ from dispatch.pipeline.converter import (
 class MockFileSystem:
     """Mock file system for testing."""
 
-    def __init__(self, files: dict[str, str] = None):
+    def __init__(self, files: dict[str, str] | None = None):
         self.files = files or {}
         self.text_files = {}
         self.binary_files = {}
@@ -90,7 +90,7 @@ class MockErrorHandler:
         folder: str,
         filename: str,
         error: Exception,
-        context: dict = None,
+        context: dict | None = None,
         error_source: str = "Dispatch",
     ):
         self.errors.append(
@@ -107,7 +107,7 @@ class MockErrorHandler:
 class MockModuleLoader:
     """Mock module loader for testing."""
 
-    def __init__(self, modules: dict = None):
+    def __init__(self, modules: dict | None = None):
         self._modules = modules or {}
         self.call_count = 0
         self.last_module_name = None
@@ -129,7 +129,7 @@ class MockModuleLoader:
 
 
 def create_mock_conversion_module(
-    output_path: str = "/output/converted.csv", should_raise: Exception = None
+    output_path: str = "/output/converted.csv", should_raise: Exception | None = None
 ):
     """Create a mock conversion module with edi_convert function."""
     module = MagicMock()

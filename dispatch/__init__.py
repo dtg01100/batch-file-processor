@@ -46,50 +46,50 @@ from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import SendManager
 
 __all__ = [
-    # Hash utilities
-    "generate_match_lists",
-    "generate_file_hash",
+    "BackendInterface",
+    # Interfaces
+    "DatabaseInterface",
+    "DispatchConfig",
+    "DispatchOrchestrator",
+    # Components
+    "EDIValidator",
+    # Log Sender
+    "EmailConfig",
+    "ErrorHandler",
+    "FileSystemInterface",
+    "FolderResult",
+    "InMemoryDatabase",
+    "LogEntry",
+    "LogSender",
+    "MockEmailService",
+    "MockPrintService",
+    "MockUIService",
+    "NullPrintService",
+    "NullUIService",
+    "PreflightIssue",
+    "PreflightResult",
+    # Preflight Validation
+    "PreflightValidator",
+    # Print Service
+    "PrintServiceProtocol",
+    # Processed Files Tracker
+    "ProcessedFileRecord",
+    "ProcessedFilesTracker",
+    "RunLogPrinter",
+    "SMTPEmailService",
+    "SendManager",
+    "UnixPrintService",
+    "WindowsPrintService",
     # File utilities
     "build_output_filename",
     "do_clear_old_files",
-    # Interfaces
-    "DatabaseInterface",
-    "FileSystemInterface",
-    "BackendInterface",
-    # Components
-    "EDIValidator",
-    "SendManager",
-    "ErrorHandler",
-    "DispatchConfig",
-    "FolderResult",
-    "DispatchOrchestrator",
-    # Legacy process function
-    "process",
-    # Preflight Validation
-    "PreflightValidator",
-    "PreflightResult",
-    "PreflightIssue",
+    "generate_file_hash",
+    # Hash utilities
+    "generate_match_lists",
     # Feature Flags
     "get_debug_mode",
     "get_feature_flags",
+    # Legacy process function
+    "process",
     "set_feature_flag",
-    # Log Sender
-    "EmailConfig",
-    "LogSender",
-    "LogEntry",
-    "SMTPEmailService",
-    "MockEmailService",
-    "MockUIService",
-    "NullUIService",
-    # Print Service
-    "PrintServiceProtocol",
-    "WindowsPrintService",
-    "UnixPrintService",
-    "MockPrintService",
-    "NullPrintService",
-    "RunLogPrinter",
-    # Processed Files Tracker
-    "ProcessedFileRecord",
-    "InMemoryDatabase",
-    "ProcessedFilesTracker",
 ]

@@ -7,7 +7,7 @@ dual UI framework architecture.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 from .config_schemas import ConfigurationSchema, FieldType
 
@@ -147,7 +147,7 @@ class WidgetFactoryRegistry:
     dynamic lookup based on framework type.
     """
 
-    _factories = {}
+    _factories: ClassVar[dict[str, Any]] = {}
 
     @classmethod
     def register_factory(cls, framework: str, factory: WidgetFactory) -> None:
@@ -233,7 +233,10 @@ class ConfigurationWidgetBuilder:
         return widgets
 
     def build_configuration_panel(
-        self, schema: ConfigurationSchema, config: dict = None, parent: Any = None
+        self,
+        schema: ConfigurationSchema,
+        config: dict | None = None,
+        parent: Any = None,
     ) -> Any:
         """
         Build a complete configuration panel from a schema.
@@ -303,22 +306,19 @@ class QtWidgetFactory(WidgetFactory):
 
         if field_type == FieldType.STRING:
             return QtLineEditWidget(field_definition, parent)
-        elif field_type == FieldType.INTEGER:
+        if field_type == FieldType.INTEGER:
             return QtSpinBoxWidget(field_definition, parent)
-        elif field_type == FieldType.FLOAT:
+        if field_type == FieldType.FLOAT:
             return QtDoubleSpinBoxWidget(field_definition, parent)
-        elif field_type == FieldType.BOOLEAN:
+        if field_type == FieldType.BOOLEAN:
             return QtCheckBoxWidget(field_definition, parent)
-        elif field_type == FieldType.SELECT:
+        if field_type == FieldType.SELECT:
             return QtComboBoxWidget(field_definition, parent)
-        elif field_type == FieldType.MULTI_SELECT:
+        if field_type == FieldType.MULTI_SELECT:
             return QtListWidgetWidget(field_definition, parent)
-        elif field_type == FieldType.LIST:
+        if field_type == FieldType.LIST or field_type == FieldType.DICT:
             return QtTextEditWidget(field_definition, parent)
-        elif field_type == FieldType.DICT:
-            return QtTextEditWidget(field_definition, parent)
-        else:
-            raise ValueError(f"Unsupported field type: {field_type}")
+        raise ValueError(f"Unsupported field type: {field_type}")
 
 
 class QtWidgetBase(WidgetBase):

@@ -118,7 +118,7 @@ def format_bundle_validation_errors(issues: list[str]) -> str:
 
 def run_wine(cmd, cwd=None, *, check=True, timeout=None):
     """Run a command through Wine."""
-    wine_cmd = ["wine"] + cmd
+    wine_cmd = ["wine", *cmd]
     env = os.environ.copy()
     env["WINEPREFIX"] = str(WINE_PREFIX)
     env["WINEDEBUG"] = "-all"  # Suppress wine debug output
@@ -452,13 +452,12 @@ def verify_build() -> bool:
                 print(f"  {item.name} ({file_size / 1024:.1f} KB)")
 
         return True
-    else:
-        print("❌ Build completed but executable not found")
-        if DIST_DIR.exists():
-            print("\nContents of dist directory:")
-            for item in DIST_DIR.iterdir():
-                print(f"  {item.name}")
-        return False
+    print("❌ Build completed but executable not found")
+    if DIST_DIR.exists():
+        print("\nContents of dist directory:")
+        for item in DIST_DIR.iterdir():
+            print(f"  {item.name}")
+    return False
 
 
 def main() -> None:

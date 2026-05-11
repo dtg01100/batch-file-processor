@@ -391,7 +391,7 @@ class TestLogSenderWithRealSMTP:
     @pytest.mark.skipif(not AIOSMTPD_AVAILABLE, reason="aiosmtpd not installed")
     def test_smtp_auth_failure_graceful(self, smtp_server):
         """No-auth server should accept messages when no credentials are supplied."""
-        host, port, handler = smtp_server
+        host, port, _handler = smtp_server
         # aiosmtpd default handler does not enforce auth -- connection succeeds.
         # Use empty credentials so SMTPEmailService skips the login() call,
         # which aiosmtpd does not support (no AUTH extension).

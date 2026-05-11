@@ -6,7 +6,8 @@ Uses a decomposed architecture with dedicated builders and handlers.
 
 import logging
 import os
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget
 
@@ -119,7 +120,7 @@ class EditFoldersDialog(BaseDialog):
                 lambda _checked: self._refresh_tab_order()
             )
 
-    _FIELD_SPECS = [
+    _FIELD_SPECS: ClassVar[list[tuple[str, str, str, Any]]] = [
         ("active_checkbutton", "folder_is_active", "check", False),
         ("process_backend_copy_check", "process_backend_copy", "check", False),
         ("process_backend_ftp_check", "process_backend_ftp", "check", False),
@@ -154,6 +155,7 @@ class EditFoldersDialog(BaseDialog):
 
     def _populate_fields(self, config: dict[str, Any]) -> None:
         """Populate UI fields from configuration."""
+
         def to_bool(val, *, default=False):
             if val is None:
                 return default
@@ -186,16 +188,15 @@ class EditFoldersDialog(BaseDialog):
         edi_check = self.dynamic_edi_builder.edi_options_check
         if not edi_check:
             return
-        want_convert = (
-            normalize_bool(config.get("process_edi"))
-            or bool(config.get("convert_to_format"))
+        want_convert = normalize_bool(config.get("process_edi")) or bool(
+            config.get("convert_to_format")
         )
         # Prevent toggling the signal handler while programmatically changing state
-        edi_check.blockSignals(True)
+        edi_check.blockSignals(True)  # noqa: FBT003 - Qt signal blocking requires positional bool
         try:
             edi_check.setChecked(want_convert)
         finally:
-            edi_check.blockSignals(False)
+            edi_check.blockSignals(False)  # noqa: FBT003 - Qt signal blocking requires positional bool
 
         self.dynamic_edi_builder._clear_dynamic_edi()
         if want_convert:
@@ -214,7 +215,9 @@ class EditFoldersDialog(BaseDialog):
             if idx >= 0:
                 convert_combo.setCurrentIndex(idx)
             else:
-                self.dynamic_edi_builder.handle_convert_format_changed(convert_combo.currentText())
+                self.dynamic_edi_builder.handle_convert_format_changed(
+                    convert_combo.currentText()
+                )
 
     def _populate_fields_from_config(self, config: dict[str, Any]) -> None:
         """Reload the dialog with a new configuration (e.g. after 'Copy Config').
@@ -826,7 +829,7 @@ class EditFoldersDialog(BaseDialog):
             logger.debug("Failed to get plugin format options: %s", e)
             return []
 
-    def _apply_plugin_configurations(self, target: dict[str, Any]) -> None:
+    def _apply_plugin_configurations(self, _target: dict[str, Any]) -> None:
         self.plugin_config_mapper.extract_plugin_configurations(
             self._fields, framework="qt"
         )

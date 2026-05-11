@@ -190,7 +190,7 @@ class MockHTTPClient:
         data: dict[str, Any] | None = None,
         files: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-        timeout: float | None = None,
+        _timeout: float | None = None,
     ) -> "MockHTTPResponse":
         """Record POST request.
 

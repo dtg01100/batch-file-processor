@@ -149,7 +149,7 @@ class SMTPEmailService:
                         "name", os.path.basename(attachment["path"])
                     )
 
-                    ctype, encoding = mimetypes.guess_type(attachment_path)
+                    ctype, _encoding = mimetypes.guess_type(attachment_path)
                     if ctype is None:
                         ctype = "application/octet-stream"
                     maintype, subtype = ctype.split("/", 1)
@@ -377,7 +377,7 @@ class LogSender:
         log_content: str,
         recipients: list[str],
         subject: str,
-        log_name: str | None = None,
+        _log_name: str | None = None,
     ) -> bool:
         """Send a log to recipients.
 
@@ -423,7 +423,7 @@ class LogSender:
         subject: str,
         body: str = "Please see attached logs.",
         batch_number: int = 1,
-        total_batches: int = 1,
+        _total_batches: int = 1,
     ) -> dict[str, bool]:
         """Send multiple logs in a single email.
 

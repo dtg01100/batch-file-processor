@@ -23,7 +23,8 @@ application, allowing tests to use real-like objects instead of MagicMocks.
 """
 
 import warnings
-from typing import Callable, Optional
+from collections.abc import Callable
+from typing import Optional
 
 # Emit deprecation warning when this module is imported
 warnings.warn(

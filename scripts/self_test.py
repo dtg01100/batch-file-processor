@@ -1,45 +1,21 @@
+"""Standalone self-test with no Qt dependencies.
+
+Returns 0 if all required checks pass, 1 otherwise.
+"""
+
+import contextlib
 import hashlib
 import os
-import platform
 import shutil
 import sys
 import tempfile
 
+# -------------------------------------------------------------------------- section 1: stdlib imports
 
-def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -> int:
-    """Standalone self-test with no Qt dependencies.
 
-    Returns 0 if all required checks pass, 1 otherwise.
-    """
-
-    passed = 0
-    failed = 0
-    qt_warnings = []
-
-    def ok(label) -> None:
-        nonlocal passed
-        passed += 1
-        print(f"  ✓ {label}")
-
-    def fail(label, reason="") -> None:
-        nonlocal failed
-        failed += 1
-        extra = f" -- {reason}" if reason else ""
-        print(f"  ✗ {label}{extra}")
-
-    def qt_warn(label, reason="") -> None:
-        extra = f" -- {reason}" if reason else ""
-        qt_warnings.append(f"{label}{extra}")
-        print(f"  ? {label} (optional){extra}")
-
-    # ------------------------------------------------------------------ header
-    print(f"Self-test: {appname} {version}")
-    print(f"Platform : {platform.platform()}")
-    print(f"Python   : {sys.version}")
-    print()
-
-    # -------------------------------------------- 1. Standard-library imports
-    print("[1/14] Standard-library imports")
+def _check_stdlib_modules() -> tuple[int, int]:
+    """Check all required standard-library modules are importable."""
+    passed = failed = 0
     stdlib_modules = [
         "argparse",
         "datetime",
@@ -53,13 +29,20 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     for mod_name in stdlib_modules:
         try:
             __import__(mod_name)
-            ok(mod_name)
+            passed += 1
+            print(f"  ✓ {mod_name}")
         except Exception as exc:
-            fail(mod_name, str(exc))
-    print()
+            failed += 1
+            print(f"  ✗ {mod_name} -- {exc}")
+    return passed, failed
 
-    # ----------------------------------------- 1b. Third-party (non-Qt) imports
-    print("[1b/14] Third-party (non-Qt) imports")
+
+# -------------------------------------------------------------------------- section 1b: third-party imports
+
+
+def _check_third_party_modules() -> tuple[int, int]:
+    """Check third-party (non-Qt) dependencies."""
+    passed = failed = 0
     third_party_modules = [
         "appdirs",
         "lxml",
@@ -68,13 +51,20 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     for mod_name in third_party_modules:
         try:
             __import__(mod_name)
-            ok(mod_name)
+            passed += 1
+            print(f"  ✓ {mod_name}")
         except Exception as exc:
-            fail(mod_name, str(exc))
-    print()
+            failed += 1
+            print(f"  ✗ {mod_name} -- {exc}")
+    return passed, failed
 
-    # ------------------------------------ 1c. Required GUI (Qt) imports
-    print("[1c/14] Required GUI modules (Qt -- failures will cause test to fail)")
+
+# -------------------------------------------------------------------------- section 1c: Qt imports
+
+
+def _check_qt_modules() -> tuple[int, int]:
+    """Check all required PyQt5 modules."""
+    passed = failed = 0
     qt_modules = [
         "PyQt5.QtCore",
         "PyQt5.QtWidgets",
@@ -87,19 +77,29 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     for mod_name in qt_modules:
         try:
             __import__(mod_name)
-            ok(mod_name)
+            passed += 1
+            print(f"  ✓ {mod_name}")
         except Exception as exc:
-            fail(mod_name, str(exc))
+            failed += 1
+            print(f"  ✗ {mod_name} -- {exc}")
 
-    # Check for sip which is required by PyQt5 but imported differently
     try:
-        ok("PyQt5.sip")
+        __import__("PyQt5.sip")
+        passed += 1
+        print("  ✓ PyQt5.sip")
     except ImportError as exc:
-        fail("PyQt5.sip", str(exc))
-    print()
+        failed += 1
+        print(f"  ✗ PyQt5.sip -- {exc}")
 
-    # ----------------------------------------- 1d. Application module imports
-    print("[1d/14] Application module imports")
+    return passed, failed
+
+
+# -------------------------------------------------------------------------- section 1d: app module imports
+
+
+def _check_app_modules() -> tuple[int, int]:
+    """Check all application modules can be imported."""
+    passed = failed = 0
     app_modules = [
         # Database and operations
         "backend.database.database_obj",
@@ -169,63 +169,95 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
     for mod_name in app_modules:
         try:
             __import__(mod_name)
-            ok(mod_name)
+            passed += 1
+            print(f"  ✓ {mod_name}")
         except Exception as exc:
-            fail(mod_name, str(exc))
-    print()
+            failed += 1
+            print(f"  ✗ {mod_name} -- {exc}")
+    return passed, failed
 
-    # ---------------------------------------- 2. Configuration directories
-    print("[2/14] Configuration directories")
+
+# -------------------------------------------------------------------------- section 2: config directories
+
+
+def _check_config_directories() -> tuple[int, int]:
+    """Verify configuration directory creation."""
+    passed = failed = 0
     try:
         import appdirs as _appdirs
 
-        config_dir = _appdirs.user_data_dir(appname)
+        config_dir = _appdirs.user_data_dir("Batch File Sender")
         os.makedirs(config_dir, exist_ok=True)
         if os.path.isdir(config_dir):
-            ok(f"config dir exists: {config_dir}")
+            passed += 1
+            print(f"  ✓ config dir exists: {config_dir}")
         else:
-            fail(f"config dir missing after makedirs: {config_dir}")
+            failed += 1
+            print(f"  ✗ config dir missing after makedirs: {config_dir}")
     except Exception as exc:
-        fail("config directory creation", str(exc))
-    print()
+        failed += 1
+        print(f"  ✗ config directory creation -- {exc}")
+    return passed, failed
 
-    # ---------------------------------------- 3. appdirs functionality
-    print("[3/14] appdirs functionality")
+
+# -------------------------------------------------------------------------- section 3: appdirs functionality
+
+
+def _check_appdirs() -> tuple[int, int]:
+    """Verify appdirs.user_data_dir returns a valid string."""
+    passed = failed = 0
     try:
         import appdirs as _appdirs
 
         test_dir = _appdirs.user_data_dir("TestApp")
         if isinstance(test_dir, str) and len(test_dir) > 0:
-            ok(f"appdirs.user_data_dir('TestApp') = {test_dir}")
+            passed += 1
+            print(f"  ✓ appdirs.user_data_dir('TestApp') = {test_dir}")
         else:
-            fail("appdirs.user_data_dir returned unexpected value")
+            failed += 1
+            print("  ✗ appdirs.user_data_dir returned unexpected value")
     except Exception as exc:
-        fail("appdirs.user_data_dir", str(exc))
-    print()
+        failed += 1
+        print(f"  ✗ appdirs.user_data_dir -- {exc}")
+    return passed, failed
 
-    # ---------------------------------------- 4. File system access
-    print("[4/14] File system access")
+
+# -------------------------------------------------------------------------- section 4: file system access
+
+
+def _check_file_system() -> tuple[int, int]:
+    """Verify read/write/cleanup of temp files."""
+    passed = failed = 0
     try:
         tmpdir = tempfile.mkdtemp(prefix="selftest_")
         tmp_path = os.path.join(tmpdir, "test_file.txt")
         test_payload = "self-test-payload"
         with open(tmp_path, "w", encoding="utf-8") as fh:
             fh.write(test_payload)
-        with open(tmp_path, "r", encoding="utf-8") as fh:
+        with open(tmp_path, encoding="utf-8") as fh:
             read_back = fh.read()
         if read_back == test_payload:
-            ok(f"write/read temp file in {tmpdir}")
+            passed += 1
+            print(f"  ✓ write/read temp file in {tmpdir}")
         else:
-            fail("temp file content mismatch")
+            failed += 1
+            print("  ✗ temp file content mismatch")
         os.remove(tmp_path)
         os.rmdir(tmpdir)
-        ok("temp file cleanup")
+        passed += 1
+        print("  ✓ temp file cleanup")
     except Exception as exc:
-        fail("file system access", str(exc))
-    print()
+        failed += 1
+        print(f"  ✗ file system access -- {exc}")
+    return passed, failed
 
-    # ---------------------------------------- 5. Local module __file__ attrs
-    print("[5/14] Local module availability (__file__ attribute)")
+
+# -------------------------------------------------------------------------- section 5: module __file__ attributes
+
+
+def _check_module_file_attrs() -> tuple[int, int]:
+    """Verify local scripts expose __file__."""
+    passed = failed = 0
     local_modules = [
         "batch_log_sender",
         "print_run_log",
@@ -238,182 +270,192 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
             try:
                 mod = __import__(mod_name)
             except Exception as exc:
-                fail(f"{mod_name} (import)", str(exc))
+                failed += 1
+                print(f"  ✗ {mod_name} (import) -- {exc}")
                 continue
         if hasattr(mod, "__file__") and mod.__file__:
-            ok(f"{mod_name}.__file__ = {mod.__file__}")
+            passed += 1
+            print(f"  ✓ {mod_name}.__file__ = {mod.__file__}")
         else:
-            fail(f"{mod_name} has no __file__ attribute")
-    print()
+            failed += 1
+            print(f"  ✗ {mod_name} has no __file__ attribute")
+    return passed, failed
 
-    # ---------------------------------------- 6. Constants
-    print("[6/14] Constants")
+
+# -------------------------------------------------------------------------- section 6: constants
+
+
+def _check_constants() -> tuple[int, int]:
+    """Check CURRENT_DATABASE_VERSION == '50'."""
+    passed = failed = 0
     try:
         from core.constants import CURRENT_DATABASE_VERSION
 
         if CURRENT_DATABASE_VERSION == "50":
-            ok("CURRENT_DATABASE_VERSION == '50'")
+            passed += 1
+            print("  ✓ CURRENT_DATABASE_VERSION == '50'")
         else:
-            fail(
-                "CURRENT_DATABASE_VERSION",
-                f"expected '50', got {CURRENT_DATABASE_VERSION!r}",
+            failed += 1
+            print(
+                f"  ✗ CURRENT_DATABASE_VERSION -- expected '50', "
+                f"got {CURRENT_DATABASE_VERSION!r}"
             )
     except Exception as exc:
-        fail("CURRENT_DATABASE_VERSION import", str(exc))
-    print()
+        failed += 1
+        print(f"  ✗ CURRENT_DATABASE_VERSION import -- {exc}")
+    return passed, failed
 
-    # ---------------------------------------- 7. Boolean utilities
-    print("[7/14] Boolean utilities")
 
+# -------------------------------------------------------------------------- section 7: boolean utilities
+
+
+def _check_bool_utils() -> tuple[int, int]:
+    """Check boolean normalization utilities."""
+    passed = failed = 0
     try:
         from core.utils.bool_utils import from_db_bool as _fdb
         from core.utils.bool_utils import normalize_bool as _nb
         from core.utils.bool_utils import to_db_bool as _tdb
 
-        ok("core.utils.bool_utils imported")
+        passed += 1
+        print("  ✓ core.utils.bool_utils imported")
     except Exception as exc:
-        fail("core.utils.bool_utils import", str(exc))
-        _nb = _tdb = _fdb = None
+        failed += 1
+        print(f"  ✗ core.utils.bool_utils import -- {exc}")
+        return passed, failed
 
-    if _nb is not None:
-        # normalize_bool: booleans pass through
+    # normalize_bool: booleans pass through
+    for val, expected in [(True, True), (False, False)]:
         try:
-            if _nb(True) is True:
-                ok("normalize_bool(True) == True")
+            result = _nb(val)
+            if result is expected:
+                passed += 1
+                print(f"  ✓ normalize_bool({val}) == {expected}")
             else:
-                fail("normalize_bool(True)", f"got {_nb(True)!r}")
+                failed += 1
+                print(f"  ✗ normalize_bool({val}) -- got {result!r}")
         except Exception as exc:
-            fail("normalize_bool(True)", str(exc))
+            failed += 1
+            print(f"  ✗ normalize_bool({val}) -- {exc}")
 
+    # normalize_bool: string inputs
+    for val, expected in [
+        ("true", True),
+        ("false", False),
+        ("yes", True),
+        ("no", False),
+        ("1", True),
+        ("0", False),
+        ("", False),
+    ]:
         try:
-            if _nb(False) is False:
-                ok("normalize_bool(False) == False")
+            result = _nb(val)
+            if result is expected:
+                passed += 1
+                print(f"  ✓ normalize_bool({val!r}) == {expected}")
             else:
-                fail("normalize_bool(False)", f"got {_nb(False)!r}")
+                failed += 1
+                print(
+                    f"  ✗ normalize_bool({val!r}) -- expected {expected}, got {result!r}"
+                )
         except Exception as exc:
-            fail("normalize_bool(False)", str(exc))
+            failed += 1
+            print(f"  ✗ normalize_bool({val!r}) -- {exc}")
 
-        # normalize_bool: string inputs
-        for val, expected in [
-            ("true", True),
-            ("false", False),
-            ("yes", True),
-            ("no", False),
-            ("1", True),
-            ("0", False),
-            ("", False),
-        ]:
-            try:
-                result = _nb(val)
-                if result is expected:
-                    ok(f"normalize_bool({val!r}) == {expected}")
-                else:
-                    fail(
-                        f"normalize_bool({val!r})",
-                        f"expected {expected}, got {result!r}",
-                    )
-            except Exception as exc:
-                fail(f"normalize_bool({val!r})", str(exc))
-
-        # normalize_bool: int/None inputs
-        for val, expected in [(1, True), (0, False), (None, False)]:
-            try:
-                result = _nb(val)
-                if result is expected:
-                    ok(f"normalize_bool({val!r}) == {expected}")
-                else:
-                    fail(
-                        f"normalize_bool({val!r})",
-                        f"expected {expected}, got {result!r}",
-                    )
-            except Exception as exc:
-                fail(f"normalize_bool({val!r})", str(exc))
-
-        # to_db_bool
+    # normalize_bool: int/None inputs
+    for val, expected in [(1, True), (0, False), (None, False)]:
         try:
-            if _tdb(True) == 1:
-                ok("to_db_bool(True) == 1")
+            result = _nb(val)
+            if result is expected:
+                passed += 1
+                print(f"  ✓ normalize_bool({val!r}) == {expected}")
             else:
-                fail("to_db_bool(True)", f"got {_tdb(True)!r}")
+                failed += 1
+                print(
+                    f"  ✗ normalize_bool({val!r}) -- expected {expected}, got {result!r}"
+                )
         except Exception as exc:
-            fail("to_db_bool(True)", str(exc))
+            failed += 1
+            print(f"  ✗ normalize_bool({val!r}) -- {exc}")
 
+    # to_db_bool
+    for val, expected in [(True, 1), (False, 0)]:
         try:
-            if _tdb(False) == 0:
-                ok("to_db_bool(False) == 0")
+            result = _tdb(val)
+            if result == expected:
+                passed += 1
+                print(f"  ✓ to_db_bool({val}) == {expected}")
             else:
-                fail("to_db_bool(False)", f"got {_tdb(False)!r}")
+                failed += 1
+                print(f"  ✗ to_db_bool({val}) -- got {result!r}")
         except Exception as exc:
-            fail("to_db_bool(False)", str(exc))
+            failed += 1
+            print(f"  ✗ to_db_bool({val}) -- {exc}")
 
-        # from_db_bool
+    # from_db_bool
+    for val, expected in [(1, True), (0, False)]:
         try:
-            if _fdb(1) is True:
-                ok("from_db_bool(1) == True")
+            result = _fdb(val)
+            if result is expected:
+                passed += 1
+                print(f"  ✓ from_db_bool({val}) == {expected}")
             else:
-                fail("from_db_bool(1)", f"got {_fdb(1)!r}")
+                failed += 1
+                print(f"  ✗ from_db_bool({val}) -- got {result!r}")
         except Exception as exc:
-            fail("from_db_bool(1)", str(exc))
+            failed += 1
+            print(f"  ✗ from_db_bool({val}) -- {exc}")
 
-        try:
-            if _fdb(0) is False:
-                ok("from_db_bool(0) == False")
+    # Round-trip: to_db_bool -> from_db_bool
+    try:
+        for original in [True, False]:
+            rt = _fdb(_tdb(original))
+            if rt is original:
+                passed += 1
+                print(f"  ✓ round-trip to_db_bool/from_db_bool({original}) == {original}")
             else:
-                fail("from_db_bool(0)", f"got {_fdb(0)!r}")
-        except Exception as exc:
-            fail("from_db_bool(0)", str(exc))
+                failed += 1
+                print(
+                    f"  ✗ round-trip to_db_bool/from_db_bool({original}) -- got {rt!r}"
+                )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ round-trip to_db_bool/from_db_bool -- {exc}")
 
-        # Round-trip: to_db_bool -> from_db_bool
-        try:
-            for original in [True, False]:
-                rt = _fdb(_tdb(original))
-                if rt is original:
-                    ok(f"round-trip to_db_bool/from_db_bool({original}) == {original}")
-                else:
-                    fail(
-                        f"round-trip to_db_bool/from_db_bool({original})", f"got {rt!r}"
-                    )
-        except Exception as exc:
-            fail("round-trip to_db_bool/from_db_bool", str(exc))
+    # Cross-check: utils.normalize_bool agrees with core version
+    try:
+        import core.utils as _utils
 
-        # Cross-check: utils.normalize_bool gives the same results as core version
-        try:
-            import core.utils as _utils
-
-            same = all(
-                _utils.normalize_bool(v) == _nb(v)
-                for v in [
-                    True,
-                    False,
-                    "true",
-                    "false",
-                    "yes",
-                    "no",
-                    "1",
-                    "0",
-                    "",
-                    1,
-                    0,
-                    None,
-                ]
+        same = all(
+            _utils.normalize_bool(v) == _nb(v)
+            for v in [
+                True, False, "true", "false", "yes", "no", "1", "0", "", 1, 0, None
+            ]
+        )
+        if same:
+            passed += 1
+            print(
+                "  ✓ utils.normalize_bool agrees with "
+                "core.utils.bool_utils.normalize_bool"
             )
-            if same:
-                ok(
-                    "utils.normalize_bool agrees with core.utils.bool_utils.normalize_bool"
-                )
-            else:
-                fail(
-                    "utils.normalize_bool vs core version",
-                    "results differ for some inputs",
-                )
-        except Exception as exc:
-            fail("utils.normalize_bool cross-check", str(exc))
+        else:
+            failed += 1
+            print(
+                "  ✗ utils.normalize_bool vs core version -- results differ for some inputs"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ utils.normalize_bool cross-check -- {exc}")
 
-    print()
+    return passed, failed
 
-    # ---------------------------------------- 8. Date utilities
-    print("[8/14] Date utilities")
 
+# -------------------------------------------------------------------------- section 8: date utilities
+
+
+def _check_date_utils() -> tuple[int, int]:
+    """Check date conversion utilities."""
+    passed = failed = 0
     try:
         from datetime import datetime as _dt
 
@@ -422,189 +464,213 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
         from core.utils.date_utils import datetime_from_dactime as _dfd2
         from core.utils.date_utils import datetime_from_invtime as _dfi
 
-        ok("core.utils.date_utils imported")
+        passed += 1
+        print("  ✓ core.utils.date_utils imported")
     except Exception as exc:
-        fail("core.utils.date_utils import", str(exc))
-        _dfd = _dfd2 = _dfi = _dacfi = _dt = None
+        failed += 1
+        print(f"  ✗ core.utils.date_utils import -- {exc}")
+        return passed, failed
 
-    if _dfd is not None:
-        # dactime_from_datetime: 2024-01-01 -> "1240101"
-        # century_digit = int("20") - 19 = 1, then "1" + "240101"
-        try:
-            result = _dfd(_dt(2024, 1, 1))
-            if result == "1240101":
-                ok("dactime_from_datetime(2024-01-01) == '1240101'")
+    # dactime_from_datetime: 2024-01-01 -> "1240101"
+    try:
+        result = _dfd(_dt(2024, 1, 1))
+        if result == "1240101":
+            passed += 1
+            print("  ✓ dactime_from_datetime(2024-01-01) == '1240101'")
+        else:
+            failed += 1
+            print(f"  ✗ dactime_from_datetime(2024-01-01) -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ dactime_from_datetime(2024-01-01) -- {exc}")
+
+    # datetime_from_dactime: 1240101 -> datetime(2024, 1, 1)
+    try:
+        result = _dfd2(1240101)
+        expected = _dt(2024, 1, 1)
+        if result == expected:
+            passed += 1
+            print("  ✓ datetime_from_dactime(1240101) == datetime(2024, 1, 1)")
+        else:
+            failed += 1
+            print(f"  ✗ datetime_from_dactime(1240101) -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ datetime_from_dactime(1240101) -- {exc}")
+
+    # Round-trip dactime_from_datetime -> datetime_from_dactime
+    try:
+        for test_dt in [_dt(2024, 1, 1), _dt(2023, 12, 31), _dt(2000, 6, 15)]:
+            dactime_str = _dfd(test_dt)
+            recovered = _dfd2(int(dactime_str))
+            if recovered == test_dt:
+                passed += 1
+                print(f"  ✓ dactime round-trip {test_dt.date()}")
             else:
-                fail("dactime_from_datetime(2024-01-01)", f"got {result!r}")
-        except Exception as exc:
-            fail("dactime_from_datetime(2024-01-01)", str(exc))
+                failed += 1
+                print(
+                    f"  ✗ dactime round-trip {test_dt.date()} -- got {recovered!r}"
+                )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ dactime round-trip -- {exc}")
 
-        # datetime_from_dactime: 1240101 -> datetime(2024, 1, 1)
-        try:
-            result = _dfd2(1240101)
-            expected = _dt(2024, 1, 1)
-            if result == expected:
-                ok("datetime_from_dactime(1240101) == datetime(2024, 1, 1)")
-            else:
-                fail("datetime_from_dactime(1240101)", f"got {result!r}")
-        except Exception as exc:
-            fail("datetime_from_dactime(1240101)", str(exc))
+    # datetime_from_invtime: "010124" -> datetime(2024, 1, 1)
+    try:
+        result = _dfi("010124")
+        expected = _dt(2024, 1, 1)
+        if result == expected:
+            passed += 1
+            print("  ✓ datetime_from_invtime('010124') == datetime(2024, 1, 1)")
+        else:
+            failed += 1
+            print(f"  ✗ datetime_from_invtime('010124') -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ datetime_from_invtime('010124') -- {exc}")
 
-        # Round-trip dactime_from_datetime -> datetime_from_dactime
-        try:
-            for test_dt in [_dt(2024, 1, 1), _dt(2023, 12, 31), _dt(2000, 6, 15)]:
-                dactime_str = _dfd(test_dt)
-                recovered = _dfd2(int(dactime_str))
-                if recovered == test_dt:
-                    ok(f"dactime round-trip {test_dt.date()}")
-                else:
-                    fail(f"dactime round-trip {test_dt.date()}", f"got {recovered!r}")
-        except Exception as exc:
-            fail("dactime round-trip", str(exc))
+    # dactime_from_invtime round-trip: "010124" -> "1240101"
+    try:
+        result = _dacfi("010124")
+        if result == "1240101":
+            passed += 1
+            print("  ✓ dactime_from_invtime('010124') == '1240101'")
+        else:
+            failed += 1
+            print(f"  ✗ dactime_from_invtime('010124') -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ dactime_from_invtime('010124') -- {exc}")
 
-        # datetime_from_invtime: "010124" -> datetime(2024, 1, 1)
-        try:
-            result = _dfi("010124")
-            expected = _dt(2024, 1, 1)
-            if result == expected:
-                ok("datetime_from_invtime('010124') == datetime(2024, 1, 1)")
-            else:
-                fail("datetime_from_invtime('010124')", f"got {result!r}")
-        except Exception as exc:
-            fail("datetime_from_invtime('010124')", str(exc))
+    return passed, failed
 
-        # dactime_from_invtime round-trip: "010124" -> "1240101"
-        try:
-            result = _dacfi("010124")
-            if result == "1240101":
-                ok("dactime_from_invtime('010124') == '1240101'")
-            else:
-                fail("dactime_from_invtime('010124')", f"got {result!r}")
-        except Exception as exc:
-            fail("dactime_from_invtime('010124')", str(exc))
 
-    print()
+# -------------------------------------------------------------------------- section 9: UPC utilities
 
-    # ---------------------------------------- 9. UPC utilities
-    print("[9/14] UPC utilities")
 
+def _check_upc_utils() -> tuple[int, int]:
+    """Check UPC calculation and validation utilities."""
+    passed = failed = 0
     try:
         from core.edi.upc_utils import calc_check_digit as _ccd
         from core.edi.upc_utils import convert_upce_to_upca as _upce2upca
         from core.edi.upc_utils import pad_upc as _pupc
         from core.edi.upc_utils import validate_upc as _vupc
 
-        ok("core.edi.upc_utils imported")
+        passed += 1
+        print("  ✓ core.edi.upc_utils imported")
     except Exception as exc:
-        fail("core.edi.upc_utils import", str(exc))
-        _ccd = _upce2upca = _vupc = _pupc = None
+        failed += 1
+        print(f"  ✗ core.edi.upc_utils import -- {exc}")
+        return passed, failed
 
-    if _ccd is not None:
-        # calc_check_digit known values
+    test_cases = [
+        ("calc_check_digit", "04180000026", _ccd, 5),
+        ("calc_check_digit", "07462100060", _ccd, 2),
+    ]
+    for name, upc, func, expected in test_cases:
         try:
-            result = _ccd("04180000026")
-            if result == 5:
-                ok("calc_check_digit('04180000026') == 5")
+            result = func(upc)
+            if result == expected:
+                passed += 1
+                print(f"  ✓ {name}({upc!r}) == {expected}")
             else:
-                fail("calc_check_digit('04180000026')", f"got {result!r}")
+                failed += 1
+                print(f"  ✗ {name}({upc!r}) -- got {result!r}")
         except Exception as exc:
-            fail("calc_check_digit('04180000026')", str(exc))
+            failed += 1
+            print(f"  ✗ {name}({upc!r}) -- {exc}")
 
+    # convert_upce_to_upca
+    try:
+        result = _upce2upca("04182635")
+        if result == "041800000265":
+            passed += 1
+            print("  ✓ convert_upce_to_upca('04182635') == '041800000265'")
+        else:
+            failed += 1
+            print(f"  ✗ convert_upce_to_upca('04182635') -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ convert_upce_to_upca('04182635') -- {exc}")
+
+    try:
+        result = _upce2upca("123")
+        if result == "":
+            passed += 1
+            print("  ✓ convert_upce_to_upca('123') == '' (invalid length)")
+        else:
+            failed += 1
+            print(f"  ✗ convert_upce_to_upca('123') -- expected '', got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ convert_upce_to_upca('123') -- {exc}")
+
+    # validate_upc
+    try:
+        result = _vupc("041800000265")
+        if result is True:
+            passed += 1
+            print("  ✓ validate_upc('041800000265') == True")
+        else:
+            failed += 1
+            print(f"  ✗ validate_upc('041800000265') -- got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ validate_upc('041800000265') -- {exc}")
+
+    try:
+        result = _vupc("041800000260")
+        if result is False:
+            passed += 1
+            print("  ✓ validate_upc('041800000260') == False (bad check digit)")
+        else:
+            failed += 1
+            print(f"  ✗ validate_upc('041800000260') -- expected False, got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ validate_upc('041800000260') -- {exc}")
+
+    try:
+        result = _vupc("abc")
+        if result is False:
+            passed += 1
+            print("  ✓ validate_upc('abc') == False (non-numeric)")
+        else:
+            failed += 1
+            print(f"  ✗ validate_upc('abc') -- expected False, got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ validate_upc('abc') -- {exc}")
+
+    # pad_upc
+    for upc_str, length, expected in [
+        ("12345", 10, "     12345"),
+        ("123456789", 5, "12345"),
+        ("12345", 5, "12345"),
+    ]:
         try:
-            # calc_check_digit('07462100060') -> 2  (full UPC-A: 074621000602)
-            result = _ccd("07462100060")
-            if result == 2:
-                ok("calc_check_digit('07462100060') == 2")
+            result = _pupc(upc_str, length)
+            if result == expected:
+                passed += 1
+                note = " (truncate)" if len(upc_str) > length else ""
+                print(f"  ✓ pad_upc({upc_str!r}, {length}) == {expected!r}{note}")
             else:
-                fail("calc_check_digit('07462100060')", f"got {result!r}")
+                failed += 1
+                print(f"  ✗ pad_upc({upc_str!r}, {length}) -- got {result!r}")
         except Exception as exc:
-            fail("calc_check_digit('07462100060')", str(exc))
+            failed += 1
+            print(f"  ✗ pad_upc({upc_str!r}, {length}) -- {exc}")
 
-        # convert_upce_to_upca known value
-        try:
-            result = _upce2upca("04182635")
-            if result == "041800000265":
-                ok("convert_upce_to_upca('04182635') == '041800000265'")
-            else:
-                fail("convert_upce_to_upca('04182635')", f"got {result!r}")
-        except Exception as exc:
-            fail("convert_upce_to_upca('04182635')", str(exc))
+    return passed, failed
 
-        # convert_upce_to_upca with invalid length
-        try:
-            result = _upce2upca("123")
-            if result == "":
-                ok("convert_upce_to_upca('123') == '' (invalid length)")
-            else:
-                fail("convert_upce_to_upca('123')", f"expected '', got {result!r}")
-        except Exception as exc:
-            fail("convert_upce_to_upca('123')", str(exc))
 
-        # validate_upc valid
-        try:
-            result = _vupc("041800000265")
-            if result is True:
-                ok("validate_upc('041800000265') == True")
-            else:
-                fail("validate_upc('041800000265')", f"got {result!r}")
-        except Exception as exc:
-            fail("validate_upc('041800000265')", str(exc))
+# -------------------------------------------------------------------------- section 10: EDI parser
 
-        # validate_upc invalid check digit
-        try:
-            result = _vupc("041800000260")
-            if result is False:
-                ok("validate_upc('041800000260') == False (bad check digit)")
-            else:
-                fail("validate_upc('041800000260')", f"expected False, got {result!r}")
-        except Exception as exc:
-            fail("validate_upc('041800000260')", str(exc))
 
-        # validate_upc non-numeric
-        try:
-            result = _vupc("abc")
-            if result is False:
-                ok("validate_upc('abc') == False (non-numeric)")
-            else:
-                fail("validate_upc('abc')", f"expected False, got {result!r}")
-        except Exception as exc:
-            fail("validate_upc('abc')", str(exc))
-
-        # pad_upc: pad to longer
-        try:
-            result = _pupc("12345", 10)
-            if result == "     12345":
-                ok("pad_upc('12345', 10) == '     12345'")
-            else:
-                fail("pad_upc('12345', 10)", f"got {result!r}")
-        except Exception as exc:
-            fail("pad_upc('12345', 10)", str(exc))
-
-        # pad_upc: truncate to shorter
-        try:
-            result = _pupc("123456789", 5)
-            if result == "12345":
-                ok("pad_upc('123456789', 5) == '12345' (truncate)")
-            else:
-                fail("pad_upc('123456789', 5)", f"got {result!r}")
-        except Exception as exc:
-            fail("pad_upc('123456789', 5)", str(exc))
-
-        # pad_upc: exact length
-        try:
-            result = _pupc("12345", 5)
-            if result == "12345":
-                ok("pad_upc('12345', 5) == '12345' (exact length)")
-            else:
-                fail("pad_upc('12345', 5)", f"got {result!r}")
-        except Exception as exc:
-            fail("pad_upc('12345', 5)", str(exc))
-
-    print()
-
-    # ---------------------------------------- 10. EDI parser
-    print("[10/14] EDI parser")
-
+def _check_edi_parser() -> tuple[int, int]:
+    """Check EDI record parsing and building."""
+    passed = failed = 0
     try:
         from core.edi.edi_parser import ARecord
         from core.edi.edi_parser import build_a_record as _bar
@@ -612,659 +678,601 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
         from core.edi.edi_parser import build_c_record as _bcr
         from core.edi.edi_parser import capture_records as _cr
         from core.edi.edi_parser import parse_a_record as _par
-        from core.edi.edi_parser import parse_b_record as _pbr
 
-        ok("core.edi.edi_parser imported")
+        passed += 1
+        print("  ✓ core.edi.edi_parser imported")
     except Exception as exc:
-        fail("core.edi.edi_parser import", str(exc))
-        _cr = _par = _pbr = _bar = _bbr = _bcr = None
-        ARecord = None
+        failed += 1
+        print(f"  ✗ core.edi.edi_parser import -- {exc}")
+        return passed, failed
 
-    if _cr is not None:
-        # capture_records: empty/whitespace -> None
+    # capture_records: empty/whitespace
+    for content, label in [("", "None"), ("   \n", "None (whitespace)")]:
         try:
-            result = _cr("")
+            result = _cr(content)
             if result is None:
-                ok("capture_records('') == None")
+                passed += 1
+                print(f"  ✓ capture_records({content!r}) == {label}")
             else:
-                fail("capture_records('')", f"expected None, got {result!r}")
+                failed += 1
+                print(f"  ✗ capture_records({content!r}) -- expected None, got {result!r}")
         except Exception as exc:
-            fail("capture_records('')", str(exc))
+            failed += 1
+            print(f"  ✗ capture_records({content!r}) -- {exc}")
 
-        try:
-            result = _cr("   \n")
-            if result is None:
-                ok("capture_records('   \\n') == None (whitespace)")
-            else:
-                fail("capture_records('   \\n')", f"expected None, got {result!r}")
-        except Exception as exc:
-            fail("capture_records('   \\n')", str(exc))
-
-        # A-record: "A" + cust_vendor(6) + invoice_number(10) + invoice_date(6) + invoice_total(10)
-        # = 1 + 6 + 10 + 6 + 10 = 33 chars + "\n"
-        _a_line = "AVEND01   INV0012345010124000000010\n"
-        # Positions: A[0], VEND01[1:7], "   INV001234"... wait, let me be precise:
-        # cust_vendor = positions 1-6 = "VEND01"
-        # invoice_number = positions 7-16 = "   INV001234"... no.
-        # "AVEND01   INV0012345010124000000010\n"
-        #  0123456789...
-        # pos 0: 'A'
-        # pos 1-6: 'VEND01' (6 chars)
-        # pos 7-16: '   INV0012' -- hmm that's only if we use the string as-is
-        # Let me recalculate: "AVEND01" = 7 chars. Then "   INV0012345" would start at 7.
-        # "AVEND01   INV0012345010124000000010" has length:
-        # A=1, VEND01=6, spaces=3, INV0012345=10, 010124=6, 000000010=9... that's only 9 for total.
-        # Let's use a well-formed line:
-        _a_line = "A" + "VEND01" + "INV0012345" + "010124" + "0000000100" + "\n"
-        # = 1+6+10+6+10 = 33 chars + \n
-
+    # A-record construction
+    _a_line = "A" + "VEND01" + "INV0012345" + "010124" + "0000000100" + "\n"
+    for field, value in [
+        ("record_type", "A"),
+        ("cust_vendor", "VEND01"),
+        ("invoice_number", "INV0012345"),
+        ("invoice_date", "010124"),
+        ("invoice_total", "0000000100"),
+    ]:
         try:
             result = _cr(_a_line)
-            if result is not None and result["record_type"] == "A":
-                ok("capture_records(A-record): record_type == 'A'")
+            if result is not None and result[field] == value:
+                passed += 1
+                print(f"  ✓ capture_records(A-record): {field} == {value!r}")
             else:
-                fail("capture_records(A-record): record_type", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(A-record)", str(exc))
-
-        try:
-            result = _cr(_a_line)
-            if result is not None and result["cust_vendor"] == "VEND01":
-                ok("capture_records(A-record): cust_vendor == 'VEND01'")
-            else:
-                fail("capture_records(A-record): cust_vendor", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(A-record): cust_vendor", str(exc))
-
-        try:
-            result = _cr(_a_line)
-            if result is not None and result["invoice_number"] == "INV0012345":
-                ok("capture_records(A-record): invoice_number == 'INV0012345'")
-            else:
-                fail("capture_records(A-record): invoice_number", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(A-record): invoice_number", str(exc))
-
-        try:
-            result = _cr(_a_line)
-            if result is not None and result["invoice_date"] == "010124":
-                ok("capture_records(A-record): invoice_date == '010124'")
-            else:
-                fail("capture_records(A-record): invoice_date", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(A-record): invoice_date", str(exc))
-
-        try:
-            result = _cr(_a_line)
-            if result is not None and result["invoice_total"] == "0000000100":
-                ok("capture_records(A-record): invoice_total == '0000000100'")
-            else:
-                fail("capture_records(A-record): invoice_total", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(A-record): invoice_total", str(exc))
-
-        # parse_a_record -> ARecord dataclass
-        try:
-            rec = _par(_a_line)
-            if isinstance(rec, ARecord):
-                ok("parse_a_record returns ARecord instance")
-            else:
-                fail("parse_a_record", f"expected ARecord, got {type(rec)!r}")
-        except Exception as exc:
-            fail("parse_a_record", str(exc))
-
-        try:
-            rec = _par(_a_line)
-            if rec.cust_vendor == "VEND01" and rec.invoice_number == "INV0012345":
-                ok("parse_a_record fields correct")
-            else:
-                fail(
-                    "parse_a_record fields",
-                    f"cust_vendor={rec.cust_vendor!r}, invoice_number={rec.invoice_number!r}",
+                failed += 1
+                print(
+                    f"  ✗ capture_records(A-record): {field} -- got {result!r}"
                 )
         except Exception as exc:
-            fail("parse_a_record fields", str(exc))
+            failed += 1
+            print(f"  ✗ capture_records(A-record): {field} -- {exc}")
 
-        # parse_a_record raises ValueError on non-A line
-        try:
-            raised = False
-            try:
-                _par("BSOMELINE\n")
-            except ValueError:
-                raised = True
-            if raised:
-                ok("parse_a_record raises ValueError on non-A line")
-            else:
-                fail(
-                    "parse_a_record ValueError", "no exception raised on B-record input"
-                )
-        except Exception as exc:
-            fail("parse_a_record ValueError", str(exc))
+    # parse_a_record -> ARecord
+    try:
+        rec = _par(_a_line)
+        if isinstance(rec, ARecord):
+            passed += 1
+            print("  ✓ parse_a_record returns ARecord instance")
+        else:
+            failed += 1
+            print(f"  ✗ parse_a_record -- expected ARecord, got {type(rec)!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ parse_a_record instance check -- {exc}")
 
-        # B-record: B + upc(11) + desc(25) + vendor_item(6) + unit_cost(6)
-        #           + combo(2) + unit_mult(6) + qty(5) + srp(5) + multipack(3) + parent(6)
-        # = 1+11+25+6+6+2+6+5+5+3+6 = 76 chars + \n
-        _b_line = (
-            "B"
-            + "00012345678"  # upc_number (11)
-            + "Item Description         "  # description (25)
-            + "000001"  # vendor_item (6)
-            + "000100"  # unit_cost (6)
-            + "01"  # combo_code (2)
-            + "000001"  # unit_multiplier (6)
-            + "00010"  # qty_of_units (5)
-            + "01000"  # suggested_retail_price (5)
-            + "   "  # price_multi_pack (3)
-            + "      "  # parent_item_number (6)
-            + "\n"
-        )
-
-        try:
-            result = _cr(_b_line)
-            if result is not None and result["record_type"] == "B":
-                ok("capture_records(B-record): record_type == 'B'")
-            else:
-                fail("capture_records(B-record): record_type", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(B-record)", str(exc))
-
-        try:
-            result = _cr(_b_line)
-            if result is not None and result["upc_number"] == "00012345678":
-                ok("capture_records(B-record): upc_number == '00012345678'")
-            else:
-                fail("capture_records(B-record): upc_number", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(B-record): upc_number", str(exc))
-
-        # C-record: C + charge_type(3) + description(25) + amount(9)
-        # = 1+3+25+9 = 38 chars + \n
-        _c_line = (
-            "C"
-            + "TAX"  # charge_type (3)
-            + "Sales Tax                "  # description (25)
-            + "000001000"  # amount (9)
-            + "\n"
-        )
-
-        try:
-            result = _cr(_c_line)
-            if result is not None and result["record_type"] == "C":
-                ok("capture_records(C-record): record_type == 'C'")
-            else:
-                fail("capture_records(C-record): record_type", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(C-record)", str(exc))
-
-        try:
-            result = _cr(_c_line)
-            if result is not None and result["charge_type"] == "TAX":
-                ok("capture_records(C-record): charge_type == 'TAX'")
-            else:
-                fail("capture_records(C-record): charge_type", f"got {result!r}")
-        except Exception as exc:
-            fail("capture_records(C-record): charge_type", str(exc))
-
-        # build_a_record + capture_records round-trip
-        try:
-            built = _bar("VEND01", "INV0012345", "010124", "0000000100")
-            parsed = _cr(built)
-            if (
-                parsed is not None
-                and parsed["cust_vendor"] == "VEND01"
-                and parsed["invoice_number"] == "INV0012345"
-                and parsed["invoice_date"] == "010124"
-                and parsed["invoice_total"] == "0000000100"
-            ):
-                ok("build_a_record + capture_records round-trip")
-            else:
-                fail("build_a_record round-trip", f"parsed={parsed!r}")
-        except Exception as exc:
-            fail("build_a_record round-trip", str(exc))
-
-        # build_b_record + capture_records round-trip
-        try:
-            built = _bbr(
-                upc_number="00012345678",
-                description="Item Description         ",
-                vendor_item="000001",
-                unit_cost="000100",
-                combo_code="01",
-                unit_multiplier="000001",
-                qty_of_units="00010",
-                suggested_retail_price="01000",
-                price_multi_pack="   ",
-                parent_item_number="      ",
+    try:
+        rec = _par(_a_line)
+        if rec.cust_vendor == "VEND01" and rec.invoice_number == "INV0012345":
+            passed += 1
+            print("  ✓ parse_a_record fields correct")
+        else:
+            failed += 1
+            print(
+                f"  ✗ parse_a_record fields -- cust_vendor={rec.cust_vendor!r}, "
+                f"invoice_number={rec.invoice_number!r}"
             )
-            parsed = _cr(built)
-            if (
-                parsed is not None
-                and parsed["upc_number"] == "00012345678"
-                and parsed["vendor_item"] == "000001"
-            ):
-                ok("build_b_record + capture_records round-trip")
-            else:
-                fail("build_b_record round-trip", f"parsed={parsed!r}")
-        except Exception as exc:
-            fail("build_b_record round-trip", str(exc))
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ parse_a_record fields -- {exc}")
 
-        # build_c_record + capture_records round-trip
+    try:
+        raised = False
         try:
-            built = _bcr("TAX", "Sales Tax                ", "000001000")
-            parsed = _cr(built)
-            if (
-                parsed is not None
-                and parsed["record_type"] == "C"
-                and parsed["charge_type"] == "TAX"
-                and parsed["amount"] == "000001000"
-            ):
-                ok("build_c_record + capture_records round-trip")
+            _par("BSOMELINE\n")
+        except ValueError:
+            raised = True
+        if raised:
+            passed += 1
+            print("  ✓ parse_a_record raises ValueError on non-A line")
+        else:
+            failed += 1
+            print("  ✗ parse_a_record ValueError -- no exception raised on B-record input")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ parse_a_record ValueError -- {exc}")
+
+    # B-record
+    _b_line = (
+        "B"
+        + "00012345678"
+        + "Item Description         "
+        + "000001"
+        + "000100"
+        + "01"
+        + "000001"
+        + "00010"
+        + "01000"
+        + "   "
+        + "      "
+        + "\n"
+    )
+    for field, value in [("record_type", "B"), ("upc_number", "00012345678")]:
+        try:
+            result = _cr(_b_line)
+            if result is not None and result[field] == value:
+                passed += 1
+                print(f"  ✓ capture_records(B-record): {field} == {value!r}")
             else:
-                fail("build_c_record round-trip", f"parsed={parsed!r}")
+                failed += 1
+                print(f"  ✗ capture_records(B-record): {field} -- got {result!r}")
         except Exception as exc:
-            fail("build_c_record round-trip", str(exc))
+            failed += 1
+            print(f"  ✗ capture_records(B-record): {field} -- {exc}")
 
-    print()
+    # C-record
+    _c_line = (
+        "C" + "TAX" + "Sales Tax                " + "000001000" + "\n"
+    )
+    for field, value in [
+        ("record_type", "C"),
+        ("charge_type", "TAX"),
+    ]:
+        try:
+            result = _cr(_c_line)
+            if result is not None and result[field] == value:
+                passed += 1
+                print(f"  ✓ capture_records(C-record): {field} == {value!r}")
+            else:
+                failed += 1
+                print(f"  ✗ capture_records(C-record): {field} -- got {result!r}")
+        except Exception as exc:
+            failed += 1
+            print(f"  ✗ capture_records(C-record): {field} -- {exc}")
 
-    # ---------------------------------------- 11. Hash utilities
-    print("[11/14] Hash utilities")
+    # build + capture round-trips
+    for build_fn, built, checks in [
+        (_bar, None, [("cust_vendor", "VEND01"), ("invoice_number", "INV0012345"), ("invoice_date", "010124"), ("invoice_total", "0000000100")]),
+        (
+            _bbr,
+            dict(upc_number="00012345678", description="Item Description         ", vendor_item="000001", unit_cost="000100", combo_code="01", unit_multiplier="000001", qty_of_units="00010", suggested_retail_price="01000", price_multi_pack="   ", parent_item_number="      "),
+            [("upc_number", "00012345678"), ("vendor_item", "000001")],
+        ),
+        (_bcr, ("TAX", "Sales Tax                ", "000001000"), [("record_type", "C"), ("charge_type", "TAX"), ("amount", "000001000")]),
+    ]:
+        try:
+            if build_fn == _bar:
+                built_line = _bar("VEND01", "INV0012345", "010124", "0000000100")
+                parsed = _cr(built_line)
+            elif build_fn == _bbr:
+                built_line = _bbr(**built)
+                parsed = _cr(built_line)
+            else:
+                built_line = _bcr(*built)
+                parsed = _cr(built_line)
 
+            for field, expected in checks:
+                if parsed is not None and parsed[field] == expected:
+                    passed += 1
+                    print(f"  ✓ {build_fn.__name__} + capture_records round-trip: {field}")
+                else:
+                    failed += 1
+                    print(f"  ✗ {build_fn.__name__} round-trip: {field} -- got {parsed!r}")
+        except Exception as exc:
+            failed += 1
+            print(f"  ✗ {build_fn.__name__} round-trip -- {exc}")
+
+    return passed, failed
+
+
+# -------------------------------------------------------------------------- section 11: hash utilities
+
+
+def _check_hash_utils() -> tuple[int, int]:
+    """Check file hash generation and matching utilities."""
+    passed = failed = 0
     try:
         from dispatch.hash_utils import build_hash_dictionaries as _bhd
         from dispatch.hash_utils import check_file_against_processed as _cfap
         from dispatch.hash_utils import generate_file_hash as _gfh
         from dispatch.hash_utils import generate_match_lists as _gml
 
-        ok("dispatch.hash_utils imported")
+        passed += 1
+        print("  ✓ dispatch.hash_utils imported")
     except Exception as exc:
-        fail("dispatch.hash_utils import", str(exc))
-        _gfh = _gml = _cfap = _bhd = None
+        failed += 1
+        print(f"  ✗ dispatch.hash_utils import -- {exc}")
+        return passed, failed
 
-    if _gfh is not None:
-        # generate_file_hash with known content
-        try:
-            _hash_tmpdir = tempfile.mkdtemp(prefix="selftest_hash_")
-            _hash_file = os.path.join(_hash_tmpdir, "hash_test.txt")
-            _hash_content = b"hello world"
-            with open(_hash_file, "wb") as _fh:
-                _fh.write(_hash_content)
-            expected_hash = hashlib.md5(_hash_content).hexdigest()
-            result = _gfh(_hash_file)
-            if result == expected_hash:
-                ok(f"generate_file_hash matches expected MD5 ({expected_hash[:8]}...)")
-            else:
-                fail(
-                    "generate_file_hash", f"expected {expected_hash!r}, got {result!r}"
-                )
-            os.remove(_hash_file)
-            os.rmdir(_hash_tmpdir)
-        except Exception as exc:
-            fail("generate_file_hash", str(exc))
+    try:
+        _hash_tmpdir = tempfile.mkdtemp(prefix="selftest_hash_")
+        _hash_file = os.path.join(_hash_tmpdir, "hash_test.txt")
+        _hash_content = b"hello world"
+        with open(_hash_file, "wb") as _fh:
+            _fh.write(_hash_content)
+        expected_hash = hashlib.md5(_hash_content).hexdigest()
+        result = _gfh(_hash_file)
+        if result == expected_hash:
+            passed += 1
+            print(f"  ✓ generate_file_hash matches expected MD5 ({expected_hash[:8]}...)")
+        else:
+            failed += 1
+            print(f"  ✗ generate_file_hash -- expected {expected_hash!r}, got {result!r}")
+        os.remove(_hash_file)
+        os.rmdir(_hash_tmpdir)
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ generate_file_hash -- {exc}")
 
-        # generate_match_lists with sample records
-        try:
-            _records = [
-                {
-                    "file_name": "file_a.edi",
-                    "file_checksum": "aaaa",
-                    "resend_flag": False,
-                },
-                {
-                    "file_name": "file_b.edi",
-                    "file_checksum": "bbbb",
-                    "resend_flag": True,
-                },
-                {
-                    "file_name": "file_c.edi",
-                    "file_checksum": "cccc",
-                    "resend_flag": False,
-                },
-            ]
-            hash_list, name_list, resend_set = _gml(_records)
-            # hash_list: list of (file_name, checksum) tuples
-            if ("file_a.edi", "aaaa") in hash_list:
-                ok("generate_match_lists: hash_list contains expected tuple")
-            else:
-                fail("generate_match_lists: hash_list", f"got {hash_list!r}")
-            # name_list: list of (checksum, file_name) tuples
-            if ("bbbb", "file_b.edi") in name_list:
-                ok("generate_match_lists: name_list contains expected tuple")
-            else:
-                fail("generate_match_lists: name_list", f"got {name_list!r}")
-            # resend_set: only the resend_flag=True checksum
-            if resend_set == {"bbbb"}:
-                ok("generate_match_lists: resend_set == {'bbbb'}")
-            else:
-                fail("generate_match_lists: resend_set", f"got {resend_set!r}")
-        except Exception as exc:
-            fail("generate_match_lists", str(exc))
+    # generate_match_lists
+    try:
+        _records = [
+            {"file_name": "file_a.edi", "file_checksum": "aaaa", "resend_flag": False},
+            {"file_name": "file_b.edi", "file_checksum": "bbbb", "resend_flag": True},
+            {"file_name": "file_c.edi", "file_checksum": "cccc", "resend_flag": False},
+        ]
+        hash_list, name_list, resend_set = _gml(_records)
+        if ("file_a.edi", "aaaa") in hash_list:
+            passed += 1
+            print("  ✓ generate_match_lists: hash_list contains expected tuple")
+        else:
+            failed += 1
+            print(f"  ✗ generate_match_lists: hash_list -- got {hash_list!r}")
+        if ("bbbb", "file_b.edi") in name_list:
+            passed += 1
+            print("  ✓ generate_match_lists: name_list contains expected tuple")
+        else:
+            failed += 1
+            print(f"  ✗ generate_match_lists: name_list -- got {name_list!r}")
+        if resend_set == {"bbbb"}:
+            passed += 1
+            print("  ✓ generate_match_lists: resend_set == {'bbbb'}")
+        else:
+            failed += 1
+            print(f"  ✗ generate_match_lists: resend_set -- got {resend_set!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ generate_match_lists -- {exc}")
 
-        # build_hash_dictionaries produces dict form
-        try:
-            _records2 = [
-                {
-                    "file_name": "file_x.edi",
-                    "file_checksum": "xxxx",
-                    "resend_flag": False,
-                },
-                {
-                    "file_name": "file_y.edi",
-                    "file_checksum": "yyyy",
-                    "resend_flag": True,
-                },
-            ]
-            hash_dict, name_dict, resend_set2 = _bhd(_records2)
-            # hash_dict maps file_name -> checksum
-            if hash_dict.get("file_x.edi") == "xxxx":
-                ok("build_hash_dictionaries: hash_dict['file_x.edi'] == 'xxxx'")
-            else:
-                fail("build_hash_dictionaries: hash_dict", f"got {hash_dict!r}")
-            # name_dict maps checksum -> file_name
-            if name_dict.get("yyyy") == "file_y.edi":
-                ok("build_hash_dictionaries: name_dict['yyyy'] == 'file_y.edi'")
-            else:
-                fail("build_hash_dictionaries: name_dict", f"got {name_dict!r}")
-            if resend_set2 == {"yyyy"}:
-                ok("build_hash_dictionaries: resend_set == {'yyyy'}")
-            else:
-                fail("build_hash_dictionaries: resend_set", f"got {resend_set2!r}")
-        except Exception as exc:
-            fail("build_hash_dictionaries", str(exc))
+    # build_hash_dictionaries
+    try:
+        _records2 = [
+            {"file_name": "file_x.edi", "file_checksum": "xxxx", "resend_flag": False},
+            {"file_name": "file_y.edi", "file_checksum": "yyyy", "resend_flag": True},
+        ]
+        hash_dict, name_dict, resend_set2 = _bhd(_records2)
+        if hash_dict.get("file_x.edi") == "xxxx":
+            passed += 1
+            print("  ✓ build_hash_dictionaries: hash_dict['file_x.edi'] == 'xxxx'")
+        else:
+            failed += 1
+            print(f"  ✗ build_hash_dictionaries: hash_dict -- got {hash_dict!r}")
+        if name_dict.get("yyyy") == "file_y.edi":
+            passed += 1
+            print("  ✓ build_hash_dictionaries: name_dict['yyyy'] == 'file_y.edi'")
+        else:
+            failed += 1
+            print(f"  ✗ build_hash_dictionaries: name_dict -- got {name_dict!r}")
+        if resend_set2 == {"yyyy"}:
+            passed += 1
+            print("  ✓ build_hash_dictionaries: resend_set == {'yyyy'}")
+        else:
+            failed += 1
+            print(f"  ✗ build_hash_dictionaries: resend_set -- got {resend_set2!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ build_hash_dictionaries -- {exc}")
 
-        # check_file_against_processed: new file (not in name_dict)
+    # check_file_against_processed
+    scenarios = [
+        ("new file", {"existingchecksum": "old_file.edi"}, set(), False, True),
+        ("already processed", {"existingchecksum": "old_file.edi"}, set(), True, False),
+        ("resend", {"resendchecksum": "resend_file.edi"}, {"resendchecksum"}, True, True),
+    ]
+    for name, name_dict, resend_set, exp_match, exp_send in scenarios:
         try:
-            # name_dict is a dict mapping checksum -> file_name
-            _nd = {"existingchecksum": "old_file.edi"}
-            _rs = set()
-            match, should_send = _cfap("new_file.edi", "newchecksum", _nd, _rs)
-            if match is False and should_send is True:
-                ok("check_file_against_processed: new file -> (False, True)")
+            checksum = next(iter(name_dict.keys()))
+            fname = name_dict[checksum]
+            match, should_send = _cfap(fname, checksum, name_dict, resend_set)
+            if match is exp_match and should_send is exp_send:
+                passed += 1
+                print(f"  ✓ check_file_against_processed: {name} -> ({exp_match}, {exp_send})")
             else:
-                fail(
-                    "check_file_against_processed: new file",
-                    f"got ({match}, {should_send})",
+                failed += 1
+                print(
+                    f"  ✗ check_file_against_processed: {name} -- "
+                    f"expected ({exp_match}, {exp_send}), got ({match}, {should_send})"
                 )
         except Exception as exc:
-            fail("check_file_against_processed: new file", str(exc))
+            failed += 1
+            print(f"  ✗ check_file_against_processed: {name} -- {exc}")
 
-        # check_file_against_processed: already processed (in name_dict, not in resend_set)
-        try:
-            _nd2 = {"existingchecksum": "old_file.edi"}
-            _rs2 = set()
-            match2, should_send2 = _cfap("old_file.edi", "existingchecksum", _nd2, _rs2)
-            if match2 is True and should_send2 is False:
-                ok("check_file_against_processed: already processed -> (True, False)")
-            else:
-                fail(
-                    "check_file_against_processed: already processed",
-                    f"got ({match2}, {should_send2})",
-                )
-        except Exception as exc:
-            fail("check_file_against_processed: already processed", str(exc))
+    return passed, failed
 
-        # check_file_against_processed: resend (in name_dict AND in resend_set)
-        try:
-            _nd3 = {"resendchecksum": "resend_file.edi"}
-            _rs3 = {"resendchecksum"}
-            match3, should_send3 = _cfap(
-                "resend_file.edi", "resendchecksum", _nd3, _rs3
-            )
-            if match3 is True and should_send3 is True:
-                ok("check_file_against_processed: resend -> (True, True)")
-            else:
-                fail(
-                    "check_file_against_processed: resend",
-                    f"got ({match3}, {should_send3})",
-                )
-        except Exception as exc:
-            fail("check_file_against_processed: resend", str(exc))
 
-    print()
+# -------------------------------------------------------------------------- section 12: feature flags
 
-    # ---------------------------------------- 12. Feature flags
-    print("[12/14] Feature flags")
 
+def _check_feature_flags() -> tuple[int, int]:
+    """Check feature flag get/set functionality."""
+    passed = failed = 0
     try:
         from dispatch.feature_flags import get_debug_mode as _gdm
         from dispatch.feature_flags import get_feature_flags as _gff
         from dispatch.feature_flags import set_feature_flag as _sff
 
-        ok("dispatch.feature_flags imported")
+        passed += 1
+        print("  ✓ dispatch.feature_flags imported")
     except Exception as exc:
-        fail("dispatch.feature_flags import", str(exc))
-        _gdm = _gff = _sff = None
+        failed += 1
+        print(f"  ✗ dispatch.feature_flags import -- {exc}")
+        return passed, failed
 
-    if _gdm is not None:
-        # Default values
+    # Default value
+    try:
+        os.environ.pop("DISPATCH_DEBUG_MODE", None)
+        result = _gdm()
+        if result is False:
+            passed += 1
+            print("  ✓ get_debug_mode() == False (default)")
+        else:
+            failed += 1
+            print(f"  ✗ get_debug_mode() -- expected False, got {result!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ get_debug_mode() -- {exc}")
 
+    # get_feature_flags dict shape
+    try:
+        flags = _gff()
+        required_keys = {"debug_mode"}
+        if isinstance(flags, dict) and required_keys <= set(flags.keys()):
+            passed += 1
+            print(f"  ✓ get_feature_flags() returns dict with keys {required_keys}")
+        else:
+            failed += 1
+            print(f"  ✗ get_feature_flags() -- got {flags!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ get_feature_flags() -- {exc}")
+
+    try:
+        flags = _gff()
+        if flags["debug_mode"] is False:
+            passed += 1
+            print("  ✓ get_feature_flags() default values correct")
+        else:
+            failed += 1
+            print(f"  ✗ get_feature_flags() default values -- got {flags!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ get_feature_flags() default values -- {exc}")
+
+    # set_feature_flag + read back + restore
+    try:
+        _sff("debug_mode", value=True)
+        result = _gdm()
+        _sff("debug_mode", value=False)  # restore immediately
+        if result is True:
+            passed += 1
+            print("  ✓ set_feature_flag('debug_mode', True) -> get_debug_mode() == True")
+        else:
+            failed += 1
+            print(f"  ✗ set_feature_flag('debug_mode', True) -- got {result!r}")
+    except Exception as exc:
+        with contextlib.suppress(ValueError, KeyError):
+            _sff("debug_mode", value=False)
+        failed += 1
+        print(f"  ✗ set_feature_flag('debug_mode', True) -- {exc}")
+
+    # set_feature_flag with unknown name raises ValueError
+    try:
+        raised = False
         try:
-            os.environ.pop("DISPATCH_DEBUG_MODE", None)
-            result = _gdm()
-            if result is False:
-                ok("get_debug_mode() == False (default)")
-            else:
-                fail("get_debug_mode()", f"expected False, got {result!r}")
-        except Exception as exc:
-            fail("get_debug_mode()", str(exc))
+            _sff("nonexistent_flag", value=True)
+        except ValueError:
+            raised = True
+        if raised:
+            passed += 1
+            print("  ✓ set_feature_flag unknown name raises ValueError")
+        else:
+            failed += 1
+            print("  ✗ set_feature_flag unknown name -- no ValueError raised")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ set_feature_flag unknown name -- {exc}")
 
-        # get_feature_flags() dict shape
-        try:
-            flags = _gff()
-            required_keys = {"debug_mode"}
-            if isinstance(flags, dict) and required_keys <= set(flags.keys()):
-                ok(f"get_feature_flags() returns dict with keys {required_keys}")
-            else:
-                fail("get_feature_flags()", f"got {flags!r}")
-        except Exception as exc:
-            fail("get_feature_flags()", str(exc))
+    return passed, failed
 
-        try:
-            flags = _gff()
-            if flags["debug_mode"] is False:
-                ok("get_feature_flags() default values correct")
-            else:
-                fail("get_feature_flags() default values", f"got {flags!r}")
-        except Exception as exc:
-            fail("get_feature_flags() default values", str(exc))
 
-        # set_feature_flag + read back + restore
-        try:
-            _sff("debug_mode", True)
-            result = _gdm()
-            _sff("debug_mode", False)  # restore immediately
-            if result is True:
-                ok("set_feature_flag('debug_mode', True) -> get_debug_mode() == True")
-            else:
-                fail("set_feature_flag('debug_mode', True)", f"got {result!r}")
-        except Exception as exc:
-            # Ensure restore even on failure
-            try:
-                _sff("debug_mode", False)
-            except (ValueError, KeyError):
-                pass  # best-effort cleanup of test flag
-            fail("set_feature_flag('debug_mode', True)", str(exc))
+# -------------------------------------------------------------------------- section 13: send manager
 
-        # set_feature_flag with unknown name raises ValueError
-        try:
-            raised = False
-            try:
-                _sff("nonexistent_flag", True)
-            except ValueError:
-                raised = True
-            if raised:
-                ok("set_feature_flag unknown name raises ValueError")
-            else:
-                fail("set_feature_flag unknown name", "no ValueError raised")
-        except Exception as exc:
-            fail("set_feature_flag unknown name", str(exc))
 
-    print()
-
-    # ---------------------------------------- 13. Send manager
-    print("[13/14] Send manager")
-
+def _check_send_manager() -> tuple[int, int]:
+    """Check SendManager and MockBackend functionality."""
+    passed = failed = 0
     try:
         from dispatch.send_manager import MockBackend as _MB
         from dispatch.send_manager import SendManager as _SM
 
-        ok("dispatch.send_manager imported (SendManager, MockBackend)")
+        passed += 1
+        print("  ✓ dispatch.send_manager imported (SendManager, MockBackend)")
     except Exception as exc:
-        fail("dispatch.send_manager import", str(exc))
-        _SM = _MB = None
+        failed += 1
+        print(f"  ✗ dispatch.send_manager import -- {exc}")
+        return passed, failed
 
-    if _SM is not None:
-        # SendManager instantiation
-        try:
-            sm = _SM()
-            if (
-                hasattr(sm, "backends")
-                and hasattr(sm, "results")
-                and hasattr(sm, "errors")
-            ):
-                ok("SendManager() has .backends, .results, .errors")
-            else:
-                fail("SendManager() attributes", f"missing attrs on {sm!r}")
-        except Exception as exc:
-            fail("SendManager() instantiation", str(exc))
+    # SendManager instantiation
+    try:
+        sm = _SM()
+        if (
+            hasattr(sm, "backends")
+            and hasattr(sm, "results")
+            and hasattr(sm, "errors")
+        ):
+            passed += 1
+            print("  ✓ SendManager() has .backends, .results, .errors")
+        else:
+            failed += 1
+            print(f"  ✗ SendManager() attributes -- missing attrs on {sm!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ SendManager() instantiation -- {exc}")
 
-        try:
-            sm = _SM()
-            if sm.backends == {} and sm.results == {} and sm.errors == {}:
-                ok("SendManager() backends/results/errors are empty dicts")
-            else:
-                fail("SendManager() initial state", f"backends={sm.backends!r}")
-        except Exception as exc:
-            fail("SendManager() initial state", str(exc))
+    try:
+        sm = _SM()
+        if sm.backends == {} and sm.results == {} and sm.errors == {}:
+            passed += 1
+            print("  ✓ SendManager() backends/results/errors are empty dicts")
+        else:
+            failed += 1
+            print(f"  ✗ SendManager() initial state -- backends={sm.backends!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ SendManager() initial state -- {exc}")
 
-        # get_enabled_backends: copy enabled, ftp disabled
-        try:
-            sm = _SM()
-            enabled = sm.get_enabled_backends(
-                {"process_backend_copy": True, "process_backend_ftp": False}
+    # get_enabled_backends
+    try:
+        sm = _SM()
+        enabled = sm.get_enabled_backends(
+            {"process_backend_copy": True, "process_backend_ftp": False}
+        )
+        if "copy" in enabled and "ftp" not in enabled:
+            passed += 1
+            print("  ✓ get_enabled_backends: copy=True,ftp=False -> {'copy'}")
+        else:
+            failed += 1
+            print(f"  ✗ get_enabled_backends -- got {enabled!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ get_enabled_backends -- {exc}")
+
+    try:
+        sm = _SM()
+        enabled = sm.get_enabled_backends({})
+        if enabled == set():
+            passed += 1
+            print("  ✓ get_enabled_backends({}) == set()")
+        else:
+            failed += 1
+            print(f"  ✗ get_enabled_backends({{}}) -- got {enabled!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ get_enabled_backends({{}}) -- {exc}")
+
+    # validate_backend_config
+    try:
+        sm = _SM()
+        errors = sm.validate_backend_config({"process_backend_copy": True})
+        if errors and any("Copy Backend" in e for e in errors):
+            passed += 1
+            print(
+                "  ✓ validate_backend_config: copy without directory -> "
+                "error mentioning 'Copy Backend'"
             )
-            if "copy" in enabled and "ftp" not in enabled:
-                ok("get_enabled_backends: copy=True,ftp=False -> {'copy'}")
-            else:
-                fail("get_enabled_backends", f"got {enabled!r}")
-        except Exception as exc:
-            fail("get_enabled_backends", str(exc))
+        else:
+            failed += 1
+            print(f"  ✗ validate_backend_config: copy without directory -- got {errors!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ validate_backend_config: copy without directory -- {exc}")
 
-        # get_enabled_backends: empty params -> empty set
+    try:
+        sm = _SM()
+        errors = sm.validate_backend_config({})
+        if errors == []:
+            passed += 1
+            print("  ✓ validate_backend_config({}) == []")
+        else:
+            failed += 1
+            print(f"  ✗ validate_backend_config({{}}) -- got {errors!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ validate_backend_config({{}}) -- {exc}")
+
+    # MockBackend
+    try:
+        mb = _MB(should_succeed=True)
+        if mb.send_calls == []:
+            passed += 1
+            print("  ✓ MockBackend(should_succeed=True): send_calls starts empty")
+        else:
+            failed += 1
+            print(f"  ✗ MockBackend send_calls initial -- got {mb.send_calls!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ MockBackend(should_succeed=True) -- {exc}")
+
+    try:
+        mb = _MB(should_succeed=True)
+        mb.send({"p": 1}, {"s": 2}, "/tmp/test.edi")
+        if len(mb.send_calls) == 1:
+            passed += 1
+            print("  ✓ MockBackend.send() records call (should_succeed=True)")
+        else:
+            failed += 1
+            print(f"  ✗ MockBackend.send() call recording -- send_calls={mb.send_calls!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ MockBackend.send() (should_succeed=True) -- {exc}")
+
+    try:
+        mb_fail = _MB(should_succeed=False)
+        raised = False
         try:
-            sm = _SM()
-            enabled = sm.get_enabled_backends({})
-            if enabled == set():
-                ok("get_enabled_backends({}) == set()")
-            else:
-                fail("get_enabled_backends({})", f"got {enabled!r}")
-        except Exception as exc:
-            fail("get_enabled_backends({})", str(exc))
+            mb_fail.send({}, {}, "/tmp/test.edi")
+        except RuntimeError:
+            raised = True
+        if raised:
+            passed += 1
+            print("  ✓ MockBackend(should_succeed=False).send() raises RuntimeError")
+        else:
+            failed += 1
+            print("  ✗ MockBackend failure -- no RuntimeError raised")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ MockBackend(should_succeed=False) -- {exc}")
 
-        # validate_backend_config: copy enabled without copy_to_directory
-        try:
-            sm = _SM()
-            errors = sm.validate_backend_config({"process_backend_copy": True})
-            if errors and any("Copy Backend" in e for e in errors):
-                ok(
-                    "validate_backend_config: copy without directory -> error mentioning 'Copy Backend'"
-                )
-            else:
-                fail(
-                    "validate_backend_config: copy without directory", f"got {errors!r}"
-                )
-        except Exception as exc:
-            fail("validate_backend_config: copy without directory", str(exc))
+    try:
+        mb_fail = _MB(should_succeed=False)
+        val_errors = mb_fail.validate({})
+        if val_errors and isinstance(val_errors, list):
+            passed += 1
+            print(
+                "  ✓ MockBackend(should_succeed=False).validate() returns "
+                "non-empty error list"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ MockBackend(should_succeed=False).validate() -- "
+                f"got {val_errors!r}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ MockBackend(should_succeed=False).validate() -- {exc}")
 
-        # validate_backend_config: empty params -> no errors
-        try:
-            sm = _SM()
-            errors = sm.validate_backend_config({})
-            if errors == []:
-                ok("validate_backend_config({}) == []")
-            else:
-                fail("validate_backend_config({})", f"got {errors!r}")
-        except Exception as exc:
-            fail("validate_backend_config({})", str(exc))
+    # send_all with MockBackend
+    try:
+        mb = _MB(should_succeed=True)
+        _hash_tmpdir2 = tempfile.mkdtemp(prefix="selftest_sm_")
+        _test_file = os.path.join(_hash_tmpdir2, "invoice.edi")
+        with open(_test_file, "w") as _fh:
+            _fh.write("AVEND01INV0012345010124000000010\n")
+        sm = _SM(backends={"mock": mb})
+        results = sm.send_all({"mock"}, _test_file, {}, {})
+        if results.get("mock") is True:
+            passed += 1
+            print("  ✓ send_all with MockBackend -> results['mock'] == True")
+        else:
+            failed += 1
+            print(f"  ✗ send_all with MockBackend -- got {results!r}")
+        if len(mb.send_calls) == 1:
+            passed += 1
+            print("  ✓ send_all with MockBackend -> MockBackend.send_calls has 1 entry")
+        else:
+            failed += 1
+            print(f"  ✗ send_all MockBackend call count -- send_calls={mb.send_calls!r}")
+        os.remove(_test_file)
+        os.rmdir(_hash_tmpdir2)
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ send_all with MockBackend -- {exc}")
 
-        # MockBackend success
-        try:
-            mb = _MB(should_succeed=True)
-            if mb.send_calls == []:
-                ok("MockBackend(should_succeed=True): send_calls starts empty")
-            else:
-                fail("MockBackend send_calls initial", f"got {mb.send_calls!r}")
-        except Exception as exc:
-            fail("MockBackend(should_succeed=True)", str(exc))
+    return passed, failed
 
-        try:
-            mb = _MB(should_succeed=True)
-            mb.send({"p": 1}, {"s": 2}, "/tmp/test.edi")
-            if len(mb.send_calls) == 1:
-                ok("MockBackend.send() records call (should_succeed=True)")
-            else:
-                fail(
-                    "MockBackend.send() call recording", f"send_calls={mb.send_calls!r}"
-                )
-        except Exception as exc:
-            fail("MockBackend.send() (should_succeed=True)", str(exc))
 
-        # MockBackend failure
-        try:
-            mb_fail = _MB(should_succeed=False)
-            raised = False
-            try:
-                mb_fail.send({}, {}, "/tmp/test.edi")
-            except RuntimeError:
-                raised = True
-            if raised:
-                ok("MockBackend(should_succeed=False).send() raises RuntimeError")
-            else:
-                fail("MockBackend failure", "no RuntimeError raised")
-        except Exception as exc:
-            fail("MockBackend(should_succeed=False)", str(exc))
+# -------------------------------------------------------------------------- section 14: orchestrator dataclasses
 
-        try:
-            mb_fail = _MB(should_succeed=False)
-            val_errors = mb_fail.validate({})
-            if val_errors and isinstance(val_errors, list):
-                ok(
-                    "MockBackend(should_succeed=False).validate() returns non-empty error list"
-                )
-            else:
-                fail(
-                    "MockBackend(should_succeed=False).validate()",
-                    f"got {val_errors!r}",
-                )
-        except Exception as exc:
-            fail("MockBackend(should_succeed=False).validate()", str(exc))
 
-        # send_all with MockBackend
-        try:
-            mb = _MB(should_succeed=True)
-            _hash_tmpdir2 = tempfile.mkdtemp(prefix="selftest_sm_")
-            _test_file = os.path.join(_hash_tmpdir2, "invoice.edi")
-            with open(_test_file, "w") as _fh:
-                _fh.write("AVEND01INV0012345010124000000010\n")
-            sm = _SM(backends={"mock": mb})
-            results = sm.send_all({"mock"}, _test_file, {}, {})
-            if results.get("mock") is True:
-                ok("send_all with MockBackend -> results['mock'] == True")
-            else:
-                fail("send_all with MockBackend", f"got {results!r}")
-            if len(mb.send_calls) == 1:
-                ok("send_all with MockBackend -> MockBackend.send_calls has 1 entry")
-            else:
-                fail("send_all MockBackend call count", f"send_calls={mb.send_calls!r}")
-            os.remove(_test_file)
-            os.rmdir(_hash_tmpdir2)
-        except Exception as exc:
-            fail("send_all with MockBackend", str(exc))
-
-    print()
-
-    # ---------------------------------------- 14. Orchestrator dataclasses and basic orchestration
-    print("[14/14] Orchestrator dataclasses and basic orchestration")
-
+def _check_orchestrator() -> tuple[int, int]:
+    """Check DispatchConfig, FolderResult, FileResult, ProcessingContext, and DispatchOrchestrator."""
+    passed = failed = 0
     try:
         from dispatch.orchestrator import DispatchConfig as _DC
         from dispatch.orchestrator import DispatchOrchestrator as _DO
@@ -1272,229 +1280,287 @@ def run_self_test(appname="Batch File Sender", version="(Git Branch: Master)") -
         from dispatch.orchestrator import ProcessingContext as _PC
         from dispatch.results import FolderResult as _FR
 
-        ok("dispatch.orchestrator imported")
+        passed += 1
+        print("  ✓ dispatch.orchestrator imported")
     except Exception as exc:
-        fail("dispatch.orchestrator import", str(exc))
-        _DC = _FR = _FiR = _PC = _DO = None
+        failed += 1
+        print(f"  ✗ dispatch.orchestrator import -- {exc}")
+        return passed, failed
 
-    if _DC is not None:
-        # DispatchConfig defaults
-        try:
-            config = _DC()
-            if (
-                config.backends == {}
-                and config.settings == {}
-                and config.version == "1.0.0"
-            ):
-                ok(
-                    "DispatchConfig() defaults: backends={}, settings={}, version='1.0.0'"
-                )
-            else:
-                fail(
-                    "DispatchConfig() defaults",
-                    f"backends={config.backends!r}, version={config.version!r}",
-                )
-        except Exception as exc:
-            fail("DispatchConfig() defaults", str(exc))
+    # DispatchConfig defaults
+    try:
+        config = _DC()
+        if (
+            config.backends == {}
+            and config.settings == {}
+            and config.version == "1.0.0"
+        ):
+            passed += 1
+            print(
+                "  ✓ DispatchConfig() defaults: backends={}, settings={}, version='1.0.0'"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ DispatchConfig() defaults -- "
+                f"backends={config.backends!r}, version={config.version!r}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ DispatchConfig() defaults -- {exc}")
 
-        # FolderResult defaults
-        try:
-            fr = _FR(folder_name="test", alias="Test")
-            if (
-                fr.files_processed == 0
-                and fr.files_failed == 0
-                and fr.errors == []
-                and fr.success is True
-            ):
-                ok(
-                    "FolderResult defaults: files_processed=0, files_failed=0, errors=[], success=True"
-                )
-            else:
-                fail(
-                    "FolderResult defaults",
-                    f"processed={fr.files_processed}, failed={fr.files_failed}, success={fr.success}",
-                )
-        except Exception as exc:
-            fail("FolderResult defaults", str(exc))
+    # FolderResult defaults
+    try:
+        fr = _FR(folder_name="test", alias="Test")
+        if (
+            fr.files_processed == 0
+            and fr.files_failed == 0
+            and fr.errors == []
+            and fr.success is True
+        ):
+            passed += 1
+            print(
+                "  ✓ FolderResult defaults: files_processed=0, files_failed=0, "
+                "errors=[], success=True"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ FolderResult defaults -- processed={fr.files_processed}, "
+                f"failed={fr.files_failed}, success={fr.success}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ FolderResult defaults -- {exc}")
 
-        # FileResult defaults
-        try:
-            fir = _FiR(file_name="test.edi", checksum="abc123")
-            if (
-                fir.sent is False
-                and fir.validated is True
-                and fir.converted is False
-                and fir.errors == []
-            ):
-                ok(
-                    "FileResult defaults: sent=False, validated=True, converted=False, errors=[]"
-                )
-            else:
-                fail(
-                    "FileResult defaults",
-                    f"sent={fir.sent}, validated={fir.validated}, converted={fir.converted}",
-                )
-        except Exception as exc:
-            fail("FileResult defaults", str(exc))
+    # FileResult defaults
+    try:
+        fir = _FiR(file_name="test.edi", checksum="abc123")
+        if (
+            fir.sent is False
+            and fir.validated is True
+            and fir.converted is False
+            and fir.errors == []
+        ):
+            passed += 1
+            print(
+                "  ✓ FileResult defaults: sent=False, validated=True, "
+                "converted=False, errors=[]"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ FileResult defaults -- sent={fir.sent}, "
+                f"validated={fir.validated}, converted={fir.converted}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ FileResult defaults -- {exc}")
 
-        # ProcessingContext defaults
-        try:
-            pc = _PC(folder={}, effective_folder={}, settings={}, upc_dict={})
-            if pc.temp_dirs == [] and pc.temp_files == []:
-                ok("ProcessingContext defaults: temp_dirs=[], temp_files=[]")
-            else:
-                fail(
-                    "ProcessingContext defaults",
-                    f"temp_dirs={pc.temp_dirs!r}, temp_files={pc.temp_files!r}",
-                )
-        except Exception as exc:
-            fail("ProcessingContext defaults", str(exc))
+    # ProcessingContext defaults
+    try:
+        pc = _PC(folder={}, effective_folder={}, settings={}, upc_dict={})
+        if pc.temp_dirs == [] and pc.temp_files == []:
+            passed += 1
+            print("  ✓ ProcessingContext defaults: temp_dirs=[], temp_files=[]")
+        else:
+            failed += 1
+            print(
+                f"  ✗ ProcessingContext defaults -- temp_dirs={pc.temp_dirs!r}, "
+                f"temp_files={pc.temp_files!r}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ ProcessingContext defaults -- {exc}")
 
-        # DispatchOrchestrator instantiation
-        try:
-            config = _DC()
-            orch = _DO(config)
-            if (
-                hasattr(orch, "validator")
-                and hasattr(orch, "send_manager")
-                and hasattr(orch, "error_handler")
-            ):
-                ok("DispatchOrchestrator has .validator, .send_manager, .error_handler")
-            else:
-                fail("DispatchOrchestrator attributes", "missing attrs")
-        except Exception as exc:
-            fail("DispatchOrchestrator instantiation", str(exc))
+    # DispatchOrchestrator instantiation
+    try:
+        config = _DC()
+        orch = _DO(config)
+        if (
+            hasattr(orch, "validator")
+            and hasattr(orch, "send_manager")
+            and hasattr(orch, "error_handler")
+        ):
+            passed += 1
+            print("  ✓ DispatchOrchestrator has .validator, .send_manager, .error_handler")
+        else:
+            failed += 1
+            print("  ✗ DispatchOrchestrator attributes -- missing attrs")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ DispatchOrchestrator instantiation -- {exc}")
 
-        try:
-            config = _DC()
-            orch = _DO(config)
-            if orch.processed_count == 0 and orch.error_count == 0:
-                ok(
-                    "DispatchOrchestrator initial counts: processed_count=0, error_count=0"
-                )
-            else:
-                fail(
-                    "DispatchOrchestrator initial counts",
-                    f"processed={orch.processed_count}, errors={orch.error_count}",
-                )
-        except Exception as exc:
-            fail("DispatchOrchestrator initial counts", str(exc))
+    try:
+        config = _DC()
+        orch = _DO(config)
+        if orch.processed_count == 0 and orch.error_count == 0:
+            passed += 1
+            print(
+                "  ✓ DispatchOrchestrator initial counts: processed_count=0, "
+                "error_count=0"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ DispatchOrchestrator initial counts -- "
+                f"processed={orch.processed_count}, errors={orch.error_count}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ DispatchOrchestrator initial counts -- {exc}")
 
-        # get_summary()
-        try:
-            config = _DC()
-            orch = _DO(config)
-            summary = orch.get_summary()
-            if summary == "0 processed, 0 errors":
-                ok("DispatchOrchestrator.get_summary() == '0 processed, 0 errors'")
-            else:
-                fail("DispatchOrchestrator.get_summary()", f"got {summary!r}")
-        except Exception as exc:
-            fail("DispatchOrchestrator.get_summary()", str(exc))
+    # get_summary()
+    try:
+        config = _DC()
+        orch = _DO(config)
+        summary = orch.get_summary()
+        if summary == "0 processed, 0 errors":
+            passed += 1
+            print("  ✓ DispatchOrchestrator.get_summary() == '0 processed, 0 errors'")
+        else:
+            failed += 1
+            print(f"  ✗ DispatchOrchestrator.get_summary() -- got {summary!r}")
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ DispatchOrchestrator.get_summary() -- {exc}")
 
-        # reset()
-        try:
-            config = _DC()
-            orch = _DO(config)
-            orch.processed_count = 5
-            orch.error_count = 3
-            orch.reset()
-            if orch.processed_count == 0 and orch.error_count == 0:
-                ok("DispatchOrchestrator.reset() resets counts to 0")
-            else:
-                fail(
-                    "DispatchOrchestrator.reset()",
-                    f"processed={orch.processed_count}, errors={orch.error_count}",
-                )
-        except Exception as exc:
-            fail("DispatchOrchestrator.reset()", str(exc))
+    # reset()
+    try:
+        config = _DC()
+        orch = _DO(config)
+        orch.processed_count = 5
+        orch.error_count = 3
+        orch.reset()
+        if orch.processed_count == 0 and orch.error_count == 0:
+            passed += 1
+            print("  ✓ DispatchOrchestrator.reset() resets counts to 0")
+        else:
+            failed += 1
+            print(
+                f"  ✗ DispatchOrchestrator.reset() -- "
+                f"processed={orch.processed_count}, errors={orch.error_count}"
+            )
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ DispatchOrchestrator.reset() -- {exc}")
 
-        # End-to-end: process a temp folder with a MockBackend
-        # The folder has one EDI file and a MockBackend injected as "mock" backend.
-        # Since "mock" is not in DEFAULT_BACKENDS and process_backend_mock key is absent,
-        # get_enabled_backends defaults to including injected backends that lack an explicit flag.
-        try:
-            if _MB is None:
-                fail(
-                    "end-to-end orchestrator test",
-                    "MockBackend not available (send_manager import failed)",
-                )
-            else:
-                _e2e_tmpdir = tempfile.mkdtemp(prefix="selftest_e2e_")
-                _edi_file = os.path.join(_e2e_tmpdir, "test_invoice.edi")
-                _edi_content = (
-                    "A"
-                    + "VEND01"
-                    + "INV0012345"
-                    + "010124"
-                    + "0000000010"
-                    + "\n"
-                    + "B"
-                    + "00012345678"  # upc_number (11)
-                    + "Item Description         "  # description (25)
-                    + "000001"  # vendor_item (6)
-                    + "000100"  # unit_cost (6)
-                    + "01"  # combo_code (2)
-                    + "000001"  # unit_multiplier (6)
-                    + "00010"  # qty_of_units (5)
-                    + "01000"  # suggested_retail_price (5)
-                    + "   "  # price_multi_pack (3)
-                    + "      "  # parent_item_number (6)
-                    + "\n"
-                )
-                with open(_edi_file, "w", encoding="utf-8") as _fh:
-                    _fh.write(_edi_content)
+    # End-to-end orchestrator test
+    try:
+        from dispatch.send_manager import MockBackend as _MB
 
-                _mock_backend = _MB(should_succeed=True)
-                _e2e_config = _DC(backends={"mock": _mock_backend})
-                _orch = _DO(_e2e_config)
+        _e2e_tmpdir = tempfile.mkdtemp(prefix="selftest_e2e_")
+        _edi_file = os.path.join(_e2e_tmpdir, "test_invoice.edi")
+        _edi_content = (
+            "A"
+            + "VEND01"
+            + "INV0012345"
+            + "010124"
+            + "0000000010"
+            + "\n"
+            + "B"
+            + "00012345678"
+            + "Item Description         "
+            + "000001"
+            + "000100"
+            + "01"
+            + "000001"
+            + "00010"
+            + "01000"
+            + "   "
+            + "      "
+            + "\n"
+        )
+        with open(_edi_file, "w", encoding="utf-8") as _fh:
+            _fh.write(_edi_content)
 
-                # Folder dict: process_backend_mock key absent -> mock backend auto-enabled
-                _folder = {
-                    "folder_name": _e2e_tmpdir,
-                    "alias": "E2E Test",
-                }
-                _result = _orch.process_folder(_folder, run_log=[])
+        _mock_backend = _MB(should_succeed=True)
+        _e2e_config = _DC(backends={"mock": _mock_backend})
+        _orch = _DO(_e2e_config)
 
-                if _result.files_processed == 1:
-                    ok("end-to-end orchestrator: files_processed == 1")
-                else:
-                    fail(
-                        "end-to-end orchestrator: files_processed",
-                        f"expected 1, got {_result.files_processed} (errors: {_result.errors})",
-                    )
+        _folder = {
+            "folder_name": _e2e_tmpdir,
+            "alias": "E2E Test",
+        }
+        _result = _orch.process_folder(_folder, run_log=[])
 
-                if len(_mock_backend.send_calls) == 1:
-                    ok("end-to-end orchestrator: MockBackend.send_calls has 1 entry")
-                else:
-                    fail(
-                        "end-to-end orchestrator: MockBackend.send_calls",
-                        f"expected 1, got {len(_mock_backend.send_calls)}",
-                    )
+        if _result.files_processed == 1:
+            passed += 1
+            print("  ✓ end-to-end orchestrator: files_processed == 1")
+        else:
+            failed += 1
+            print(
+                f"  ✗ end-to-end orchestrator: files_processed -- "
+                f"expected 1, got {_result.files_processed} (errors: {_result.errors})"
+            )
 
-                # Cleanup
-                shutil.rmtree(_e2e_tmpdir, ignore_errors=True)
+        if len(_mock_backend.send_calls) == 1:
+            passed += 1
+            print(
+                "  ✓ end-to-end orchestrator: MockBackend.send_calls has 1 entry"
+            )
+        else:
+            failed += 1
+            print(
+                f"  ✗ end-to-end orchestrator: MockBackend.send_calls -- "
+                f"expected 1, got {len(_mock_backend.send_calls)}"
+            )
 
-        except Exception as exc:
-            fail("end-to-end orchestrator test", str(exc))
+        shutil.rmtree(_e2e_tmpdir, ignore_errors=True)
 
-    print()
+    except Exception as exc:
+        failed += 1
+        print(f"  ✗ end-to-end orchestrator test -- {exc}")
 
-    # ---------------------------------------------------------------- summary
-    total = passed + failed
+    return passed, failed
+
+
+# -------------------------------------------------------------------------- main
+
+
+def run_self_test(
+    appname: str = "Batch File Sender", version: str = "(Git Branch: Master)"
+) -> int:
+    """Run all self-test sections. Returns 0 if all pass, 1 otherwise."""
+    sections = [
+        ("[1/14] Standard-library imports", _check_stdlib_modules),
+        ("[1b/14] Third-party (non-Qt) imports", _check_third_party_modules),
+        ("[1c/14] Required GUI modules (Qt -- failures will cause test to fail)", _check_qt_modules),
+        ("[1d/14] Application module imports", _check_app_modules),
+        ("[2/14] Configuration directories", _check_config_directories),
+        ("[3/14] appdirs functionality", _check_appdirs),
+        ("[4/14] File system access", _check_file_system),
+        ("[5/14] Local module availability (__file__ attribute)", _check_module_file_attrs),
+        ("[6/14] Constants", _check_constants),
+        ("[7/14] Boolean utilities", _check_bool_utils),
+        ("[8/14] Date utilities", _check_date_utils),
+        ("[9/14] UPC utilities", _check_upc_utils),
+        ("[10/14] EDI parser", _check_edi_parser),
+        ("[11/14] Hash utilities", _check_hash_utils),
+        ("[12/14] Feature flags", _check_feature_flags),
+        ("[13/14] Send manager", _check_send_manager),
+        ("[14/14] Orchestrator dataclasses and basic orchestration", _check_orchestrator),
+    ]
+
+    total_passed = total_failed = 0
+
+    for label, fn in sections:
+        print(f"\n{label}")
+        passed, failed = fn()
+        total_passed += passed
+        total_failed += failed
+        print()
+
+    total = total_passed + total_failed
     print("=" * 60)
-    print(f"Results: {passed}/{total} checks passed, {failed} failed")
-    if qt_warnings:
-        print(f"Qt warnings (not counted as failures): {len(qt_warnings)}")
-        for w in qt_warnings:
-            print(f"  ? {w}")
-    if failed == 0:
+    print(f"Results: {total_passed}/{total} checks passed, {total_failed} failed")
+    if total_failed == 0:
         print("STATUS: ALL REQUIRED CHECKS PASSED")
     else:
         print("STATUS: SOME REQUIRED CHECKS FAILED")
     print("=" * 60)
 
-    return 0 if failed == 0 else 1
+    return 0 if total_failed == 0 else 1
 
 
 if __name__ == "__main__":

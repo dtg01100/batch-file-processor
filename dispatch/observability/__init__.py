@@ -7,7 +7,7 @@ from dispatch.observability.background_writer import AuditBackgroundWriter
 __all__ = [
     "AlertDispatcher",
     "AlertQueue",
+    "AuditBackgroundWriter",
     "AuditEvent",
     "AuditLogger",
-    "AuditBackgroundWriter",
 ]

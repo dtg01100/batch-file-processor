@@ -65,13 +65,13 @@ class FakeQueryRunner:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
 
-    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_query(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results as list of dicts."""
         cursor = self.conn.execute(query, params or ())
         rows = cursor.fetchall()
         # Convert to list of dicts
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
-        return [dict(zip(columns, row)) for row in rows]
+        return [dict(zip(columns, row, strict=False)) for row in rows]
 
 
 @pytest.fixture
@@ -149,7 +149,7 @@ def invfetcher_with_test_data(invfetcher_test_db):
     """
     from core.edi.inv_fetcher import InvFetcher
 
-    db_path, query_runner = invfetcher_test_db
+    _db_path, query_runner = invfetcher_test_db
     settings = {"database_lookup_mode": "test"}
     return InvFetcher(query_runner, settings)
 
@@ -219,7 +219,7 @@ class MockQueryRunner:
     def __init__(self):
         self.call_count = 0
 
-    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_query(self, query: str, params: tuple | None = None) -> list[dict]:
         """Return test data based on query pattern.
 
         Args:

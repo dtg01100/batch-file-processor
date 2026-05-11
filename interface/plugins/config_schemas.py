@@ -7,7 +7,7 @@ with built-in validation support.
 """
 
 from enum import Enum
-from typing import Any, Union
+from typing import Any
 
 from .validation_framework import ValidationResult, Validator
 
@@ -46,8 +46,8 @@ class FieldDefinition:
         required: bool = False,
         validators: list[Validator] | None = None,
         choices: list[dict[str, Any]] | None = None,
-        min_value: Union[int, float] | None = None,
-        max_value: Union[int, float] | None = None,
+        min_value: int | float | None = None,
+        max_value: int | float | None = None,
         min_length: int | None = None,
         max_length: int | None = None,
     ) -> None:
@@ -211,11 +211,11 @@ class FieldDefinition:
             if invalid_values:
                 valid_choices = ", ".join(valid_values)
             errors.append(
-                (
+
                     f"Field '{self.name}' contains invalid values:"
                     f" {', '.join(invalid_values)}."
                     f" Valid choices are: {valid_choices}"
-                )
+
             )
         return errors
 

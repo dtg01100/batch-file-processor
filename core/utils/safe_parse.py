@@ -1,9 +1,8 @@
 """Safe parsing utilities for converting strings to numbers with defaults."""
 
-from typing import Union
 
 
-def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
+def safe_int(value: str | int | float | None, default: int = 0) -> int:
     """Safely convert a value to an integer with a default fallback.
 
     Args:
@@ -42,7 +41,7 @@ def safe_int(value: Union[str, int, float, None], default: int = 0) -> int:
     return default
 
 
-def safe_float(value: Union[str, int, float, None], default: float = 0.0) -> float:
+def safe_float(value: str | int | float | None, default: float = 0.0) -> float:
     """Safely convert a value to a float with a default fallback.
 
     Args:

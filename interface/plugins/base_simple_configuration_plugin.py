@@ -79,9 +79,9 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: dict[str, Any]) -> Any:
+    def create_config(self, _data: dict[str, Any]) -> Any:
         """Create a configuration instance from raw data."""
-        return type("SimpleConfig", (), {"__init__": lambda self: None})()
+        return type("SimpleConfig", (), {"__init__": lambda _self: None})()
 
     def serialize_config(self, config: Any) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""

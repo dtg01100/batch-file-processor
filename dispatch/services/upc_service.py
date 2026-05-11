@@ -51,7 +51,7 @@ class UPCLookupService:
     def get_dictionary(
         self,
         upc_service: Any | None = None,
-        strict_db_mode: bool = False,
+        strict_db_mode: bool = False,  # noqa: FBT001,FBT002 - required by UPC service interface
     ) -> dict[int, list[Any]]:
         """Get or fetch UPC dictionary.
 

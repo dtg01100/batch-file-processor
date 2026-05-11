@@ -282,9 +282,8 @@ class FolderSettingsValidator:
             result.add_error("alias", "Alias Too Long")
 
         # Check uniqueness (exclude current alias if editing)
-        if alias in self.existing_aliases:
-            if alias != current_alias:
-                result.add_error("alias", "Folder Alias Already In Use")
+        if alias in self.existing_aliases and alias != current_alias:
+            result.add_error("alias", "Folder Alias Already In Use")
 
         return result
 
@@ -413,14 +412,13 @@ class FolderSettingsValidator:
         """
         result = ValidationResult()
 
-        if convert_format == "fintech":
-            if division_id:
-                try:
-                    int(division_id)
-                except ValueError:
-                    result.add_error(
-                        "fintech_division_id", "fintech divisionid needs to be a number"
-                    )
+        if convert_format == "fintech" and division_id:
+            try:
+                int(division_id)
+            except ValueError:
+                result.add_error(
+                    "fintech_division_id", "fintech divisionid needs to be a number"
+                )
 
         return result
 

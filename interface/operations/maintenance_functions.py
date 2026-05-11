@@ -7,7 +7,8 @@ extracted from main_interface.py for better testability.
 import datetime
 import hashlib
 import os
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from core.ports.repositories import (
     IFolderRepository,
@@ -87,7 +88,7 @@ class MaintenanceFunctions:
         self._progress = progress_callback or NullProgressCallback()
         self._on_operation_start = on_operation_start
         self._on_operation_end = on_operation_end
-        self._confirm = confirm_callback or (lambda msg: True)
+        self._confirm = confirm_callback or (lambda _msg: True)
         self._database_import_callback = database_import_callback
         self._folder_repo = folder_repo
         self._settings_repo = settings_repo
@@ -188,7 +189,7 @@ class MaintenanceFunctions:
             self._on_operation_start()
         users_refresh = False
 
-        def _remove_folders_iter(folders_iter, *, active_only: bool) -> None:
+        def _remove_folders_iter(folders_iter, *, _active_only: bool) -> None:
             nonlocal users_refresh
             count = len(folders_iter) if hasattr(folders_iter, "__len__") else 0
             if count > 0:
@@ -242,9 +243,7 @@ class MaintenanceFunctions:
             if selected_folder is None:
                 self._progress.show("adding files to processed list...")
 
-            folder_count = 0
-            for parameters_dict in folders:
-                folder_count += 1
+            for folder_count, parameters_dict in enumerate(folders, 1):
                 self._process_single_folder(
                     parameters_dict=parameters_dict,
                     folder_count=folder_count,
@@ -316,9 +315,7 @@ class MaintenanceFunctions:
         files = [f for f in os.listdir(".") if os.path.isfile(f)]
         file_total = len(files)
         filtered_files: list[str] = []
-        file_count = 0
-        for f in files:
-            file_count += 1
+        for file_count, f in enumerate(files, 1):
             self._progress.update_message(
                 self._progress_message(
                     "checking files for already processed",
@@ -329,16 +326,17 @@ class MaintenanceFunctions:
                 )
             )
             checksum = self._checksum_of_file(f)
-            if self._database_obj.processed_files.find_one(
-                file_name=os.path.join(os.getcwd(), f), file_checksum=checksum
-            ) is None:
+            if (
+                self._database_obj.processed_files.find_one(
+                    file_name=os.path.join(os.getcwd(), f), file_checksum=checksum
+                )
+                is None
+            ):
                 filtered_files.append(f)
 
         file_total = len(filtered_files)
-        file_count = 0
-        for filename in filtered_files:
+        for file_count, filename in enumerate(filtered_files, 1):
             logger.debug("Processing file: %s", filename)
-            file_count += 1
             self._progress.update_message(
                 self._progress_message(
                     "adding files to processed list...",

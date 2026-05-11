@@ -203,7 +203,10 @@ class TestCreateQueryRunner:
 
     def test_create_query_runner_from_settings_requires_password_or_key(self):
         """Test that missing both password and key raises ValueError."""
-        with pytest.raises(ValueError, match="Either as400_password or ssh_key_filename must be provided"):
+        with pytest.raises(
+            ValueError,
+            match="Either as400_password or ssh_key_filename must be provided",
+        ):
             create_query_runner_from_settings(
                 {
                     "as400_username": "user",
@@ -372,7 +375,11 @@ class TestDB2SSHAdapter:
 
         source = inspect.getsource(_run_query)
         # Verify semicolon handling is present
-        assert 'rstrip()' in source or 'endswith(";")' in source or "endswith(';')" in source
+        assert (
+            "rstrip()" in source
+            or 'endswith(";")' in source
+            or "endswith(';')" in source
+        )
 
     def test_db2_command_uses_t_flag(self):
         """Ensure _run_query uses db2 -f file -t for semicolon termination."""
@@ -382,4 +389,6 @@ class TestDB2SSHAdapter:
 
         source = inspect.getsource(_run_query)
         # Verify -t flag is present (use raw string to avoid escaping issues)
-        assert "-t" in source, "db2 command should use -t flag for semicolon termination"
+        assert (
+            "-t" in source
+        ), "db2 command should use -t flag for semicolon termination"

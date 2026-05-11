@@ -4,6 +4,7 @@
 These tests verify that alerting and audit logging never break processing
 even when SMTP or DB is down.
 """
+
 import sqlite3
 from unittest.mock import MagicMock
 
@@ -144,11 +145,10 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(
-            audit_queue, mock_db
-        )
+        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_db)
 
         import threading
+
         t = threading.Thread(target=writer._run)
         t.start()
         t.join(timeout=5.0)
@@ -184,11 +184,10 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(
-            audit_queue, mock_db
-        )
+        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_db)
 
         import threading
+
         t = threading.Thread(target=writer._run)
         t.start()
         t.join(timeout=5.0)

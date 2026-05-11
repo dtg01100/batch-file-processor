@@ -7,7 +7,7 @@ from contextlib import contextmanager
 class TimerResult:
     """Result of a timed operation."""
 
-    __slots__ = ("duration_ms", "start_time", "end_time")
+    __slots__ = ("duration_ms", "end_time", "start_time")
 
     def __init__(self) -> None:
         self.duration_ms: float = 0

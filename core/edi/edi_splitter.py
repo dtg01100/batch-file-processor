@@ -370,7 +370,7 @@ class EDISplitter:
         self,
         content: str,
         config: SplitConfig,
-        upc_dict: dict = None,
+        upc_dict: dict | None = None,
         filter_categories: str = "ALL",
         filter_mode: str = "include",
     ) -> SplitResult:
@@ -471,7 +471,7 @@ class EDISplitter:
         self,
         input_path: str,
         config: SplitConfig,
-        upc_dict: dict = None,
+        upc_dict: dict | None = None,
         filter_categories: str = "ALL",
         filter_mode: str = "include",
     ) -> SplitResult:

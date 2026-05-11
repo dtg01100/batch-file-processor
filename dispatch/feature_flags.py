@@ -84,7 +84,7 @@ def set_feature_flag(name: str, *, value: bool) -> None:
 
 __all__ = [
     "get_debug_mode",
-    "get_strict_testing_mode",
     "get_feature_flags",
+    "get_strict_testing_mode",
     "set_feature_flag",
 ]

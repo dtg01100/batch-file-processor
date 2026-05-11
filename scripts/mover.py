@@ -12,7 +12,7 @@ Example usage:
 import os
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import scripts.backup_increment as backup_increment
 from backend.database import sqlite_wrapper

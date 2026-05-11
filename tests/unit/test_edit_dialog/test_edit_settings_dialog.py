@@ -587,17 +587,17 @@ class TestEditSettingsDialogBaseDialogPattern:
     def test_has_body_method(self):
         """Test that dialog has required body() method."""
         assert hasattr(EditSettingsDialog, "body")
-        assert callable(getattr(EditSettingsDialog, "body"))
+        assert callable(EditSettingsDialog.body)
 
     def test_has_apply_method(self):
         """Test that dialog has required apply() method."""
         assert hasattr(EditSettingsDialog, "apply")
-        assert callable(getattr(EditSettingsDialog, "apply"))
+        assert callable(EditSettingsDialog.apply)
 
     def test_has_validate_method(self):
         """Test that dialog has required validate() method."""
         assert hasattr(EditSettingsDialog, "validate")
-        assert callable(getattr(EditSettingsDialog, "validate"))
+        assert callable(EditSettingsDialog.validate)
 
     def test_dialog_is_subclass_of_qdialog(self):
         """Test that dialog is ultimately a QDialog subclass."""

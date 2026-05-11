@@ -24,12 +24,12 @@ from interface.services.smtp_service import (
 )
 
 __all__ = [
-    "FTPService",
     "FTPConnectionResult",
+    "FTPService",
     "MockFTPService",
+    "MockSMTPService",
     "ReportingService",
     "ResendService",
     "SMTPService",
     "SMTPServiceProtocol",
-    "MockSMTPService",
 ]

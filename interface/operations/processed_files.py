@@ -18,13 +18,12 @@ def export_processed_report(
         """Returns a file path that does not already exist."""
         if not os.path.exists(file_name + file_extension):
             return file_name + file_extension
-        else:
-            i = 1
-            while True:
-                potential_file_path = file_name + " (" + str(i) + ")" + file_extension
-                if not os.path.exists(potential_file_path):
-                    return potential_file_path
-                i += 1
+        i = 1
+        while True:
+            potential_file_path = file_name + " (" + str(i) + ")" + file_extension
+            if not os.path.exists(potential_file_path):
+                return potential_file_path
+            i += 1
 
     folder_dict = database_obj.folders_table.find_one(id=folder_id)
     if folder_dict is None:

@@ -244,12 +244,12 @@ class DatabaseObj:
             if self._show_error_func:
                 self._show_error_func(
                     "Error",
-                (
-                    "Database is corrupted or invalid."
-                    " Version information is missing.\r\n"
-                    "The database file will need to be recreated"
-                    " or restored from backup.",
-                ),
+                    (
+                        "Database is corrupted or invalid."
+                        " Version information is missing.\r\n"
+                        "The database file will need to be recreated"
+                        " or restored from backup.",
+                    ),
                 )
             raise SystemExit("Database corrupted: missing version record")
 
@@ -271,10 +271,10 @@ class DatabaseObj:
             if self._show_error_func:
                 self._show_error_func(
                     "Error",
-                f"The operating system detected is: "
-                f'"{self._running_platform}", '
-                f"this does not match the configuration creator,"
-                " which is stored as: "
+                    f"The operating system detected is: "
+                    f'"{self._running_platform}", '
+                    f"this does not match the configuration creator,"
+                    " which is stored as: "
                     f'"{db_version_dict["os"]}".\r\n'
                     f"Folder paths are not portable between operating systems. Exiting",
                 )
@@ -466,14 +466,14 @@ class DatabaseObj:
                 log_file.write(f"\n{'=' * 60}\n")
                 log_file.write(f"Program version: {self._database_version}\n")
                 log_file.write(f"Timestamp: {datetime.datetime.now()}\n")
-                log_file.write(f"Error: {str(error)}\n")
+                log_file.write(f"Error: {error!s}\n")
                 log_file.write("Traceback:\n")
                 log_file.write(traceback.format_exc())
                 log_file.write(f"{'=' * 60}\n")
         except Exception as log_error:
             # If logging fails, print to stderr but still re-raise original error
             print(
-                f"\nWARNING: Failed to write critical error log: {str(log_error)}\n",
+                f"\nWARNING: Failed to write critical error log: {log_error!s}\n",
                 file=sys.stderr,
             )
 
@@ -626,7 +626,7 @@ class DatabaseObj:
     # ------------------------------------------------------------------
 
     def _get_singleton_or_default(
-        self, table_name: str, table_obj: Any, default_factory: Callable[..., Any]
+        self, _table_name: str, table_obj: Any, default_factory: Callable[..., Any]
     ) -> dict:
         """Get a singleton record by id=1, creating with defaults if missing.
 

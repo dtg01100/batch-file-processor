@@ -15,7 +15,7 @@ import threading
 import time
 import zipfile
 from email import message_from_bytes
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -47,17 +47,14 @@ pytestmark = [pytest.mark.integration, pytest.mark.backend]
 # Helpers
 # ---------------------------------------------------------------------------
 
-
 def _free_port() -> int:
     """Return an OS-assigned free TCP port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
-
 def _md5(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
-
 
 class _NoTLSSMTPClient(RealSMTPClient):
     """RealSMTPClient that silently skips STARTTLS when not supported.
@@ -69,16 +66,14 @@ class _NoTLSSMTPClient(RealSMTPClient):
     """
 
     def starttls(self) -> None:
-        try:
-            super().starttls()
-        except smtplib.SMTPNotSupportedError:
-            pass  # test server doesn't support TLS -- that's fine
+        import contextlib
 
+        with contextlib.suppress(smtplib.SMTPNotSupportedError):
+            super().starttls()
 
 # ---------------------------------------------------------------------------
 # FTP server fixture
 # ---------------------------------------------------------------------------
-
 
 class _FTPFixture:
     """Wraps a pyftpdlib server started in a daemon thread."""
@@ -117,7 +112,7 @@ class _FTPFixture:
             self._server.close_all()
             self._server = None
 
-    def list_uploaded_files(self, subdir: str = "") -> List[str]:
+    def list_uploaded_files(self, subdir: str = "") -> list[str]:
         """Return basenames of files in *root_dir/subdir*."""
         target = os.path.join(self.root_dir, subdir.lstrip("/"))
         if not os.path.isdir(target):
@@ -129,7 +124,6 @@ class _FTPFixture:
         target = os.path.join(self.root_dir, subdir.lstrip("/"), filename)
         with open(target, "rb") as fh:
             return fh.read()
-
 
 @pytest.fixture()
 def ftp_server(tmp_path):
@@ -153,17 +147,15 @@ def ftp_server(tmp_path):
     yield srv, params
     srv.stop()
 
-
 # ---------------------------------------------------------------------------
 # SMTP server fixture
 # ---------------------------------------------------------------------------
-
 
 class _CapturingHandler:
     """aiosmtpd handler that appends received envelopes to a list."""
 
     def __init__(self):
-        self.messages: List[dict] = []
+        self.messages: list[dict] = []
 
     async def handle_DATA(self, server, session, envelope):
         self.messages.append(
@@ -174,7 +166,6 @@ class _CapturingHandler:
             }
         )
         return "250 Message accepted"
-
 
 @pytest.fixture()
 def smtp_server():
@@ -197,7 +188,6 @@ def smtp_server():
     yield handler, settings
     controller.stop()
 
-
 def _make_email_params(
     recipient: str = "recipient@test.com", subject: str = "Test %filename%"
 ) -> dict:
@@ -207,22 +197,18 @@ def _make_email_params(
         "process_backend_email": True,
     }
 
-
 # ---------------------------------------------------------------------------
 # Helper: create temp file with content
 # ---------------------------------------------------------------------------
-
 
 def _make_file(tmp_path, name: str, content: bytes) -> str:
     p = tmp_path / name
     p.write_bytes(content)
     return str(p)
 
-
 # ---------------------------------------------------------------------------
 # FTP Tests
 # ---------------------------------------------------------------------------
-
 
 class TestFTPLiveServer:
     """FTP integration tests against a real pyftpdlib server."""
@@ -459,11 +445,9 @@ class TestFTPLiveServer:
         assert mock.connections[0][0] == "10.0.0.1"
         assert mock.connections[0][1] == 2121
 
-
 # ---------------------------------------------------------------------------
 # SMTP Tests
 # ---------------------------------------------------------------------------
-
 
 class TestSMTPLiveServer:
     """SMTP integration tests against a real aiosmtpd server."""
@@ -732,11 +716,9 @@ class TestSMTPLiveServer:
         assert len(attachment_content) == len(content)
         assert _md5(attachment_content) == _md5(content)
 
-
 # ---------------------------------------------------------------------------
 # Combined FTP + SMTP Tests
 # ---------------------------------------------------------------------------
-
 
 class TestCombinedBackends:
     """Tests that exercise FTP and SMTP (and copy) backends together."""

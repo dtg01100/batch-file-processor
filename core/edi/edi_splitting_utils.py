@@ -224,7 +224,7 @@ def _write_split_edi_files(
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
 
-                current_file = open(output_file_path, "wb")
+                current_file = open(output_file_path, "wb")  # noqa: SIM115 - file managed in loop, closed in finally block (line 242)
 
             if current_file is None:
                 raise ValueError(
@@ -433,21 +433,21 @@ def filter_edi_file_by_category(
 def _copy_edi_file(input_file: str, output_file: str) -> None:
     """Copy an EDI file without applying filtering."""
     try:
-        with open(input_file, "r") as infile:
+        with open(input_file) as infile:
             content = infile.read()
         with open(output_file, "w") as outfile:
             outfile.write(content)
-    except (IOError, OSError) as e:
-        raise ValueError(f"Failed to copy file: {e}")
+    except OSError as e:
+        raise ValueError(f"Failed to copy file: {e}") from e
 
 
 def _read_edi_lines(input_file: str) -> list[str]:
     """Read all lines from an EDI file."""
     try:
-        with open(input_file, "r") as infile:
+        with open(input_file) as infile:
             return infile.readlines()
-    except (IOError, OSError) as e:
-        raise ValueError(f"Failed to read input file: {e}")
+    except OSError as e:
+        raise ValueError(f"Failed to read input file: {e}") from e
 
 
 def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
@@ -510,7 +510,7 @@ def _filter_invoices_by_category(
             any_filtered = True
             continue
 
-        filtered_invoice = [a_record] + filtered_b_records
+        filtered_invoice = [a_record, *filtered_b_records]
         if c_record:
             filtered_invoice.append(c_record)
         filtered_invoices.append(filtered_invoice)
@@ -524,5 +524,5 @@ def _write_filtered_invoices(output_file: str, invoices: list[list[str]]) -> Non
         with open(output_file, "w") as outfile:
             for invoice in invoices:
                 outfile.writelines(invoice)
-    except (IOError, OSError) as e:
-        raise ValueError(f"Failed to write output file: {e}")
+    except OSError as e:
+        raise ValueError(f"Failed to write output file: {e}") from e

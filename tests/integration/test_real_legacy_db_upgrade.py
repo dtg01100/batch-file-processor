@@ -64,8 +64,12 @@ def migrated_db(legacy_db, tmp_path):
 _MIGRATED_DB_CACHE: str | None = None
 # Use a subdirectory so the old file-style cache (.migrated_db_cache as a file)
 # from prior versions is left untouched.
-_MIGRATED_DB_CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", ".migrated_db_cache.d")
-_MIGRATED_DB_LOCK = os.path.join(os.path.dirname(__file__), "..", "..", ".migrated_db_cache.d.lock")
+_MIGRATED_DB_CACHE_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "..", ".migrated_db_cache.d"
+)
+_MIGRATED_DB_LOCK = os.path.join(
+    os.path.dirname(__file__), "..", "..", ".migrated_db_cache.d.lock"
+)
 
 
 @pytest.fixture(scope="session")
@@ -134,7 +138,9 @@ def migrated_db_session(tmp_path_factory):
                 try:
                     db = sqlite_wrapper.Database.connect(cache_dest)
                     version = db["version"].find_one(id=1)
-                    if version and version.get("version") == str(CURRENT_DATABASE_VERSION):
+                    if version and version.get("version") == str(
+                        CURRENT_DATABASE_VERSION
+                    ):
                         cur = db._conn.execute(
                             "SELECT name FROM sqlite_master WHERE type='table' AND name='folders'"
                         )
@@ -849,6 +855,9 @@ class TestMigrationIdempotency:
         db.close()
 
 
+from typing import ClassVar
+
+
 class TestRequiredFieldReadability:
     """Test that all fields required by the application are readable after v32 migration.
 
@@ -861,8 +870,7 @@ class TestRequiredFieldReadability:
     4. process_parameters hard-access fields exist in all folder rows after migration.
     """
 
-    # Fields accessed via hard bracket [] in backend modules — missing = KeyError
-    _BACKEND_REQUIRED_FOLDER_FIELDS = {
+    _BACKEND_REQUIRED_FOLDER_FIELDS: ClassVar[set[str]] = {
         "copy_to_directory",  # copy_backend.py: process_parameters["copy_to_directory"]
         "email_subject_line",  # email_backend.py: process_parameters["email_subject_line"]
         "email_to",  # email_backend.py: process_parameters["email_to"]
@@ -873,8 +881,7 @@ class TestRequiredFieldReadability:
         "ftp_folder",  # ftp_backend.py: process_parameters["ftp_folder"]
     }
 
-    # Fields accessed via hard bracket [] in email_backend.py from settings table
-    _REQUIRED_SETTINGS_FIELDS = {
+    _REQUIRED_SETTINGS_FIELDS: ClassVar[set[str]] = {
         "email_address",  # settings["email_address"]
         "email_smtp_server",  # settings["email_smtp_server"]
         "smtp_port",  # settings["smtp_port"]
@@ -1026,7 +1033,7 @@ class TestNoBehavioralChangeAfterUpgrade:
     # All v32 folder columns that are read by the dispatch pipeline or backends.
     # New columns added by migration are intentionally excluded — they have no
     # pre-migration state to compare against.
-    _FOLDER_BEHAVIORAL_COLS = [
+    _FOLDER_BEHAVIORAL_COLS: ClassVar[list[str]] = [
         "id",
         "folder_name",
         "alias",
@@ -1089,7 +1096,7 @@ class TestNoBehavioralChangeAfterUpgrade:
     # Compare these fields by their boolean meaning, not their raw storage value.
     # NOTE: tweak_edi is excluded — it is intentionally retired by migration and
     # is not tracked as a behavioral field (see _FOLDER_BEHAVIORAL_COLS above).
-    _BOOL_FOLDER_COLS = {
+    _BOOL_FOLDER_COLS: ClassVar[set[str]] = {
         "folder_is_active",
         "process_edi",
         "split_edi",
@@ -1116,7 +1123,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         "include_a_records",
     }
 
-    _PROCESSED_FILES_DEDUP_COLS = [
+    _PROCESSED_FILES_DEDUP_COLS: ClassVar[list[str]] = [
         "id",
         "file_name",
         "file_checksum",
@@ -1124,7 +1131,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         "folder_id",
     ]
 
-    _SETTINGS_BEHAVIORAL_COLS = [
+    _SETTINGS_BEHAVIORAL_COLS: ClassVar[list[str]] = [
         "id",
         "enable_email",
         "email_address",
@@ -1191,7 +1198,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         ), f"Folder count changed: {len(before_folders)} → {len(after_folders)}"
 
         diffs = []
-        for before_row, after_row in zip(before_folders, after_folders):
+        for before_row, after_row in zip(before_folders, after_folders, strict=False):
             for col_idx, col_name in enumerate(self._FOLDER_BEHAVIORAL_COLS):
                 b_val = before_row[col_idx]
                 a_val = after_row[col_idx]
@@ -1235,7 +1242,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         ), f"processed_files count changed: {len(before_pf)} → {len(after_pf)}"
 
         diffs = []
-        for before_row, after_row in zip(before_pf, after_pf):
+        for before_row, after_row in zip(before_pf, after_pf, strict=False):
             for col_idx, col_name in enumerate(self._PROCESSED_FILES_DEDUP_COLS):
                 b_val = before_row[col_idx]
                 a_val = after_row[col_idx]
@@ -1263,7 +1270,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         assert len(after_settings) == len(before_settings)
 
         diffs = []
-        for before_row, after_row in zip(before_settings, after_settings):
+        for before_row, after_row in zip(before_settings, after_settings, strict=False):
             for col_idx, col_name in enumerate(self._SETTINGS_BEHAVIORAL_COLS):
                 b_val = before_row[col_idx]
                 a_val = after_row[col_idx]

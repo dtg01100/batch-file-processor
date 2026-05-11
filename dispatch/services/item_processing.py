@@ -1,6 +1,6 @@
 """Item processing service for EDI converters."""
+
 import decimal
-from typing import Tuple
 
 from core.utils import (
     calc_check_digit,
@@ -15,7 +15,7 @@ class ItemProcessor:
 
     def convert_to_item_total(
         self, unit_cost: str, qty: str
-    ) -> Tuple[decimal.Decimal, int]:
+    ) -> tuple[decimal.Decimal, int]:
         """Calculate item total from unit cost and quantity."""
         wrkqtyint = safe_int(qty)
         try:

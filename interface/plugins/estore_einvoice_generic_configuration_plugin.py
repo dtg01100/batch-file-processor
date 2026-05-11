@@ -101,9 +101,9 @@ class EStoreEInvoiceGenericConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="Vendor Name (Vendor OID)",
                 description=(
-                "The vendor name or vendor OID identifier"
-                " for the output filename"
-            ),
+                    "The vendor name or vendor OID identifier"
+                    " for the output filename"
+                ),
                 default="",
             ),
             FieldDefinition(

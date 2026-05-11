@@ -10,8 +10,7 @@ def apply_migration(database_connection) -> bool | None:
     This migration is applied when upgrading from database version 33 to 34.
     """
     try:
-        database_connection.query(
-            """
+        database_connection.query("""
             CREATE TABLE IF NOT EXISTS audit_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 correlation_id TEXT NOT NULL,
@@ -28,8 +27,7 @@ def apply_migration(database_connection) -> bool | None:
                 details TEXT,
                 FOREIGN KEY (folder_id) REFERENCES folders(id)
             )
-            """
-        )
+            """)
         database_connection.query(
             "CREATE INDEX IF NOT EXISTS idx_audit_correlation ON audit_log(correlation_id)"
         )

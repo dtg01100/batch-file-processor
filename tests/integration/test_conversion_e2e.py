@@ -277,7 +277,7 @@ class TestConvertToCSV:
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
 
         # Read and verify CSV content
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -305,7 +305,7 @@ class TestConvertToCSV:
 
         assert os.path.exists(result), f"Output file {result} was not created"
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -338,7 +338,7 @@ class TestConvertToCSV:
             edi_file, output_path, {}, parameters, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -363,7 +363,7 @@ class TestConvertToCSV:
             edi_file, output_path, {}, parameters, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -419,7 +419,7 @@ class TestConvertToCSV:
             str(edi_path), output_path, {}, parameters, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
 
         assert "Tom AND Jerry" in content, "Ampersand should be replaced with AND"
@@ -466,7 +466,7 @@ class TestConvertToFintech:
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -506,7 +506,7 @@ class TestConvertToFintech:
         ), "Output CSV should be created even with missing UPCs"
 
         # Read the output and verify empty UPC fields
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -551,7 +551,7 @@ class TestConvertToScannerware:
         assert os.path.exists(result), f"Output file {result} was not created"
 
         # Verify content is not empty
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
 
         assert len(content) > 0, "Output file should not be empty"
@@ -589,7 +589,7 @@ class TestConvertToScannerware:
         )
 
         # Read and verify date was offset
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             lines = f.readlines()
 
         # Find A record line and check date
@@ -625,7 +625,7 @@ class TestConvertToSimplifiedCSV:
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -646,7 +646,7 @@ class TestConvertToSimplifiedCSV:
             edi_file, output_path, {}, parameters, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -668,7 +668,7 @@ class TestConvertToSimplifiedCSV:
             edi_file, output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -707,7 +707,7 @@ class TestConvertToYellowdogCSV:
         output_path = str(tmp_path / "output_yellowdog")
 
         # Get test database query runner
-        db_path, query_runner = invfetcher_test_db
+        _db_path, query_runner = invfetcher_test_db
 
         # Patch create_query_runner_from_settings where it's imported
         with patch(
@@ -725,7 +725,7 @@ class TestConvertToYellowdogCSV:
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -770,7 +770,7 @@ class TestConvertToEstoreEinvoice:
         assert os.path.exists(result), f"Output file {result} was not created"
         assert result.endswith(".csv"), f"Output {result} should be a CSV file"
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -816,9 +816,7 @@ class TestConvertToEstoreEinvoiceGeneric:
         output_path = str(tmp_path / "output_estore_generic")
 
         # Mock create_query_runner_from_settings where it's imported
-        with patch(
-            "core.database.query_runner.create_query_runner_from_settings"
-        ):
+        with patch("core.database.query_runner.create_query_runner_from_settings"):
             result = convert_to_estore_einvoice_generic.edi_convert(
                 edi_file,
                 output_path,
@@ -1093,7 +1091,7 @@ class TestConversionEdgeCases:
             str(edi_path), output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
 
         # Unicode should be preserved
@@ -1144,7 +1142,7 @@ class TestConversionEdgeCases:
             str(edi_path), output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -1183,7 +1181,7 @@ class TestConversionEdgeCases:
             str(edi_path), output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -1239,7 +1237,7 @@ class TestOutputFormatValidation:
             edi_file, output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
 
         # All fields should be quoted
@@ -1261,7 +1259,7 @@ class TestOutputFormatValidation:
             edi_file, output_path, {}, default_parameters_dict, sample_upc_lut
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 

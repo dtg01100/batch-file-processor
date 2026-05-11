@@ -4,7 +4,8 @@ Constructs the complete UI layout for the Qt edit folders dialog,
 managing widget container creation, spacing, and scroll area setup.
 """
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (

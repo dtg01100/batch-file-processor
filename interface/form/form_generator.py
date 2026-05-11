@@ -72,7 +72,7 @@ class FormGenerator(ABC):
         )
 
     @abstractmethod
-    def build_form(self, config: dict = None, parent: Any = None) -> Any:
+    def build_form(self, config: dict | None = None, parent: Any = None) -> Any:
         """
         Build the complete form from the schema.
 
@@ -346,7 +346,7 @@ class QtFormGenerator(FormGenerator):
     Qt implementation of the form generator.
     """
 
-    def build_form(self, config: dict = None, parent: Any = None) -> Any:
+    def build_form(self, config: dict | None = None, parent: Any = None) -> Any:
         """
         Build the Qt form from the schema.
 
@@ -398,7 +398,7 @@ class QtFormGenerator(FormGenerator):
 
         return self.form_container
 
-    def _render_plugin_sections(self, parent: Any = None) -> None:
+    def _render_plugin_sections(self, _parent: Any = None) -> None:
         """
         Render plugin sections added to the form.
 
@@ -478,7 +478,7 @@ class QtFormGenerator(FormGenerator):
 
         """
         all_errors = []
-        for field_name, widget in self.widgets.items():
+        for _field_name, widget in self.widgets.items():
             if not widget.validate():
                 all_errors.extend(widget.get_validation_errors())
 
@@ -574,5 +574,4 @@ class FormGeneratorFactory:
         )
         if framework == "qt":
             return QtFormGenerator(schema, framework)
-        else:
-            raise ValueError(f"Unsupported UI framework: {framework}")
+        raise ValueError(f"Unsupported UI framework: {framework}")

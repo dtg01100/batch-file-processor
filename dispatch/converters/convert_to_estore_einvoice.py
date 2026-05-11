@@ -91,7 +91,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             self.output_filename, "w", newline="", encoding="utf-8"
         )
         context.csv_writer = csv.writer(
@@ -158,7 +158,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
             self.invoice_accum.clear()
 
         # Format invoice date
-        if not record.fields["invoice_date"] == EMPTY_DATE_MMDDYY:
+        if record.fields["invoice_date"] != EMPTY_DATE_MMDDYY:
             invoice_date = datetime.strptime(record.fields["invoice_date"], "%m%d%y")
             write_invoice_date = datetime.strftime(invoice_date, "%Y%m%d")
         else:
@@ -176,7 +176,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         self.row_dict_list.append(row_dict)
         self.invoice_index += 1
 
-    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
         """Process a B record (line item), handling shipper mode.
 
         Args:
@@ -258,7 +258,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
             context.output_file.close()
             context.output_file = None
 
-    def _get_return_value(self, context: ConversionContext) -> str:
+    def _get_return_value(self, _context: ConversionContext) -> str:
         """Get the return value - the generated filename.
 
         Args:

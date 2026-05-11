@@ -400,7 +400,7 @@ class TestRunValidation:
             upc_dict={},
         )
 
-        continue_processing, current_file = processor._run_validation(
+        continue_processing, _current_file = processor._run_validation(
             current_file="/path/to/file.edi",
             context=context,
             result=result,
@@ -457,7 +457,7 @@ class TestRunValidation:
             upc_dict={},
         )
 
-        continue_processing, current_file = processor._run_validation(
+        continue_processing, _current_file = processor._run_validation(
             current_file="/path/to/file.edi",
             context=context,
             result=result,
@@ -486,7 +486,7 @@ class TestRunValidation:
             upc_dict={},
         )
 
-        continue_processing, current_file = processor._run_validation(
+        continue_processing, _current_file = processor._run_validation(
             current_file="/path/to/file.edi",
             context=context,
             result=result,
@@ -657,7 +657,7 @@ class TestRunConversion:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion(
+        _new_file, _did_convert, conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",
@@ -683,7 +683,7 @@ class TestRunConversion:
             upc_dict={},
         )
 
-        new_file, did_convert, conversion_failed = processor._run_conversion(
+        _new_file, did_convert, _conversion_failed = processor._run_conversion(
             current_file="/path/to/file.edi",
             file_basename="file.edi",
             original_file_path="/path/to/file.edi",

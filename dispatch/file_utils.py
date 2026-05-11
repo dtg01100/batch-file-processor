@@ -4,6 +4,7 @@ This module contains pure functions for file operations,
 extracted from dispatch.py for testability.
 """
 
+import contextlib
 import datetime
 import os
 import re
@@ -26,7 +27,7 @@ _INVALID_ALIAS_CHARS_RE = re.compile(r"[^a-zA-Z0-9 ]")
 
 def build_output_filename(
     original: str,
-    format: str,
+    _format: str,
     params: dict,
     filename_prefix: str = "",
     filename_suffix: str = "",
@@ -138,7 +139,7 @@ def ensure_directory_exists(path: str) -> bool:
     try:
         os.makedirs(path, exist_ok=True)
         return True
-    except (IOError, OSError):
+    except OSError:
         return False
 
 
@@ -246,7 +247,7 @@ def extract_invoice_numbers(
                 else content_bytes
             )
         else:
-            with open(file_path, "r", errors="replace") as f:
+            with open(file_path, errors="replace") as f:
                 content = f.read()
 
         seen: dict[str, None] = {}
@@ -262,9 +263,7 @@ def extract_invoice_numbers(
 
         return ", ".join(seen)
     except (OSError, ValueError, KeyError) as e:
-        logger.exception(
-            "Failed to extract invoice numbers from %s: %s", file_path, e
-        )
+        logger.exception("Failed to extract invoice numbers from %s: %s", file_path, e)
         return ""
 
 
@@ -332,17 +331,15 @@ def write_to_run_log(run_log: Any, message: str, prefix: str = "") -> None:
     """
     full_message = f"{prefix}{message}" if prefix else message
     if hasattr(run_log, "write"):
-        try:
+        with contextlib.suppress(Exception):
             run_log.write(f"{full_message}\r\n".encode())
-        except Exception:
-            pass
     elif hasattr(run_log, "append"):
         run_log.append(full_message)
 
 
 __all__ = [
+    "apply_file_rename",
     "do_clear_old_files",
     "extract_invoice_numbers",
-    "apply_file_rename",
     "write_to_run_log",
 ]

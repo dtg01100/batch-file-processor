@@ -68,7 +68,7 @@ def _edi_path(filename):
 
 def _count_a_records(file_path):
     count = 0
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         for line in f:
             if line.startswith("A"):
                 count += 1
@@ -184,7 +184,7 @@ class TestEDIFileDiscovery:
 
     def test_all_edi_files_are_readable(self):
         for file_path in _all_edi_files():
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
             assert content is not None, f"Failed to read {file_path}"
 
@@ -204,7 +204,7 @@ class TestEDIFileDiscovery:
 class TestEDIFileParsing:
     def test_all_files_start_with_a_record(self):
         for file_path in _all_edi_files():
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 first_non_empty = None
                 for line in f:
                     if line.strip():
@@ -217,7 +217,7 @@ class TestEDIFileParsing:
 
     def test_a_record_field_widths(self):
         for file_path in _all_edi_files():
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for line in f:
                     if not line.startswith("A"):
                         continue
@@ -238,7 +238,7 @@ class TestEDIFileParsing:
 
     def test_b_record_field_widths(self):
         for file_path in _all_edi_files():
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for line in f:
                     if not line.startswith("B"):
                         continue
@@ -255,7 +255,7 @@ class TestEDIFileParsing:
     def test_negative_invoice_totals(self, filename):
         file_path = _edi_path(filename)
         a_record = None
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             for line in f:
                 if line.startswith("A"):
                     a_record = capture_records(line)
@@ -550,7 +550,7 @@ class TestEDIStructuralIntegrity:
         violations = []
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for lineno, line in enumerate(f, start=1):
                     if not line.strip():
                         continue
@@ -565,7 +565,7 @@ class TestEDIStructuralIntegrity:
     def test_invoice_total_is_numeric(self):
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for lineno, line in enumerate(f, start=1):
                     if not line.startswith("A"):
                         continue
@@ -583,7 +583,7 @@ class TestEDIStructuralIntegrity:
         violations = []
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for lineno, line in enumerate(f, start=1):
                     if not line.startswith("B"):
                         continue
@@ -598,7 +598,7 @@ class TestEDIStructuralIntegrity:
         violations = []
         for file_path in _all_edi_files():
             filename = os.path.basename(file_path)
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for lineno, line in enumerate(f, start=1):
                     if not line.startswith("B"):
                         continue

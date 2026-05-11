@@ -43,10 +43,7 @@ from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 @pytest.fixture
 def qt_app():
     """Create QApplication instance for tests."""
-    if not QApplication.instance():
-        app = QApplication([])
-    else:
-        app = QApplication.instance()
+    app = QApplication([]) if not QApplication.instance() else QApplication.instance()
     return app
 
 
@@ -394,7 +391,7 @@ class TestMaintenanceWorkflow:
             )
             if path:
                 maintenance_functions.database_import_wrapper(path)
-            return None
+            return
 
         monkeypatch.setattr(
             "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",
@@ -442,7 +439,7 @@ class TestMaintenanceWorkflow:
             )
             if path:
                 maintenance_functions.database_import_wrapper(path)
-            return None
+            return
 
         monkeypatch.setattr(
             "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",
@@ -517,7 +514,7 @@ class TestMaintenanceWorkflow:
             )
             if path:
                 maintenance_functions.database_import_wrapper(path)
-            return None
+            return
 
         monkeypatch.setattr(
             "interface.qt.dialogs.maintenance_dialog.MaintenanceDialog.open_dialog",

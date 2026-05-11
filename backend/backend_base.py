@@ -84,7 +84,7 @@ class BackendBase(ABC):
     MAX_DELAY = 60
     INITIAL_DELAY = 2
 
-    def __init__(self, disable_retry: bool = False) -> None:
+    def __init__(self, disable_retry: bool = False) -> None:  # noqa: FBT001,FBT002 - required by backend interface pattern
         """Initialize the backend base.
 
         Args:
@@ -248,20 +248,20 @@ class BackendBase(ABC):
             errno = getattr(error, "errno", None)
             if errno is not None and errno in (
                 113,  # ECONNREFUSED (Linux)
-                61,   # ECONNREFUSED (macOS)
+                61,  # ECONNREFUSED (macOS)
                 111,  # ECONNREFUSED (some Linux)
-                2,    # ENOENT - No such file or directory
-                9,    # EBADF - Bad file descriptor
-                13,   # EACCES - Permission denied
-                1,    # EPERM - Operation not permitted
+                2,  # ENOENT - No such file or directory
+                9,  # EBADF - Bad file descriptor
+                13,  # EACCES - Permission denied
+                1,  # EPERM - Operation not permitted
                 110,  # ETIMEDOUT - Connection timed out
                 104,  # ECONNRESET - Connection reset by peer
                 101,  # ENETUNREACH - Network is unreachable
-                64,   # EHOSTDOWN - Host is down
-                65,   # EHOSTUNREACH - No route to host
-                99,   # EADDRNOTAVAIL - Cannot assign requested address
-                22,   # EINVAL - Invalid argument
-                87,   # WSAEINVAL (Windows) - Invalid argument
+                64,  # EHOSTDOWN - Host is down
+                65,  # EHOSTUNREACH - No route to host
+                99,  # EADDRNOTAVAIL - Cannot assign requested address
+                22,  # EINVAL - Invalid argument
+                87,  # WSAEINVAL (Windows) - Invalid argument
                 10049,  # WSAADDRNOTAVAIL (Windows)
                 10060,  # WSAETIMEDOUT (Windows)
                 10054,  # WSAECONNRESET (Windows)
@@ -269,7 +269,7 @@ class BackendBase(ABC):
                 return True
         return False
 
-    def _prepare_for_retry(
+    def _prepare_for_retry(  # noqa: B027 - intentionally empty default implementation
         self,
         process_parameters: dict,
         settings: dict,
@@ -288,16 +288,14 @@ class BackendBase(ABC):
             **kwargs: Additional backend-specific arguments
 
         """
-        pass
 
-    def _cleanup(self) -> None:
+    def _cleanup(self) -> None:  # noqa: B027 - intentionally empty default implementation
         """Cleanup connections and resources.
 
         Override this method to perform cleanup operations.
         Called in a finally block after each attempt.
 
         """
-        pass
 
     @abstractmethod
     def _execute(

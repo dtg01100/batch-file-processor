@@ -17,7 +17,9 @@ class TestAlertQueue:
         from dispatch.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
-        queue._queue_path.write_text(json.dumps({"id": 1}) + "\n" + json.dumps({"id": 2}) + "\n")
+        queue._queue_path.write_text(
+            json.dumps({"id": 1}) + "\n" + json.dumps({"id": 2}) + "\n"
+        )
         result = queue.dequeue()
         assert result["id"] == 1
         remaining = queue.peek()

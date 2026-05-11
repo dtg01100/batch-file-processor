@@ -187,14 +187,10 @@ class TestPrintRunLogWindows:
 
     def test_raw_data_encoding_python3(self):
         """Test that data is encoded as bytes for Python 3."""
-        import sys
 
         test_string = "Test log content"
 
-        if sys.version_info >= (3,):
-            raw_data = bytes(test_string, "utf-8")
-        else:
-            raw_data = test_string
+        raw_data = bytes(test_string, "utf-8")
 
         assert isinstance(raw_data, bytes)
 

@@ -252,13 +252,12 @@ class TestProcessDirectoriesLogic:
     def test_increments_backup_counter(self, mock_settings_dict):
         """Should increment backup counter on each run."""
         # Simulate the logic in process_directories
-        if mock_settings_dict["enable_interval_backups"]:
-            if (
-                mock_settings_dict["backup_counter"]
-                >= mock_settings_dict["backup_counter_maximum"]
-            ):
-                # Would do backup here
-                mock_settings_dict["backup_counter"] = 0
+        if mock_settings_dict["enable_interval_backups"] and (
+            mock_settings_dict["backup_counter"]
+            >= mock_settings_dict["backup_counter_maximum"]
+        ):
+            # Would do backup here
+            mock_settings_dict["backup_counter"] = 0
 
         mock_settings_dict["backup_counter"] += 1
 
@@ -271,13 +270,12 @@ class TestProcessDirectoriesLogic:
         mock_settings_dict["backup_counter_maximum"] = 10
 
         # Simulate the logic
-        if mock_settings_dict["enable_interval_backups"]:
-            if (
-                mock_settings_dict["backup_counter"]
-                >= mock_settings_dict["backup_counter_maximum"]
-            ):
-                # Would trigger backup
-                mock_settings_dict["backup_counter"] = 0
+        if mock_settings_dict["enable_interval_backups"] and (
+            mock_settings_dict["backup_counter"]
+            >= mock_settings_dict["backup_counter_maximum"]
+        ):
+            # Would trigger backup
+            mock_settings_dict["backup_counter"] = 0
 
         assert mock_settings_dict["backup_counter"] == 0
 
@@ -362,14 +360,14 @@ class TestErrorHandling:
 
         with (
             patch("os.path.isdir", return_value=False),
-            patch("os.mkdir", side_effect=IOError("Cannot create directory")),
+            patch("os.mkdir", side_effect=OSError("Cannot create directory")),
         ):
             # Simulate the error handling logic from process_directories
             log_folder_creation_error = False
             if not os.path.isdir(mock_reporting["logs_directory"]):
                 try:
                     os.mkdir(mock_reporting["logs_directory"])
-                except IOError:
+                except OSError:
                     log_folder_creation_error = True
 
             assert log_folder_creation_error is True
@@ -729,10 +727,9 @@ class TestBackupIncrementLogic:
         }
 
         # Simulate backup trigger
-        if settings["enable_interval_backups"]:
-            if settings["backup_counter"] >= settings["backup_counter_maximum"]:
-                # Would call backup_increment.do_backup here
-                settings["backup_counter"] = 0
+        if settings["enable_interval_backups"] and settings["backup_counter"] >= settings["backup_counter_maximum"]:
+            # Would call backup_increment.do_backup here
+            settings["backup_counter"] = 0
 
         assert settings["backup_counter"] == 0
 

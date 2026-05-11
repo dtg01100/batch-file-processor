@@ -8,7 +8,8 @@ components.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 
 class ConfigSectionBase(ABC):
@@ -158,9 +159,9 @@ class SectionRegistry:
     sections from plugins and the core system.
     """
 
-    _sections: dict[str, type[ConfigSectionBase]] = {}
-    _renderers: dict[str, Callable] = {}
-    _plugin_sections: dict[str, list[str]] = {}
+    _sections: ClassVar[dict[str, type["ConfigSectionBase"]]] = {}
+    _renderers: ClassVar[dict[str, Callable]] = {}
+    _plugin_sections: ClassVar[dict[str, list[str]]] = {}
 
     @classmethod
     def register_section(cls, section_class: type[ConfigSectionBase]) -> None:

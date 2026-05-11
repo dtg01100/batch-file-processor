@@ -206,7 +206,7 @@ class FolderDiscoveryService:
         folder: dict,
         folder_index: int | None = None,
         folder_total: int | None = None,
-        folder_name: str | None = None,
+        _folder_name: str | None = None,
         progress_reporter: Any | None = None,
     ) -> list[str]:
         """Filter out files that have already been processed.

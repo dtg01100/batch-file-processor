@@ -19,7 +19,7 @@ def do(
     settings: dict,
     filename: str,
     file_ops: FileOperationsProtocol | None = None,
-    disable_retry: bool = False,
+    disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
 ) -> bool:
     """Copy a file to a local directory.
 
@@ -51,7 +51,7 @@ class CopyBackend(BackendBase):
     def __init__(
         self,
         file_ops: FileOperationsProtocol | None = None,
-        disable_retry: bool = False,
+        disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
     ) -> None:
         """Initialize copy backend.
 
@@ -97,9 +97,9 @@ class CopyBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        settings: dict,
+        _settings: dict,
         filename: str,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> bool:
         """Copy file to destination directory.
 
@@ -122,9 +122,9 @@ class CopyBackend(BackendBase):
             try:
                 self.file_ops.makedirs(dest_dir)
             except OSError as e:
-                raise IOError(
+                raise OSError(
                     f"Failed to create destination directory '{dest_dir}': {e}"
-                )
+                ) from e
 
         destination_path = self._resolve_destination(dest_dir, filename)
         self.file_ops.copy(filename, destination_path)
@@ -134,7 +134,7 @@ class CopyBackend(BackendBase):
         """Get backend name for logging."""
         return "copy"
 
-    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, _settings: dict) -> str:
         """Get copy destination for logging."""
         return process_parameters.get("copy_to_directory", "")
 

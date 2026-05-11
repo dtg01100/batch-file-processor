@@ -5,7 +5,7 @@ Tests the base plugin interface and lifecycle management.
 """
 
 import unittest
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 from interface.plugins import PluginBase
@@ -37,7 +37,7 @@ class TestPlugin(PluginBase):
     def get_version(cls) -> str:
         return "1.0.0"
 
-    def initialize(self, config: Dict[str, Any] = None) -> None:
+    def initialize(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or {}
 
     def activate(self) -> None:
@@ -48,7 +48,6 @@ class TestPlugin(PluginBase):
 
     def create_widget(self, parent: Any = None) -> Any:
         return None
-
 
 class TestPluginWithConfig(TestPlugin):
     """
@@ -78,7 +77,6 @@ class TestPluginWithConfig(TestPlugin):
             ),
         ]
         return ConfigurationSchema(fields)
-
 
 class TestPluginBase(unittest.TestCase):
     """
@@ -201,7 +199,6 @@ class TestPluginBase(unittest.TestCase):
 
         self.assertTrue(result.success)
         mock_initialize.assert_called_once_with(valid_config)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -231,7 +231,7 @@ class TestConvertToCSVHeaders(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             first_row = next(reader)
             assert first_row == [
@@ -268,7 +268,7 @@ class TestConvertToCSVHeaders(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             first_row = next(reader)
             # First row should be data, not headers
@@ -303,7 +303,7 @@ class TestConvertToCSVARecords(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # A record should contain "A" as first field
             lines = content.split("\n")
@@ -334,7 +334,7 @@ class TestConvertToCSVARecords(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             lines = content.split("\n")
             # Should have no lines starting with "A"
@@ -368,7 +368,7 @@ class TestConvertToCSVARecords(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should contain CUSTOM in the output
             assert "CUSTOM" in content
@@ -402,7 +402,7 @@ class TestConvertToCSVCRecords(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should contain C record fields
             assert '"C"' in content
@@ -432,7 +432,7 @@ class TestConvertToCSVCRecords(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             lines = content.split("\n")
             # Should have no lines with C record type
@@ -467,7 +467,7 @@ class TestConvertToCSVUPCCalculation(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # When disabled, UPC should be the raw value
             assert "01234567890" in content
@@ -496,7 +496,7 @@ class TestConvertToCSVUPCCalculation(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # When enabled, should add tab and check digit (12-digit UPC)
             # 01234567890 + check digit = 012345678905
@@ -547,7 +547,7 @@ class TestConvertToCSVUPCCalculation(TestConvertToCSVFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should use UPC from LUT: 012345678905
             assert "012345678905" in content
@@ -599,7 +599,7 @@ class TestConvertToCSVOverrideUPC(TestConvertToCSVFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should use overridden UPC
             assert "012345678905" in content
@@ -649,7 +649,7 @@ class TestConvertToCSVOverrideUPC(TestConvertToCSVFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should NOT use overridden UPC since category doesn't match
             assert '"01234567890"' in content
@@ -682,7 +682,7 @@ class TestConvertToCSVFilterAmpersand(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should replace & with AND
             assert "AND" in content
@@ -712,7 +712,7 @@ class TestConvertToCSVFilterAmpersand(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # Should preserve the ampersand
             assert "&" in content
@@ -821,7 +821,7 @@ class TestConvertToCSVUPCTargetLength(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # UPC should be padded to 11 chars then ljust used
             assert "01234567890" in content
@@ -852,7 +852,7 @@ class TestConvertToCSVUPCTargetLength(TestConvertToCSVFixtures):
             sample_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             content = f.read()
             # With 12-char target and check digit calc, should be 12 chars
             assert "012345678905" in content
@@ -995,7 +995,7 @@ class TestConvertToCSVDataTransformation(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Find data row (skip header if present)
@@ -1027,7 +1027,7 @@ class TestConvertToCSVDataTransformation(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] != "UPC"]
@@ -1072,7 +1072,7 @@ class TestConvertToCSVIntegration(TestConvertToCSVFixtures):
 
         assert os.path.exists(result)
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             content = f.read()
             # Should have headers, data, and A/C records
             assert "UPC" in content
@@ -1154,7 +1154,7 @@ class TestConvertToCSVIntegration(TestConvertToCSVFixtures):
             empty_upc_lut,
         )
 
-        with open(output_file + ".csv", "r", encoding="utf-8") as f:
+        with open(output_file + ".csv", encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have header + 3 data rows

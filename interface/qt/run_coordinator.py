@@ -90,9 +90,7 @@ class QtRunCoordinator:
             component="qt_run_coordinator",
             operation="process_directories",
             context={
-                "folder_count": folders_table_process.count(
-                    folder_is_active=True
-                )
+                "folder_count": folders_table_process.count(folder_is_active=True)
             },
         )
 
@@ -152,9 +150,7 @@ class QtRunCoordinator:
         """
         if (
             settings_dict["enable_interval_backups"]
-            and settings_dict[
-                "backup_counter"
-            ]
+            and settings_dict["backup_counter"]
             >= settings_dict["backup_counter_maximum"]
         ):
             self._app._backup_increment_module.do_backup(self._app._database_path)
@@ -174,7 +170,7 @@ class QtRunCoordinator:
         ):
             try:
                 self._app._os_module.mkdir(self._app._logs_directory["logs_directory"])
-            except IOError as mkdir_error:
+            except OSError as mkdir_error:
                 log_with_context(
                     logger,
                     40,
@@ -269,9 +265,8 @@ class QtRunCoordinator:
         folders = list(
             folders_table_process.find(folder_is_active=True, order_by="alias")
         )
-        if (
-            self._app._progress_service
-            and hasattr(self._app._progress_service, "start_sending")
+        if self._app._progress_service and hasattr(
+            self._app._progress_service, "start_sending"
         ):
             self._app._progress_service.start_sending(
                 total_files=0, total_folders=len(folders)
@@ -281,9 +276,8 @@ class QtRunCoordinator:
     def _process_folders(self, orchestrator, folders, run_log):
         run_error_bool = False
         for folder_index, folder in enumerate(folders, start=1):
-            if (
-                self._app._progress_service
-                and hasattr(self._app._progress_service, "set_folder_context")
+            if self._app._progress_service and hasattr(
+                self._app._progress_service, "set_folder_context"
             ):
                 self._app._progress_service.set_folder_context(
                     folder_num=folder_index,

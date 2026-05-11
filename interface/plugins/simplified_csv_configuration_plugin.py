@@ -108,9 +108,8 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="Simple CSV Sort Order",
                 description=(
-                "Sort order for simple CSV format"
-                " (comma-separated column names)"
-            ),
+                    "Sort order for simple CSV format" " (comma-separated column names)"
+                ),
                 default="",
             ),
         ]

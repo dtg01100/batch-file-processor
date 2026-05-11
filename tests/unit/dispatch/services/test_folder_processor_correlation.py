@@ -21,12 +21,18 @@ class TestFolderProcessorCorrelation:
         mock_result.errors = []
 
         with patch.object(executor, "_folder_exists", return_value=True):
-            with patch.object(executor, "_discover_and_filter_files", return_value=["/test/file.edi"]):
+            with patch.object(
+                executor, "_discover_and_filter_files", return_value=["/test/file.edi"]
+            ):
                 with patch.object(executor, "_process_folder_files"):
                     with patch.object(executor, "_finalize_folder_result"):
                         executor.process_folder(
                             MagicMock(
-                                folder={"folder_name": "/test", "alias": "Test", "id": 1},
+                                folder={
+                                    "folder_name": "/test",
+                                    "alias": "Test",
+                                    "id": 1,
+                                },
                                 run_log=MagicMock(),
                                 processed_files=None,
                             )
@@ -40,12 +46,18 @@ class TestFolderProcessorCorrelation:
         from core.structured_logging import get_correlation_id
 
         with patch.object(executor, "_folder_exists", return_value=True):
-            with patch.object(executor, "_discover_and_filter_files", return_value=["/test/file.edi"]):
+            with patch.object(
+                executor, "_discover_and_filter_files", return_value=["/test/file.edi"]
+            ):
                 with patch.object(executor, "_process_folder_files"):
                     with patch.object(executor, "_finalize_folder_result"):
                         executor.process_folder(
                             MagicMock(
-                                folder={"folder_name": "/test", "alias": "Test", "id": 1},
+                                folder={
+                                    "folder_name": "/test",
+                                    "alias": "Test",
+                                    "id": 1,
+                                },
                                 run_log=MagicMock(),
                                 processed_files=None,
                             )

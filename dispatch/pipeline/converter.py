@@ -512,7 +512,7 @@ class EDIConverterStep:
         convert_to_format: str,
         input_path: str,
         input_basename: str,
-        correlation_id: str,
+        _correlation_id: str,
         start_time: float,
     ) -> tuple[bool, ConverterResult | None]:
         """Ensure output directory exists, creating if necessary.
@@ -651,7 +651,7 @@ class EDIConverterStep:
         input_basename: str,
         output_dir: str,
         module_name: str,
-        process_edi: bool,
+        process_edi: bool,  # noqa: FBT001 - required by converter pipeline interface
         correlation_id: str,
         start_time: float,
     ):
@@ -714,7 +714,7 @@ class EDIConverterStep:
         upc_dict: dict,
         convert_to_format: str,
         input_basename: str,
-        correlation_id: str,
+        _correlation_id: str,
         start_time: float,
     ) -> ConverterResult:
         """Execute the module conversion and return a ConverterResult."""
@@ -748,7 +748,7 @@ class EDIConverterStep:
         output_dir: str,
         convert_to_format: str,
         input_basename: str,
-        correlation_id: str,
+        _correlation_id: str,
         start_time: float,
     ) -> ConverterResult:
         """Centralized conversion error handling that logs and

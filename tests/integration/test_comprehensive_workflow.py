@@ -454,7 +454,9 @@ class TestFolderConfigurationChanges:
 class TestResendWorkflow:
     """Test the resend flag workflow for reprocessing files."""
 
-    def test_mark_file_for_resend(self, workspace, configured_folder, sample_edi_content):
+    def test_mark_file_for_resend(
+        self, workspace, configured_folder, sample_edi_content
+    ):
         """Test marking a file for resend via database."""
         # Create and process a file first
         test_file = workspace["input_folder"] / "invoice_001.edi"

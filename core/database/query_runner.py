@@ -87,7 +87,7 @@ class DatabaseConnectionProtocol(Protocol):
     with proper resource management.
     """
 
-    def execute(self, query: str, params: tuple = None) -> list[dict]:
+    def execute(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results.
 
         Args:
@@ -117,7 +117,7 @@ class MockConnection:
         self.executed_queries: list[tuple[str, tuple | None]] = []
         self.results: list[list[dict]] = []
 
-    def execute(self, query: str, params: tuple = None) -> list[dict]:
+    def execute(self, query: str, params: tuple | None = None) -> list[dict]:
         """Record the query and return preset results.
 
         Args:
@@ -176,7 +176,7 @@ class SQLiteConnection:
             self._connection.row_factory = sqlite3.Row
         return self._connection
 
-    def execute(self, query: str, params: tuple = None) -> list[dict]:
+    def execute(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results as list of dicts.
 
         Args:
@@ -210,7 +210,7 @@ class SQLiteConnection:
             # Convert rows to dictionaries
             results = []
             for row in cursor.fetchall():
-                row_dict = dict(zip(columns, row))
+                row_dict = dict(zip(columns, row, strict=False))
                 results.append(row_dict)
         except sqlite3.Error:
             results = []
@@ -258,7 +258,7 @@ class QueryRunner:
         """
         self.connection = connection
 
-    def run_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_query(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute a query and return results.
 
         Args:
@@ -272,7 +272,7 @@ class QueryRunner:
         assert_read_only_sql(query)
         return self.connection.execute(query, params)
 
-    def run_query_single(self, query: str, params: tuple = None) -> dict | None:
+    def run_query_single(self, query: str, params: tuple | None = None) -> dict | None:
         """Execute a query and return single result.
 
         Args:
@@ -287,7 +287,9 @@ class QueryRunner:
         return results[0] if results else None
 
     # Legacy alias for backward compatibility
-    def run_arbitrary_query(self, query: str, params: tuple = None) -> list[dict]:
+    def run_arbitrary_query(
+        self, query: str, params: tuple | None = None
+    ) -> list[dict]:
         """Legacy alias for run_query to maintain backward compatibility.
 
         Args:
@@ -377,9 +379,7 @@ def create_query_runner_from_settings(
     ssh_key_filename = settings_dict.get("ssh_key_filename", "").strip() or None
     as400_password = settings_dict.get("as400_password", "").strip() or None
     if not (as400_password or ssh_key_filename):
-        raise ValueError(
-            "Either as400_password or ssh_key_filename must be provided"
-        )
+        raise ValueError("Either as400_password or ssh_key_filename must be provided")
 
     return create_query_runner(
         username=settings_dict["as400_username"],

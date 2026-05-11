@@ -15,7 +15,7 @@ from dispatch.pipeline.validator import (
 class MockFileSystem:
     """Mock file system for testing."""
 
-    def __init__(self, files: dict[str, str] = None):
+    def __init__(self, files: dict[str, str] | None = None):
         self.files = files or {}
 
     def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
@@ -31,8 +31,8 @@ class MockValidatorForStep:
         self,
         should_pass: bool = True,
         should_have_minor_errors: bool = False,
-        errors: list[str] = None,
-        warnings: list[str] = None,
+        errors: list[str] | None = None,
+        warnings: list[str] | None = None,
         log_output: str = "",
     ):
         self.should_pass = should_pass
@@ -69,7 +69,7 @@ class MockErrorHandler:
         folder: str,
         filename: str,
         error: Exception,
-        context: dict = None,
+        context: dict | None = None,
         error_source: str = "Dispatch",
     ):
         self.errors.append(
@@ -786,10 +786,7 @@ class TestIntegration:
 
         should_block = step.should_block_processing({"report_edi_errors": True})
 
-        if not result.is_valid and should_block:
-            processing_blocked = True
-        else:
-            processing_blocked = False
+        processing_blocked = bool(not result.is_valid and should_block)
 
         assert processing_blocked is True
 
@@ -844,7 +841,7 @@ class TestEdgeCases:
         """Test validation of very long EDI file."""
         b_record = "B12345678901" + " " * 64
         lines = ["AHEADER"]
-        for i in range(1000):
+        for _i in range(1000):
             lines.append(b_record)
         lines.append("CFOOTER")
 

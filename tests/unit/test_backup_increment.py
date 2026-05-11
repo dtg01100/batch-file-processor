@@ -63,13 +63,13 @@ class TestDoBackup:
 
     def test_do_backup_file_content_matches(self, temp_dir, source_file_to_backup):
         """Test that backup file has the same content as original."""
-        with open(source_file_to_backup, "r") as f:
+        with open(source_file_to_backup) as f:
             original_content = f.read()
 
         with patch("scripts.backup_increment.utils.do_clear_old_files"):
             result = backup_increment.do_backup(source_file_to_backup)
 
-        with open(result, "r") as f:
+        with open(result) as f:
             backup_content = f.read()
 
         assert backup_content == original_content

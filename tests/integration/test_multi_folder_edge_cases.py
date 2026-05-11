@@ -415,7 +415,7 @@ class TestConcurrentDatabaseAccess:
 
         def writer():
             try:
-                row = list(db.folders_table.all())[0]
+                row = next(iter(db.folders_table.all()))
                 for i in range(20):
                     row["alias"] = f"Conc {i}"
                     db.folders_table.update(row, ["id"])

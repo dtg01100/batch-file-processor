@@ -209,6 +209,7 @@ class QtBatchFileSenderApp:
                 ),
             )
         QApplication.exec()
+        return None
 
     def shutdown(self) -> None:
         if self._progress_service is not None:
@@ -299,9 +300,10 @@ class QtBatchFileSenderApp:
             )
         existing_folders = self._folder_manager.check_folder_exists(selected_folder)
 
-        if existing_folders["truefalse"]:
-            if self._handle_existing_folder_choice(existing_folders):
-                return
+        if existing_folders["truefalse"] and self._handle_existing_folder_choice(
+            existing_folders
+        ):
+            return
 
         if self._progress_service:
             self._progress_service.show("Adding Folder...")
@@ -317,23 +319,20 @@ class QtBatchFileSenderApp:
         """Ask user whether to mark files as processed and perform marking if agreed."""
         if self._ui_service.ask_yes_no(
             "Mark Processed", "Do you want to mark files in folder as processed?"
-        ):
-            if self._database and self._database.folders_table:
-                folder_dict = self._database.folders_table.find_one(
-                    folder_name=selected_folder
-                )
-                if folder_dict:
-                    self._mark_active_as_processed_wrapper(folder_dict["id"])
+        ) and self._database and self._database.folders_table:
+            folder_dict = self._database.folders_table.find_one(
+                folder_name=selected_folder
+            )
+            if folder_dict:
+                self._mark_active_as_processed_wrapper(folder_dict["id"])
 
     def _preselect_select_folder_checks(self) -> bool:
         """Checks prerequisites for selecting a folder."""
-        if (
+        return not (
             self._database is None
             or self._ui_service is None
             or self._folder_manager is None
-        ):
-            return False
-        return True
+        )
 
     def _handle_existing_folder_choice(self, existing_folders: dict) -> bool:
         """Handle user choice when folder already exists.
@@ -444,8 +443,8 @@ class QtBatchFileSenderApp:
         try:
             if self._database.session_database:
                 self._database.session_database.query(
-                "CREATE TABLE IF NOT EXISTS "
-                "single_table AS SELECT * FROM folders WHERE 0"
+                    "CREATE TABLE IF NOT EXISTS "
+                    "single_table AS SELECT * FROM folders WHERE 0"
                 )
                 self._database.session_database.query(
                     "ALTER TABLE single_table ADD COLUMN old_id INTEGER"
@@ -503,8 +502,8 @@ class QtBatchFileSenderApp:
             if not has_backend:
                 self._ui_service.show_error(
                     "Cannot Enable Folder",
-                f"Folder '{folder.get('alias', 'Unknown')}' "
-                f"has no backends configured.\n\n"
+                    f"Folder '{folder.get('alias', 'Unknown')}' "
+                    f"has no backends configured.\n\n"
                     "Please edit the folder and enable at least one backend:\n"
                     "• Email\n"
                     "• FTP\n"
@@ -556,29 +555,12 @@ class QtBatchFileSenderApp:
     def _open_edit_folders_dialog(self, folder_config: dict) -> None:
         from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 
-        def _get_aliases() -> list:
-            if self._database and self._database.folders_table:
-                return [
-                    row["alias"]
-                    for row in self._database.folders_table.find()
-                    if row.get("alias")
-                ]
-            return []
-
-        def _get_settings() -> dict:
-            if self._database:
-                settings = dict(self._database.get_settings_or_default())
-                if self._database.folders_table:
-                    settings["folders"] = self._database.folders_table.find()
-                return settings
-            return {}
-
         dlg = EditFoldersDialog(
             self._window,
             folder_config,
             on_apply_success=self._on_folder_edit_applied,
-            alias_provider=_get_aliases,
-            settings_provider=_get_settings,
+            alias_provider=self._get_existing_aliases,
+            settings_provider=self._get_folder_dialog_settings,
         )
         if dlg.exec():
             folder_id = folder_config.get("id")
@@ -596,6 +578,25 @@ class QtBatchFileSenderApp:
         if self._database is None or self._database.folders_table is None:
             return
         self._database.folders_table.update(folder_config, ["id"])
+
+    def _get_existing_aliases(self) -> list[str]:
+        """Return list of existing folder aliases for dedup hinting in edit dialog."""
+        if self._database and self._database.folders_table:
+            return [
+                row["alias"]
+                for row in self._database.folders_table.find()
+                if row.get("alias")
+            ]
+        return []
+
+    def _get_folder_dialog_settings(self) -> dict:
+        """Return settings dict for edit folders dialog."""
+        if self._database:
+            settings = dict(self._database.get_settings_or_default())
+            if self._database.folders_table:
+                settings["folders"] = self._database.folders_table.find()
+            return settings
+        return {}
 
     def _set_defaults_popup(self) -> None:
         if self._database is None:
@@ -848,7 +849,7 @@ class QtBatchFileSenderApp:
                 test_log_file.write("teststring")
             os.remove(test_file_path)
             return True
-        except IOError as log_directory_error:
+        except OSError as log_directory_error:
             logger.debug("Logs directory check failed: %s", log_directory_error)
             return False
 

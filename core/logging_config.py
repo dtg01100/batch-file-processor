@@ -26,7 +26,7 @@ import logging
 import os
 import sys
 from contextvars import ContextVar
-from typing import IO, Any, Union
+from typing import IO, Any
 
 from core.structured_logging import JSONFormatter, StructuredLogAdapter
 
@@ -238,16 +238,16 @@ class RunLogHandler(logging.Handler):
 
     def __init__(
         self,
-        run_log: Union[IO[bytes], list[str], None] = None,
+        run_log: IO[bytes] | list[str] | None = None,
         level: int = logging.INFO,
     ) -> None:
         super().__init__(level=level)
-        self.run_log: Union[IO[bytes], list[str], None] = run_log
+        self.run_log: IO[bytes] | list[str] | None = run_log
         self.setFormatter(logging.Formatter(RUN_LOG_FORMAT))
 
     # -- public API --------------------------------------------------------
 
-    def set_run_log(self, run_log: Union[IO[bytes], list[str], None]) -> None:
+    def set_run_log(self, run_log: IO[bytes] | list[str] | None) -> None:
         """Replace the current run-log target.
 
         Call this at the start of each new dispatch run to point the handler

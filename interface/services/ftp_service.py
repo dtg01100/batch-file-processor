@@ -128,7 +128,7 @@ class MockFTPService(FTPServiceProtocol):
         self.connection_attempts = []
 
     def test_connection(
-        self, server: str, port: int, username: str, password: str, folder: str
+        self, server: str, port: int, username: str, _password: str, folder: str
     ) -> FTPConnectionResult:
         """Record connection attempt and return configured result."""
         self.connection_attempts.append(
@@ -144,7 +144,7 @@ class MockFTPService(FTPServiceProtocol):
         )
 
     def connect(
-        self, server: str, port: int, username: str, password: str
+        self, _server: str, _port: int, _username: str, _password: str
     ) -> "MockFTPConnection":
         """Return a mock FTP connection."""
         return MockFTPConnection()

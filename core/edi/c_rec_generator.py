@@ -16,7 +16,7 @@ class QueryRunnerProtocol(Protocol):
     enabling easy mocking in tests.
     """
 
-    def run_query(self, query: str, params: tuple = None) -> list:
+    def run_query(self, query: str, params: tuple | None = None) -> list:
         """Run a SQL query and return results.
 
         Args:
@@ -136,10 +136,7 @@ class CRecGenerator:
             9-character amount string suitable for EDI output
 
         """
-        if amount < 0:
-            amount_builder = amount - (amount * 2)
-        else:
-            amount_builder = amount
+        amount_builder = amount - amount * 2 if amount < 0 else amount
 
         amount_str = f"{amount_builder:.2f}".replace(".", "").rjust(9, "0")
 
@@ -183,7 +180,7 @@ class CRecGenerator:
         return f"C{charge_type}{desc_str}{amount_str}\n"
 
     def generate_c_records_for_invoice(
-        self, invoice_data: dict, charges: list[dict]
+        self, _invoice_data: dict, charges: list[dict]
     ) -> list[str]:
         """Generate all C records for an invoice.
 

@@ -430,10 +430,10 @@ class TestImportThread:
         # Create a database at the new path for testing
         # Since we can't mock signals, we just verify run() doesn't crash
         # when dealing with non-existent files
-        try:
+        import contextlib
+
+        with contextlib.suppress(Exception):
             thread.run()
-        except Exception:
-            pass  # The method should handle exceptions internally
 
 
 @pytest.mark.qt

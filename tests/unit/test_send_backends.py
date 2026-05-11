@@ -233,7 +233,9 @@ class TestEmailBackend:
         assert "a@example.com" in to_field
         assert "b@example.com" in to_field
 
-    def test_email_sends_to_semicolon_separated_recipients(self, sample_settings, sample_file):
+    def test_email_sends_to_semicolon_separated_recipients(
+        self, sample_settings, sample_file
+    ):
         """Semicolon-separated addresses are accepted in the same way as commas."""
         from backend import email_backend
         from backend.smtp_client import MockSMTPClient
@@ -347,7 +349,7 @@ class TestHTTPBackend:
 
         assert result is True
         assert len(mock_client.posts) > 0
-        url, data, files, headers = mock_client.posts[0]
+        url, _data, _files, _headers = mock_client.posts[0]
         assert url == "https://example.com/upload"
 
     def test_http_post_includes_file_in_files_dict(
@@ -366,7 +368,7 @@ class TestHTTPBackend:
         )
 
         assert len(mock_client.posts) > 0
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, files, _headers = mock_client.posts[0]
         basename = os.path.basename(sample_file)
         # files dict has field_name as key and (filename, file_obj) tuple as value
         assert "file" in files
@@ -389,7 +391,7 @@ class TestHTTPBackend:
             http_client=mock_client,
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, files, _headers = mock_client.posts[0]
         assert "my_custom_field" in files
 
     def test_http_post_with_bearer_auth(self, sample_settings_dict, sample_file):
@@ -410,7 +412,7 @@ class TestHTTPBackend:
             http_client=mock_client,
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, _files, headers = mock_client.posts[0]
         assert headers is not None
         assert "Authorization" in headers
         assert headers["Authorization"] == "Bearer my-secret-token"
@@ -433,7 +435,7 @@ class TestHTTPBackend:
             http_client=mock_client,
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        url, _data, _files, _headers = mock_client.posts[0]
         assert "api_key=my-api-key" in url
 
     def test_http_post_parses_custom_headers(self, sample_settings_dict, sample_file):
@@ -453,7 +455,7 @@ class TestHTTPBackend:
             http_client=mock_client,
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, _files, headers = mock_client.posts[0]
         assert headers.get("X-Custom-Header") == "value1"
         assert headers.get("X-Another") == "value2"
 

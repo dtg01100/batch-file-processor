@@ -8,7 +8,8 @@ class that implements the required methods is considered a valid
 implementation, without explicit inheritance.
 """
 
-from typing import Any, Callable, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

@@ -50,7 +50,7 @@ logger = get_logger(__name__)
 class TweakerQueryRunnerProtocol(Protocol):
     """Protocol for query runner operations in the tweaker context."""
 
-    def run_query(self, query: str, params: tuple = None) -> list:
+    def run_query(self, query: str, params: tuple | None = None) -> list:
         """Run a SQL query and return results."""
         ...
 
@@ -84,7 +84,7 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         logger.warning(message + " - using NoOpQueryRunner")
 
         class NoOpQueryRunner:
-            def run_query(self, query: str, params: tuple = None) -> list:
+            def run_query(self, _query: str, _params: tuple | None = None) -> list:
                 return []
 
         return NoOpQueryRunner()
@@ -214,7 +214,7 @@ class EDITweaker:
         self,
         input_path: str,
         output_path: str,
-        settings: dict[str, Any],
+        _settings: dict[str, Any],
         params: dict[str, Any],
         upc_dict: dict[int, tuple],
     ) -> str:
@@ -323,6 +323,7 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
+        return None
 
     def _open_output_with_retry(self, filepath: str) -> TextIO:
         """Open output file with retry logic."""
@@ -348,6 +349,7 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
+        return None
 
     def _process_records(
         self, lines: list[str], output_file: TextIO, upc_dict: dict
@@ -410,7 +412,7 @@ class EDITweaker:
             },
         )
 
-    def _process_a_record(self, fields: dict, output_file: TextIO) -> str:
+    def _process_a_record(self, fields: dict, _output_file: TextIO) -> str:
         """Process an A record.
 
         Args:
@@ -426,7 +428,7 @@ class EDITweaker:
 
         if self.config.invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]
-            if not invoice_date_string == EMPTY_DATE_MMDDYY:
+            if invoice_date_string != EMPTY_DATE_MMDDYY:
                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
                 offset_invoice_date = invoice_date + timedelta(
                     days=self.config.invoice_date_offset
@@ -469,7 +471,7 @@ class EDITweaker:
         return "".join(line_builder)
 
     def _process_b_record(
-        self, fields: dict, output_file: TextIO, upc_dict: dict
+        self, fields: dict, _output_file: TextIO, upc_dict: dict
     ) -> str:
         """Process a B record.
 
@@ -535,10 +537,9 @@ class EDITweaker:
         if (
             self.config.split_prepaid_sales_tax_crec
             and self.crec_appender.unappended_records
-        ):
-            if fields.get("description", "").startswith("TABSales Tax"):
-                self.crec_appender.fetch_splitted_sales_tax_totals(output_file)
-                return ""
+        ) and fields.get("description", "").startswith("TABSales Tax"):
+            self.crec_appender.fetch_splitted_sales_tax_totals(output_file)
+            return ""
 
         return (
             fields["record_type"]

@@ -376,7 +376,7 @@ class TestEDISplitter:
         splitter.split_edi(content, config)
 
         # Check written content - should have content
-        for path, written_content in mock_filesystem.written_files.items():
+        for _path, written_content in mock_filesystem.written_files.items():
             if isinstance(written_content, bytes):
                 # The content should have been written
                 assert len(written_content) > 0

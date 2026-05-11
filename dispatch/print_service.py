@@ -152,7 +152,7 @@ class WindowsPrintService(BasePrintService):
 
         """
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
@@ -185,10 +185,7 @@ class WindowsPrintService(BasePrintService):
         try:
             formatted_log = self.format_content(content)
 
-            if sys.version_info >= (3,):
-                raw_data = bytes(formatted_log, "utf-8")
-            else:
-                raw_data = formatted_log
+            raw_data = bytes(formatted_log, "utf-8")
 
             h_printer = win32print.OpenPrinter(printer_name)
             try:
@@ -246,7 +243,7 @@ class UnixPrintService(BasePrintService):
 
         """
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
@@ -277,7 +274,7 @@ class UnixPrintService(BasePrintService):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            stdout, stderr = lpr.communicate(input=formatted_log.encode("utf-8"))
+            _stdout, stderr = lpr.communicate(input=formatted_log.encode("utf-8"))
 
             if lpr.returncode != 0:
                 logger.error("lpr command failed: %s", stderr.decode("utf-8"))
@@ -402,7 +399,7 @@ class NullPrintService(BasePrintService):
         """Initialize the null print service."""
         super().__init__(line_width=line_width)
 
-    def print_file(self, file_path: str) -> bool:
+    def print_file(self, _file_path: str) -> bool:
         """Do nothing, return True.
 
         Args:
@@ -414,7 +411,7 @@ class NullPrintService(BasePrintService):
         """
         return True
 
-    def print_content(self, content: str) -> bool:
+    def print_content(self, _content: str) -> bool:
         """Do nothing, return True.
 
         Args:
@@ -501,8 +498,7 @@ def create_print_service(line_width: int = 75) -> PrintServiceProtocol:
     """
     if sys.platform == "win32":
         return WindowsPrintService(line_width=line_width)
-    else:
-        return UnixPrintService(line_width=line_width)
+    return UnixPrintService(line_width=line_width)
 
 
 def create_run_log_printer(line_width: int = 75) -> RunLogPrinter:

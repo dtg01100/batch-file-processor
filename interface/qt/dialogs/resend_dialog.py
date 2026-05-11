@@ -438,7 +438,7 @@ class ResendDialog(BaseDialog):
                 f["file_exists"] = file_info["file_exists"]
                 break
 
-    def _on_file_check_finished(self, missing_count: int, total_count: int) -> None:
+    def _on_file_check_finished(self, missing_count: int, _total_count: int) -> None:
         """Handle file existence check completion."""
         self._loading_label.setText("")
         if missing_count > 0:
@@ -461,17 +461,17 @@ class ResendDialog(BaseDialog):
                 if file_item is not None:
                     file_item.setText(f"{warning_icon} {file_item.text()}")
 
-    def _on_search_changed(self, text: str) -> None:
+    def _on_search_changed(self, _text: str) -> None:
         """Handle search input changes with debouncing."""
         self._search_timer.stop()
         self._search_timer.start(150)
 
-    def _on_search_field_changed(self, index: int) -> None:
+    def _on_search_field_changed(self, _index: int) -> None:
         """Re-apply search when the selected search field changes."""
         self._search_timer.stop()
         self._do_search_filter()
 
-    def _on_date_filter_toggled(self, checked: bool) -> None:
+    def _on_date_filter_toggled(self, checked: bool) -> None:  # noqa: FBT001 - Qt signal handler requires bool parameter
         """Handle date filter checkbox toggle."""
         self._date_from_input.setEnabled(checked)
         self._date_to_input.setEnabled(checked)
@@ -633,9 +633,9 @@ class ResendDialog(BaseDialog):
             should_check = self._filtered_files[row]["id"] in self._selected_files
             if checkbox.isChecked() != should_check:
                 # Prevent toggling the signal handler during programmatic sync
-                checkbox.blockSignals(True)
+                checkbox.blockSignals(True)  # noqa: FBT003 - Qt signal blocking requires positional bool
                 checkbox.setChecked(should_check)
-                checkbox.blockSignals(False)
+                checkbox.blockSignals(False)  # noqa: FBT003 - Qt signal blocking requires positional bool
 
         self._is_updating_selection = False
 

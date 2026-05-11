@@ -116,7 +116,9 @@ class TestFolderProcessingConfig:
         config = FolderProcessingConfig(convert_edi=True, convert_to_format="csv")
         assert config.has_conversion is True
 
-        config_no_format = FolderProcessingConfig(convert_edi=True, convert_to_format="")
+        config_no_format = FolderProcessingConfig(
+            convert_edi=True, convert_to_format=""
+        )
         assert config_no_format.has_conversion is False
 
         config_disabled = FolderProcessingConfig(

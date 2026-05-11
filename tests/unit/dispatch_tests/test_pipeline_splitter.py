@@ -20,7 +20,7 @@ from dispatch.pipeline.splitter import (
 class MockFileSystem:
     """Mock file system for testing."""
 
-    def __init__(self, files: dict[str, str] = None):
+    def __init__(self, files: dict[str, str] | None = None):
         self.files = files or {}
         self.text_files = {}
         self.binary_files = {}
@@ -93,7 +93,7 @@ class MockErrorHandler:
         folder: str,
         filename: str,
         error: Exception,
-        context: dict = None,
+        context: dict | None = None,
         error_source: str = "Dispatch",
     ):
         self.errors.append(
@@ -148,7 +148,7 @@ class MockEDISplitter:
         self,
         input_path: str,
         config: SplitConfig,
-        upc_dict: dict = None,
+        upc_dict: dict | None = None,
         filter_categories: str = "ALL",
         filter_mode: str = "include",
     ) -> SplitResult:

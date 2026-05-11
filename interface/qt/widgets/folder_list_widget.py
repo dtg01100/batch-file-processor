@@ -10,7 +10,8 @@ Fuzzy matching via the ``thefuzz`` library is used to filter folders by alias
 when a filter value is provided.
 """
 
-from typing import Any, Callable, Iterator, Protocol
+from collections.abc import Callable, Iterator
+from typing import Any, Protocol
 
 import thefuzz.process  # type: ignore
 from PyQt5.QtCore import Qt
@@ -566,7 +567,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)
+        btn.setProperty("compact", True)  # noqa: FBT003 - Qt property API requires positional bool
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
+from core.exceptions import BackendSendError
+
 pytestmark = [pytest.mark.unit, pytest.mark.backend]
 
 
@@ -73,7 +75,7 @@ class TestHTTPBackendOperations:
             process_parameters, settings_dict, source_file, http_client=mock_client
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        url, _data, files, _headers = mock_client.posts[0]
         assert url == "https://example.com/upload"
         assert "file" in files
 
@@ -97,7 +99,7 @@ class TestHTTPBackendOperations:
             process_parameters, settings_dict, str(source), http_client=mock_client
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, _files, headers = mock_client.posts[0]
         assert headers is not None
 
     def test_http_backend_bearer_auth(self, temp_dir, settings_dict):
@@ -121,7 +123,7 @@ class TestHTTPBackendOperations:
             process_parameters, settings_dict, str(source), http_client=mock_client
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        _url, _data, _files, headers = mock_client.posts[0]
         assert headers is not None
 
     def test_http_backend_query_auth(self, temp_dir, settings_dict):
@@ -145,7 +147,7 @@ class TestHTTPBackendOperations:
             process_parameters, settings_dict, str(source), http_client=mock_client
         )
 
-        url, data, files, headers = mock_client.posts[0]
+        url, _data, _files, _headers = mock_client.posts[0]
         assert "api_key=" in url
 
     def test_http_backend_failure_raises(
@@ -185,7 +187,7 @@ class TestHTTPBackendOperations:
         mock_client.set_response(status_code=500)
 
         with patch("time.sleep"):
-            with pytest.raises(Exception):
+            with pytest.raises(BackendSendError):
                 __import__("backend.http_backend", fromlist=["do"]).do(
                     process_parameters,
                     settings_dict,
@@ -280,7 +282,7 @@ class TestHTTPClient:
         client.post("https://example.com/upload", data={"key": "value"})
 
         assert len(client.posts) == 1
-        url, data, files, headers = client.posts[0]
+        url, data, _files, _headers = client.posts[0]
         assert url == "https://example.com/upload"
         assert data == {"key": "value"}
 

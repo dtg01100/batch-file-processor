@@ -26,6 +26,7 @@ Thread Safety:
 
 import importlib
 import os
+from typing import ClassVar
 
 from core.structured_logging import get_logger, log_backend_call, log_with_context
 from dispatch.interfaces import BackendInterface
@@ -46,7 +47,7 @@ class SendManager:
     """
 
     # Default backend configuration mapping
-    DEFAULT_BACKENDS = {
+    DEFAULT_BACKENDS: ClassVar[dict[str, dict[str, str]]] = {
         "copy": {
             "module": "backend.copy_backend",
             "setting": "copy_to_directory",
@@ -157,7 +158,7 @@ class SendManager:
                     success=False,
                     error=e,
                 )
-                logger.error("Backend '%s' failed to send: %s" % (backend_name, e))
+                logger.error(f"Backend '{backend_name}' failed to send: {e}")
                 logger.debug("Backend '%s' result: failure", backend_name)
                 # Continue with other backends instead of raising
 

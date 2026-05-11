@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import os
+from typing import ClassVar
 
 from core.constants import CURRENT_DATABASE_VERSION
 
@@ -275,7 +276,7 @@ class TestSetDefaultsPopup:
 class TestEditDialogDefaults:
     """Test EditDialog receives proper defaults in all scenarios."""
 
-    REQUIRED_KEYS = [
+    REQUIRED_KEYS: ClassVar[list[str]] = [
         "copy_to_directory",
         "folder_is_active",
         "alias",

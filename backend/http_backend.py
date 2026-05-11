@@ -86,7 +86,7 @@ def do(
     settings_dict: dict,
     filename: str,
     http_client: HTTPClientProtocol | None = None,
-    disable_retry: bool = False,
+    disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
 ) -> bool:
     """Send a file via HTTP POST.
 
@@ -116,7 +116,7 @@ class HTTPBackend(BackendBase):
     """
 
     def __init__(
-        self, http_client: HTTPClientProtocol | None = None, disable_retry: bool = False
+        self, http_client: HTTPClientProtocol | None = None, disable_retry: bool = False  # noqa: FBT001,FBT002 - required by backend interface pattern
     ) -> None:
         """Initialize HTTP backend.
 
@@ -132,9 +132,9 @@ class HTTPBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        settings_dict: dict,
+        _settings_dict: dict,
         filename: str,
-        **kwargs,
+        **_kwargs,
     ) -> bool:
         """Send file via HTTP POST.
 
@@ -214,27 +214,26 @@ class HTTPBackend(BackendBase):
                     log_url,
                 )
                 return True
-            else:
-                error_msg = (
-                    f"HTTP POST failed with status {response.status_code}: "
-                    f"{response.text[:500]}"
-                )
-                log_file_operation(
-                    logger,
-                    "write",
-                    file_basename,
-                    file_size=file_size,
-                    file_type="edi",
-                    success=False,
-                    correlation_id=self._correlation_id,
-                )
-                raise BackendSendError(error_msg)
+            error_msg = (
+                f"HTTP POST failed with status {response.status_code}: "
+                f"{response.text[:500]}"
+            )
+            log_file_operation(
+                logger,
+                "write",
+                file_basename,
+                file_size=file_size,
+                file_type="edi",
+                success=False,
+                correlation_id=self._correlation_id,
+            )
+            raise BackendSendError(error_msg)
 
     def _get_backend_name(self) -> str:
         """Get backend name for logging."""
         return "http"
 
-    def _get_endpoint(self, process_parameters: dict, settings_dict: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, _settings_dict: dict) -> str:
         """Get HTTP endpoint for logging."""
         return process_parameters.get("http_url", "")
 
@@ -248,10 +247,10 @@ class HTTPBackend(BackendBase):
 
     def _prepare_for_retry(
         self,
-        process_parameters: dict,
-        settings_dict: dict,
-        filename: str,
-        **kwargs,
+        _process_parameters: dict,
+        _settings_dict: dict,
+        _filename: str,
+        **_kwargs,
     ) -> None:
         """Prepare for retry by resetting state."""
         self._client = None

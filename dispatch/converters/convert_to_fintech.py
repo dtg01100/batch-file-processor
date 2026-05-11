@@ -74,7 +74,7 @@ class FintechConverter(BaseEDIConverter):
         context.user_data["inv_fetcher"] = InvFetcher(None, context.settings_dict)
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -227,8 +227,7 @@ class FintechConverter(BaseEDIConverter):
         """
         if uommult > 1:
             return "EA"
-        else:
-            return "CS"
+        return "CS"
 
     @staticmethod
     def _format_invoice_date(inv_date: str) -> str:

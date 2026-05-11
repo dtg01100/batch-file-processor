@@ -102,7 +102,7 @@ class FileProcessingHelpers:
         """
         invoice_numbers = []
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 for line in f:
                     if line.startswith("A"):
                         try:
@@ -112,8 +112,8 @@ class FileProcessingHelpers:
                                 invoice_numbers.append(invoice_num)
                         except Exception:
                             logger.warning(
-                "Skipping malformed A-record in %s "
-                "while extracting invoice numbers",
+                                "Skipping malformed A-record in %s "
+                                "while extracting invoice numbers",
                                 file_path,
                             )
         except OSError as e:

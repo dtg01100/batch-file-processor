@@ -22,11 +22,11 @@ from interface.operations.plugin_configuration_mapper import (
 )
 
 __all__ = [
-    "FolderManager",
+    "ExtractedPluginConfig",
     "FolderDataExtractor",
+    "FolderManager",
+    "PluginConfigPopulationResult",
     "PluginConfigurationMapper",
     "QtPluginConfigExtractor",
     "QtPluginWidgetPopulator",
-    "ExtractedPluginConfig",
-    "PluginConfigPopulationResult",
 ]

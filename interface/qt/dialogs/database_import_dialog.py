@@ -179,12 +179,12 @@ class DatabaseImportDialog(BaseDialog):
         self._import_thread.confirm_required.connect(self._on_confirm_required)
         self._import_thread.start()
 
-    def _on_progress(self, value: int, maximum: int, message: str) -> None:
+    def _on_progress(self, value: int, maximum: int, _message: str) -> None:
         """Update progress bar."""
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, _message: str) -> None:
+    def _on_finished(self, success: bool, _message: str) -> None:  # noqa: FBT001 - Qt signal handler requires bool parameter
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -213,10 +213,10 @@ class DatabaseImportDialog(BaseDialog):
     ) -> None:
         """Handle confirmation request from background thread."""
         # Store result in the thread's result container via the event's dict
-        setattr(result_event, "result", self.confirm_yes_no(title, message))
+        result_event.result = self.confirm_yes_no(title, message)
         result_event.set()
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+    def closeEvent(self, event: QCloseEvent) -> None:
         """Handle dialog close — cancel import thread if still running."""
         thread = getattr(self, "_import_thread", None)
         if (
@@ -289,7 +289,7 @@ class ImportThread(QThread):
             return reply == QMessageBox.StandardButton.Yes
 
         result_event = threading.Event()
-        setattr(result_event, "result", False)
+        result_event.result = False
 
         # Emit signal to main thread - handler will set result_event.result
         # and call result_event.set()
@@ -318,7 +318,7 @@ class ImportThread(QThread):
             if not self._check_version_compatibility(
                 new_db_version, new_db_version_dict
             ):
-                self.finished.emit(False, "Import cancelled by user")
+                self.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 - Qt signal emit with positional bool
                 return
 
             # Run the migration
@@ -326,7 +326,7 @@ class ImportThread(QThread):
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")
+            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003 - Qt signal emit with positional bool
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")
@@ -364,20 +364,18 @@ class ImportThread(QThread):
                 if not self._confirm(
                     "Compatibility Warning",
                     "THIS WILL RESULT IN UNDEFINED BEHAVIOR, ARE YOU SURE YOU WANT "
-                    "TO CONTINUE?\nBackup is stored at: "
-                    + self._backup_path,
+                    "TO CONTINUE?\nBackup is stored at: " + self._backup_path,
                 ):
                     return False
 
-            elif new_db_version_dict.get("os") != self._platform:
-                if not self._confirm(
-                    "Platform Warning",
-                    "The operating system specified in the configuration does "
-                    "not match the currently running operating system.\n"
-                    "There is no guarantee that the imported folders will work. "
-                    "Continue?",
-                ):
-                    return False
+            elif new_db_version_dict.get("os") != self._platform and not self._confirm(
+                "Platform Warning",
+                "The operating system specified in the configuration does "
+                "not match the currently running operating system.\n"
+                "There is no guarantee that the imported folders will work. "
+                "Continue?",
+            ):
+                return False
         except Exception as e:
             logger.debug("Version compatibility check failed: %s", e)
             return False
@@ -394,7 +392,7 @@ class DbMigrationJob:
     def do_migrate(
         self,
         thread: ImportThread,
-        new_database_path: str,
+        _new_database_path: str,
         original_database_path: str,
     ) -> None:
         """Perform the database migration."""
@@ -440,7 +438,7 @@ class DbMigrationJob:
             if not isinstance(folder, dict):
                 continue
             if thread._is_cancelled:  # Cooperative cancellation check
-                thread.finished.emit(False, "Import cancelled by user")
+                thread.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 - Qt signal emit with positional bool
                 return
             self._migrate_folder(folder, target_folders, original_db)
             thread.progress.emit(

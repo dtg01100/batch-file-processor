@@ -1052,7 +1052,7 @@ class TestComplexStateTransitions:
         folder_id = folder["id"]
 
         # Toggle multiple times
-        for iteration in range(5):
+        for _iteration in range(5):
             # Disable
             folder_manager.disable_folder(folder_id)
             folder = db.folders_table.find_one(id=folder_id)

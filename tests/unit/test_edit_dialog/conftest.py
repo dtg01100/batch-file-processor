@@ -5,8 +5,9 @@ and related components (validator, extractor, FTP service).
 """
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -42,7 +43,6 @@ from interface.validation.folder_settings_validator import (
 # FTP Service Fixtures
 # =============================================================================
 
-
 @pytest.fixture
 def mock_ftp_service() -> MagicMock:
     """Create a mock FTP service implementing FTPServiceProtocol.
@@ -54,7 +54,6 @@ def mock_ftp_service() -> MagicMock:
         >>> mock_ftp_service.test_connection.return_value = FTPConnectionResult(success=True)
     """
     return MagicMock(spec=FTPServiceProtocol)
-
 
 @pytest.fixture
 def failing_ftp_service() -> MagicMock:
@@ -71,11 +70,9 @@ def failing_ftp_service() -> MagicMock:
     )
     return mock
 
-
 # =============================================================================
 # Validator Fixtures
 # =============================================================================
-
 
 @pytest.fixture
 def mock_validator() -> MagicMock:
@@ -89,7 +86,6 @@ def mock_validator() -> MagicMock:
         >>> validator.validate_extracted_fields.return_value = ValidationResult(is_valid=False)
     """
     return MagicMock(spec=FolderSettingsValidator)
-
 
 @pytest.fixture
 def failing_mock_validator() -> MagicMock:
@@ -111,7 +107,6 @@ def failing_mock_validator() -> MagicMock:
 
     return mock
 
-
 @pytest.fixture
 def validating_mock_validator(mock_ftp_service) -> FolderSettingsValidator:
     """Create a real FolderSettingsValidator with mock FTP service.
@@ -124,11 +119,9 @@ def validating_mock_validator(mock_ftp_service) -> FolderSettingsValidator:
     """
     return FolderSettingsValidator(ftp_service=mock_ftp_service, existing_aliases=[])
 
-
 # =============================================================================
 # Extractor Fixtures
 # =============================================================================
-
 
 @pytest.fixture
 def mock_extractor() -> MagicMock:
@@ -142,7 +135,6 @@ def mock_extractor() -> MagicMock:
         >>> extractor.extract_all.return_value = ExtractedDialogFields(folder_name="/test")
     """
     return MagicMock(spec=FolderDataExtractor)
-
 
 @pytest.fixture
 def sample_extracted_fields() -> ExtractedDialogFields:
@@ -175,11 +167,9 @@ def sample_extracted_fields() -> ExtractedDialogFields:
         split_edi_filter_mode="include",
     )
 
-
 # =============================================================================
 # Folder Configuration Fixtures
 # =============================================================================
-
 
 @pytest.fixture
 def sample_folder_config() -> FolderConfiguration:
@@ -257,7 +247,6 @@ def sample_folder_config() -> FolderConfiguration:
         ),
     )
 
-
 @pytest.fixture
 def sample_ftp_folder_config() -> FolderConfiguration:
     """Create a sample FolderConfiguration with FTP-only settings.
@@ -284,7 +273,6 @@ def sample_ftp_folder_config() -> FolderConfiguration:
         edi=EDIConfiguration(process_edi=False),
     )
 
-
 @pytest.fixture
 def sample_email_folder_config() -> FolderConfiguration:
     """Create a sample FolderConfiguration with Email-only settings.
@@ -307,7 +295,6 @@ def sample_email_folder_config() -> FolderConfiguration:
         copy=None,
         edi=EDIConfiguration(process_edi=False),
     )
-
 
 @pytest.fixture
 def sample_edi_folder_config() -> FolderConfiguration:
@@ -334,20 +321,18 @@ def sample_edi_folder_config() -> FolderConfiguration:
         ),
     )
 
-
 # =============================================================================
 # Folder Dictionary Fixtures
 # =============================================================================
 
-
 @pytest.fixture
-def sample_folder_dict() -> Dict[str, Any]:
+def sample_folder_dict() -> dict[str, Any]:
     """Create a sample folder configuration dictionary.
 
     This represents the dictionary format as would come from the database.
 
     Returns:
-        Dict[str, Any]: Folder configuration as dictionary
+        dict[str, Any]: Folder configuration as dictionary
     """
     return {
         "folder_name": "/test/folder",
@@ -417,13 +402,12 @@ def sample_folder_dict() -> Dict[str, Any]:
         "split_prepaid_sales_tax_crec": False,
     }
 
-
 @pytest.fixture
-def minimal_folder_dict() -> Dict[str, Any]:
+def minimal_folder_dict() -> dict[str, Any]:
     """Create a minimal folder configuration dictionary.
 
     Returns:
-        Dict[str, Any]: Minimal folder config with required fields only
+        dict[str, Any]: Minimal folder config with required fields only
     """
     return {
         "folder_name": "/minimal/folder",
@@ -435,16 +419,14 @@ def minimal_folder_dict() -> Dict[str, Any]:
         "process_edi": False,
     }
 
-
 # =============================================================================
 # Combined Dependencies Fixtures
 # =============================================================================
 
-
 @pytest.fixture
 def dialog_dependencies(
     mock_ftp_service: MagicMock, mock_validator: MagicMock, mock_extractor: MagicMock
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Provide all three dependencies for EditFoldersDialog testing.
 
     This fixture combines the three main dependencies (ftp_service,
@@ -474,11 +456,10 @@ def dialog_dependencies(
         "extractor": mock_extractor,
     }
 
-
 @pytest.fixture
 def dialog_dependencies_with_real_validator(
-    mock_ftp_service: MagicMock, sample_folder_dict: Dict[str, Any]
-) -> Dict[str, Any]:
+    mock_ftp_service: MagicMock, sample_folder_dict: dict[str, Any]
+) -> dict[str, Any]:
     """Provide dependencies with a real FolderSettingsValidator.
 
     Args:
@@ -499,11 +480,9 @@ def dialog_dependencies_with_real_validator(
         "extractor": MagicMock(spec=FolderDataExtractor),
     }
 
-
 # =============================================================================
 # Settings and Alias Provider Fixtures
 # =============================================================================
-
 
 @pytest.fixture
 def mock_settings_provider() -> Callable:
@@ -522,7 +501,6 @@ def mock_settings_provider() -> Callable:
 
     return provider
 
-
 @pytest.fixture
 def mock_alias_provider() -> Callable:
     """Create a mock alias provider function.
@@ -536,11 +514,9 @@ def mock_alias_provider() -> Callable:
 
     return provider
 
-
 # =============================================================================
 # Validation Result Fixtures
 # =============================================================================
-
 
 @pytest.fixture
 def valid_validation_result() -> ValidationResult:
@@ -550,7 +526,6 @@ def valid_validation_result() -> ValidationResult:
         ValidationResult: Valid result with no errors
     """
     return ValidationResult(is_valid=True)
-
 
 @pytest.fixture
 def invalid_validation_result() -> ValidationResult:
@@ -563,7 +538,6 @@ def invalid_validation_result() -> ValidationResult:
     result.add_error("folder_name", "Folder name is required")
     result.add_error("alias", "Alias must be unique")
     return result
-
 
 @pytest.fixture
 def validation_result_with_warnings() -> ValidationResult:

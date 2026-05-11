@@ -27,9 +27,7 @@ def _is_valid_ftp_path(path: str) -> bool:
     """
     if not path:
         return False
-    if ".." in path:
-        return False
-    return True
+    return ".." not in path
 
 
 def _ensure_remote_directory(client: FTPClientProtocol, remote_dir: str) -> None:
@@ -66,7 +64,7 @@ def do(
     settings_dict: dict,
     filename: str,
     ftp_client: FTPClientProtocol | None = None,
-    disable_retry: bool = False,
+    disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
 ) -> bool:
     """Send a file via FTP/FTPS.
 
@@ -96,7 +94,7 @@ class FTPBackend(BackendBase):
     """
 
     def __init__(
-        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False
+        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False  # noqa: FBT001,FBT002 - required by backend interface pattern
     ) -> None:
         """Initialize FTP backend.
 
@@ -114,9 +112,9 @@ class FTPBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        settings: dict,
+        _settings: dict,
         filename: str,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> bool:
         """Send file via FTP/FTPS.
 

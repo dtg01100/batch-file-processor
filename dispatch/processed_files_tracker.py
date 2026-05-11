@@ -440,13 +440,13 @@ class ProcessedFilesTracker:
         )
 
         if not record:
-            logger.warning("File not found for resend marking: %s" % file_name)
+            logger.warning(f"File not found for resend marking: {file_name}")
             return False
 
         record["resend_flag"] = True
         self.database.update(self.TABLE_NAME, record, keys=["file_name", "folder_id"])
 
-        logger.info("Marked file for resend: %s" % file_name)
+        logger.info(f"Marked file for resend: {file_name}")
         return True
 
     def clear_resend_flag(self, file_name: str, folder_id: int) -> bool:

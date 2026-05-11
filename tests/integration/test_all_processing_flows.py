@@ -170,7 +170,7 @@ class TestResendFlow:
         )
 
         # Verify resend flag is set
-        updated_record = list(processed_table.find(id=record_id))[0]
+        updated_record = next(iter(processed_table.find(id=record_id)))
         assert updated_record["resend_flag"] == True, "Resend flag should be set"
 
         # Clear resend flag after verification
@@ -182,7 +182,7 @@ class TestResendFlow:
             ["id"],
         )
 
-        cleared_record = list(processed_table.find(id=record_id))[0]
+        cleared_record = next(iter(processed_table.find(id=record_id)))
         assert cleared_record["resend_flag"] == False, "Resend flag should be cleared"
 
     def test_resend_with_duplicate_detection(
@@ -300,9 +300,9 @@ C00000004000060000
         assert isinstance(result, bool), "Should return boolean"
         # Output file should exist if filtering was successful
         if result:
-            assert output_file.exists() or test_file.exists(), (
-                "File should be created or modified"
-            )
+            assert (
+                output_file.exists() or test_file.exists()
+            ), "File should be created or modified"
 
     def test_filter_drops_non_matching_invoices(self, temp_workspace):
         """Test that invoices with no matching category records are dropped."""
@@ -682,9 +682,9 @@ class TestCombinedFlows:
         result2 = orchestrator.process_folder(folder_config, run_log)
         assert result2.success is True, "Second attempt should succeed"
         assert result2.files_failed == 0, "Second attempt should have no failures"
-        assert result2.files_processed == 2, (
-            "Second attempt should process all input files"
-        )
+        assert (
+            result2.files_processed == 2
+        ), "Second attempt should process all input files"
 
     def test_full_lifecycle_flow(self, temp_workspace):
         """Test complete lifecycle: config → process → track → resend → cleanup.

@@ -75,15 +75,7 @@ def windows_executable(docker_cmd):
 
     Does NOT clean dist/build directories so they can be inspected on failure.
     """
-    build_cmd = docker_cmd + [
-        "run",
-        "--rm",
-        "--volume",
-        f"{PROJECT_ROOT}:/src/",
-        "--env",
-        "SPECFILE=./main_interface.spec",
-        IMAGE,
-    ]
+    build_cmd = [*docker_cmd, "run", "--rm", "--volume", f"{PROJECT_ROOT}:/src/", "--env", "SPECFILE=./main_interface.spec", IMAGE]
 
     result = subprocess.run(
         build_cmd,
@@ -139,14 +131,7 @@ class TestWindowsExecutable:
         """Running --self-test on the .exe via Wine succeeds."""
         wine_cmd = "wine '/src/dist/Batch File Sender.exe' --self-test"
 
-        run_cmd = docker_cmd + [
-            "run",
-            "--rm",
-            "--volume",
-            f"{PROJECT_ROOT}:/src/",
-            IMAGE,
-            wine_cmd,
-        ]
+        run_cmd = [*docker_cmd, "run", "--rm", "--volume", f"{PROJECT_ROOT}:/src/", IMAGE, wine_cmd]
 
         result = subprocess.run(
             run_cmd,
@@ -169,14 +154,7 @@ class TestWindowsExecutable:
         """Running --help on the .exe via Wine shows expected flags."""
         wine_cmd = "wine '/src/dist/Batch File Sender.exe' --help"
 
-        run_cmd = docker_cmd + [
-            "run",
-            "--rm",
-            "--volume",
-            f"{PROJECT_ROOT}:/src/",
-            IMAGE,
-            wine_cmd,
-        ]
+        run_cmd = [*docker_cmd, "run", "--rm", "--volume", f"{PROJECT_ROOT}:/src/", IMAGE, wine_cmd]
 
         result = subprocess.run(
             run_cmd,

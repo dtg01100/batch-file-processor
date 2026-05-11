@@ -122,7 +122,9 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Connection refused"))
 
         with patch("backend.backend_base.time.sleep"):
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         # Only the successful connect is recorded; 2 failed attempts are not.
@@ -134,7 +136,9 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_perm("530 Login incorrect"))
 
         with patch("backend.backend_base.time.sleep"):
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         # At least one successful login after the failure
@@ -147,32 +151,40 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Temporary failure"))
 
         with patch("backend.backend_base.time.sleep"):
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         assert len(mock_client.files_sent) == 1
         sent_cmd, sent_data = mock_client.files_sent[0]
-        assert "temporary_test_file.txt" in sent_cmd.lower() or "stor" in sent_cmd.lower()
+        assert (
+            "temporary_test_file.txt" in sent_cmd.lower() or "stor" in sent_cmd.lower()
+        )
         assert sent_data == b"batch file processor test data\n"
 
     def test_ftp_gives_up_after_10_retries(self, temporary_test_file):
         """Eleven consecutive failures should cause an exception after 10 retries."""
         mock_client = MockFTPClient()
         # Each outer-while iteration requires 2 errors (TLS + non-TLS both fail).
-        # 11 outer failures × 2 errors each = 22 errors to reach counter==10 then raise.
+        # 11 outer failures x 2 errors each = 22 errors to reach counter==10 then raise.
         for _ in range(22):
             mock_client.add_error(ftplib.error_temp("Server unavailable"))
 
         with patch("backend.backend_base.time.sleep"):
-            with pytest.raises(Exception):
-                ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            with pytest.raises(Exception):  # noqa: B017 - retry exhaustion re-raises original exception
+                ftp_backend.do(
+                    FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+                )
 
     def test_ftp_no_sleep_on_first_attempt(self, temporary_test_file):
         """Successful first attempt must not call time.sleep at all."""
         mock_client = MockFTPClient()
 
         with patch("backend.backend_base.time.sleep") as mock_sleep:
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         mock_sleep.assert_not_called()
@@ -184,7 +196,9 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Transient error"))
 
         with patch("backend.backend_base.time.sleep") as mock_sleep:
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         mock_sleep.assert_called_once_with(2)
@@ -195,7 +209,9 @@ class TestFTPRetryLogic:
         mock_client.add_error(ftplib.error_temp("Retry me"))
 
         with patch("backend.backend_base.time.sleep"):
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
         assert len(mock_client.files_sent) == 1
@@ -228,7 +244,9 @@ class TestFTPRetryLogic:
             mock_client.add_error(ftplib.error_temp("Always failing"))
 
         with patch("backend.backend_base.time.sleep"):
-            result = ftp_backend.do(FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client)
+            result = ftp_backend.do(
+                FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
+            )
 
         assert result is True
 
@@ -259,7 +277,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -273,7 +294,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -286,9 +310,12 @@ class TestEmailRetryLogic:
             mock_client.add_error(smtplib.SMTPConnectError(421, "Unavailable"))
 
         with patch("backend.email_backend.time.sleep"):
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017 - retry exhaustion re-raises original exception
                 email_backend.do(
-                    EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                    EMAIL_PARAMS,
+                    EMAIL_SETTINGS,
+                    temporary_test_file,
+                    smtp_client=mock_client,
                 )
 
     def test_email_no_retries_on_success(self, temporary_test_file):
@@ -297,7 +324,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep") as mock_sleep:
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -310,7 +340,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep") as mock_sleep:
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -324,7 +357,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -359,7 +395,10 @@ class TestEmailRetryLogic:
 
         with patch("backend.email_backend.time.sleep"):
             result = email_backend.do(
-                EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                EMAIL_PARAMS,
+                EMAIL_SETTINGS,
+                temporary_test_file,
+                smtp_client=mock_client,
             )
 
         assert result is True
@@ -372,7 +411,10 @@ class TestEmailRetryLogic:
         with patch("backend.email_backend.time.sleep") as mock_sleep:
             with pytest.raises(RuntimeError, match="Network is unreachable"):
                 email_backend.do(
-                    EMAIL_PARAMS, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
+                    EMAIL_PARAMS,
+                    EMAIL_SETTINGS,
+                    temporary_test_file,
+                    smtp_client=mock_client,
                 )
 
         mock_sleep.assert_not_called()

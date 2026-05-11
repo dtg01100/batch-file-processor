@@ -196,9 +196,12 @@ def _parse_error(output: str) -> str:
     messages = []
     for line in lines:
         line = line.strip()
-        if line.startswith("SQLSTATE:") or line.startswith("NATIVE ERROR"):
-            messages.append(line)
-        elif "not found" in line.lower() or "error" in line.lower():
+        if (
+            line.startswith("SQLSTATE:")
+            or line.startswith("NATIVE ERROR")
+            or "not found" in line.lower()
+            or "error" in line.lower()
+        ):
             messages.append(line)
     return "; ".join(messages) if messages else output.strip()
 
@@ -277,7 +280,7 @@ def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
     try:
         # Use -t flag for semicolon-terminated statements (allows multiline SQL)
         cmd = f'qsh -c "db2 -f {remote_sql} -t"'
-        stdin, stdout, stderr = ssh.exec_command(cmd)
+        _stdin, stdout, stderr = ssh.exec_command(cmd)
         output = stdout.read().decode()
         error = stderr.read().decode()
         exit_status = stdout.channel.recv_exit_status()
@@ -332,7 +335,7 @@ class Cursor:
             operation, _ = _qmark_to_positional(operation, parameters)
 
         ssh = self._connection._ssh
-        output, error, exit_status = _run_query(ssh, operation)
+        output, _error, exit_status = _run_query(ssh, operation)
 
         if exit_status != 0:
             msg = _parse_error(output)
@@ -469,12 +472,12 @@ class Connection:
                 key_filename=key_filename,
                 timeout=timeout,
             )
-        except paramiko.AuthenticationException:
-            raise OperationalError(f"Authentication failed for {user}@{host}")
+        except paramiko.AuthenticationException as e:
+            raise OperationalError(f"Authentication failed for {user}@{host}") from e
         except paramiko.SSHException as e:
-            raise OperationalError(f"SSH connection failed: {e}")
+            raise OperationalError(f"SSH connection failed: {e}") from e
         except Exception as e:
-            raise OperationalError(f"Connection failed: {e}")
+            raise OperationalError(f"Connection failed: {e}") from e
 
     def cursor(self) -> Cursor:
         """Create a new cursor for executing queries.
@@ -526,7 +529,7 @@ def connect(
     key_filename: str | None = None,
     port: int = 22,
     timeout: int = 10,
-    **kwargs,
+    **_kwargs,
 ) -> Connection:
     """Connect to IBM i Db2 via SSH.
 

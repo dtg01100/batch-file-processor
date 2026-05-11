@@ -387,7 +387,7 @@ class FileProcessor:
         current_file: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        _run_log: Any,
         file_basename: str,
     ) -> tuple[bool, str]:
         """Run validation step of the pipeline.
@@ -410,7 +410,9 @@ class FileProcessor:
         should_validate = (
             normalize_bool(context.effective_folder.get("process_edi", False))
             or normalize_bool(context.effective_folder.get("split_edi", False))
-            or normalize_bool(context.effective_folder.get("force_edi_validation", False))  # noqa: E501
+            or normalize_bool(
+                context.effective_folder.get("force_edi_validation", False)
+            )
         )
         if not should_validate:
             return True, current_file
@@ -519,11 +521,11 @@ class FileProcessor:
     def _run_splitting(
         self,
         current_file: str,
-        file_path: str,
+        _file_path: str,
         file_basename: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        _run_log: Any,
     ) -> bool:
         """Run splitting step of the pipeline.
 
@@ -564,10 +566,10 @@ class FileProcessor:
         self,
         current_file: str,
         file_basename: str,
-        original_file_path: str,
+        _original_file_path: str,
         context: ProcessingContext,
-        run_log: Any,
-        validation_passed: bool,
+        _run_log: Any,
+        validation_passed: bool,  # noqa: FBT001 - required by file processor pipeline interface
     ) -> tuple[str, bool, bool]:
         """Run conversion step of the pipeline.
 
@@ -607,14 +609,14 @@ class FileProcessor:
     ) -> tuple[str, bool, bool]:
         """Execute a conversion-style step.
 
-        Args:
-conversion_step: Converter step
-            file_path: Current file path
-            file_basename: File basename
-            context: Processing context
+                Args:
+        conversion_step: Converter step
+                    file_path: Current file path
+                    file_basename: File basename
+                    context: Processing context
 
-        Returns:
-            Tuple of (new_file_path, did_convert, conversion_failed)
+                Returns:
+                    Tuple of (new_file_path, did_convert, conversion_failed)
 
         """
         did_convert = False
@@ -707,7 +709,7 @@ conversion_step: Converter step
         self,
         file_path: str,
         folder: dict,
-        run_log: Any,
+        _run_log: Any,
         settings: dict,
     ) -> bool:
         """Send file to all enabled backends via send_manager.
@@ -735,7 +737,7 @@ conversion_step: Converter step
         result: FileResult,
         file_basename: str,
         current_file: str,
-        run_log: Any,
+        _run_log: Any,
     ) -> None:
         """Record send failure.
 
@@ -749,7 +751,7 @@ conversion_step: Converter step
         result.errors.append(f"Failed to send {file_basename}")
         logger.warning("Failed to send file: %s", current_file)
 
-    def _log_success(self, file_basename: str, file_path: str, run_log: Any) -> None:
+    def _log_success(self, file_basename: str, file_path: str, _run_log: Any) -> None:
         """Log successful processing.
 
         Args:

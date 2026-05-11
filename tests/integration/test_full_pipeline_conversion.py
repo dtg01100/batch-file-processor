@@ -128,7 +128,8 @@ class CaptureBackend:
 
     def send(self, params: dict, settings: dict, filename: str) -> bool:
         try:
-            content = open(filename, "rb").read()
+            with open(filename, "rb") as f:
+                content = f.read()
             self.received.append((filename, content))
         except Exception:
             self.received.append((filename, b""))

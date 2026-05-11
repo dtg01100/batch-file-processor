@@ -83,13 +83,13 @@ class QueryRunnerWithTestData:
                 "Corporate Customer Email",
                 "Corporate Customer Email 2",
             ]
-            return [dict(zip(columns, row)) for row in self._customer_data]
+            return [dict(zip(columns, row, strict=False)) for row in self._customer_data]
         # Check if this is a UOM query (has odhst)
         if "ODHS" in query_upper:
             if not self._uom_data:
                 return []
             columns = ["itemno", "uom_mult", "uom_code"]
-            return [dict(zip(columns, row)) for row in self._uom_data]
+            return [dict(zip(columns, row, strict=False)) for row in self._uom_data]
         # Fall back to SQLite execution for other queries
         return self._sqlite_runner.run_query(query, params)
 
@@ -328,6 +328,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -335,7 +336,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -385,6 +386,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -392,7 +394,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -443,6 +445,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -450,7 +453,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -522,6 +525,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -529,7 +533,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -545,7 +549,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should contain customer name
                 assert "Test Customer" in content
@@ -586,6 +590,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -593,7 +598,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -609,7 +614,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should contain formatted address
                 assert "Bill To:" in content or "12345" in content
@@ -646,6 +651,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -653,7 +659,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -669,7 +675,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should contain ship to
                 assert "Ship To:" in content or "12345" in content
@@ -706,6 +712,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -713,7 +720,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -729,7 +736,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should use corporate address when available
                 assert "Corporate Customer" in content or "456 Corporate Ave" in content
@@ -766,6 +773,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -773,7 +781,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -789,7 +797,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should fall back to regular customer address
                 assert "Test Customer" in content
@@ -830,6 +838,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -837,7 +846,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -870,7 +879,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should calculate correct total
                 assert "$" in content
@@ -907,6 +916,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -914,7 +924,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -985,6 +995,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -992,7 +1003,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1062,6 +1073,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1069,7 +1081,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1136,6 +1148,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1143,7 +1156,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1210,6 +1223,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1217,7 +1231,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1291,6 +1305,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1298,7 +1313,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1353,6 +1368,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1360,7 +1376,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1412,6 +1428,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1419,7 +1436,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1464,7 +1481,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 reader = csv.reader(f)
                 rows = list(reader)
                 # Should have multiple data rows
@@ -1502,6 +1519,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1509,7 +1527,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1541,7 +1559,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should include charge amounts
                 assert "FRE" in content or "Freight" in content
@@ -1582,6 +1600,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1589,7 +1608,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1605,7 +1624,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 assert "Invoice Details" in content
         finally:
@@ -1641,6 +1660,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1648,7 +1668,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1664,7 +1684,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Invoice total from header = 0000010000 = $100.00
                 assert "Total:" in content
@@ -1701,6 +1721,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 CustomerLookupService,
             )
             from dispatch.services.uom_lookup_service import UOMLookupService
+
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
             )
@@ -1708,7 +1729,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1724,7 +1745,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
                 str(input_file), output_file, default_settings, default_parameters, {}
             )
 
-            with open(output_file + ".csv", "r", encoding="utf-8") as f:
+            with open(output_file + ".csv", encoding="utf-8") as f:
                 content = f.read()
                 # Should have Description, UPC, Quantity, UOM, Price, Amount columns
                 assert "Description" in content

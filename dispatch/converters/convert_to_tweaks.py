@@ -55,7 +55,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         if config.force_txt_file_ext:
             output_path += ".txt"
 
-        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")
+        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
         context.user_data["output_path"] = output_path
 
     def process_a_record(self, record, context: ConversionContext) -> None:

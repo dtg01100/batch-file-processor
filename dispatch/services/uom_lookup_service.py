@@ -1,5 +1,6 @@
 """UOM (Unit of Measure) lookup service for EDI converters."""
-from typing import Any, List, Optional
+
+from typing import Any
 
 from core.database import QueryRunner
 from core.structured_logging import get_logger
@@ -17,9 +18,9 @@ class UOMLookupService:
             query_runner: Database query runner for executing queries
         """
         self._query_runner = query_runner
-        self.uom_lookup_list: List[dict[str, Any]] = []
+        self.uom_lookup_list: list[dict[str, Any]] = []
 
-    def init_uom_lookup(self, invoice_number: str) -> List[dict[str, Any]]:
+    def init_uom_lookup(self, invoice_number: str) -> list[dict[str, Any]]:
         """Initialize UOM lookup and fetch UOM data."""
         self.uom_lookup_list = self._query_runner.run_query(
             self._get_uom_query_sql(), (invoice_number,)
@@ -44,7 +45,7 @@ class UOMLookupService:
         except IndexError:
             return "?"
 
-    def _uom_get_key(self, entry: dict[str, Any], *keys: str) -> Optional[str]:
+    def _uom_get_key(self, entry: dict[str, Any], *keys: str) -> str | None:
         for key in keys:
             for k, v in entry.items():
                 if k.upper() == key.upper():
@@ -54,14 +55,14 @@ class UOMLookupService:
                     return v
         return None
 
-    def _uom_safe_int_eq(self, a: Optional[str], b: str) -> bool:
+    def _uom_safe_int_eq(self, a: str | None, b: str) -> bool:
         try:
             return int(a) == int(b)
         except (ValueError, TypeError):
             return False
 
-    def _uom_candidates(self, item_number: str) -> List[dict[str, Any]]:
-        out: List[dict[str, Any]] = []
+    def _uom_candidates(self, item_number: str) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
         for e in self.uom_lookup_list:
             item_no = self._uom_get_key(e, "itemno", "ITEMNO")
             if item_no is None:
@@ -71,9 +72,9 @@ class UOMLookupService:
         return out
 
     def _uom_select(
-        self, candidates: List[dict[str, Any]], packsize: str
-    ) -> List[dict[str, Any]]:
-        out: List[dict[str, Any]] = []
+        self, candidates: list[dict[str, Any]], packsize: str
+    ) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
         for e in candidates:
             uom_mult = self._uom_get_key(e, "uom_mult", "UOM_MULT")
             if uom_mult is None:

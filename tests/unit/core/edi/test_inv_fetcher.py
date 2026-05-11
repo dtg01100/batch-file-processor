@@ -166,7 +166,7 @@ class TestInvFetcher:
         def side_effect(query, params=None):
             if "odhst" in query:
                 return [{"BUHUNB": 99, "BUHXTX": "OTHER"}]
-            elif "dsanrep" in query:
+            if "dsanrep" in query:
                 return [{"ANB9TX": "CASE"}]
             return []
 
@@ -281,12 +281,12 @@ class TestInvFetcherIntegration:
                         "btabnb": 12345,
                     }
                 ]
-            elif "odhst" in query:
+            if "odhst" in query:
                 return [
                     {"BUHUNB": 1, "BUHXTX": "EACH"},
                     {"BUHUNB": 2, "BUHXTX": "CASE"},
                 ]
-            elif "dsanrep" in query:
+            if "dsanrep" in query:
                 return [{"ANB8TX": "UNIT"}]
             return []
 

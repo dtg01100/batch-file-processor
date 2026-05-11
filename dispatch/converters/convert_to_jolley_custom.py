@@ -33,7 +33,7 @@ Backward Compatibility:
 """
 
 import csv
-from typing import Any, Optional
+from typing import Any
 
 from core import utils
 from core.utils import prettify_dates
@@ -68,8 +68,8 @@ class JolleyCustomConverter(BaseEDIConverter):
     def __init__(self):
         """Initialize the converter with service objects."""
         self._db_connector = DatabaseConnector()
-        self._customer_service: Optional[CustomerLookupService] = None
-        self._uom_service: Optional[UOMLookupService] = None
+        self._customer_service: CustomerLookupService | None = None
+        self._uom_service: UOMLookupService | None = None
         self._item_processor = ItemProcessor()
         self._header_a_record: dict[str, str] = {}
         self._header_fields_dict: dict[str, Any] = {}
@@ -88,7 +88,7 @@ class JolleyCustomConverter(BaseEDIConverter):
         )
         self._uom_service = UOMLookupService(self._db_connector.query_runner)
 
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
             context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
         context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -149,27 +149,23 @@ class JolleyCustomConverter(BaseEDIConverter):
             + "US",
         ]
 
-        csv_writer.writerow(
-            [
-                "Bill To:",
-                str(self._header_fields_dict["Customer_Number"])
-                + "\n"
-                + self._header_fields_dict["Customer_Name"]
-                + "\n"
-                + self._header_fields_dict["Customer_Address"]
-                + "\n"
-                + self._header_fields_dict["Customer_Town"]
-                + ", "
-                + self._header_fields_dict["Customer_State"]
-                + ", "
-                + self._header_fields_dict["Customer_Zip"]
-                + ", "
-                + "\n"
-                + "US",
-                "Ship To:",
-            ]
-            + ship_to_segment
+        bill_to = (
+            str(self._header_fields_dict["Customer_Number"])
+            + "\n"
+            + self._header_fields_dict["Customer_Name"]
+            + "\n"
+            + self._header_fields_dict["Customer_Address"]
+            + "\n"
+            + self._header_fields_dict["Customer_Town"]
+            + ", "
+            + self._header_fields_dict["Customer_State"]
+            + ", "
+            + self._header_fields_dict["Customer_Zip"]
+            + ", "
+            + "\n"
+            + "US"
         )
+        csv_writer.writerow(["Bill To:", bill_to, "Ship To:", *ship_to_segment])
         csv_writer.writerow([""])
         csv_writer.writerow(
             ["Description", "UPC #", "Quantity", "UOM", "Price", "Amount"]

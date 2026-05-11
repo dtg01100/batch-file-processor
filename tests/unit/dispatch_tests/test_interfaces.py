@@ -366,7 +366,7 @@ class TestValidatorInterface:
     def test_validator_validate_with_warnings_fails(self):
         """Test ValidatorInterface.validate_with_warnings() when invalid."""
         mock = MockValidator(should_pass=False)
-        is_valid, errors, warnings = mock.validate_with_warnings("/path/to/file.edi")
+        is_valid, errors, _warnings = mock.validate_with_warnings("/path/to/file.edi")
         assert is_valid is False
         assert "Validation failed" in errors
 

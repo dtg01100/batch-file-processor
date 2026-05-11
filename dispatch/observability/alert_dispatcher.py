@@ -36,7 +36,7 @@ class AlertDispatcher:
         except Exception as e:
             error_record_copy = dict(error_record)
             error_record_copy["alert_error"] = str(e)
-            error_record_copy["alert_retry_count"] = error_record_copy.get(
-                "alert_retry_count", 0
-            ) + 1
+            error_record_copy["alert_retry_count"] = (
+                error_record_copy.get("alert_retry_count", 0) + 1
+            )
             self._queue.enqueue(error_record_copy)

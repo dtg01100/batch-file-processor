@@ -368,16 +368,15 @@ class EDISplitterStep:
                 include_credits=include_credits,
                 errors=errors,
             )
-        else:
-            return self._filter_without_split(
-                input_path, output_dir, upc_dict, filter_categories, filter_mode, errors
-            )
+        return self._filter_without_split(
+            input_path, output_dir, upc_dict, filter_categories, filter_mode, errors
+        )
 
     def _do_split(
         self,
         input_path: str,
         output_dir: str,
-        params: dict,
+        _params: dict,
         upc_dict: dict,
         filter_categories: str,
         filter_mode: str,
@@ -454,51 +453,48 @@ class EDISplitterStep:
                     skipped_invoices=split_result.skipped_invoices,
                     errors=errors,
                 )
-            else:
-                if len(split_result.output_files) == 1:
-                    original_count = getattr(split_result, "original_invoice_count", 1)
-                    if original_count > 1:
-                        logger.info(
-                "Split produced single file "
-                "(was filtered from multi-invoice source): %s",
-                            split_result.output_files[0][0],
-                        )
-                        return SplitterResult(
-                            files=split_result.output_files,
-                            was_split=True,
-                            was_filtered=was_filtered,
-                            skipped_invoices=split_result.skipped_invoices,
-                            errors=errors,
-                        )
-                    else:
-                        logger.info(
-                            "Split produced single file from single-invoice source: %s",
-                            split_result.output_files[0][0],
-                        )
-                        filtered_files = self._filter_by_credit_invoice(
-                            split_result.output_files,
-                            include_invoices=include_invoices,
-                            include_credits=include_credits,
-                        )
-                        return SplitterResult(
-                            files=filtered_files,
-                            was_split=True,
-                            was_filtered=was_filtered,
-                            skipped_invoices=split_result.skipped_invoices,
-                            errors=errors,
-                        )
-                else:
+            if len(split_result.output_files) == 1:
+                original_count = getattr(split_result, "original_invoice_count", 1)
+                if original_count > 1:
                     logger.info(
-                        "No split performed for %s (single invoice source)",
-                        input_path,
+                        "Split produced single file "
+                        "(was filtered from multi-invoice source): %s",
+                        split_result.output_files[0][0],
                     )
                     return SplitterResult(
-                        files=[(input_path, "", "")],
-                        was_split=False,
+                        files=split_result.output_files,
+                        was_split=True,
                         was_filtered=was_filtered,
                         skipped_invoices=split_result.skipped_invoices,
                         errors=errors,
                     )
+                logger.info(
+                    "Split produced single file from single-invoice source: %s",
+                    split_result.output_files[0][0],
+                )
+                filtered_files = self._filter_by_credit_invoice(
+                    split_result.output_files,
+                    include_invoices=include_invoices,
+                    include_credits=include_credits,
+                )
+                return SplitterResult(
+                    files=filtered_files,
+                    was_split=True,
+                    was_filtered=was_filtered,
+                    skipped_invoices=split_result.skipped_invoices,
+                    errors=errors,
+                )
+            logger.info(
+                "No split performed for %s (single invoice source)",
+                input_path,
+            )
+            return SplitterResult(
+                files=[(input_path, "", "")],
+                was_split=False,
+                was_filtered=was_filtered,
+                skipped_invoices=split_result.skipped_invoices,
+                errors=errors,
+            )
 
         except ValueError as e:
             logger.warning("No valid invoices after filtering %s: %s", input_path, e)
@@ -629,14 +625,14 @@ class EDISplitterStep:
             try:
                 is_credit = self._credit_detector.detect(file_path)
 
-                if is_credit and include_credits:
-                    filtered_files.append((file_path, prefix, suffix))
-                elif not is_credit and include_invoices:
+                if (is_credit and include_credits) or (
+                    not is_credit and include_invoices
+                ):
                     filtered_files.append((file_path, prefix, suffix))
             except Exception as e:
                 logger.warning(
-                "Credit/invoice detection failed for %s; "
-                "keeping file by default: %s",
+                    "Credit/invoice detection failed for %s; "
+                    "keeping file by default: %s",
                     file_path,
                     e,
                 )

@@ -47,7 +47,7 @@ def do(
     settings: dict,
     filename: str,
     smtp_client: SMTPClientProtocol | None = None,
-    disable_retry: bool = False,
+    disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
 ) -> bool:
     """Send a file via email.
 
@@ -77,7 +77,7 @@ class EmailBackend(BackendBase):
     """
 
     def __init__(
-        self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False
+        self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False  # noqa: FBT001,FBT002 - required by backend interface pattern
     ) -> None:
         """Initialize email backend.
 
@@ -98,7 +98,7 @@ class EmailBackend(BackendBase):
         process_parameters: dict,
         settings: dict,
         filename: str,
-        **kwargs,
+        **_kwargs,
     ) -> bool:
         """Send email with file attachment.
 
@@ -215,11 +215,11 @@ class EmailBackend(BackendBase):
         """
         if _is_network_unreachable(error):
             return True
-        if isinstance(error, (PermissionError, FileNotFoundError, TimeoutError)):
-            return True
-        return False
+        return bool(
+            isinstance(error, (PermissionError, FileNotFoundError, TimeoutError))
+        )
 
-    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
+    def _get_endpoint(self, _process_parameters: dict, settings: dict) -> str:
         """Get SMTP endpoint for logging."""
         return (
             f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
@@ -235,10 +235,10 @@ class EmailBackend(BackendBase):
 
     def _prepare_for_retry(
         self,
-        process_parameters: dict,
-        settings: dict,
-        filename: str,
-        **kwargs,
+        _process_parameters: dict,
+        _settings: dict,
+        _filename: str,
+        **_kwargs,
     ) -> None:
         """Prepare for retry by resetting state."""
         self._server = None

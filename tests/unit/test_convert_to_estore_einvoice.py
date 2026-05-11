@@ -216,7 +216,7 @@ class TestEstoreEinvoiceHeaderRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have H record type
             assert "H," in content
@@ -246,7 +246,7 @@ class TestEstoreEinvoiceHeaderRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have store number
             assert "001" in content
@@ -276,7 +276,7 @@ class TestEstoreEinvoiceHeaderRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have vendor OID
             assert "VENDOR123" in content
@@ -310,7 +310,7 @@ class TestEstoreEinvoiceDetailRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have D record type
             assert "D," in content
@@ -340,7 +340,7 @@ class TestEstoreEinvoiceDetailRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have GTIN/UPC
             assert "012345678905" in content
@@ -374,7 +374,7 @@ class TestEstoreEinvoiceTrailerRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have T record type for trailer
             assert "T," in content
@@ -404,7 +404,7 @@ class TestEstoreEinvoiceTrailerRecord(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have invoice cost field
             assert "T,0" in content or ",0" in content
@@ -456,7 +456,7 @@ class TestEstoreEinvoiceTaxCalculation(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should include tax info (trailer with 0 means no tax was added)
             assert "T," in content
@@ -637,7 +637,7 @@ class TestEstoreEinvoiceDateHandling(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have date in YYYYMMDD format (20250125)
             assert "2025" in content or "20250125" in content
@@ -805,7 +805,7 @@ class TestEstoreEinvoiceEdgeCases(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have multiple data rows (excluding header)
@@ -898,7 +898,7 @@ class TestEstoreEinvoiceDataTransformation(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have data (extended cost calculation happens internally)
             assert "D," in content or "123456" in content
@@ -943,7 +943,7 @@ class TestEstoreEinvoiceDataTransformation(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             data_rows = [r for r in rows if r and r[0] != "Store #"]
@@ -977,7 +977,7 @@ class TestEstoreEinvoiceDataTransformation(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             content = f.read()
             # Should have Detail Type field (I, D, C, S)
             assert "Detail Type" in content or "I" in content
@@ -1011,7 +1011,7 @@ class TestEstoreEinvoiceFormatCompliance(TestEstoreEinvoiceFixtures):
         import glob
 
         csv_files = glob.glob(os.path.join(os.path.dirname(output_file), "eInv*.csv"))
-        with open(csv_files[0], "r", encoding="utf-8") as f:
+        with open(csv_files[0], encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
             # Should have data rows
@@ -1128,7 +1128,7 @@ class TestEstoreEinvoiceShipperModeRegression(TestEstoreEinvoiceFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -1202,7 +1202,7 @@ class TestEstoreEinvoiceShipperModeRegression(TestEstoreEinvoiceFixtures):
             sample_upc_lut,
         )
 
-        with open(result, "r", encoding="utf-8") as f:
+        with open(result, encoding="utf-8") as f:
             reader = csv.reader(f)
             rows = list(reader)
 

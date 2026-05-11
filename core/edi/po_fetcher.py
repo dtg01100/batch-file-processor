@@ -16,7 +16,7 @@ class QueryRunnerProtocol(Protocol):
     enabling easy mocking in tests.
     """
 
-    def run_query(self, query: str, params: tuple = None) -> list:
+    def run_query(self, query: str, params: tuple | None = None) -> list:
         """Run a SQL query and return results.
 
         Args:

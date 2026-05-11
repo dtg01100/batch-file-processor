@@ -513,14 +513,14 @@ class TestMigrationContents:
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
         # Both folders promoted: tweak_edi=1 signals active processing.
-        assert folders["Disabled"]["process_edi"] == 1, (
-            "process_edi=0 + tweak_edi=1 must be promoted: folder was sending Tweaked EDI"
-        )
+        assert (
+            folders["Disabled"]["process_edi"] == 1
+        ), "process_edi=0 + tweak_edi=1 must be promoted: folder was sending Tweaked EDI"
         assert folders["Disabled"]["tweak_edi"] == 0
         assert folders["Disabled"]["convert_to_format"] == "tweaks"
-        assert folders["DisabledEmpty"]["process_edi"] == 1, (
-            "process_edi=0 + tweak_edi=1 (no format) must be promoted"
-        )
+        assert (
+            folders["DisabledEmpty"]["process_edi"] == 1
+        ), "process_edi=0 + tweak_edi=1 (no format) must be promoted"
         assert folders["DisabledEmpty"]["tweak_edi"] == 0
         assert folders["DisabledEmpty"]["convert_to_format"] == "tweaks"
 
@@ -856,7 +856,7 @@ class TestV32UpgradeIntegration:
         cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 1")
         assert cur.fetchone()[0] == 260
 
-        # 380 originally-disabled − 110 tweak_edi promoted = 270 remain disabled.
+        # 380 originally-disabled - 110 tweak_edi promoted = 270 remain disabled.
         cur.execute("SELECT COUNT(*) FROM folders WHERE process_edi = 0")
         assert cur.fetchone()[0] == 270
 

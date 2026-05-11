@@ -1,4 +1,5 @@
 """Database connector service for EDI converters."""
+
 from typing import Any
 
 from core.database import QueryRunner

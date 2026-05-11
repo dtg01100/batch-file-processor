@@ -70,14 +70,14 @@ import re
 import time
 import traceback
 import uuid
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from contextvars import ContextVar
 from dataclasses import asdict, is_dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 # Correlation ID context variable - thread/async-safe
 _correlation_id_var: ContextVar[str | None] = ContextVar("correlation_id", default=None)
@@ -1029,7 +1029,7 @@ class StructuredLogger:
 
         """
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "logger": module,
             "mod": module,
             "function": function,
@@ -1441,7 +1441,7 @@ class JSONFormatter(logging.Formatter):
         fmt: str | None = None,
         datefmt: str | None = None,
         style: str = "%",
-        validate: bool = True,
+        _validate: bool = True,
         indent: int | None = None,
         sort_keys: bool = False,
         ensure_ascii: bool = False,
@@ -1521,20 +1521,23 @@ class JSONFormatter(logging.Formatter):
             default=self._serialize_value,
         )
 
-
     def _build_log_data(self, record: logging.LogRecord) -> dict[str, Any]:
         base = _build_base_record(record)
 
         # add optional attributes
-        _add_optional_attrs_to_base(record, base, [
-            "correlation_id",
-            "trace_id",
-            "component",
-            "operation",
-            "module",
-            "function",
-            "duration_ms",
-        ])
+        _add_optional_attrs_to_base(
+            record,
+            base,
+            [
+                "correlation_id",
+                "trace_id",
+                "component",
+                "operation",
+                "module",
+                "function",
+                "duration_ms",
+            ],
+        )
 
         # structured fields
         for key in ["error", "input_summary", "output_summary", "event", "context"]:
@@ -1587,11 +1590,10 @@ class JSONFormatter(logging.Formatter):
         return base
 
 
-
 def _build_base_record(record: logging.LogRecord) -> dict[str, Any]:
     return {
         "timestamp": datetime.fromtimestamp(
-            record.created, tz=timezone.utc
+            record.created, tz=UTC
         ).isoformat(),
         "level": record.levelname,
         "logger": record.name,

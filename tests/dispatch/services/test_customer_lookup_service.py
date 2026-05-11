@@ -17,6 +17,7 @@ class TestCustomerLookupService:
 
     def test_lookup_not_found_raises(self):
         from core.exceptions import CustomerLookupError
+
         mock_query_runner = MagicMock()
         mock_query_runner.run_query.return_value = []
         service = CustomerLookupService(mock_query_runner, "SELECT ...")

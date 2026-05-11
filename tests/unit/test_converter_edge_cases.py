@@ -349,7 +349,7 @@ class TestConverterEmptyFileHandling:
         """convert_to_yellowdog_csv with empty input handles it gracefully (doesn't crash badly)."""
         from dispatch.converters import convert_to_yellowdog_csv
 
-        fetcher_class, fetcher_instance = mock_inv_fetcher
+        fetcher_class, _fetcher_instance = mock_inv_fetcher
 
         # For yellowdog_csv, an empty file leads to an empty arec_line dict
         # which causes flush_to_csv to fail when accessing arec_line['invoice_date']
@@ -657,7 +657,9 @@ class TestConverterEmptyFileHandling:
                 mock_openpyxl.Workbook.return_value = mock_wb
 
                 # Should not raise even with empty file
-                try:
+                import contextlib
+
+                with contextlib.suppress(Exception):
                     convert_to_scansheet_type_a.edi_convert(
                         empty_edi_file,
                         output_base,
@@ -665,10 +667,6 @@ class TestConverterEmptyFileHandling:
                         default_parameters_dict,
                         {},
                     )
-                except Exception:
-                    # Any exception is acceptable; we just verify it doesn't
-                    # crash the test runner with an unhandled SystemExit
-                    pass
 
 
 # ---------------------------------------------------------------------------
@@ -832,7 +830,7 @@ class TestConverterMalformedInput:
         content = make_a_record() + "\n" + "Xunknown\n" + make_b_record() + "\n"
         edi_file = self._write_edi(tmp_path, content)
 
-        fetcher_class, fetcher_instance = mock_inv_fetcher
+        fetcher_class, _fetcher_instance = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
 
@@ -846,7 +844,7 @@ class TestConverterMalformedInput:
                         "invoice_date": line[17:23],
                         "invoice_total": line[23:33],
                     }
-                elif line.startswith("B"):
+                if line.startswith("B"):
                     return {
                         "record_type": "B",
                         "upc_number": line[1:12],
@@ -860,8 +858,7 @@ class TestConverterMalformedInput:
                         "price_multi_pack": line[67:70],
                         "parent_item_number": line[70:76],
                     }
-                else:
-                    return None
+                return None
 
             mock_utils.capture_records.side_effect = _capture
             mock_utils.datetime_from_invtime.return_value = MagicMock(
@@ -1225,7 +1222,7 @@ class TestConverterEmptyUpcLut:
         """
         from dispatch.converters import convert_to_fintech
 
-        fetcher_class, fetcher_instance = mock_inv_fetcher
+        fetcher_class, _fetcher_instance = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
@@ -1289,7 +1286,7 @@ class TestConverterEmptyUpcLut:
         """convert_to_yellowdog_csv with empty upc_lut uses raw UPC from EDI."""
         from dispatch.converters import convert_to_yellowdog_csv
 
-        fetcher_class, fetcher_instance = mock_inv_fetcher
+        fetcher_class, _fetcher_instance = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.invFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
@@ -1335,8 +1332,7 @@ class TestConverterEmptyUpcLut:
             def datetime_from_invtime_side_effect(date_str):
                 if date_str == "010125":  # From our A record
                     return datetime(2025, 1, 1)
-                else:
-                    return datetime.strptime(date_str, "%m%d%y")
+                return datetime.strptime(date_str, "%m%d%y")
 
             mock_utils.datetime_from_invtime.side_effect = (
                 datetime_from_invtime_side_effect

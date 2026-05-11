@@ -62,16 +62,16 @@ from .section_factory import (
 )
 
 __all__ = [
-    "FormGenerator",
-    "QtFormGenerator",
-    "FormGeneratorFactory",
-    "SectionFactory",
-    "QtSectionFactory",
-    "SectionFactoryRegistry",
-    "PluginSectionFactory",
-    "ConfigSectionWidget",
-    "QtConfigSectionWidget",
     "CollapsibleSectionWidget",
+    "ConfigSectionWidget",
+    "FormGenerator",
+    "FormGeneratorFactory",
+    "PluginSectionFactory",
     "QtCollapsibleSectionWidget",
+    "QtConfigSectionWidget",
+    "QtFormGenerator",
+    "QtSectionFactory",
+    "SectionFactory",
+    "SectionFactoryRegistry",
     "TabbedSectionWidget",
 ]

@@ -1,4 +1,5 @@
 import ast
+import contextlib
 import json
 import unittest
 
@@ -38,10 +39,8 @@ class TestFolderDatabaseRoundTrip(unittest.TestCase):
         schema.ensure_schema(self.db)
 
     def tearDown(self):
-        try:
+        with contextlib.suppress(Exception):
             self.db.close()
-        except Exception:
-            pass
 
     def test_insert_and_read_folder_with_plugin_configs(self):
         fc = FolderConfiguration(folder_name="rt-test", folder_is_active="True")

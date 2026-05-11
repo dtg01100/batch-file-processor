@@ -16,15 +16,15 @@ logger = get_logger(__name__)
 
 
 def process(
-    database_connection: Any,
+    _database_connection: Any,
     folders_database: Any,
     run_log: Any,
-    emails_table: Any,
-    run_log_directory: str,
-    reporting: Any,
+    _emails_table: Any,
+    _run_log_directory: str,
+    _reporting: Any,
     processed_files: Any,
     version: str,
-    errors_folder: str,
+    _errors_folder: str,
     settings: dict,
     progress_callback: Any = None,
 ) -> tuple[bool, str]:

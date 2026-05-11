@@ -30,17 +30,16 @@ def get_python_packages():
     """Find all Python packages in the project."""
     packages = []
     for item in PROJECT_ROOT.iterdir():
-        if item.is_dir() and (item / "__init__.py").exists():
-            if item.name not in {
-                ".venv",
-                "test_venv",
-                ".git",
-                "__pycache__",
-                "build",
-                "dist",
-                "hooks",
-            }:
-                packages.append(item.name)
+        if item.is_dir() and (item / "__init__.py").exists() and item.name not in {
+            ".venv",
+            "test_venv",
+            ".git",
+            "__pycache__",
+            "build",
+            "dist",
+            "hooks",
+        }:
+            packages.append(item.name)
     return packages
 
 
@@ -62,13 +61,12 @@ def get_spec_hidden_imports():
                 func_name = func.attr
             if func_name == "Analysis":
                 for keyword in node.keywords:
-                    if keyword.arg == "hiddenimports":
-                        if isinstance(keyword.value, ast.List):
-                            return [
-                                elt.value
-                                for elt in keyword.value.elts
-                                if isinstance(elt, ast.Constant)
-                            ]
+                    if keyword.arg == "hiddenimports" and isinstance(keyword.value, ast.List):
+                        return [
+                            elt.value
+                            for elt in keyword.value.elts
+                            if isinstance(elt, ast.Constant)
+                        ]
     return []
 
 
@@ -116,9 +114,9 @@ class TestHiddenImports:
                 collected = collect_submodules(package)
                 assert len(collected) > 0, f"No submodules collected for {package}"
 
-                assert "collect_submodules" in hook_content, (
-                    f"Hook for {package} should use collect_submodules"
-                )
+                assert (
+                    "collect_submodules" in hook_content
+                ), f"Hook for {package} should use collect_submodules"
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
     def test_all_packages_have_hooks(self):
@@ -219,9 +217,9 @@ class TestHiddenImports:
             content = f.read()
 
         assert "hookspath" in content, "Spec file should configure hookspath"
-        assert "['hooks']" in content or '"hooks"' in content, (
-            "Spec file should include 'hooks' in hookspath"
-        )
+        assert (
+            "['hooks']" in content or '"hooks"' in content
+        ), "Spec file should include 'hooks' in hookspath"
 
     def test_windows_bundle_validation_checks_exe_size(self):
         """Verify Windows bundle validation checks executable minimum size."""
@@ -246,7 +244,7 @@ class TestHiddenImports:
 
     def test_podman_build_route_fails_fast(self):
         """Podman script should reject the unsupported Linux PyInstaller route."""
-        with pytest.raises(RuntimeError, match="Linux.*PyInstaller"):
+        with pytest.raises(RuntimeError, match=r"Linux.*PyInstaller"):
             build_windows_podman.ensure_supported_build_route()
 
 
@@ -280,13 +278,15 @@ class TestImportDiscovery:
                     try:
                         tree = ast.parse(content)
                         for node in ast.walk(tree):
-                            if isinstance(node, ast.Call):
-                                if isinstance(node.func, ast.Attribute):
-                                    if node.func.attr == "import_module":
-                                        if node.args:
-                                            arg = node.args[0]
-                                            if isinstance(arg, ast.Constant):
-                                                dynamic_imports.add(arg.value)
+                            if (
+                                isinstance(node, ast.Call)
+                                and isinstance(node.func, ast.Attribute)
+                                and node.func.attr == "import_module"
+                                and node.args
+                            ):
+                                arg = node.args[0]
+                                if isinstance(arg, ast.Constant):
+                                    dynamic_imports.add(arg.value)
                     except SyntaxError:
                         pass
             except Exception:

@@ -7,19 +7,41 @@ profile = "black"
 
 [tool.ruff]
 line-length = 88
+target-version = "py311"
 
 [tool.ruff.lint]
-extend-ignore = ["E203"]
-select = ["E", "F", "W", "I", "C90"]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "C90",    # mccabe complexity
+    "B",      # bugbear - common bugs and design issues
+    "FBT",    # boolean traps - positional boolean args
+    "SIM",    # simplify - code clarity improvements
+    "RET",    # return statement consistency
+    "ARG",    # unused arguments
+    "RUF",    # ruff-specific rules
+    "UP",     # pyupgrade - Python 3.11 modernization
+]
+ignore = [
+    "E203",   # whitespace before ':' - conflicts with black
+    "B028",   # no explicit `stacklevel` keyword - noisy
+    "SIM117", # multiple with statements - often less readable
+    "RET504", # unnecessary assign before return - stylistic
+]
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
 
 [tool.ruff.lint.per-file-ignores]
-"archive/*" = ["E402", "E501", "F841", "C90", "ANN", "UP006", "UP045", "FBT", "D413"]
+"archive/*" = ["E402", "E501", "F841", "C90", "ANN", "UP006", "UP045", "FBT", "D413", "ARG", "PLR2004", "PLC0415", "SIM117"]
 "adapters/sqlite/repositories/*" = ["ANN401", "FBT001", "FBT002", "FBT003"]
-"scripts/*" = ["E402", "E501", "FBT001", "FBT002", "FBT003"]
+"scripts/*" = ["E402", "E501", "FBT001", "FBT002", "FBT003", "ARG", "PLC0415", "SIM117"]
 "scripts/self_test.py" = ["C90"]
 "scripts/mover.py" = ["C90"]
-"tests/*" = ["E402", "E501", "E712", "E731", "E741", "C90", "ANN", "UP006", "UP045", "FBT", "D413"]
-"migrations/*" = ["E402", "E501", "C90"]
+"tests/*" = ["E402", "E501", "E712", "E731", "E741", "C90", "ANN", "UP006", "UP045", "FBT", "D413", "ARG", "PLR2004", "PLC0415", "SIM117", "S101"]
+"migrations/*" = ["E402", "E501", "C90", "ARG", "PLC0415", "SIM117"]
 "migrations/folders_database_migrator.py" = ["C90"]
 "main_qt.py" = ["E402"]
 "interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = ["E402"]

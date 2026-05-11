@@ -119,9 +119,9 @@ class QtUIService:
         clicked = msg_box.clickedButton()
         if clicked == btn1:
             return 0
-        elif clicked == btn2:
+        if clicked == btn2:
             return 1
-        elif clicked == btn3:
+        if clicked == btn3:
             return 2
         return -1
 
@@ -293,7 +293,7 @@ class QtProgressService(QObject):
         overlay.setObjectName("qt_progress_overlay")
         overlay.setAutoFillBackground(True)
         # Ensure stylesheet background gets painted even with global QFrame styles.
-        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)  # noqa: FBT003 - Qt API requires positional bool
         overlay.setStyleSheet(
             f"QFrame#qt_progress_overlay "
             f"{{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"
@@ -389,12 +389,12 @@ class QtProgressService(QObject):
         animation.finished.connect(on_animation_finished)
         animation.start()
         # Store animation and effect as attributes to prevent garbage collection
-        setattr(throbber, "_animation", animation)
-        setattr(throbber, "_opacity_effect", opacity_effect)
+        throbber._animation = animation
+        throbber._opacity_effect = opacity_effect
         return throbber
 
     @staticmethod
-    def _build_progress_bar(parent: QWidget) -> "QProgressBar":
+    def _build_progress_bar(parent: QWidget) -> QProgressBar:
         """Create a QProgressBar for percentage-based progress."""
         from PyQt5.QtWidgets import QProgressBar
 
@@ -677,8 +677,8 @@ class QtProgressService(QObject):
 
     def update_discovery_file(
         self,
-        folder_num: int,
-        folder_total: int,
+        _folder_num: int,
+        _folder_total: int,
         file_num: int,
         file_total: int,
         filename: str,

@@ -36,14 +36,14 @@ __all__ = [
     # Re-exports from focused modules
     "CRecGenerator",
     "_col_to_excel",
-    "do_split_edi",
-    "filter_b_records_by_category",
-    "filter_edi_file_by_category",
     "add_row",
-    "qty_to_int",
     # Legacy functions
     "apply_retail_uom_transform",
     "apply_upc_override",
+    "do_split_edi",
+    "filter_b_records_by_category",
+    "filter_edi_file_by_category",
+    "qty_to_int",
 ]
 
 
@@ -149,8 +149,7 @@ def apply_upc_override(
         if do_updateupc:
             record["upc_number"] = upc_lookup[vendor_item_int][override_level]
             return True
-        else:
-            return False
+        return False
 
     except (KeyError, ValueError, IndexError):
         record["upc_number"] = ""

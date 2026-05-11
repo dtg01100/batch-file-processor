@@ -50,7 +50,8 @@ class CaptureBackend:
 
     def send(self, params: dict, settings: dict, filename: str) -> bool:
         try:
-            self.received.append((filename, open(filename, "rb").read()))
+            with open(filename, "rb") as f:
+                self.received.append((filename, f.read()))
         except Exception:
             self.received.append((filename, b""))
         return True
@@ -79,7 +80,7 @@ def _make_edi_dir(tmp_path, name="in"):
     return d
 
 
-def _run_folder_from_db(db, folder_id: int, extra_settings: dict = None) -> tuple:
+def _run_folder_from_db(db, folder_id: int, extra_settings: dict | None = None) -> tuple:
     """Load a folder from the DB and run it through the orchestrator."""
     loaded = dict(db["folders"].find_one(id=folder_id))
     backend = CaptureBackend()
@@ -122,9 +123,9 @@ class TestProcessEDIMappingFromDB:
         assert result.files_processed == 1
         # The file delivered to the backend should be a converted CSV
         assert backend.received
-        assert backend.received[0][0].endswith(".csv"), (
-            f"Expected .csv output, got: {backend.received[0][0]}"
-        )
+        assert backend.received[0][0].endswith(
+            ".csv"
+        ), f"Expected .csv output, got: {backend.received[0][0]}"
 
     def test_process_edi_false_sends_original(self, temp_db, tmp_path):
         indir = _make_edi_dir(tmp_path)
@@ -518,7 +519,7 @@ class TestNullFieldDefaultsFromDB:
                 # upc_target_length deliberately omitted
             }
         )
-        result, backend = _run_folder_from_db(temp_db, fid)
+        result, _backend = _run_folder_from_db(temp_db, fid)
 
         # Should succeed (not crash with TypeError: int(None))
         assert result.success
@@ -538,7 +539,7 @@ class TestNullFieldDefaultsFromDB:
                 # a_record_padding_length deliberately omitted
             }
         )
-        result, backend = _run_folder_from_db(temp_db, fid)
+        result, _backend = _run_folder_from_db(temp_db, fid)
 
         assert result.success
 

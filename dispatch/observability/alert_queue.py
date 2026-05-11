@@ -17,10 +17,10 @@ class AlertQueue:
             import appdirs
 
             queue_path = (
-            Path(appdirs.user_data_dir())
-            / "Batch File Sender"
-            / "alert_queue.jsonl"
-        )
+                Path(appdirs.user_data_dir())
+                / "Batch File Sender"
+                / "alert_queue.jsonl"
+            )
         self._queue_path = Path(queue_path)
         self._failures_path = (
             Path(failures_path)
@@ -41,7 +41,7 @@ class AlertQueue:
     def peek(self) -> list[dict[str, Any]]:
         if not self._queue_path.exists():
             return []
-        with open(self._queue_path, "r", encoding="utf-8") as f:
+        with open(self._queue_path, encoding="utf-8") as f:
             return [json.loads(line) for line in f if line.strip()]
 
     def dequeue(self) -> dict[str, Any] | None:
@@ -57,9 +57,9 @@ class AlertQueue:
         self._failures_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self._failures_path, "a", encoding="utf-8") as f:
             f.write(
-            f"{datetime.now().isoformat()} FAILED:"
-            f" {json.dumps(alert)} error: {error}\n"
-        )
+                f"{datetime.now().isoformat()} FAILED:"
+                f" {json.dumps(alert)} error: {error}\n"
+            )
 
     @property
     def queue_path(self) -> Path:

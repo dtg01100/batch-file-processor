@@ -285,7 +285,7 @@ class HTTPClientProtocol(Protocol):
         files: dict | None = None,
         headers: dict | None = None,
         timeout: float | None = None,
-    ) -> "requests.Response":
+    ) -> requests.Response:
         """Send a POST request.
 
         Args:

@@ -72,11 +72,11 @@ class YellowDogCSVConfigurationPlugin(ConfigurationPlugin):
             return schema.validate(config)
         return ValidationResult(success=True, errors=[])
 
-    def create_config(self, data: dict[str, Any]) -> YellowDogCSVConfiguration:
+    def create_config(self, _data: dict[str, Any]) -> YellowDogCSVConfiguration:
         """Create a configuration instance from raw data."""
         return YellowDogCSVConfiguration()
 
-    def serialize_config(self, config: YellowDogCSVConfiguration) -> dict[str, Any]:
+    def serialize_config(self, _config: YellowDogCSVConfiguration) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         return {}
 

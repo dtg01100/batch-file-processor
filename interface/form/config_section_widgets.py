@@ -7,7 +7,8 @@ can be reused across different configuration interfaces.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from ..plugins.config_schemas import ConfigurationSchema, FieldType
 from ..plugins.ui_abstraction import WidgetBase, WidgetFactoryRegistry
@@ -431,8 +432,7 @@ class TabbedSectionWidget(ConfigSectionWidget):
         """
         if self.framework == "qt":
             return self._render_qt(config)
-        else:
-            return self._render_qt(config)
+        return self._render_qt(config)
 
     def _render_qt(self, config: dict[str, Any] | None = None) -> Any:
         """

@@ -18,13 +18,13 @@ from backend.database import (
 
 __all__ = [
     "Database",
-    "Table",
-    "connect",
-    "DatabaseObj",
     "DatabaseConnectionProtocol",
+    "DatabaseObj",
+    "Table",
     "TableProtocol",
+    "connect",
     "file_operations",
     "ftp_client",
-    "smtp_client",
     "protocols",
+    "smtp_client",
 ]

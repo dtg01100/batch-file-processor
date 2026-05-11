@@ -37,8 +37,6 @@ from core.structured_logging import (
     log_with_context,
     set_correlation_id,
 )
-from core.utils.bool_utils import normalize_bool
-from core.utils.format_utils import normalize_convert_to_format
 from dispatch.results import FolderResult
 
 logger = get_logger(__name__)
@@ -474,39 +472,21 @@ class FolderPipelineExecutor:
     def _build_effective_folder(self, folder: dict) -> dict:
         """Build effective folder with defaults applied.
 
-        This replicates the normalization logic from DispatchOrchestrator
-        to ensure folder has all required fields with sensible defaults.
+        Delegates to the shared core.utils.folder_utils.build_effective_folder
+        utility to avoid duplicating normalization logic.
 
         Args:
-            folder: Original folder configuration
+            folder: Original folder configuration.
 
         Returns:
-            Normalized folder dict with defaults applied
+            Normalized folder dict with defaults applied.
+
         """
-        from core.constants import FOLDER_DEFAULTS
+        from core.utils.folder_utils import build_effective_folder
 
-        effective_folder = folder.copy()
-
-        for key, default in FOLDER_DEFAULTS.items():
-            if effective_folder.get(key) is None:
-                effective_folder[key] = default
-
-        if not effective_folder.get("upc_target_length"):
-            effective_folder["upc_target_length"] = FOLDER_DEFAULTS.get(
-                "upc_target_length", 11
-            )
-
-        effective_folder["convert_to_format"] = normalize_convert_to_format(
-            effective_folder.get("convert_to_format", "")
-        )
-
-        if normalize_bool(effective_folder.get("tweak_edi", False)):
-            effective_folder["convert_to_format"] = "tweaks"
-            effective_folder["process_edi"] = True
-
+        effective_folder = build_effective_folder(folder)
         if "settings" not in effective_folder:
             effective_folder["settings"] = {}
-
         return effective_folder
 
     def _record_processed_file(
@@ -589,7 +569,7 @@ class FolderPipelineExecutor:
         self,
         folder: dict,
         total_files: int,
-        request: FolderProcessingRequest,
+        _request: FolderProcessingRequest,
     ) -> None:
         """Initialize progress reporter for folder processing.
 

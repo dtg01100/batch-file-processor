@@ -6,8 +6,9 @@ custom validation logic for their configuration fields.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Union
+from typing import Any
 
 
 @dataclass
@@ -19,7 +20,9 @@ class ValidationResult:
     success: bool
     errors: list[str]
 
-    def __init__(self, *, success: bool = True, errors: list[str] = None) -> None:
+    def __init__(
+        self, *, success: bool = True, errors: list[str] | None = None
+    ) -> None:
         """
         Initialize a validation result.
 
@@ -177,8 +180,8 @@ class RangeValidator(Validator):
 
     def __init__(
         self,
-        min_value: Union[int, float],
-        max_value: Union[int, float],
+        min_value: int | float,
+        max_value: int | float,
         message: str = "Value must be between {min} and {max}",
     ) -> None:
         """
@@ -215,7 +218,7 @@ class LengthValidator(Validator):
     def __init__(
         self,
         min_length: int = 0,
-        max_length: int = None,
+        max_length: int | None = None,
         message: str = "Value must be between {min} and {max} characters long",
     ) -> None:
         """

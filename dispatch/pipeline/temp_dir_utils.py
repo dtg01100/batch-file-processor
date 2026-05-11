@@ -5,7 +5,7 @@ from typing import Any
 
 def _extract_pipeline_temp_dirs(folder: dict, context: Any | None) -> list[str] | None:
     if context is not None and hasattr(context, "temp_dirs"):
-        temp_dirs = getattr(context, "temp_dirs")
+        temp_dirs = context.temp_dirs
         if isinstance(temp_dirs, list):
             return temp_dirs
 

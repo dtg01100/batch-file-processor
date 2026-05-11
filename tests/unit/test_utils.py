@@ -1074,7 +1074,9 @@ class TestDoSplitEdi:
 
         assert len(result) == 1
         assert all(
-            os.path.commonpath([os.path.abspath(str(work_dir)), os.path.abspath(item[0])])
+            os.path.commonpath(
+                [os.path.abspath(str(work_dir)), os.path.abspath(item[0])]
+            )
             == os.path.abspath(str(work_dir))
             for item in result
         )

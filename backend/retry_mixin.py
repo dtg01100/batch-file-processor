@@ -5,7 +5,8 @@ retry logic with exponential backoff for backend operations.
 """
 
 import time
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from core.constants import DEFAULT_MAX_RETRIES
 from core.structured_logging import get_logger

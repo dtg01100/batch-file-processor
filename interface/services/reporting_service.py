@@ -423,8 +423,8 @@ class ReportingService:
                     )
                 else:
                     logger.info(
-                "Emailing report log failed with error: %s, "
-                "printing disabled, stopping",
+                        "Emailing report log failed with error: %s, "
+                        "printing disabled, stopping",
                         error,
                     )
                     run_log.write(
@@ -433,10 +433,13 @@ class ReportingService:
                         + ", printing disabled, stopping\r\n"
                     )
 
-        if self._normalize_bool(reporting_config.get("report_printing_fallback")):
-            if run_log_file and self._print_run_log is not None:
+        if (
+            self._normalize_bool(reporting_config.get("report_printing_fallback"))
+            and run_log_file
+            and self._print_run_log is not None
+        ):
                 try:
-                    with open(run_log_file, "r", encoding="utf-8") as run_log:
+                    with open(run_log_file, encoding="utf-8") as run_log:
                         self._print_run_log.do(run_log)
                 except Exception as printing_error:
                     logger.debug(

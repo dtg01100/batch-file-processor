@@ -134,7 +134,7 @@ else:
     modern_lines = modern_bytes.decode("utf-8", errors="replace").splitlines(
         keepends=True
     )
-    for i, line in enumerate(
+    for _i, line in enumerate(
         difflib.unified_diff(
             legacy_lines, modern_lines, fromfile="legacy", tofile="modern"
         )

@@ -409,7 +409,7 @@ class MockFTPClient:
         self._raise_error_if_set()
         self.directories_changed.append(directory)
 
-    def storbinary(self, cmd: str, fp: Any, blocksize: int = 8192) -> None:
+    def storbinary(self, cmd: str, fp: Any, _blocksize: int = 8192) -> None:
         """Record file storage.
 
         Args:
@@ -455,7 +455,7 @@ class MockFTPClient:
         self.nlst_results.append(directory)
         return self._nlst_return_value
 
-    def retrbinary(self, cmd: str, callback: Any, blocksize: int = 8192) -> None:
+    def retrbinary(self, cmd: str, callback: Any, _blocksize: int = 8192) -> None:
         """Record file retrieval.
 
         Args:

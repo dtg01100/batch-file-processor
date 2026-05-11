@@ -141,7 +141,7 @@ def apply_upc_override(
 def process_upc_for_output(
     fields: dict[str, str],
     *,
-    calc_check_digit_flag: bool = True,
+    _calc_check_digit_flag: bool = True,
     upc_target_length: int = 11,
     upc_padding: str = "           ",
 ) -> str:

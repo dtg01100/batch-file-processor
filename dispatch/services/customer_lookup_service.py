@@ -1,5 +1,6 @@
 """Customer lookup service for EDI converters."""
-from typing import Any, List
+
+from typing import Any
 
 from core.database import QueryRunner
 from core.exceptions import CustomerLookupError
@@ -51,7 +52,7 @@ class CustomerLookupService:
         return self._header_dict
 
     def _build_header_dict(
-        self, header_fields: dict[str, Any], header_fields_list: List[str]
+        self, header_fields: dict[str, Any], _header_fields_list: list[str]
     ) -> dict[str, Any]:
         """Build customer header dictionary from query results."""
         result = {}

@@ -169,7 +169,7 @@ class TestCopyBackendOperations:
 
             def copy(self, src, dst):
                 call_count["n"] += 1
-                raise IOError("transient error")
+                raise OSError("transient error")
 
         with pytest.raises(IOError, match="transient error"):
             copy_backend.do(
@@ -318,7 +318,7 @@ class TestFTPBackendOperations:
         missing_file = str(temp_dir / "nonexistent.txt")
 
         with patch("time.sleep"):
-            with pytest.raises(FileNotFoundError, match="nonexistent.txt"):
+            with pytest.raises(FileNotFoundError, match=r"nonexistent\.txt"):
                 ftp_backend.do(process_parameters, settings_dict, missing_file)
 
 
@@ -450,7 +450,7 @@ class TestEmailBackendOperations:
 
         # Use mock client that fails - need enough errors for all 10 retries
         mock_client = MockSMTPClient()
-        for _ in range(60):  # Need 50+ errors (10 retries × 5 ops per retry)
+        for _ in range(60):  # Need 50+ errors (10 retries x 5 ops per retry)
             mock_client.add_error(RuntimeError("Connection failed"))
 
         # Mock sleep to be instant so test runs fast

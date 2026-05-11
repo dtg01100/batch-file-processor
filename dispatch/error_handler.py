@@ -263,11 +263,10 @@ class ErrorHandler:
             self._persist_to_database(error_record)
 
         # Fire alert if configured and allowed
-        if self._alert_dispatcher is not None and context.get(
-            "alert_on_failure", True
-        ):
+        if self._alert_dispatcher is not None and context.get("alert_on_failure", True):
             try:
                 import traceback as tb
+
                 self._alert_dispatcher.dispatch_error_alert(
                     error_record={
                         "error_type": type(error).__name__,
@@ -539,7 +538,7 @@ class RealFileSystem:
 
     def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
         """Read file contents as text."""
-        with open(path, "r", encoding=encoding) as f:
+        with open(path, encoding=encoding) as f:
             return f.read()
 
     def write_file(self, path: str, data: bytes) -> None:

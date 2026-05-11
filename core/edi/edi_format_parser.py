@@ -19,7 +19,7 @@ Example:
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 class EDIFormatError(Exception):
@@ -46,7 +46,7 @@ class EDIFormatParser:
     """
 
     # Class-level registry of loaded formats
-    _format_registry: dict[str, "EDIFormatParser"] = {}
+    _format_registry: ClassVar[dict[str, "EDIFormatParser"]] = {}
 
     def __init__(self, format_config: dict[str, Any]) -> None:
         """Initialize parser with format configuration.
@@ -96,15 +96,15 @@ class EDIFormatParser:
 
         """
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 config = json.load(f)
             return cls(config)
-        except FileNotFoundError:
-            raise EDIFormatError(f"Format file not found: {filepath}")
+        except FileNotFoundError as e:
+            raise EDIFormatError(f"Format file not found: {filepath}") from e
         except json.JSONDecodeError as e:
-            raise EDIFormatError(f"Invalid JSON in format file {filepath}: {e}")
+            raise EDIFormatError(f"Invalid JSON in format file {filepath}: {e}") from e
         except Exception as e:
-            raise EDIFormatError(f"Error loading format file {filepath}: {e}")
+            raise EDIFormatError(f"Error loading format file {filepath}: {e}") from e
 
     @classmethod
     def load_format(
@@ -198,7 +198,7 @@ class EDIFormatParser:
         formats = []
         for file_path in formats_dir.glob("*.json"):
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     config = json.load(f)
                 formats.append(
                     {

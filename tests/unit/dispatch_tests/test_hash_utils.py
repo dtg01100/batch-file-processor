@@ -68,7 +68,7 @@ class TestGenerateMatchLists:
         """Test with entries missing resend flag (should default to False)."""
         processed_files = [{"file_name": "test.txt", "file_checksum": "abc123"}]
 
-        hash_dict, name_dict, resend_set = generate_match_lists(processed_files)
+        _hash_dict, _name_dict, resend_set = generate_match_lists(processed_files)
 
         assert resend_set == set()
 
@@ -78,7 +78,7 @@ class TestGenerateMatchLists:
             {"file_name": "test.txt", "file_checksum": "abc123", "resend_flag": None}
         ]
 
-        hash_dict, name_dict, resend_set = generate_match_lists(processed_files)
+        _hash_dict, _name_dict, resend_set = generate_match_lists(processed_files)
 
         assert resend_set == set()
 
@@ -214,7 +214,7 @@ class TestBuildHashDictionaries:
             },
         ]
 
-        hash_dict, name_dict, resend_set = build_hash_dictionaries(processed_files)
+        hash_dict, name_dict, _resend_set = build_hash_dictionaries(processed_files)
 
         # Later entry wins for name_dict
         assert name_dict == {"same_hash": "file2.txt"}
@@ -243,7 +243,7 @@ class TestGenerateFileHashRetryCount:
             def mock_open(*args, **kwargs):
                 call_count[0] += 1
                 if call_count[0] == 1:
-                    raise IOError("Simulated failure")
+                    raise OSError("Simulated failure")
                 return original_open(*args, **kwargs)
 
             with patch("builtins.open", mock_open):

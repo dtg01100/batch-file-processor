@@ -461,9 +461,7 @@ class TestSendBackendToggleBehavior:
 
         # Simulate backend selection logic
         def should_connect_ftp(config):
-            if config.get("process_backend_ftp"):
-                return True
-            return False
+            return bool(config.get("process_backend_ftp"))
 
         assert should_connect_ftp(enabled_dict) is True
         assert should_connect_ftp(disabled_dict) is False
@@ -489,9 +487,7 @@ class TestSendBackendToggleBehavior:
 
         # Simulate backend selection logic
         def should_send_email(config):
-            if config.get("process_backend_email"):
-                return True
-            return False
+            return bool(config.get("process_backend_email"))
 
         assert should_send_email(enabled_dict) is True
         assert should_send_email(disabled_dict) is False
@@ -515,9 +511,7 @@ class TestSendBackendToggleBehavior:
 
         # Simulate backend selection logic
         def should_copy(config):
-            if config.get("process_backend_copy"):
-                return True
-            return False
+            return bool(config.get("process_backend_copy"))
 
         assert should_copy(enabled_dict) is True
         assert should_copy(disabled_dict) is False

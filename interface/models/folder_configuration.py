@@ -8,7 +8,7 @@ validation and serialization/deserialization methods.
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
@@ -38,7 +38,7 @@ def _discover_format_values() -> list[tuple[str, str]]:
     import pkgutil
 
     # Mapping from internal names (from filenames) to display values
-# (for legacy compatibility)
+    # (for legacy compatibility)
     DISPLAY_VALUES = {
         "scannerware": "ScannerWare",
         "scansheet_type_a": "ScanSheet_Type_A",
@@ -79,7 +79,7 @@ class ConvertFormat(metaclass=_ConvertFormatMeta):
     Auto-populated from dispatch/converters/convert_to_*.py modules.
     """
 
-    _discovered: list[str] = []
+    _discovered: ClassVar[list[str]] = []
 
     def __init__(self, value: str):
         self._value = value
@@ -371,7 +371,7 @@ class FolderConfigurationPydantic(BaseModel):
     prepend_date_files: bool = Field(default=False)
 
     @model_validator(mode="after")
-    def validate_edi_options(cls, values):  # noqa: N805
+    def validate_edi_options(cls, values):
         if values.prepend_date_files and not values.split_edi:
             raise ValueError("prepend_date_files requires split_edi to be true")
         return values
@@ -504,7 +504,7 @@ class FolderConfiguration:
                         f"No configuration plugin found for format: {format_name}"
                     )
         except Exception as e:
-            errors.append(f"Error validating plugin configurations: {str(e)}")
+            errors.append(f"Error validating plugin configurations: {e!s}")
 
         return errors
 
@@ -530,7 +530,9 @@ class FolderConfiguration:
                 prepend_date_files=self.edi.prepend_date_files if self.edi else False,
             )
         except ValidationError as exc:
-            raise ValueError(f"FolderConfiguration pydantic validation failed: {exc}")
+            raise ValueError(
+                f"FolderConfiguration pydantic validation failed: {exc}"
+            ) from exc
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FolderConfiguration":
@@ -805,8 +807,8 @@ class FolderConfiguration:
                         self.invoice_date.custom_format_enabled
                     ),
                     "invoice_date_custom_format_string": (
-                self.invoice_date.custom_format_string
-            ),
+                        self.invoice_date.custom_format_string
+                    ),
                     "retail_uom": normalize_bool(self.invoice_date.retail_uom),
                 }
             )
@@ -819,8 +821,8 @@ class FolderConfiguration:
                     "estore_store_number": self.backend_specific.estore_store_number,
                     "estore_Vendor_OId": self.backend_specific.estore_vendor_oid,
                     "estore_vendor_NameVendorOID": (
-                self.backend_specific.estore_vendor_namevendoroid
-            ),
+                        self.backend_specific.estore_vendor_namevendoroid
+                    ),
                     "fintech_division_id": self.backend_specific.fintech_division_id,
                 }
             )

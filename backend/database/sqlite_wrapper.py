@@ -21,10 +21,12 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 import threading
-from typing import Any
+from contextlib import suppress
+from typing import Any, ClassVar
 
 from core.utils.bool_utils import normalize_bool, to_db_bool
 
@@ -55,7 +57,7 @@ class Table:
         self._boolean_columns: set | None = None
         self._lock = lock
 
-    _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE = {
+    _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE: ClassVar[dict[str, set[str]]] = {
         "folders": {
             "folder_is_active",
             "process_backend_copy",
@@ -231,11 +233,8 @@ class Table:
                     (v_stripped[0] == "{" and v_stripped[-1] == "}")
                     or (v_stripped[0] == "[" and v_stripped[-1] == "]")
                 ):
-                    try:
+                    with suppress(json.JSONDecodeError, ValueError):
                         d[k] = json.loads(v)
-                    except (json.JSONDecodeError, ValueError):
-                        # Keep as string if not valid JSON
-                        pass
 
         return d
 
@@ -288,17 +287,17 @@ class Table:
             if key in boolean_cols:
                 if normalize_bool(value):
                     clauses.append(
-                        (
-                    f"({quoted_key}=1 OR lower(cast({quoted_key} as text))"
-                    f" IN {true_legacy})"
-                )
+
+                            f"({quoted_key}=1 OR lower(cast({quoted_key} as text))"
+                            f" IN {true_legacy})"
+
                     )
                 else:
                     clauses.append(
-                        (
-                    f"({quoted_key}=0 OR lower(cast({quoted_key} as text))"
-                    f" IN {false_legacy})"
-                )
+
+                            f"({quoted_key}=0 OR lower(cast({quoted_key} as text))"
+                            f" IN {false_legacy})"
+
                     )
             else:
                 clauses.append(f"{quoted_key}=?")
@@ -506,7 +505,7 @@ class Table:
 
         """
         with self._lock:
-            set_keys = [k for k in record.keys() if k not in keys]
+            set_keys = [k for k in record if k not in keys]
             if not set_keys:
                 # Nothing to update
                 return
@@ -713,10 +712,8 @@ class Database:
         self._lock = threading.RLock()
 
         # Enable foreign key constraints
-        try:
+        with contextlib.suppress(sqlite3.Error):
             self._conn.execute("PRAGMA foreign_keys = ON")
-        except sqlite3.Error:
-            pass
 
         # Ensure core schema exists for new or in-memory databases so tests and
         # migrations can assume base tables like 'version' are present.
@@ -773,10 +770,8 @@ class Database:
     def close(self) -> None:
         """Close the database connection."""
         with self._lock:
-            try:
+            with contextlib.suppress(sqlite3.Error):
                 self._conn.close()
-            except sqlite3.Error:
-                pass
 
     def query(self, sql: str, *, raise_on_error: bool = False) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.
@@ -805,10 +800,8 @@ class Database:
             except sqlite3.Error:
                 if raise_on_error:
                     raise
-                try:
+                with contextlib.suppress(sqlite3.Error):
                     self._conn.commit()
-                except sqlite3.Error:
-                    pass
                 return []
 
             if sql.strip().upper().startswith("PRAGMA"):
@@ -831,10 +824,8 @@ class Database:
             except sqlite3.Error:
                 if raise_on_error:
                     raise
-                try:
+                with contextlib.suppress(sqlite3.Error):
                     self._conn.commit()
-                except sqlite3.Error:
-                    pass
                 return []
 
     def query_strict(self, sql: str) -> list[dict[str, Any]]:

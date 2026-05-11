@@ -13,6 +13,7 @@ Outputs (written to the same directory as the XML file)
 
 from __future__ import annotations
 
+import contextlib
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -69,10 +70,8 @@ def parse_junit_xml(xml_path: Path) -> SuiteStats:
         stats.failed += int(suite.get("failures", 0))
         stats.errors += int(suite.get("errors", 0))
         stats.skipped += int(suite.get("skipped", 0))
-        try:
+        with contextlib.suppress(ValueError):
             stats.elapsed += float(suite.get("time", 0))
-        except ValueError:
-            pass
 
         for tc in suite.findall("testcase"):
             classname = tc.get("classname", "unknown")

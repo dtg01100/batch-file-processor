@@ -612,11 +612,11 @@ class TestMaintenanceDialog:
         dialog = MaintenanceDialog(None, mock_maintenance_functions)
         qtbot.addWidget(dialog)
         buttons = dialog.findChildren(QPushButton)
-        active_btn = [
+        active_btn = next(
             b
             for b in buttons
             if "active" in b.text().lower() and "inactive" not in b.text().lower()
-        ][0]
+        )
         active_btn.click()
         assert mock_maintenance_functions.was_called("set_all_active")
 

@@ -11,7 +11,7 @@ Uses reflection/introspection to automatically detect missing fields.
 import os
 import sys
 from dataclasses import fields, is_dataclass
-from typing import Dict, Optional, Set
+from typing import Optional
 
 import pytest
 
@@ -40,15 +40,13 @@ from interface.operations.folder_data_extractor import ExtractedDialogFields
 # FIELD COLLECTION UTILITIES
 # =============================================================================
 
-
-def get_dataclass_fields_flat(dataclass_type) -> Set[str]:
+def get_dataclass_fields_flat(dataclass_type) -> set[str]:
     """Get all field names from a dataclass, excluding nested dataclasses."""
     if not is_dataclass(dataclass_type):
         return set()
     return {f.name for f in fields(dataclass_type)}
 
-
-def get_all_nested_fields_flat(dataclass_type) -> Set[str]:
+def get_all_nested_fields_flat(dataclass_type) -> set[str]:
     """Get all field names from a dataclass including nested dataclass fields."""
     all_fields = set()
     if not is_dataclass(dataclass_type):
@@ -57,9 +55,8 @@ def get_all_nested_fields_flat(dataclass_type) -> Set[str]:
     for f in fields(dataclass_type):
         field_type = f.type
         # Handle Optional types
-        if hasattr(field_type, "__origin__"):
-            if field_type.__origin__ is Optional:
-                field_type = field_type.__args__[0]
+        if hasattr(field_type, "__origin__") and field_type.__origin__ is Optional:
+            field_type = field_type.__args__[0]
 
         # Check if it's a nested dataclass
         if is_dataclass(field_type):
@@ -70,8 +67,7 @@ def get_all_nested_fields_flat(dataclass_type) -> Set[str]:
 
     return all_fields
 
-
-def get_to_dict_keys() -> Set[str]:
+def get_to_dict_keys() -> set[str]:
     """Get all keys that to_dict() produces."""
     config = FolderConfiguration(
         folder_name="test",
@@ -137,8 +133,7 @@ def get_to_dict_keys() -> Set[str]:
     )
     return set(config.to_dict().keys())
 
-
-def get_to_dict_keys_with_http() -> Set[str]:
+def get_to_dict_keys_with_http() -> set[str]:
     """Get all keys that to_dict() produces when HTTP backend is configured."""
     config = FolderConfiguration(
         folder_name="test",
@@ -166,8 +161,7 @@ def get_to_dict_keys_with_http() -> Set[str]:
     )
     return set(config.to_dict().keys())
 
-
-def get_from_dict_expected_keys() -> Set[str]:
+def get_from_dict_expected_keys() -> set[str]:
     """Get all keys that from_dict() expects to read."""
     # Create a comprehensive dict with all possible keys
     all_keys = {
@@ -235,13 +229,11 @@ def get_from_dict_expected_keys() -> Set[str]:
     }
     return all_keys
 
-
-def get_extractor_fields() -> Set[str]:
+def get_extractor_fields() -> set[str]:
     """Get all fields extracted by ExtractedDialogFields."""
     return get_dataclass_fields_flat(ExtractedDialogFields)
 
-
-def get_database_columns_from_create_db() -> Set[str]:
+def get_database_columns_from_create_db() -> set[str]:
     """Get database columns defined in create_database.py initial_db_dict."""
     # These are the columns from create_database.py initial_db_dict
     return {
@@ -272,8 +264,7 @@ def get_database_columns_from_create_db() -> Set[str]:
         "edi_output_folder",
     }
 
-
-def get_backend_required_fields() -> Dict[str, Set[str]]:
+def get_backend_required_fields() -> dict[str, set[str]]:
     """Get required fields for each backend."""
     return {
         "ftp": {"ftp_server", "ftp_port", "ftp_username", "ftp_password", "ftp_folder"},
@@ -281,8 +272,7 @@ def get_backend_required_fields() -> Dict[str, Set[str]]:
         "copy": {"copy_to_directory"},
     }
 
-
-def get_dispatch_required_fields() -> Set[str]:
+def get_dispatch_required_fields() -> set[str]:
     """Get fields used by dispatch.py for processing."""
     return {
         # Core identity
@@ -310,7 +300,6 @@ def get_dispatch_required_fields() -> Set[str]:
         "ftp_folder",
         "email_to",
     }
-
 
 # =============================================================================
 # EXPECTED FIELD DEFINITIONS
@@ -479,11 +468,9 @@ EXPECTED_EXTRACTOR_FIELDS = {
     "copy_to_directory",
 }
 
-
 # =============================================================================
 # TEST CLASSES
 # =============================================================================
-
 
 class TestFieldCoverageAnalysis:
     """Analyze and report field coverage across the pipeline."""
@@ -786,7 +773,6 @@ class TestFieldCoverageAnalysis:
             f"folders table columns: {sorted(missing_columns)}"
         )
 
-
 class TestNestedConfigurationCoverage:
     """Test coverage of nested configuration classes."""
 
@@ -914,7 +900,6 @@ class TestNestedConfigurationCoverage:
             csv_fields == expected
         ), f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
 
-
 class TestFieldCoverageReport:
     """Generate comprehensive field coverage report."""
 
@@ -978,7 +963,6 @@ class TestFieldCoverageReport:
 
         # Keep a concrete invariant so this test verifies report inputs are valid
         assert len(to_dict_keys) > 0
-
 
 class TestRoundTripIntegrity:
     """Test that fields survive a complete round trip."""
@@ -1214,7 +1198,6 @@ class TestRoundTripIntegrity:
         print("ROUNDTRIP TEST PASSED")
         print(f"{'='*60}")
         print(f"All {len(dict_form)} fields survived the round trip!")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

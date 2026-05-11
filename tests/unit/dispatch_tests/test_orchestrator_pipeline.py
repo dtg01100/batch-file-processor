@@ -124,7 +124,7 @@ class ConverterWithTempDirs:
         self.call_count += 1
         if context is not None and hasattr(context, "temp_dirs"):
             context.temp_dirs.extend(self.temp_dirs)
-        return None
+        return
 
 
 class CaptureBackend:
@@ -807,7 +807,9 @@ class TestProcessedFilesAndCleanupBehavior:
         def mock_calculate(file_path):
             return file_to_checksum_rev.get(file_path, "unknown")
 
-        with patch("core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate):
+        with patch(
+            "core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate
+        ):
             filtered = orchestrator._filter_processed_files(
                 files, temp_database.processed_files, {"id": 42}
             )
@@ -1403,7 +1405,9 @@ class TestOrchestratorProgressPhases:
         def mock_calculate(file_path):
             return file_to_checksum.get(file_path, "other")
 
-        with patch("core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate):
+        with patch(
+            "core.utils.file_utils.calculate_file_checksum", side_effect=mock_calculate
+        ):
             pending_lists, total_pending = orchestrator.discover_pending_files(
                 folders,
                 processed_files=temp_database.processed_files,
@@ -1580,20 +1584,24 @@ class TestOrchestratorProgressPhases:
         )
 
         # Manually insert a processed file record with resend_flag=0
-        temp_database.processed_files.insert({
-            "file_name": "test1.edi",
-            "file_checksum": "abc123",  # Fake checksum
-            "folder_id": 1,
-            "resend_flag": 0,  # Already processed, NOT marked for resend
-        })
+        temp_database.processed_files.insert(
+            {
+                "file_name": "test1.edi",
+                "file_checksum": "abc123",  # Fake checksum
+                "folder_id": 1,
+                "resend_flag": 0,  # Already processed, NOT marked for resend
+            }
+        )
 
         # Insert another with resend_flag=1
-        temp_database.processed_files.insert({
-            "file_name": "test2.edi",
-            "file_checksum": "def456",  # Fake checksum
-            "folder_id": 1,
-            "resend_flag": 1,  # Marked for resend
-        })
+        temp_database.processed_files.insert(
+            {
+                "file_name": "test2.edi",
+                "file_checksum": "def456",  # Fake checksum
+                "folder_id": 1,
+                "resend_flag": 1,  # Marked for resend
+            }
+        )
 
         backend = CaptureBackend()
         progress = SimpleProgressReporter()
