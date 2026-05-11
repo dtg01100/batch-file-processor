@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 
 from core.edi.edi_parser import capture_records
+from core.exceptions import DataIntegrityError
 from core.structured_logging import get_logger
 
 MAX_A_RECORD_COUNT = 700
@@ -123,20 +124,20 @@ def _validate_split_counts(
         a_record_count: Number of A records (invoices) in the original file.
 
     Raises:
-        Exception: If line counts or A record counts don't match expectations.
+        DataIntegrityError: If line counts or A record counts don't match.
 
     """
     output_paths = [output_file for output_file, _, _ in edi_send_list]
     edi_send_list_lines = _count_total_lines(output_paths)
 
     if lines_in_edi != write_counter:
-        raise Exception("not all lines in input were written out")
+        raise DataIntegrityError("not all lines in input were written out")
     if lines_in_edi != edi_send_list_lines:
-        raise Exception("total lines in output files do not match input file")
+        raise DataIntegrityError("total lines in output files do not match input file")
     if len(edi_send_list) != a_record_count:
-        raise Exception('mismatched number of "A" records')
+        raise DataIntegrityError('mismatched number of "A" records')
     if not edi_send_list:
-        raise Exception("No Split EDIs")
+        raise DataIntegrityError("No Split EDIs")
 
 
 def _write_split_edi_files(
