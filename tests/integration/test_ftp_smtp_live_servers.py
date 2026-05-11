@@ -56,6 +56,28 @@ def _free_port() -> int:
 def _md5(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
 
+def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
+    """Poll until a server is accepting connections on host:port, with timeout."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        except (OSError, ConnectionRefusedError):
+            time.sleep(0.01)
+    raise RuntimeError(f"Server on {host}:{port} did not start within {timeout}s")
+
+def _wait_for_messages(
+    handler, count: int, timeout: float = 5.0, interval: float = 0.01
+) -> None:
+    """Poll until handler.messages has at least *count* items, with timeout."""
+    deadline = time.monotonic() + timeout
+    while len(handler.messages) < count:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(interval, remaining))
+
 class _NoTLSSMTPClient(RealSMTPClient):
     """RealSMTPClient that silently skips STARTTLS when not supported.
 
@@ -104,8 +126,8 @@ class _FTPFixture:
             daemon=True,
         )
         self._thread.start()
-        # Brief pause so the server loop is ready
-        time.sleep(0.05)
+        # Wait until the server loop is ready
+        _wait_for_server(self.host, self.port)
 
     def stop(self) -> None:
         if self._server is not None:
@@ -176,7 +198,7 @@ def smtp_server():
     port = _free_port()
     controller = Controller(handler, hostname="127.0.0.1", port=port)
     controller.start()
-    time.sleep(0.1)  # let the event loop start
+    _wait_for_server("127.0.0.1", port)
 
     settings = {
         "email_address": "sender@test.com",
@@ -464,7 +486,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         msg_data = handler.messages[0]
         assert "recipient@test.com" in msg_data["rcpt_tos"]
@@ -491,7 +513,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -523,7 +545,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -550,7 +572,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -575,7 +597,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -604,7 +626,7 @@ class TestSMTPLiveServer:
             )
             assert result is True
 
-        time.sleep(0.2)
+        _wait_for_messages(handler, 3)
         assert len(handler.messages) == 3
         received_subjects = []
         for msg_data in handler.messages:
@@ -627,7 +649,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         parsed = message_from_bytes(handler.messages[0]["data"])
         subject = parsed["Subject"]
@@ -653,7 +675,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         msg_data = handler.messages[0]
         # All recipients should appear in SMTP envelope
@@ -703,7 +725,7 @@ class TestSMTPLiveServer:
         )
 
         assert result is True
-        time.sleep(0.3)  # give async handler more time for large payload
+        _wait_for_messages(handler, 1, timeout=10)
         assert len(handler.messages) == 1
 
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -764,7 +786,7 @@ class TestCombinedBackends:
         assert ftp_content == content
 
         # Verify SMTP received the email
-        time.sleep(0.2)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) >= 1
         parsed = message_from_bytes(handler.messages[0]["data"])
         attachment_content = None
@@ -825,7 +847,7 @@ class TestCombinedBackends:
         assert "allbackends.txt" in ftp_files
 
         # Verify SMTP
-        time.sleep(0.2)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) >= 1
         parsed = message_from_bytes(handler.messages[0]["data"])
         attachment_content = None

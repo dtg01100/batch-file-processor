@@ -66,6 +66,28 @@ def _edi_path(filename):
     return os.path.join(TEST_EDI_DIR, filename)
 
 
+def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
+    """Poll until a server is accepting connections on host:port, with timeout."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        except (OSError, ConnectionRefusedError):
+            time.sleep(0.01)
+    raise RuntimeError(f"Server on {host}:{port} did not start within {timeout}s")
+
+def _wait_for_messages(
+    handler, count: int, timeout: float = 5.0, interval: float = 0.01
+) -> None:
+    """Poll until handler.messages has at least *count* items, with timeout."""
+    deadline = time.monotonic() + timeout
+    while len(handler.messages) < count:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(interval, remaining))
+
 def _count_a_records(file_path):
     count = 0
     with open(file_path, encoding="utf-8") as f:
@@ -108,7 +130,7 @@ def live_ftp_server(tmp_path):
         daemon=True,
     )
     t.start()
-    time.sleep(0.05)
+    _wait_for_server("127.0.0.1", port)
     yield ("127.0.0.1", port, root)
     server.close_all()
 
@@ -467,7 +489,7 @@ class TestEDISMTPTransport:
         with open(file_path, "rb") as f:
             original_bytes = f.read()
         _smtp_send(host, port, "Test EDI", "202001.001", original_bytes)
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert (
             len(handler.messages) == 1
         ), f"Expected 1 message, got {len(handler.messages)}"
@@ -488,7 +510,7 @@ class TestEDISMTPTransport:
         with open(file_path, "rb") as f:
             data = f.read()
         _smtp_send(host, port, "Test EDI Filename", "202001.001", data)
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) >= 1
         envelope = handler.messages[0]
         msg = message_from_bytes(envelope.content)
@@ -508,7 +530,7 @@ class TestEDISMTPTransport:
             with open(file_path, "rb") as f:
                 data = f.read()
             _smtp_send(host, port, f"EDI {filename}", filename, data)
-        time.sleep(0.2)
+        _wait_for_messages(handler, 3)
         assert (
             len(handler.messages) == 3
         ), f"Expected 3 messages, got {len(handler.messages)}"
@@ -519,7 +541,7 @@ class TestEDISMTPTransport:
         with open(file_path, "rb") as f:
             original_bytes = f.read()
         _smtp_send(host, port, "Test Negative EDI", "202002.006", original_bytes)
-        time.sleep(0.1)
+        _wait_for_messages(handler, 1)
         assert len(handler.messages) >= 1
         envelope = handler.messages[0]
         msg = message_from_bytes(envelope.content)
