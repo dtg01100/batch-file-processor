@@ -13,7 +13,7 @@ when a filter value is provided.
 from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
-import thefuzz.process  # type: ignore
+import thefuzz.process  # type: ignore - thefuzz stubs missing, package works correctly at runtime
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtWidgets import (

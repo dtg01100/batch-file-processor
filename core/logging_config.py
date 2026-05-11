@@ -335,8 +335,8 @@ class RunLogAdapter(logging.LoggerAdapter):
         kwargs: dict,
     ) -> tuple[str, dict]:
         """Prepend folder (and optionally file) context to *msg*."""
-        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr]
-        file: str | None = self.extra.get("file")  # type: ignore[union-attr]
+        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr] - extra is typed as dict, never None when this runs
+        file: str | None = self.extra.get("file")  # type: ignore[union-attr] - extra is typed as dict, never None when this runs
 
         if folder and file:
             msg = f"[{folder}/{file}] {msg}"
