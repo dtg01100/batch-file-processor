@@ -8,24 +8,26 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-_default_parser = None
-
 
 class EDIParseError(Exception):
     """Raised when a non-empty line cannot be parsed as EDI."""
 
 
+_SENTINEL = object()
+_default_parser = _SENTINEL
+
+
 def _get_default_parser():
-    global _default_parser
-    if _default_parser is None:
+    global _default_parser  # lazy singleton, safe in single-threaded CLI context
+    if _default_parser is _SENTINEL:
         try:
             from core.edi.edi_format_parser import EDIFormatParser
 
             _default_parser = EDIFormatParser.get_default_parser()
         except Exception:
             logger.exception("Failed to initialize EDIFormatParser")
-            _default_parser = False
-    return _default_parser if _default_parser is not False else None
+            _default_parser = _SENTINEL
+    return _default_parser if _default_parser is not _SENTINEL else None
 
 
 @dataclass

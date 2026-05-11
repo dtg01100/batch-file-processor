@@ -275,7 +275,7 @@ class FileProcessor:
             current_file=current_file,
             context=context,
             result=result,
-            run_log=run_log,
+            _run_log=run_log,
             file_basename=file_basename,
         )
         val_duration = int((time.time() - val_start) * 1000)
@@ -302,11 +302,11 @@ class FileProcessor:
         split_start = time.time()
         split_skipped = self._run_splitting(
             current_file=current_file,
-            file_path=file_path,
+            _file_path=file_path,
             file_basename=file_basename,
             context=context,
             result=result,
-            run_log=run_log,
+            _run_log=run_log,
         )
         split_duration = int((time.time() - split_start) * 1000)
         if self._audit_logger and split_skipped:
@@ -325,9 +325,9 @@ class FileProcessor:
         current_file, did_convert, conversion_failed = self._run_conversion(
             current_file=current_file,
             file_basename=file_basename,
-            original_file_path=file_path,
+            _original_file_path=file_path,
             context=context,
-            run_log=run_log,
+            _run_log=run_log,
             validation_passed=result.validated,
         )
         convert_duration = int((time.time() - convert_start) * 1000)
@@ -679,7 +679,7 @@ class FileProcessor:
         result.sent = self._send_to_backends(
             file_path=final_file,
             folder=context.effective_folder,
-            run_log=run_log,
+            _run_log=run_log,
             settings=context.settings,
         )
 
@@ -692,7 +692,7 @@ class FileProcessor:
                 result=result,
                 file_basename=file_basename,
                 current_file=current_file,
-                run_log=run_log,
+                _run_log=run_log,
             )
             return
 
