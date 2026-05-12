@@ -64,7 +64,7 @@ def do(
     settings_dict: dict,
     filename: str,
     ftp_client: FTPClientProtocol | None = None,
-    disable_retry: bool = False,  # noqa: FBT001,FBT002 - required by backend interface pattern
+    disable_retry: bool = False,
 ) -> bool:
     """Send a file via FTP/FTPS.
 
@@ -94,7 +94,7 @@ class FTPBackend(BackendBase):
     """
 
     def __init__(
-        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False  # noqa: FBT001,FBT002 - required by backend interface pattern
+        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False
     ) -> None:
         """Initialize FTP backend.
 

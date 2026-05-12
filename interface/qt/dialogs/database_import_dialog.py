@@ -25,12 +25,12 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-import scripts.backup_increment as backup_increment
 from backend.database import sqlite_wrapper
 from core.utils.bool_utils import normalize_bool
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 from migrations import folders_database_migrator
+from scripts import backup_increment
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class DatabaseImportDialog(BaseDialog):
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, _message: str) -> None:  # noqa: FBT001 - Qt signal handler requires bool parameter
+    def _on_finished(self, success: bool, _message: str) -> None:
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -283,7 +283,7 @@ class ImportThread(QThread):
                 None,
                 title,
                 message,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type] - PyQt5 stubs incorrect, flags work at runtime
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]
                 QMessageBox.StandardButton.No,
             )
             return reply == QMessageBox.StandardButton.Yes
@@ -318,7 +318,7 @@ class ImportThread(QThread):
             if not self._check_version_compatibility(
                 new_db_version, new_db_version_dict
             ):
-                self.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 - Qt signal emit with positional bool
+                self.finished.emit(False, "Import cancelled by user")
                 return
 
             # Run the migration
@@ -326,7 +326,7 @@ class ImportThread(QThread):
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003 - Qt signal emit with positional bool
+            self.finished.emit(True, "Import completed successfully")
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")
@@ -438,7 +438,7 @@ class DbMigrationJob:
             if not isinstance(folder, dict):
                 continue
             if thread._is_cancelled:  # Cooperative cancellation check
-                thread.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 - Qt signal emit with positional bool
+                thread.finished.emit(False, "Import cancelled by user")
                 return
             self._migrate_folder(folder, target_folders, original_db)
             thread.progress.emit(

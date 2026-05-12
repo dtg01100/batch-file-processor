@@ -425,11 +425,9 @@ class Cursor:
 
     def setinputsizes(self, sizes: list) -> None:
         """Set input sizes (no-op, not supported by db2ssh)."""
-        pass
 
     def setoutputsize(self, size: int, column: int | None = None) -> None:
         """Set output size for a column (no-op, not supported by db2ssh)."""
-        pass
 
     def __iter__(self):
         return self
@@ -508,7 +506,6 @@ class Connection:
 
     def commit(self) -> None:
         """Commit pending transactions (no-op for db2ssh over SSH)."""
-        pass
 
     def rollback(self) -> None:
         """Rollback pending transactions.

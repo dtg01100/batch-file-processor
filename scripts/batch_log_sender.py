@@ -25,7 +25,7 @@ def do(
     emails_count,
     total_emails,
     run_summary_string,
-    progress_callback: ProgressCallback = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> None:
     if progress_callback is None:
         progress_callback = NullProgressCallback()
@@ -91,7 +91,7 @@ def do(
     print("sending " + str(subject_line + " to " + str(to_address_list)))
 
     server = smtplib.SMTP(
-        str(settings["email_smtp_server"]), str(settings["smtp_port"])
+        str(settings["email_smtp_server"]), int(settings["smtp_port"])
     )
     server.ehlo()
     server.starttls()

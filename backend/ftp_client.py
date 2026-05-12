@@ -158,7 +158,7 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
-        filename = cmd.split()[-1] if " " in cmd else cmd
+        filename = cmd.rsplit(maxsplit=1)[-1] if " " in cmd else cmd
         start_time = time.perf_counter()
         logger.debug("FTP storing file: %s", filename)
         log_backend_call(logger, "ftp", "upload", endpoint=filename, success=None)
@@ -248,7 +248,7 @@ class RealFTPClient:
         """
         if self._connection is None:
             raise RuntimeError("Not connected to FTP server")
-        filename = cmd.split()[-1] if " " in cmd else cmd
+        filename = cmd.rsplit(maxsplit=1)[-1] if " " in cmd else cmd
         start_time = time.perf_counter()
         logger.debug("FTP retrieving file: %s", filename)
         log_backend_call(logger, "ftp", "download", endpoint=filename, success=None)
@@ -465,7 +465,7 @@ class MockFTPClient:
 
         """
         self._raise_error_if_set()
-        filename = cmd.split()[-1] if " " in cmd else cmd
+        filename = cmd.rsplit(maxsplit=1)[-1] if " " in cmd else cmd
         content = self._file_contents.get(filename, b"")
         self.files_retrieved.append((cmd, content))
         callback(content)

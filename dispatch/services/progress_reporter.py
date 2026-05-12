@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Protocol
+from typing import Protocol, TextIO
 
 
 class ProgressReporter(Protocol):
@@ -57,7 +57,7 @@ class UIProgressReporter:
 
 
 class CLIProgressReporter:
-    def __init__(self, output: object | None = None) -> None:
+    def __init__(self, output: TextIO | None = None) -> None:
         self._output = output or sys.stdout
 
     def update(

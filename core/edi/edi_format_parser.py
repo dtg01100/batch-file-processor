@@ -25,8 +25,6 @@ from typing import Any, ClassVar
 class EDIFormatError(Exception):
     """Raised when there's an error with EDI format configuration or parsing."""
 
-    pass
-
 
 class EDIFormatParser:
     """Parser for EDI files based on JSON format configurations.
@@ -130,24 +128,19 @@ class EDIFormatParser:
 
         # Determine formats directory
         if formats_dir is None:
-            # Try to find edi_formats directory relative to this file
             module_dir = Path(__file__).parent
-            formats_dir = module_dir / "edi_formats"
-
-            # If not found, try current working directory
-            if not formats_dir.exists():
-                formats_dir = Path.cwd() / "edi_formats"
+            resolved_dir: Path = module_dir / "edi_formats"
+            if not resolved_dir.exists():
+                resolved_dir = Path.cwd() / "edi_formats"
         else:
-            formats_dir = Path(formats_dir)
+            resolved_dir = Path(formats_dir)
 
-        if not formats_dir.exists():
-            raise EDIFormatError(f"Formats directory not found: {formats_dir}")
+        if not resolved_dir.exists():
+            raise EDIFormatError(f"Formats directory not found: {resolved_dir}")
 
-        # Try to find format file
-        format_file = formats_dir / f"{format_id}_format.json"
+        format_file = resolved_dir / f"{format_id}_format.json"
         if not format_file.exists():
-            # Try without _format suffix
-            format_file = formats_dir / f"{format_id}.json"
+            format_file = resolved_dir / f"{format_id}.json"
 
         if not format_file.exists():
             raise EDIFormatError(
@@ -186,17 +179,17 @@ class EDIFormatParser:
         """
         if formats_dir is None:
             module_dir = Path(__file__).parent
-            formats_dir = module_dir / "edi_formats"
-            if not formats_dir.exists():
-                formats_dir = Path.cwd() / "edi_formats"
+            resolved_dir: Path = module_dir / "edi_formats"
+            if not resolved_dir.exists():
+                resolved_dir = Path.cwd() / "edi_formats"
         else:
-            formats_dir = Path(formats_dir)
+            resolved_dir = Path(formats_dir)
 
-        if not formats_dir.exists():
+        if not resolved_dir.exists():
             return []
 
-        formats = []
-        for file_path in formats_dir.glob("*.json"):
+        formats: list[dict[str, str]] = []
+        for file_path in resolved_dir.glob("*.json"):
             try:
                 with open(file_path, encoding="utf-8") as f:
                     config = json.load(f)

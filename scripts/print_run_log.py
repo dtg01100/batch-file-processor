@@ -24,7 +24,7 @@ def do(filename) -> None:
         # raw_data could equally be raw PCL/PS read from
         #  some print-to-file operation
         #
-        raw_data = bytes(formatted_log)
+        raw_data = bytes(formatted_log, "utf-8")
 
         h_printer = win32print.OpenPrinter(printer_name)
         try:
@@ -44,4 +44,4 @@ def do(filename) -> None:
         import subprocess
 
         lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
-        lpr.stdin.write(formatted_log)
+        lpr.stdin.write(formatted_log.encode("utf-8"))  # type: ignore[union-attr]

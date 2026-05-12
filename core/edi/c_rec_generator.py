@@ -58,7 +58,7 @@ class CRecGenerator:
     """
 
     def __init__(
-        self, query_runner: QueryRunnerProtocol, config: CRecordConfig = None
+        self, query_runner: QueryRunnerProtocol, config: CRecordConfig | None = None
     ) -> None:
         """Initialize with a query runner and optional config.
 

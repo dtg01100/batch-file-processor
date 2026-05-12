@@ -569,7 +569,7 @@ class FileProcessor:
         _original_file_path: str,
         context: ProcessingContext,
         _run_log: Any,
-        validation_passed: bool,  # noqa: FBT001 - required by file processor pipeline interface
+        validation_passed: bool,
     ) -> tuple[str, bool, bool]:
         """Run conversion step of the pipeline.
 

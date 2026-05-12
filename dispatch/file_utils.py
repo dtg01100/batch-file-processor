@@ -56,7 +56,7 @@ def build_output_filename(
                 filename_prefix,
                 rename_template.replace("%datetime%", date_time),
                 ".",
-                original.split(".")[-1],
+                original.rsplit(".", maxsplit=1)[-1],
                 filename_suffix,
             ]
         )
@@ -339,7 +339,14 @@ def write_to_run_log(run_log: Any, message: str, prefix: str = "") -> None:
 
 __all__ = [
     "apply_file_rename",
+    "build_error_log_filename",
+    "build_output_filename",
+    "build_processed_file_record",
     "do_clear_old_files",
+    "ensure_directory_exists",
     "extract_invoice_numbers",
+    "get_file_extension",
+    "list_files_in_directory",
+    "strip_invalid_filename_chars",
     "write_to_run_log",
 ]

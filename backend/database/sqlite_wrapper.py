@@ -287,17 +287,13 @@ class Table:
             if key in boolean_cols:
                 if normalize_bool(value):
                     clauses.append(
-
-                            f"({quoted_key}=1 OR lower(cast({quoted_key} as text))"
-                            f" IN {true_legacy})"
-
+                        f"({quoted_key}=1 OR lower(cast({quoted_key} as text))"
+                        f" IN {true_legacy})"
                     )
                 else:
                     clauses.append(
-
-                            f"({quoted_key}=0 OR lower(cast({quoted_key} as text))"
-                            f" IN {false_legacy})"
-
+                        f"({quoted_key}=0 OR lower(cast({quoted_key} as text))"
+                        f" IN {false_legacy})"
                     )
             else:
                 clauses.append(f"{quoted_key}=?")
@@ -769,9 +765,8 @@ class Database:
 
     def close(self) -> None:
         """Close the database connection."""
-        with self._lock:
-            with contextlib.suppress(sqlite3.Error):
-                self._conn.close()
+        with self._lock, contextlib.suppress(sqlite3.Error):
+            self._conn.close()
 
     def query(self, sql: str, *, raise_on_error: bool = False) -> list[dict[str, Any]]:
         """Execute raw SQL and return results as dictionaries.

@@ -513,7 +513,7 @@ class LogSender:
             subject=subject,
             body=body,
             batch_number=batch_number,
-            total_batches=total_batches,
+            _total_batches=total_batches,
         )
 
         # Add to removal queue if provided

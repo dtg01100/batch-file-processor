@@ -215,7 +215,7 @@ class DatabaseObj:
                     self._running_platform,
                 )
             else:
-                import scripts.create_database as create_database
+                from scripts import create_database
 
                 create_database.do(
                     self._database_version,

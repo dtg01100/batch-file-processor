@@ -95,7 +95,7 @@ class MockSMTPService:
     ) -> None:
         self._success = success
         self._error_message = error_message
-        self.last_call = None
+        self.last_call: dict[str, str] | None = None
 
     def test_connection(
         self,

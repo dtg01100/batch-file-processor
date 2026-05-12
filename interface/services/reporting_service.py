@@ -438,18 +438,18 @@ class ReportingService:
             and run_log_file
             and self._print_run_log is not None
         ):
-                try:
-                    with open(run_log_file, encoding="utf-8") as run_log:
-                        self._print_run_log.do(run_log)
-                except Exception as printing_error:
-                    logger.debug(
-                        "Printing error log failed with error: %s",
-                        printing_error,
-                    )
-                    if run_log_file:
-                        with open(run_log_file, "a", encoding="utf-8") as run_log:
-                            run_log.write(
-                                "Printing error log failed with error: "
-                                + str(printing_error)
-                                + "\r\n"
-                            )
+            try:
+                with open(run_log_file, encoding="utf-8") as run_log:
+                    self._print_run_log.do(run_log)
+            except Exception as printing_error:
+                logger.debug(
+                    "Printing error log failed with error: %s",
+                    printing_error,
+                )
+                if run_log_file:
+                    with open(run_log_file, "a", encoding="utf-8") as run_log:
+                        run_log.write(
+                            "Printing error log failed with error: "
+                            + str(printing_error)
+                            + "\r\n"
+                        )

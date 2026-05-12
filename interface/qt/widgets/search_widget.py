@@ -69,9 +69,9 @@ class SearchWidget(QWidget):
         )
         self._debounce_timer.stop()
         # Suppress textChanged signal during programmatic clear
-        self._entry.blockSignals(True)  # noqa: FBT003 - Qt signal blocking requires positional bool
+        self._entry.blockSignals(True)
         self._entry.clear()
-        self._entry.blockSignals(False)  # noqa: FBT003 - Qt signal unblocking requires positional bool
+        self._entry.blockSignals(False)
         self._pending_filter = ""
         self._filter_value = ""
         self._escape_shortcut.setEnabled(False)

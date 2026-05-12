@@ -13,7 +13,7 @@ when a filter value is provided.
 from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
-import thefuzz.process  # type: ignore - thefuzz stubs missing, package works correctly at runtime
+import thefuzz.process  # type: ignore[import]
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtWidgets import (
@@ -529,19 +529,18 @@ class FolderListWidget(QWidget):
 
         if not filter_text:
             visible_ids = set(self._row_widgets.keys())
+        elif not self._folder_aliases:
+            visible_ids = set()
         else:
-            if not self._folder_aliases:
-                visible_ids = set()
-            else:
-                # Build a mapping of "id:alias" keys so each entry is unique,
-                # then match by folder ID to avoid collisions between duplicate aliases.
-                keyed = {str(fid): alias for fid, alias in self._folder_aliases.items()}
-                fuzzy_matches = list(
-                    thefuzz.process.extractWithoutOrder(
-                        filter_text, keyed, score_cutoff=80
-                    )
+            # Build a mapping of "id:alias" keys so each entry is unique,
+            # then match by folder ID to avoid collisions between duplicate aliases.
+            keyed = {str(fid): alias for fid, alias in self._folder_aliases.items()}
+            fuzzy_matches = list(
+                thefuzz.process.extractWithoutOrder(
+                    filter_text, keyed, score_cutoff=80
                 )
-                visible_ids = {int(m[2]) for m in fuzzy_matches}
+            )
+            visible_ids = {int(m[2]) for m in fuzzy_matches}
 
         visible_count = 0
         for fid, row in self._row_widgets.items():
@@ -567,7 +566,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)  # noqa: FBT003 - Qt property API requires positional bool
+        btn.setProperty("compact", True)
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

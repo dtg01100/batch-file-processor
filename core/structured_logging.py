@@ -541,7 +541,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
 
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
-    ) -> tuple[str, MutableMapping[str, Any]]:  # type: ignore[override] - LogRecord.process signature varies by Python version
+    ) -> tuple[str, MutableMapping[str, Any]]:  # type: ignore[override]
         """Process the logging message and keyword arguments.
 
         Injects context variables into the extra dict.
@@ -1120,11 +1120,11 @@ class StructuredLogger:
         # Sanitize result
         if result is not None:
             if isinstance(result, str) and len(result) > 100:
-                result_summary = f"<{len(result)} chars>"
+                result_summary: str | dict[str, Any] = f"<{len(result)} chars>"
             elif isinstance(result, dict):
                 result_summary = redact_sensitive_data(result)
             else:
-                result_summary = redact_value(result)
+                result_summary = redact_value(result)  # type: ignore[assignment]
             fields["output_summary"] = result_summary
         else:
             fields["output_summary"] = None
@@ -1341,7 +1341,7 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
         start_time = time.perf_counter()
 
         try:
-            result = await func(*args, **kwargs)  # type: ignore[misc] - await on Coroutine incompatible with Callable return type at static level
+            result = await func(*args, **kwargs)  # type: ignore[misc]
 
             # Calculate duration
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -1370,8 +1370,8 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
 
     # Return appropriate wrapper based on function type
     if inspect.iscoroutinefunction(func):
-        return async_wrapper  # type: ignore[return-value] - wrapper callable compatible at runtime despite type mismatch
-    return sync_wrapper  # type: ignore[return-value] - wrapper callable compatible at runtime despite type mismatch
+        return async_wrapper  # type: ignore[return-value]
+    return sync_wrapper  # type: ignore[return-value]
 
 
 # =============================================================================
@@ -1458,7 +1458,7 @@ class JSONFormatter(logging.Formatter):
             ensure_ascii: Whether to escape non-ASCII characters
 
         """
-        super().__init__(fmt, datefmt, style)  # type: ignore[arg-type] - LogRecord.__init__ signature varies by Python version
+        super().__init__(fmt, datefmt, style)  # type: ignore[arg-type]
         self.indent = indent
         self.sort_keys = sort_keys
         self.ensure_ascii = ensure_ascii
@@ -1592,9 +1592,7 @@ class JSONFormatter(logging.Formatter):
 
 def _build_base_record(record: logging.LogRecord) -> dict[str, Any]:
     return {
-        "timestamp": datetime.fromtimestamp(
-            record.created, tz=UTC
-        ).isoformat(),
+        "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
         "level": record.levelname,
         "logger": record.name,
         "message": record.getMessage(),

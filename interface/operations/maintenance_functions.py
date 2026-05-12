@@ -209,12 +209,12 @@ class MaintenanceFunctions:
 
         if self._folder_repo is not None:
             folders = list(self._folder_repo.find_all(active_only=True))
-            _remove_folders_iter(folders, active_only=True)
+            _remove_folders_iter(folders, _active_only=True)
         else:
             folders = list(
                 self._database_obj.folders_table.find(folder_is_active=False)
             )
-            _remove_folders_iter(folders, active_only=False)
+            _remove_folders_iter(folders, _active_only=False)
 
         self._progress.hide()
         if users_refresh and self._refresh_callback:

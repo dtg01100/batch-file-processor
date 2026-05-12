@@ -343,7 +343,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 - Qt signal handler requires bool parameter
+    def _on_edi_check_toggled(self, checked: bool) -> None:
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return
@@ -607,10 +607,14 @@ class DynamicEDIBuilder:
             if self.convert_sub_layout is not None:
                 self.convert_sub_layout.addWidget(form_widget)
 
-    def _build_csv_sub(self) -> None:
+    def _make_wrapper_widget(self) -> tuple[QWidget, QVBoxLayout]:
         wrapper = QWidget()
         layout = QVBoxLayout(wrapper)
         layout.setContentsMargins(0, 0, 0, 0)
+        return wrapper, layout
+
+    def _build_csv_sub(self) -> None:
+        wrapper, layout = self._make_wrapper_widget()
 
         upc_check = QCheckBox("Calculate UPC Check Digit")
         upc_check.setAccessibleName("Calculate UPC check digit")
@@ -714,71 +718,32 @@ class DynamicEDIBuilder:
         sort_row.addWidget(column_sort_field)
         layout.addLayout(sort_row)
 
-        self._populate_csv_sub_fields(
-            upc_check,
-            a_rec_check,
-            c_rec_check,
-            headers_check,
-            ampersand_check,
-            pad_arec_check,
-            arec_padding_field,
-            arec_padding_length,
-            override_upc_check,
-            override_upc_level,
-            override_upc_cat_filter,
-            upc_target_length,
-            upc_padding_pattern,
-            each_uom_check,
-            split_sales_tax_check,
-            include_item_numbers_check,
-            include_item_desc_check,
-            column_sort_field,
-        )
+        self._populate_csv_sub_fields()
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)
 
-    def _populate_csv_sub_fields(
-        self,
-        upc_check,
-        a_rec_check,
-        c_rec_check,
-        headers_check,
-        ampersand_check,
-        pad_arec_check,
-        arec_padding_field,
-        arec_padding_length,
-        override_upc_check,
-        override_upc_level,
-        override_upc_cat_filter,
-        upc_target_length,
-        upc_padding_pattern,
-        each_uom_check,
-        split_sales_tax_check,
-        include_item_numbers_check,
-        include_item_desc_check,
-        column_sort_field,
-    ) -> None:
+    def _populate_csv_sub_fields(self) -> None:
         cfg = self.folder_config
-        upc_check.setChecked(
+        self.fields["upc_var_check"].setChecked(
             normalize_bool(cfg.get("calculate_upc_check_digit", False))
         )
-        a_rec_check.setChecked(normalize_bool(cfg.get("include_a_records", False)))
-        c_rec_check.setChecked(normalize_bool(cfg.get("include_c_records", False)))
-        headers_check.setChecked(normalize_bool(cfg.get("include_headers", False)))
-        ampersand_check.setChecked(normalize_bool(cfg.get("filter_ampersand", False)))
-        pad_arec_check.setChecked(normalize_bool(cfg.get("pad_a_records", False)))
-        arec_padding_field.setText(str(cfg.get("a_record_padding", "")))
+        self.fields["a_rec_var_check"].setChecked(normalize_bool(cfg.get("include_a_records", False)))
+        self.fields["c_rec_var_check"].setChecked(normalize_bool(cfg.get("include_c_records", False)))
+        self.fields["headers_check"].setChecked(normalize_bool(cfg.get("include_headers", False)))
+        self.fields["ampersand_check"].setChecked(normalize_bool(cfg.get("filter_ampersand", False)))
+        self.fields["pad_arec_check"].setChecked(normalize_bool(cfg.get("pad_a_records", False)))
+        self.fields["a_record_padding_field"].setText(str(cfg.get("a_record_padding", "")))
 
         pad_len = str(
             cfg.get("a_record_padding_length")
             if cfg.get("a_record_padding_length") is not None
             else 6
         )
-        idx = arec_padding_length.findText(pad_len)
+        idx = self.fields["a_record_padding_length"].findText(pad_len)
         if idx >= 0:
-            arec_padding_length.setCurrentIndex(idx)
+            self.fields["a_record_padding_length"].setCurrentIndex(idx)
 
-        override_upc_check.setChecked(
+        self.fields["override_upc_bool"].setChecked(
             normalize_bool(cfg.get("override_upc_bool", False))
         )
 
@@ -787,37 +752,35 @@ class DynamicEDIBuilder:
             if cfg.get("override_upc_level") is not None
             else 1
         )
-        idx = override_upc_level.findText(lvl)
+        idx = self.fields["override_upc_level"].findText(lvl)
         if idx >= 0:
-            override_upc_level.setCurrentIndex(idx)
+            self.fields["override_upc_level"].setCurrentIndex(idx)
 
-        override_upc_cat_filter.setText(
+        self.fields["override_upc_category_filter_entry"].setText(
             str(cfg.get("override_upc_category_filter", ""))
         )
-        upc_target_length.setText(
+        self.fields["upc_target_length_entry"].setText(
             str(
                 cfg.get("upc_target_length")
                 if cfg.get("upc_target_length") is not None
                 else 11
             )
         )
-        upc_padding_pattern.setText(str(cfg.get("upc_padding_pattern", "           ")))
-        each_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
-        split_sales_tax_check.setChecked(
+        self.fields["upc_padding_pattern_entry"].setText(str(cfg.get("upc_padding_pattern", "           ")))
+        self.fields["edi_each_uom_tweak"].setChecked(normalize_bool(cfg.get("retail_uom", False)))
+        self.fields["split_sales_tax_prepaid_var"].setChecked(
             normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
         )
-        include_item_numbers_check.setChecked(
+        self.fields["include_item_numbers"].setChecked(
             normalize_bool(cfg.get("include_item_numbers", False))
         )
-        include_item_desc_check.setChecked(
+        self.fields["include_item_description"].setChecked(
             normalize_bool(cfg.get("include_item_description", False))
         )
-        column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
+        self.fields["simple_csv_column_sorter"].setText(str(cfg.get("simple_csv_sort_order", "")))
 
     def _build_scannerware_sub(self) -> None:
-        wrapper = QWidget()
-        layout = QVBoxLayout(wrapper)
-        layout.setContentsMargins(0, 0, 0, 0)
+        wrapper, layout = self._make_wrapper_widget()
 
         arec_group = QGroupBox("A-Record Padding")
         arec_layout = QVBoxLayout(arec_group)
@@ -870,9 +833,7 @@ class DynamicEDIBuilder:
             self.convert_sub_layout.addWidget(wrapper)
 
     def _build_simplified_csv_sub(self) -> None:
-        wrapper = QWidget()
-        layout = QVBoxLayout(wrapper)
-        layout.setContentsMargins(0, 0, 0, 0)
+        wrapper, layout = self._make_wrapper_widget()
 
         headers_check = QCheckBox("Include Headings")
         self.fields["headers_check"] = headers_check
@@ -912,9 +873,7 @@ class DynamicEDIBuilder:
             self.convert_sub_layout.addWidget(wrapper)
 
     def _build_estore_sub(self, fmt: str) -> None:
-        wrapper = QWidget()
-        wrapper_layout = QVBoxLayout(wrapper)
-        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        wrapper, wrapper_layout = self._make_wrapper_widget()
         form_widget = QWidget()
         layout = QFormLayout(form_widget)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -951,9 +910,7 @@ class DynamicEDIBuilder:
             self.convert_sub_layout.addWidget(wrapper)
 
     def _build_fintech_sub(self) -> None:
-        wrapper = QWidget()
-        wrapper_layout = QVBoxLayout(wrapper)
-        wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        wrapper, wrapper_layout = self._make_wrapper_widget()
         form_widget = QWidget()
         layout = QFormLayout(form_widget)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -970,9 +927,7 @@ class DynamicEDIBuilder:
             self.convert_sub_layout.addWidget(wrapper)
 
     def _build_basic_options_sub(self) -> None:
-        wrapper = QWidget()
-        layout = QVBoxLayout(wrapper)
-        layout.setContentsMargins(0, 0, 0, 0)
+        wrapper, layout = self._make_wrapper_widget()
         layout.addWidget(QLabel("No additional options for this format."))
         if self.convert_sub_layout is not None:
             self.convert_sub_layout.addWidget(wrapper)

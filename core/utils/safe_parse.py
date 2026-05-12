@@ -1,7 +1,6 @@
 """Safe parsing utilities for converting strings to numbers with defaults."""
 
 
-
 def safe_int(value: str | int | float | None, default: int = 0) -> int:
     """Safely convert a value to an integer with a default fallback.
 

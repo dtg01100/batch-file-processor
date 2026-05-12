@@ -127,10 +127,9 @@ class EventHandlers:
                         border: none;
                     }}
                 """)
-        else:
-            if is_active:
-                active_btn.setText("Folder Is Enabled")
-                active_btn.setStyleSheet(f"""
+        elif is_active:
+            active_btn.setText("Folder Is Enabled")
+            active_btn.setStyleSheet(f"""
                     QCheckBox {{
                         background-color: transparent;
                         color: {Theme.ON_SUCCESS_CONTAINER};
@@ -138,9 +137,9 @@ class EventHandlers:
                         border: none;
                     }}
                 """)
-            else:
-                active_btn.setText("Folder Is Disabled")
-                active_btn.setStyleSheet(f"""
+        else:
+            active_btn.setText("Folder Is Disabled")
+            active_btn.setStyleSheet(f"""
                     QCheckBox {{
                         background-color: transparent;
                         color: {Theme.ON_ERROR_CONTAINER};

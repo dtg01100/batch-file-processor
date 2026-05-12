@@ -25,7 +25,6 @@ class DispatchConfig:
         backends: Dictionary of backend name to backend instance
         error_handler: Error handler instance
         settings: Global application settings
-        version: Application version string
         upc_service: UPC service for dictionary fetching
         progress_reporter: Progress reporter
         validator_step: Pipeline validator step
@@ -41,7 +40,6 @@ class DispatchConfig:
     backends: dict[str, BackendInterface] = field(default_factory=dict)
     error_handler: ErrorHandlerInterface | None = None
     settings: dict = field(default_factory=dict)
-    version: str = "1.0.0"
     upc_service: Any | None = None
     progress_reporter: Any | None = None
     validator_step: Any | None = None

@@ -79,7 +79,7 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        is_valid: bool = True,  # noqa: FBT001,FBT002 - required by plugin configuration interface
+        is_valid: bool = True,
         validation_errors: list[str] | None = None,
     ) -> None:
         """
@@ -107,7 +107,7 @@ class PluginSectionStateManager:
         self,
         format_name: str,
         config: dict[str, Any],
-        is_valid: bool = True,  # noqa: FBT001,FBT002 - required by plugin configuration interface
+        is_valid: bool = True,
         validation_errors: list[str] | None = None,
     ) -> bool:
         """
@@ -466,7 +466,7 @@ class PluginConfigurationMapper:
             QDoubleSpinBox: lambda w: w.value(),
             QComboBox: lambda w: w.currentData(),
             QCheckBox: lambda w: w.isChecked(),
-            QListWidget: lambda w: self._get_qt_list_widget_value(w),
+            QListWidget: self._get_qt_list_widget_value,
         }
 
         for widget_type, getter in _WIDGET_VALUE_GETTERS.items():

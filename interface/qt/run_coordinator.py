@@ -259,7 +259,7 @@ class QtRunCoordinator:
         )
 
     def _init_orchestrator_and_folders(self, config, folders_table_process):
-        from dispatch import DispatchOrchestrator
+        from dispatch.orchestrator import DispatchOrchestrator
 
         orchestrator = DispatchOrchestrator(config)
         folders = list(

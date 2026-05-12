@@ -50,5 +50,5 @@ def do_backup(input_file):
         success=True,
     )
 
-    utils.do_clear_old_files(os.path.dirname(backup_path), 50)
+    utils.clear_old_files(os.path.dirname(backup_path), 50)
     return backup_path

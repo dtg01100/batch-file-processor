@@ -1,6 +1,7 @@
 import logging
 from decimal import Decimal, InvalidOperation
 
+from core.constants import PRICE_DECIMAL_PLACES
 from core.structured_logging import get_logger, log_with_context
 from core.utils.safe_parse import safe_int
 
@@ -20,7 +21,7 @@ def convert_to_price(value):
 
 
 def convert_to_price_decimal(value):
-    if len(value) < 2:
+    if len(value) < PRICE_DECIMAL_PLACES:
         return 0
     retprice = (
         (value[:-2].lstrip("0") if value[:-2].lstrip("0") != "" else "0")
@@ -74,9 +75,7 @@ def detect_invoice_is_credit(edi_process) -> bool:
 
     if fields["record_type"] != "A":
         raise ValueError(
-
-                "[Invoice Type Detection]: Somehow ended up in the middle"
-                " of a file, this should not happen"
-
+            "[Invoice Type Detection]: Somehow ended up in the middle"
+            " of a file, this should not happen"
         )
     return not dac_str_int_to_int(fields["invoice_total"]) >= 0

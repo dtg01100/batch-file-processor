@@ -412,7 +412,9 @@ def _check_bool_utils() -> tuple[int, int]:
             rt = _fdb(_tdb(original))
             if rt is original:
                 passed += 1
-                print(f"  ✓ round-trip to_db_bool/from_db_bool({original}) == {original}")
+                print(
+                    f"  ✓ round-trip to_db_bool/from_db_bool({original}) == {original}"
+                )
             else:
                 failed += 1
                 print(
@@ -429,7 +431,18 @@ def _check_bool_utils() -> tuple[int, int]:
         same = all(
             _utils.normalize_bool(v) == _nb(v)
             for v in [
-                True, False, "true", "false", "yes", "no", "1", "0", "", 1, 0, None
+                True,
+                False,
+                "true",
+                "false",
+                "yes",
+                "no",
+                "1",
+                "0",
+                "",
+                1,
+                0,
+                None,
             ]
         )
         if same:
@@ -508,9 +521,7 @@ def _check_date_utils() -> tuple[int, int]:
                 print(f"  ✓ dactime round-trip {test_dt.date()}")
             else:
                 failed += 1
-                print(
-                    f"  ✗ dactime round-trip {test_dt.date()} -- got {recovered!r}"
-                )
+                print(f"  ✗ dactime round-trip {test_dt.date()} -- got {recovered!r}")
     except Exception as exc:
         failed += 1
         print(f"  ✗ dactime round-trip -- {exc}")
@@ -695,7 +706,9 @@ def _check_edi_parser() -> tuple[int, int]:
                 print(f"  ✓ capture_records({content!r}) == {label}")
             else:
                 failed += 1
-                print(f"  ✗ capture_records({content!r}) -- expected None, got {result!r}")
+                print(
+                    f"  ✗ capture_records({content!r}) -- expected None, got {result!r}"
+                )
         except Exception as exc:
             failed += 1
             print(f"  ✗ capture_records({content!r}) -- {exc}")
@@ -716,9 +729,7 @@ def _check_edi_parser() -> tuple[int, int]:
                 print(f"  ✓ capture_records(A-record): {field} == {value!r}")
             else:
                 failed += 1
-                print(
-                    f"  ✗ capture_records(A-record): {field} -- got {result!r}"
-                )
+                print(f"  ✗ capture_records(A-record): {field} -- got {result!r}")
         except Exception as exc:
             failed += 1
             print(f"  ✗ capture_records(A-record): {field} -- {exc}")
@@ -762,7 +773,9 @@ def _check_edi_parser() -> tuple[int, int]:
             print("  ✓ parse_a_record raises ValueError on non-A line")
         else:
             failed += 1
-            print("  ✗ parse_a_record ValueError -- no exception raised on B-record input")
+            print(
+                "  ✗ parse_a_record ValueError -- no exception raised on B-record input"
+            )
     except Exception as exc:
         failed += 1
         print(f"  ✗ parse_a_record ValueError -- {exc}")
@@ -796,9 +809,7 @@ def _check_edi_parser() -> tuple[int, int]:
             print(f"  ✗ capture_records(B-record): {field} -- {exc}")
 
     # C-record
-    _c_line = (
-        "C" + "TAX" + "Sales Tax                " + "000001000" + "\n"
-    )
+    _c_line = "C" + "TAX" + "Sales Tax                " + "000001000" + "\n"
     for field, value in [
         ("record_type", "C"),
         ("charge_type", "TAX"),
@@ -817,13 +828,37 @@ def _check_edi_parser() -> tuple[int, int]:
 
     # build + capture round-trips
     for build_fn, built, checks in [
-        (_bar, None, [("cust_vendor", "VEND01"), ("invoice_number", "INV0012345"), ("invoice_date", "010124"), ("invoice_total", "0000000100")]),
+        (
+            _bar,
+            None,
+            [
+                ("cust_vendor", "VEND01"),
+                ("invoice_number", "INV0012345"),
+                ("invoice_date", "010124"),
+                ("invoice_total", "0000000100"),
+            ],
+        ),
         (
             _bbr,
-            dict(upc_number="00012345678", description="Item Description         ", vendor_item="000001", unit_cost="000100", combo_code="01", unit_multiplier="000001", qty_of_units="00010", suggested_retail_price="01000", price_multi_pack="   ", parent_item_number="      "),
+            dict(
+                upc_number="00012345678",
+                description="Item Description         ",
+                vendor_item="000001",
+                unit_cost="000100",
+                combo_code="01",
+                unit_multiplier="000001",
+                qty_of_units="00010",
+                suggested_retail_price="01000",
+                price_multi_pack="   ",
+                parent_item_number="      ",
+            ),
             [("upc_number", "00012345678"), ("vendor_item", "000001")],
         ),
-        (_bcr, ("TAX", "Sales Tax                ", "000001000"), [("record_type", "C"), ("charge_type", "TAX"), ("amount", "000001000")]),
+        (
+            _bcr,
+            ("TAX", "Sales Tax                ", "000001000"),
+            [("record_type", "C"), ("charge_type", "TAX"), ("amount", "000001000")],
+        ),
     ]:
         try:
             if build_fn == _bar:
@@ -839,10 +874,14 @@ def _check_edi_parser() -> tuple[int, int]:
             for field, expected in checks:
                 if parsed is not None and parsed[field] == expected:
                     passed += 1
-                    print(f"  ✓ {build_fn.__name__} + capture_records round-trip: {field}")
+                    print(
+                        f"  ✓ {build_fn.__name__} + capture_records round-trip: {field}"
+                    )
                 else:
                     failed += 1
-                    print(f"  ✗ {build_fn.__name__} round-trip: {field} -- got {parsed!r}")
+                    print(
+                        f"  ✗ {build_fn.__name__} round-trip: {field} -- got {parsed!r}"
+                    )
         except Exception as exc:
             failed += 1
             print(f"  ✗ {build_fn.__name__} round-trip -- {exc}")
@@ -879,10 +918,14 @@ def _check_hash_utils() -> tuple[int, int]:
         result = _gfh(_hash_file)
         if result == expected_hash:
             passed += 1
-            print(f"  ✓ generate_file_hash matches expected MD5 ({expected_hash[:8]}...)")
+            print(
+                f"  ✓ generate_file_hash matches expected MD5 ({expected_hash[:8]}...)"
+            )
         else:
             failed += 1
-            print(f"  ✗ generate_file_hash -- expected {expected_hash!r}, got {result!r}")
+            print(
+                f"  ✗ generate_file_hash -- expected {expected_hash!r}, got {result!r}"
+            )
         os.remove(_hash_file)
         os.rmdir(_hash_tmpdir)
     except Exception as exc:
@@ -952,7 +995,13 @@ def _check_hash_utils() -> tuple[int, int]:
     scenarios = [
         ("new file", {"existingchecksum": "old_file.edi"}, set(), False, True),
         ("already processed", {"existingchecksum": "old_file.edi"}, set(), True, False),
-        ("resend", {"resendchecksum": "resend_file.edi"}, {"resendchecksum"}, True, True),
+        (
+            "resend",
+            {"resendchecksum": "resend_file.edi"},
+            {"resendchecksum"},
+            True,
+            True,
+        ),
     ]
     for name, name_dict, resend_set, exp_match, exp_send in scenarios:
         try:
@@ -961,7 +1010,9 @@ def _check_hash_utils() -> tuple[int, int]:
             match, should_send = _cfap(fname, checksum, name_dict, resend_set)
             if match is exp_match and should_send is exp_send:
                 passed += 1
-                print(f"  ✓ check_file_against_processed: {name} -> ({exp_match}, {exp_send})")
+                print(
+                    f"  ✓ check_file_against_processed: {name} -> ({exp_match}, {exp_send})"
+                )
             else:
                 failed += 1
                 print(
@@ -1040,7 +1091,9 @@ def _check_feature_flags() -> tuple[int, int]:
         _sff("debug_mode", value=False)  # restore immediately
         if result is True:
             passed += 1
-            print("  ✓ set_feature_flag('debug_mode', True) -> get_debug_mode() == True")
+            print(
+                "  ✓ set_feature_flag('debug_mode', True) -> get_debug_mode() == True"
+            )
         else:
             failed += 1
             print(f"  ✗ set_feature_flag('debug_mode', True) -- got {result!r}")
@@ -1090,11 +1143,7 @@ def _check_send_manager() -> tuple[int, int]:
     # SendManager instantiation
     try:
         sm = _SM()
-        if (
-            hasattr(sm, "backends")
-            and hasattr(sm, "results")
-            and hasattr(sm, "errors")
-        ):
+        if hasattr(sm, "backends") and hasattr(sm, "results") and hasattr(sm, "errors"):
             passed += 1
             print("  ✓ SendManager() has .backends, .results, .errors")
         else:
@@ -1157,7 +1206,9 @@ def _check_send_manager() -> tuple[int, int]:
             )
         else:
             failed += 1
-            print(f"  ✗ validate_backend_config: copy without directory -- got {errors!r}")
+            print(
+                f"  ✗ validate_backend_config: copy without directory -- got {errors!r}"
+            )
     except Exception as exc:
         failed += 1
         print(f"  ✗ validate_backend_config: copy without directory -- {exc}")
@@ -1196,7 +1247,9 @@ def _check_send_manager() -> tuple[int, int]:
             print("  ✓ MockBackend.send() records call (should_succeed=True)")
         else:
             failed += 1
-            print(f"  ✗ MockBackend.send() call recording -- send_calls={mb.send_calls!r}")
+            print(
+                f"  ✗ MockBackend.send() call recording -- send_calls={mb.send_calls!r}"
+            )
     except Exception as exc:
         failed += 1
         print(f"  ✗ MockBackend.send() (should_succeed=True) -- {exc}")
@@ -1257,7 +1310,9 @@ def _check_send_manager() -> tuple[int, int]:
             print("  ✓ send_all with MockBackend -> MockBackend.send_calls has 1 entry")
         else:
             failed += 1
-            print(f"  ✗ send_all MockBackend call count -- send_calls={mb.send_calls!r}")
+            print(
+                f"  ✗ send_all MockBackend call count -- send_calls={mb.send_calls!r}"
+            )
         os.remove(_test_file)
         os.rmdir(_hash_tmpdir2)
     except Exception as exc:
@@ -1383,7 +1438,9 @@ def _check_orchestrator() -> tuple[int, int]:
             and hasattr(orch, "error_handler")
         ):
             passed += 1
-            print("  ✓ DispatchOrchestrator has .validator, .send_manager, .error_handler")
+            print(
+                "  ✓ DispatchOrchestrator has .validator, .send_manager, .error_handler"
+            )
         else:
             failed += 1
             print("  ✗ DispatchOrchestrator attributes -- missing attrs")
@@ -1496,9 +1553,7 @@ def _check_orchestrator() -> tuple[int, int]:
 
         if len(_mock_backend.send_calls) == 1:
             passed += 1
-            print(
-                "  ✓ end-to-end orchestrator: MockBackend.send_calls has 1 entry"
-            )
+            print("  ✓ end-to-end orchestrator: MockBackend.send_calls has 1 entry")
         else:
             failed += 1
             print(
@@ -1525,12 +1580,18 @@ def run_self_test(
     sections = [
         ("[1/14] Standard-library imports", _check_stdlib_modules),
         ("[1b/14] Third-party (non-Qt) imports", _check_third_party_modules),
-        ("[1c/14] Required GUI modules (Qt -- failures will cause test to fail)", _check_qt_modules),
+        (
+            "[1c/14] Required GUI modules (Qt -- failures will cause test to fail)",
+            _check_qt_modules,
+        ),
         ("[1d/14] Application module imports", _check_app_modules),
         ("[2/14] Configuration directories", _check_config_directories),
         ("[3/14] appdirs functionality", _check_appdirs),
         ("[4/14] File system access", _check_file_system),
-        ("[5/14] Local module availability (__file__ attribute)", _check_module_file_attrs),
+        (
+            "[5/14] Local module availability (__file__ attribute)",
+            _check_module_file_attrs,
+        ),
         ("[6/14] Constants", _check_constants),
         ("[7/14] Boolean utilities", _check_bool_utils),
         ("[8/14] Date utilities", _check_date_utils),
@@ -1539,7 +1600,10 @@ def run_self_test(
         ("[11/14] Hash utilities", _check_hash_utils),
         ("[12/14] Feature flags", _check_feature_flags),
         ("[13/14] Send manager", _check_send_manager),
-        ("[14/14] Orchestrator dataclasses and basic orchestration", _check_orchestrator),
+        (
+            "[14/14] Orchestrator dataclasses and basic orchestration",
+            _check_orchestrator,
+        ),
     ]
 
     total_passed = total_failed = 0

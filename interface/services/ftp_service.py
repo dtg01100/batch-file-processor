@@ -3,6 +3,7 @@
 import ftplib
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -125,10 +126,10 @@ class MockFTPService(FTPServiceProtocol):
         self.should_succeed = should_succeed
         self.fail_at = fail_at
         self.error_message = error_message
-        self.connection_attempts = []
+        self.connection_attempts: list[dict[str, Any]] = []
 
     def test_connection(
-        self, server: str, port: int, username: str, password: str, folder: str  # noqa: ARG002 - required by FTPServiceProtocol but unused by mock
+        self, server: str, port: int, username: str, password: str, folder: str  # noqa: ARG002
     ) -> FTPConnectionResult:
         """Record connection attempt and return configured result."""
         self.connection_attempts.append(
@@ -145,10 +146,10 @@ class MockFTPService(FTPServiceProtocol):
 
     def connect(
         self,
-        server: str,  # noqa: ARG002 - required by FTPServiceProtocol but unused by mock
-        port: int,  # noqa: ARG002 - required by FTPServiceProtocol but unused by mock
-        username: str,  # noqa: ARG002 - required by FTPServiceProtocol but unused by mock
-        password: str,  # noqa: ARG002 - required by FTPServiceProtocol but unused by mock
+        server: str,  # noqa: ARG002
+        port: int,  # noqa: ARG002
+        username: str,  # noqa: ARG002
+        password: str,  # noqa: ARG002
     ) -> "MockFTPConnection":
         """Return a mock FTP connection."""
         return MockFTPConnection()
@@ -158,7 +159,7 @@ class MockFTPConnection:
     """Mock FTP connection for testing."""
 
     def __init__(self) -> None:
-        self.cwd_calls = []
+        self.cwd_calls: list[str] = []
         self.closed = False
 
     def cwd(self, path: str) -> None:

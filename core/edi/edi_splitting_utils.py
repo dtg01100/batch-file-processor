@@ -224,7 +224,7 @@ def _write_split_edi_files(
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
 
-                current_file = open(output_file_path, "wb")  # noqa: SIM115 - file managed in loop, closed in finally block (line 242)
+                current_file = open(output_file_path, "wb")
 
             if current_file is None:
                 raise ValueError(
@@ -368,9 +368,8 @@ def filter_b_records_by_category(
                 if filter_mode == "include":
                     if category_in_list:
                         filtered_records.append(record)
-                else:  # exclude mode
-                    if not category_in_list:
-                        filtered_records.append(record)
+                elif not category_in_list:
+                    filtered_records.append(record)
             else:
                 # Item not in upc_dict - include by default (fail-open)
                 filtered_records.append(record)

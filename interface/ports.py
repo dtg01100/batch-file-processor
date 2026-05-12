@@ -17,10 +17,10 @@ from typing import Any, Protocol, runtime_checkable
 try:
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 except ImportError:
-    QApplication = None  # type: ignore[assignment,misc] - PyQt5 optional import, None fallback at runtime
-    QFileDialog = None  # type: ignore[assignment,misc] - PyQt5 optional import, None fallback at runtime
-    QMessageBox = None  # type: ignore[assignment,misc] - PyQt5 optional import, None fallback at runtime
-    QWidget = None  # type: ignore[assignment,misc] - PyQt5 optional import, None fallback at runtime
+    QApplication = None  # type: ignore[assignment,misc]
+    QFileDialog = None  # type: ignore[assignment,misc]
+    QMessageBox = None  # type: ignore[assignment,misc]
+    QWidget = None  # type: ignore[assignment,misc]
 
 
 @runtime_checkable
@@ -412,8 +412,8 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]
+            QMessageBox.StandardButton.No,  # type: ignore[arg-type]
         )
         return result == QMessageBox.StandardButton.Yes
 
@@ -423,8 +423,8 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]
+            QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]
         )
         return result == QMessageBox.StandardButton.Ok
 

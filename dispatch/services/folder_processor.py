@@ -37,6 +37,7 @@ from core.structured_logging import (
     log_with_context,
     set_correlation_id,
 )
+from core.utils.file_utils import calculate_file_checksum
 from dispatch.results import FolderResult
 
 logger = get_logger(__name__)
@@ -361,21 +362,7 @@ class FolderPipelineExecutor:
         return filtered
 
     def _calculate_file_checksum(self, file_path: str) -> str:
-        """Calculate MD5 checksum of a file.
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            Hexadecimal MD5 checksum string
-        """
-        import hashlib
-
-        try:
-            with open(file_path, "rb") as f:
-                return hashlib.md5(f.read()).hexdigest()
-        except OSError:
-            return ""
+        return calculate_file_checksum(file_path)
 
     def _process_folder_files(
         self,

@@ -20,16 +20,13 @@ import appdirs
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
-import core.utils as utils
-import scripts.backup_increment as backup_increment
-import scripts.batch_log_sender as batch_log_sender
-import scripts.print_run_log as print_run_log
 from adapters.sqlite.repositories import (
     SqliteFolderRepository,
     SqliteProcessedFilesRepository,
     SqliteSettingsRepository,
 )
 from backend.database.database_obj import DatabaseObj
+from core import utils
 from core.constants import APP_VERSION, CURRENT_DATABASE_VERSION, UPC_PADDING_PATTERN
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
@@ -38,6 +35,7 @@ from interface.qt.diagnostics import QtDiagnosticsService
 from interface.qt.run_coordinator import QtRunCoordinator
 from interface.qt.window_controller import QtMainWindowController
 from interface.services.reporting_service import ReportingService
+from scripts import backup_increment, batch_log_sender, print_run_log
 
 logger = logging.getLogger(__name__)
 
@@ -317,9 +315,13 @@ class QtBatchFileSenderApp:
 
     def _maybe_mark_as_processed(self, selected_folder: str) -> None:
         """Ask user whether to mark files as processed and perform marking if agreed."""
-        if self._ui_service.ask_yes_no(
-            "Mark Processed", "Do you want to mark files in folder as processed?"
-        ) and self._database and self._database.folders_table:
+        if (
+            self._ui_service.ask_yes_no(
+                "Mark Processed", "Do you want to mark files in folder as processed?"
+            )
+            and self._database
+            and self._database.folders_table
+        ):
             folder_dict = self._database.folders_table.find_one(
                 folder_name=selected_folder
             )

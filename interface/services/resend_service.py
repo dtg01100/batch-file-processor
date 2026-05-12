@@ -232,10 +232,8 @@ class ResendService:
                 params = [search_value]
             else:
                 where_clauses.append(
-
-                        "(pf.file_name LIKE ? OR pf.invoice_numbers LIKE ?"
-                        " OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?)"
-
+                    "(pf.file_name LIKE ? OR pf.invoice_numbers LIKE ?"
+                    " OR COALESCE(f.alias, pf.folder_alias, '') LIKE ?)"
                 )
                 params = [search_value, search_value, search_value]
 
@@ -277,7 +275,7 @@ class ResendService:
         self,
         processed_lines: list[dict[str, Any]],
         folder_aliases: dict[int, str],
-        check_file_exists: bool,  # noqa: FBT001 - required by resend service interface
+        check_file_exists: bool,
     ) -> list[dict[str, Any]]:
         """Construct the deduplicated file list from processed lines."""
         file_list: list[dict[str, Any]] = []

@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from collections.abc import MutableMapping
 from contextvars import ContextVar
 from typing import IO, Any
 
@@ -144,7 +145,7 @@ def setup_logging(
     # ------------------------------------------------------------------
     use_json = os.environ.get("BFS_LOG_FORMAT", "").lower() == "json"
     if use_json:
-        formatter = JSONFormatter()
+        formatter: logging.Formatter = JSONFormatter()
     else:
         formatter = logging.Formatter(DEFAULT_FORMAT, datefmt=DEFAULT_DATEFMT)
 
@@ -332,11 +333,11 @@ class RunLogAdapter(logging.LoggerAdapter):
     def process(
         self,
         msg: str,
-        kwargs: dict,
-    ) -> tuple[str, dict]:
+        kwargs: MutableMapping[str, Any],
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """Prepend folder (and optionally file) context to *msg*."""
-        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr] - extra is typed as dict, never None when this runs
-        file: str | None = self.extra.get("file")  # type: ignore[union-attr] - extra is typed as dict, never None when this runs
+        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr, assignment]
+        file: str | None = self.extra.get("file")  # type: ignore[union-attr, assignment]
 
         if folder and file:
             msg = f"[{folder}/{file}] {msg}"
@@ -607,7 +608,3 @@ def _safe_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {k: _safe_value(v) for k, v in value.items()}
     return str(value)
-
-
-# Default audit logger instance
-audit_logger = AuditLogger()

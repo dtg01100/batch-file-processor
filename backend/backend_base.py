@@ -84,14 +84,14 @@ class BackendBase(ABC):
     MAX_DELAY = 60
     INITIAL_DELAY = 2
 
-    def __init__(self, disable_retry: bool = False) -> None:  # noqa: FBT001,FBT002 - required by backend interface pattern
+    def __init__(self, disable_retry: bool = False) -> None:
         """Initialize the backend base.
 
         Args:
             disable_retry: If True, skip retry logic (for testing)
 
         """
-        self._correlation_id = None
+        self._correlation_id: str | None = None
         self._counter = 0
         self._disable_retry = disable_retry
         self._lock = threading.Lock()
@@ -269,7 +269,7 @@ class BackendBase(ABC):
                 return True
         return False
 
-    def _prepare_for_retry(  # noqa: B027 - intentionally empty default implementation
+    def _prepare_for_retry(  # noqa: B027
         self,
         process_parameters: dict,
         settings: dict,
@@ -289,7 +289,7 @@ class BackendBase(ABC):
 
         """
 
-    def _cleanup(self) -> None:  # noqa: B027 - intentionally empty default implementation
+    def _cleanup(self) -> None:  # noqa: B027
         """Cleanup connections and resources.
 
         Override this method to perform cleanup operations.
@@ -323,7 +323,6 @@ class BackendBase(ABC):
             Exception: On failure
 
         """
-        pass
 
     @abstractmethod
     def _get_backend_name(self) -> str:
@@ -333,7 +332,6 @@ class BackendBase(ABC):
             Backend name (e.g., "smtp", "ftp", "http", "copy")
 
         """
-        pass
 
     @abstractmethod
     def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
@@ -347,4 +345,3 @@ class BackendBase(ABC):
             Endpoint string (URL, host:port, etc.)
 
         """
-        pass

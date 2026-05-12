@@ -51,12 +51,7 @@ from .date_utils import (
     datetime_from_invtime,
     prettify_dates,
 )
-from .file_utils import (
-    clear_old_files,
-)
-from .file_utils import (
-    clear_old_files as do_clear_old_files,  # do_clear_old_files: compat alias
-)
+from .file_utils import clear_old_files
 from .format_utils import normalize_convert_to_format
 from .safe_parse import qty_to_int, safe_float, safe_int
 from .timing_utils import context_timer
@@ -87,7 +82,6 @@ __all__ = [
     "datetime_from_dactime",
     "datetime_from_invtime",
     "detect_invoice_is_credit",
-    "do_clear_old_files",
     "do_split_edi",
     "filter_b_records_by_category",
     "filter_edi_file_by_category",

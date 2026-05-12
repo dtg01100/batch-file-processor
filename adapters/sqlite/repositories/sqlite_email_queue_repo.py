@@ -46,7 +46,7 @@ class SqliteEmailQueueRepository(IEmailQueueRepository):
 
         """
         all_emails = self._db.emails_table.all()
-        batch = []
+        batch: list[dict[str, Any]] = []
         total_size = 0
 
         for email in all_emails:

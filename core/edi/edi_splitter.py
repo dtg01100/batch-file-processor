@@ -11,10 +11,9 @@ from typing import Protocol, runtime_checkable
 from core.edi.edi_parser import capture_records
 
 # Re-export for backward compatibility (test imports from this module).
-from core.edi.edi_splitting_utils import (  # noqa: F401 - backward compat re-export
+from core.edi.edi_splitting_utils import (
     _col_to_excel,
     filter_b_records_by_category,
-    filter_edi_file_by_category,
 )
 
 

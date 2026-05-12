@@ -14,10 +14,8 @@ import logging
 from migrations.legacy_migrations import run_legacy_migrations
 
 # Backward-compatible re-exports for external consumers
-from migrations.migration_helpers import (  # noqa: F401 - re-exports for backward compat
-    CSV_SORT_ORDER,
-    CURRENT_SCHEMA_VERSION,
-    REPLACEME_PLACEHOLDER,
+from migrations.migration_helpers import (
+    CURRENT_SCHEMA_VERSION,  # noqa: F401 — re-exported for external consumers
     _normalize_legacy_v32_values,
 )
 from migrations.modern_migrations import migrate_v33_to_v50, run_modern_migrations
