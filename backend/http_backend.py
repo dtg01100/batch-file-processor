@@ -86,6 +86,7 @@ def do(
     settings_dict: dict,
     filename: str,
     http_client: HTTPClientProtocol | None = None,
+    *,
     disable_retry: bool = False,
 ) -> bool:
     """Send a file via HTTP POST.
@@ -116,7 +117,7 @@ class HTTPBackend(BackendBase):
     """
 
     def __init__(
-        self, http_client: HTTPClientProtocol | None = None, disable_retry: bool = False
+        self, http_client: HTTPClientProtocol | None = None, *, disable_retry: bool = False
     ) -> None:
         """Initialize HTTP backend.
 

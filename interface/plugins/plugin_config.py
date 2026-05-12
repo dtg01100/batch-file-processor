@@ -327,20 +327,20 @@ class PluginRegistry:
 
         """
         return [
-            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]
+            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]  # dynamically-loaded plugins, class attrs unknown statically
             for plugin_id, plugin_class in sorted(cls._convert_plugins.items())
         ]
 
     @classmethod
-    def list_send_plugins(cls) -> list[tuple[str, str, str]]:
-        """List all registered send plugins.
+    def get_send_plugin_info(cls) -> list[tuple[int, str, str]]:
+        """Get info about all registered send plugins.
 
         Returns:
             List of (plugin_id, plugin_name, description) tuples.
 
         """
         return [
-            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]
+            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]  # dynamically-loaded plugins, class attrs unknown statically
             for plugin_id, plugin_class in sorted(cls._send_plugins.items())
         ]
 
@@ -417,4 +417,4 @@ def get_plugin_config(
     if plugin_class is None:
         return None
 
-    return plugin_class.get_config_fields()  # type: ignore[attr-defined]
+    return plugin_class.get_config_fields()  # type: ignore[attr-defined]  # plugin_class is Any due to dynamic import

@@ -84,7 +84,7 @@ class BackendBase(ABC):
     MAX_DELAY = 60
     INITIAL_DELAY = 2
 
-    def __init__(self, disable_retry: bool = False) -> None:
+    def __init__(self, *, disable_retry: bool = False) -> None:
         """Initialize the backend base.
 
         Args:

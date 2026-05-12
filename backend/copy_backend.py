@@ -19,6 +19,7 @@ def do(
     settings: dict,
     filename: str,
     file_ops: FileOperationsProtocol | None = None,
+    *,
     disable_retry: bool = False,
 ) -> bool:
     """Copy a file to a local directory.
@@ -51,6 +52,7 @@ class CopyBackend(BackendBase):
     def __init__(
         self,
         file_ops: FileOperationsProtocol | None = None,
+        *,
         disable_retry: bool = False,
     ) -> None:
         """Initialize copy backend.
@@ -155,12 +157,3 @@ class CopyBackend(BackendBase):
         finally:
             self._cleanup()
 
-    @staticmethod
-    def create_file_ops() -> FileOperationsProtocol:
-        """Create a file operations instance.
-
-        Returns:
-            File operations instance
-
-        """
-        return create_file_operations()

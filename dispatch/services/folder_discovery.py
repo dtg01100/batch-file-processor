@@ -15,7 +15,8 @@ import os
 from typing import Any
 
 from core.structured_logging import get_logger
-from dispatch.interfaces import DatabaseInterface
+from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
+from dispatch.services.progress_reporter import ProgressReporter
 
 logger = get_logger(__name__)
 
@@ -37,8 +38,8 @@ class FolderDiscoveryService:
 
     def __init__(
         self,
-        file_system: Any = None,
-        progress_reporter: Any = None,
+        file_system: FileSystemInterface | None = None,
+        progress_reporter: ProgressReporter | None = None,
     ) -> None:
         """Initialize the folder discovery service.
 
@@ -115,7 +116,7 @@ class FolderDiscoveryService:
         pre_discovered_files: list[str] | None,
         processed_files: DatabaseInterface | None,
         folder: dict,
-        run_log: Any = None,
+        run_log: RunLog | None = None,
     ) -> list[str] | None:
         """Discover files to process and filter already-processed files.
 
@@ -160,7 +161,7 @@ class FolderDiscoveryService:
         processed_files: DatabaseInterface | None = None,
         folder_index: int | None = None,
         folder_total: int | None = None,
-        progress_reporter: Any | None = None,
+        progress_reporter: ProgressReporter | None = None,
     ) -> list[str]:
         """Discover pending files for a single folder."""
         folder_path = folder.get("folder_name", "")
@@ -177,7 +178,7 @@ class FolderDiscoveryService:
                 folder,
                 folder_index=folder_index,
                 folder_total=folder_total,
-                folder_name=alias,
+                _folder_name=alias,
                 progress_reporter=progress_reporter,
             )
 
@@ -207,7 +208,7 @@ class FolderDiscoveryService:
         folder_index: int | None = None,
         folder_total: int | None = None,
         _folder_name: str | None = None,
-        progress_reporter: Any | None = None,
+        progress_reporter: ProgressReporter | None = None,
     ) -> list[str]:
         """Filter out files that have already been processed.
 
@@ -267,7 +268,7 @@ class FolderDiscoveryService:
 
         return pending_files
 
-    def _log_message(self, run_log: Any, message: str) -> None:
+    def _log_message(self, run_log: RunLog | None, message: str) -> None:
         """Write a message to the run log if available."""
         from dispatch.file_utils import write_to_run_log
 

@@ -263,7 +263,7 @@ class ResendService:
         folder_ids = list(dict.fromkeys(line["folder_id"] for line in processed_lines))
         folder_aliases = self._get_folder_alias_batch(folder_ids)
 
-        return self._build_file_list(processed_lines, folder_aliases, check_file_exists)
+        return self._build_file_list(processed_lines, folder_aliases, check_file_exists=check_file_exists)
 
     def _build_where_clause(self, clauses: list[str]) -> str:
         """Build SQL WHERE clause from individual clauses."""
@@ -275,6 +275,7 @@ class ResendService:
         self,
         processed_lines: list[dict[str, Any]],
         folder_aliases: dict[int, str],
+        *,
         check_file_exists: bool,
     ) -> list[dict[str, Any]]:
         """Construct the deduplicated file list from processed lines."""

@@ -258,7 +258,7 @@ def _finalize_current_invoice(
     current_c_records: list[str],
     current_output_path: str | None,
     output_files: list[tuple[str, str, str]],
-    upc_dict: dict,
+    upc_dict: dict | None,
     filter_categories: str,
     filter_mode: str,
 ) -> tuple[int, int]:

@@ -471,7 +471,7 @@ class ResendDialog(BaseDialog):
         self._search_timer.stop()
         self._do_search_filter()
 
-    def _on_date_filter_toggled(self, checked: bool) -> None:
+    def _on_date_filter_toggled(self, checked: bool) -> None:  # noqa: FBT001 — Qt slot, signature dictated by toggled(bool)
         """Handle date filter checkbox toggle."""
         self._date_from_input.setEnabled(checked)
         self._date_to_input.setEnabled(checked)
@@ -633,9 +633,9 @@ class ResendDialog(BaseDialog):
             should_check = self._filtered_files[row]["id"] in self._selected_files
             if checkbox.isChecked() != should_check:
                 # Prevent toggling the signal handler during programmatic sync
-                checkbox.blockSignals(True)
+                checkbox.blockSignals(True)  # noqa: FBT003 — Qt API requires positional bool
                 checkbox.setChecked(should_check)
-                checkbox.blockSignals(False)
+                checkbox.blockSignals(False)  # noqa: FBT003 — Qt API requires positional bool
 
         self._is_updating_selection = False
 

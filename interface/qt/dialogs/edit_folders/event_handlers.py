@@ -163,6 +163,18 @@ class EventHandlers:
 
         self.update_backend_states()
 
+    def _get_check_state(self, field_key: str) -> bool:
+        """Get the checked state of a checkbox widget, or False if missing."""
+        widget = self.fields.get(field_key)
+        return bool(widget and widget.isChecked())
+
+    def _set_widgets_enabled(self, field_keys: list[str], enabled: bool) -> None:  # noqa: FBT001
+        """Enable or disable a list of widgets by field key."""
+        for key in field_keys:
+            widget = self.fields.get(key)
+            if widget:
+                widget.setEnabled(enabled)
+
     def update_backend_states(self) -> None:
         """Update the enabled/disabled state of backend-specific widgets."""
         active_btn = self.fields.get("active_checkbutton")
@@ -171,61 +183,33 @@ class EventHandlers:
         settings = self.settings_provider() if self.settings_provider else {}
         email_globally_enabled = bool(settings.get("enable_email", False))
 
-        # Copy backend
-        copy_check = self.fields.get("process_backend_copy_check")
-        copy_on = is_active and (copy_check.isChecked() if copy_check else False)
-        copy_btn = self.fields.get("copy_dest_btn")
-        if copy_btn:
-            copy_btn.setEnabled(copy_on)
+        copy_on = is_active and self._get_check_state("process_backend_copy_check")
+        self._set_widgets_enabled(["copy_dest_btn"], copy_on)
 
-        # FTP backend
-        ftp_check = self.fields.get("process_backend_ftp_check")
-        ftp_on = is_active and (ftp_check.isChecked() if ftp_check else False)
-        for key in [
-            "ftp_server_field",
-            "ftp_port_field",
-            "ftp_folder_field",
-            "ftp_username_field",
-            "ftp_password_field",
-        ]:
-            widget = self.fields.get(key)
-            if widget:
-                widget.setEnabled(ftp_on)
+        ftp_on = is_active and self._get_check_state("process_backend_ftp_check")
+        self._set_widgets_enabled([
+            "ftp_server_field", "ftp_port_field", "ftp_folder_field",
+            "ftp_username_field", "ftp_password_field",
+        ], ftp_on)
 
-        # Email backend
-        email_check = self.fields.get("process_backend_email_check")
-        email_on = (
-            is_active
-            and (email_check.isChecked() if email_check else False)
-            and email_globally_enabled
-        )
-        for key in ["email_recipient_field", "email_sender_subject_field"]:
-            widget = self.fields.get(key)
-            if widget:
-                widget.setEnabled(email_on)
+        email_self_on = self._get_check_state("process_backend_email_check")
+        email_on = is_active and email_self_on and email_globally_enabled
+        self._set_widgets_enabled([
+            "email_recipient_field", "email_sender_subject_field",
+        ], email_on)
 
-        # EDI settings enabled if folder is active and ANY backend is selected
         any_backend = (
-            (copy_check.isChecked() if copy_check else False)
-            or (ftp_check.isChecked() if ftp_check else False)
-            or (email_check.isChecked() if email_check else False)
+            self._get_check_state("process_backend_copy_check")
+            or self._get_check_state("process_backend_ftp_check")
+            or self._get_check_state("process_backend_email_check")
         )
-        edi_enabled = is_active and any_backend
-
-        for key in [
-            "split_edi",
-            "force_edi_check_var",
-            "split_edi_send_invoices",
-            "split_edi_send_credits",
-            "prepend_file_dates",
-            "rename_file_field",
-            "split_edi_filter_categories_entry",
-            "split_edi_filter_mode",
+        self._set_widgets_enabled([
+            "split_edi", "force_edi_check_var",
+            "split_edi_send_invoices", "split_edi_send_credits",
+            "prepend_file_dates", "rename_file_field",
+            "split_edi_filter_categories_entry", "split_edi_filter_mode",
             "edi_options_check",
-        ]:
-            widget = self.fields.get(key)
-            if widget:
-                widget.setEnabled(edi_enabled)
+        ], is_active and any_backend)
 
     def copy_config_from_other(self) -> None:
         """Copy configuration from another selected folder."""

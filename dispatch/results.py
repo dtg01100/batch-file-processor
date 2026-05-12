@@ -12,7 +12,9 @@ from dispatch.interfaces import (
     DatabaseInterface,
     ErrorHandlerInterface,
     FileSystemInterface,
+    UPCDictionaryProvider,
 )
+from dispatch.services.progress_reporter import ProgressReporter
 
 
 @dataclass
@@ -40,8 +42,9 @@ class DispatchConfig:
     backends: dict[str, BackendInterface] = field(default_factory=dict)
     error_handler: ErrorHandlerInterface | None = None
     settings: dict = field(default_factory=dict)
-    upc_service: Any | None = None
-    progress_reporter: Any | None = None
+    version: str = "1.0.0"
+    upc_service: UPCDictionaryProvider | None = None
+    progress_reporter: ProgressReporter | None = None
     validator_step: Any | None = None
     splitter_step: Any | None = None
     converter_step: Any | None = None

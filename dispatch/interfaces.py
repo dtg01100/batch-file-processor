@@ -363,7 +363,7 @@ class LogInterface(Protocol):
     Implementations should provide logging capabilities.
     """
 
-    def write(self, message: str) -> None:
+    def write(self, message: str) -> int | None:
         """Write a message to the log.
 
         Args:
@@ -392,4 +392,45 @@ class LogInterface(Protocol):
 
     def close(self) -> None:
         """Close the log."""
+        ...
+
+
+@runtime_checkable
+class RunLog(Protocol):
+    """Protocol for run log targets.
+
+    The run log is a write-only target for recording processing activity.
+    Implementations can be StringIO (for in-memory logging), lists (for
+    structured accumulation), or any object with a ``write`` method.
+    """
+
+    def write(self, message: str) -> int | None:
+        """Write a message to the run log.
+
+        Args:
+            message: Message to write
+
+        Returns:
+            Number of characters written, or None for list-like targets
+
+        """
+        ...
+
+    def flush(self) -> None:
+        """Flush the run log buffer (optional)."""
+
+        ...
+
+
+@runtime_checkable
+class UPCDictionaryProvider(Protocol):
+    """Protocol for UPC dictionary lookup services."""
+
+    def get_dictionary(self) -> dict[int, list[Any]]:
+        """Fetch the full UPC dictionary.
+
+        Returns:
+            Dictionary mapping item numbers to their lookup data
+
+        """
         ...

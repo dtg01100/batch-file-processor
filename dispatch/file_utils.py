@@ -13,6 +13,7 @@ import tempfile
 from typing import Any
 
 from core.structured_logging import get_logger
+from dispatch.interfaces import FileSystemInterface, RunLog
 
 # Backward-compatible re-export: callers use do_clear_old_files from this module.
 # Import directly from core.utils.file_utils in new code.
@@ -223,7 +224,7 @@ def build_processed_file_record(
 
 def extract_invoice_numbers(
     file_path: str,
-    file_system: Any = None,
+    file_system: FileSystemInterface | None = None,
 ) -> str:
     """Extract invoice numbers from EDI A-records in a file.
 
@@ -318,7 +319,7 @@ def apply_file_rename(
     return full_dest
 
 
-def write_to_run_log(run_log: Any, message: str, prefix: str = "") -> None:
+def write_to_run_log(run_log: RunLog | None, message: str, prefix: str = "") -> None:
     """Write a message to a run log buffer.
 
     Handles both StringIO (write/encode) and list (append) targets.
@@ -329,12 +330,15 @@ def write_to_run_log(run_log: Any, message: str, prefix: str = "") -> None:
         prefix: Optional prefix (e.g., "ERROR: ")
 
     """
+    if run_log is None:
+        return
     full_message = f"{prefix}{message}" if prefix else message
     if hasattr(run_log, "write"):
         with contextlib.suppress(Exception):
-            run_log.write(f"{full_message}\r\n".encode())
+            result = run_log.write(full_message)
     elif hasattr(run_log, "append"):
-        run_log.append(full_message)
+        with contextlib.suppress(Exception):
+            run_log.append(full_message)
 
 
 __all__ = [

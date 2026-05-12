@@ -13,7 +13,7 @@ from typing import Any
 
 from core.structured_logging import get_logger, log_with_context
 from dispatch.file_system import RealFileSystem
-from dispatch.interfaces import DatabaseInterface, FileSystemInterface
+from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
 from scripts import record_error
 
 logger = get_logger(__name__)
@@ -37,7 +37,7 @@ class ErrorLogger:
 
     """
 
-    def __init__(self, errors_folder: str = "", run_log: Any = None) -> None:
+    def __init__(self, errors_folder: str = "", run_log: RunLog | None = None) -> None:
         """Initialize the error logger.
 
         Args:
@@ -180,7 +180,7 @@ class ErrorHandler:
     def __init__(
         self,
         errors_folder: str | None = None,
-        run_log: Any = None,
+        run_log: RunLog | None = None,
         run_log_directory: str | None = None,
         database: DatabaseInterface | None = None,
         log_path: str | None = None,
@@ -287,7 +287,7 @@ class ErrorHandler:
 
     def record_error_to_logs(
         self,
-        run_log: Any,
+        run_log: RunLog,
         errors_log: StringIO,
         error_message: str,
         filename: str,

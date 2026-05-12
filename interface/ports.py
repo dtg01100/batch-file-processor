@@ -17,7 +17,7 @@ from typing import Any, Protocol, runtime_checkable
 try:
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 except ImportError:
-    QApplication = None  # type: ignore[assignment,misc]
+    QApplication = None  # type: ignore[assignment,misc]  # headless: assign None to Qt type
     QFileDialog = None  # type: ignore[assignment,misc]
     QMessageBox = None  # type: ignore[assignment,misc]
     QWidget = None  # type: ignore[assignment,misc]
@@ -412,8 +412,8 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]
-            QMessageBox.StandardButton.No,  # type: ignore[arg-type]
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
+            QMessageBox.StandardButton.No,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
         )
         return result == QMessageBox.StandardButton.Yes
 
@@ -423,8 +423,8 @@ class QtUIService:
             self._parent,
             title,
             message,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]
-            QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
+            QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
         )
         return result == QMessageBox.StandardButton.Ok
 

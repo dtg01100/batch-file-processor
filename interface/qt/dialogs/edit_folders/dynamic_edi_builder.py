@@ -343,7 +343,7 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:
+    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 — Qt slot, signature dictated by toggled(bool)
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return

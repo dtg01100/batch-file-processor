@@ -22,7 +22,11 @@ Backward Compatibility:
 """
 
 from core.edi.edi_tweaker import EDITweaker, TweakerConfig
-from dispatch.converters.convert_base import BaseEDIConverter, ConversionContext
+from dispatch.converters.convert_base import (
+    BaseEDIConverter,
+    ConversionContext,
+    create_edi_convert_wrapper,
+)
 from dispatch.converters.mixins import DatabaseConnectionMixin
 
 
@@ -55,7 +59,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         if config.force_txt_file_ext:
             output_path += ".txt"
 
-        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")
+        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
         context.user_data["output_path"] = output_path
 
     def process_a_record(self, record, context: ConversionContext) -> None:
@@ -121,7 +125,5 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         """
         return context.user_data.get("output_path", context.output_filename)
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(TweaksConverter, format_name="tweaks")

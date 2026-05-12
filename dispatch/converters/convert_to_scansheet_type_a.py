@@ -43,7 +43,11 @@ from PIL import ImageOps as pil_ImageOps
 from core import utils
 from core.constants import BARCODE_BATCH_SAVE_INTERVAL, UPC_A_NO_CHECK_LENGTH
 from core.structured_logging import get_logger
-from dispatch.converters.convert_base import BaseEDIConverter, ConversionContext
+from dispatch.converters.convert_base import (
+    BaseEDIConverter,
+    ConversionContext,
+    create_edi_convert_wrapper,
+)
 
 logger = get_logger(__name__)
 
@@ -354,8 +358,6 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             normalized = normalized[-UPC_A_NO_CHECK_LENGTH:]
         return normalized
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     ScanSheetTypeAConverter, format_name="scansheet_type_a"

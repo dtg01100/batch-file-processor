@@ -41,6 +41,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
+    create_edi_convert_wrapper,
 )
 
 logger = get_logger(__name__)
@@ -91,7 +92,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             self.output_filename, "w", newline="", encoding="utf-8"
         )
         context.csv_writer = csv.writer(
@@ -270,8 +271,6 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         """
         return self.output_filename
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     EStoreEInvoiceConverter, format_name="estore_einvoice"

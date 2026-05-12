@@ -330,7 +330,7 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
-        return None
+        raise RuntimeError(f"unreachable: _open_input_with_retry always returns or raises for {filepath}")  # type: ignore[unreachable]
 
     def _open_output_with_retry(self, filepath: str) -> TextIO:
         """Open output file with retry logic."""
@@ -356,7 +356,7 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
-        return None
+        raise RuntimeError(f"unreachable: _open_output_with_retry always returns or raises for {filepath}")  # type: ignore[unreachable]
 
     def _process_records(
         self, lines: list[str], output_file: TextIO, upc_dict: dict
@@ -392,17 +392,17 @@ class EDITweaker:
 
             if writeable_line.startswith("A"):
                 a_records += 1
-                writeable_line = self._process_a_record(input_edi_dict, output_file)
+                writeable_line = self._process_a_record(input_edi_dict, output_file)  # type: ignore[arg-type]
 
             if writeable_line.startswith("B"):
                 b_records += 1
                 writeable_line = self._process_b_record(
-                    input_edi_dict, output_file, upc_dict
+                    input_edi_dict, output_file, upc_dict  # type: ignore[arg-type]
                 )
 
             if writeable_line.startswith("C"):
                 c_records += 1
-                writeable_line = self._process_c_record(input_edi_dict, output_file)
+                writeable_line = self._process_c_record(input_edi_dict, output_file)  # type: ignore[arg-type]
 
             if writeable_line:
                 output_file.write(writeable_line)
@@ -431,7 +431,7 @@ class EDITweaker:
 
         """
         invoice_num = fields["invoice_number"]
-        self.crec_appender.set_invoice_number(int(invoice_num))
+        self.crec_appender.set_invoice_number(str(invoice_num))
 
         if self.config.invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]

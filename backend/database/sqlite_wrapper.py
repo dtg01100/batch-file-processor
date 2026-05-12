@@ -823,25 +823,6 @@ class Database:
                     self._conn.commit()
                 return []
 
-    def query_strict(self, sql: str) -> list[dict[str, Any]]:
-        """Execute raw SQL and return results as dictionaries.
-
-        Strict version that raises exceptions on query failure.
-        Use this when you need to distinguish between empty results
-        and query errors.
-
-        Args:
-            sql: SQL statement to execute.
-
-        Returns:
-            List of dictionaries representing result rows.
-
-        Raises:
-            sqlite3.Error: If query execution fails.
-
-        """
-        return self.query(sql, raise_on_error=True)
-
     @classmethod
     def connect(cls, path: str) -> Database:
         """Connect to a SQLite database.

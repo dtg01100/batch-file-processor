@@ -33,6 +33,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
+    create_edi_convert_wrapper,
 )
 
 logger = get_logger(__name__)
@@ -110,7 +111,7 @@ class YellowDogConverter(BaseEDIConverter):
         self.brec_index = 0
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -290,8 +291,6 @@ class YellowDogConverter(BaseEDIConverter):
                 ]
             )
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     YellowDogConverter, format_name="yellowdog_csv"

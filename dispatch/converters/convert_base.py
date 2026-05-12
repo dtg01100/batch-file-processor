@@ -31,8 +31,9 @@ Example usage:
 
 import csv
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, TextIO
+from typing import Any, Literal, TextIO
 
 from core import utils
 
@@ -426,8 +427,8 @@ def create_csv_writer(
     file_handle: TextIO,
     dialect: str = "excel",
     lineterminator: str = "\r\n",
-    quoting: int = csv.QUOTE_ALL,
-) -> csv.writer:
+    quoting: int = csv.QUOTE_ALL,  # type: ignore[annotation-union-mismatch]  # Literal[1] but csv.QUOTE_ALL is int
+) -> Any:
     """Create a CSV writer with common settings.
 
     This utility eliminates the ~20 lines of CSV writer setup duplicated
@@ -444,7 +445,7 @@ def create_csv_writer(
 
     """
     return csv.writer(
-        file_handle, dialect=dialect, lineterminator=lineterminator, quoting=quoting
+        file_handle, dialect=dialect, lineterminator=lineterminator, quoting=quoting  # type: ignore[arg-type]  # Literal vs int mismatch
     )
 
 

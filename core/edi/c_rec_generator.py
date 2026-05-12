@@ -72,7 +72,7 @@ class CRecGenerator:
         self.unappended_records = False
         self.config = config or CRecordConfig()
 
-    def set_invoice_number(self, invoice_number: int) -> None:
+    def set_invoice_number(self, invoice_number: str) -> None:
         """Set the current invoice number.
 
         This marks that there may be unappended records for this invoice.

@@ -30,6 +30,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
+    create_edi_convert_wrapper,
     normalize_parameter,
 )
 
@@ -75,7 +76,7 @@ class ScannerWareConverter(BaseEDIConverter):
         context.user_data["output_path"] = output_path
 
         # Open output file in binary mode (matching original behavior)
-        context.output_file = open(output_path, "wb")
+        context.output_file = open(output_path, "wb")  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
@@ -186,8 +187,6 @@ class ScannerWareConverter(BaseEDIConverter):
 # =============================================================================
 # Backward Compatibility Wrapper
 # =============================================================================
-
-from .convert_base import create_edi_convert_wrapper
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(

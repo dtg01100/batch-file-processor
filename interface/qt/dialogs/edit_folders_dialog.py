@@ -192,11 +192,11 @@ class EditFoldersDialog(BaseDialog):
             config.get("convert_to_format")
         )
         # Prevent toggling the signal handler while programmatically changing state
-        edi_check.blockSignals(True)
+        edi_check.blockSignals(True)  # noqa: FBT003 — Qt API requires positional bool
         try:
             edi_check.setChecked(want_convert)
         finally:
-            edi_check.blockSignals(False)
+            edi_check.blockSignals(False)  # noqa: FBT003 — Qt API requires positional bool
 
         self.dynamic_edi_builder._clear_dynamic_edi()
         if want_convert:

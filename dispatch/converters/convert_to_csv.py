@@ -33,6 +33,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
+    create_edi_convert_wrapper,
     normalize_parameter,
 )
 from dispatch.converters.csv_utils import (
@@ -102,7 +103,7 @@ class CSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -335,7 +336,5 @@ class CSVConverter(BaseEDIConverter):
         """
         return filter_description(desc, filter_ampersand=filter_ampersand)
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(CSVConverter, format_name="csv")

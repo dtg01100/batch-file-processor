@@ -46,7 +46,7 @@ def _col_to_excel(col: int) -> str:
 
 
 def _build_split_file_metadata(
-    line_dict: dict,
+    line_dict: dict | None,
     count: int,
     edi_process: str,
     work_directory: str,
@@ -72,6 +72,8 @@ def _build_split_file_metadata(
         where suffix is ".cr" for credit invoices or ".inv" for regular.
 
     """
+    if line_dict is None:
+        raise ValueError("capture_records returned None for A-record line")
     prepend_letters = _col_to_excel(count)
     file_name_suffix = ".cr" if int(line_dict["invoice_total"]) < 0 else ".inv"
 
@@ -224,7 +226,7 @@ def _write_split_edi_files(
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
 
-                current_file = open(output_file_path, "wb")
+                current_file = open(output_file_path, "wb")  # noqa: SIM115 — lifecycle spans loop iterations, closed in finally
 
             if current_file is None:
                 raise ValueError(
@@ -328,14 +330,14 @@ def do_split_edi(
 
 
 def filter_b_records_by_category(
-    b_records: list[str], upc_dict: dict, filter_categories: str, filter_mode: str
+    b_records: list[str], upc_dict: dict | None, filter_categories: str, filter_mode: str
 ) -> list[str]:
     """Filter B records based on item category.
 
     Args:
         b_records: List of B record lines to filter
         upc_dict: Dictionary mapping item numbers to
-            [category, upc1, upc2, upc3, upc4]
+            [category, upc1, upc2, upc3, upc4] (may be None)
         filter_categories: String of comma-separated categories or "ALL"
         filter_mode: "include" (keep these) or "exclude" (remove these)
 
@@ -343,6 +345,9 @@ def filter_b_records_by_category(
         List of filtered B record lines
 
     """
+    if upc_dict is None:
+        return b_records
+
     if filter_categories == "ALL":
         return b_records
 
@@ -451,8 +456,8 @@ def _read_edi_lines(input_file: str) -> list[str]:
 
 def _group_lines_by_invoice(lines: list[str]) -> list[list[str]]:
     """Group EDI lines into invoice chunks starting at A records."""
-    invoices = []
-    current_invoice = []
+    invoices: list[list[str]] = []
+    current_invoice: list[str] = []
 
     for line in lines:
         if line.startswith("A"):
@@ -509,7 +514,9 @@ def _filter_invoices_by_category(
             any_filtered = True
             continue
 
-        filtered_invoice = [a_record, *filtered_b_records]
+        assert a_record is not None
+        filtered_invoice: list[str] = [a_record]
+        filtered_invoice.extend(filtered_b_records)
         if c_record:
             filtered_invoice.append(c_record)
         filtered_invoices.append(filtered_invoice)

@@ -336,8 +336,8 @@ class RunLogAdapter(logging.LoggerAdapter):
         kwargs: MutableMapping[str, Any],
     ) -> tuple[str, MutableMapping[str, Any]]:
         """Prepend folder (and optionally file) context to *msg*."""
-        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr, assignment]
-        file: str | None = self.extra.get("file")  # type: ignore[union-attr, assignment]
+        folder: str | None = self.extra.get("folder")  # type: ignore[union-attr, assignment]  # extra is dict-like, not typed MutableMapping
+        file: str | None = self.extra.get("file")  # type: ignore[union-attr, assignment]  # extra is dict-like, not typed MutableMapping
 
         if folder and file:
             msg = f"[{folder}/{file}] {msg}"

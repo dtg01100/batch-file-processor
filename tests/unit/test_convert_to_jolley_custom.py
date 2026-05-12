@@ -338,7 +338,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -396,7 +396,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -455,7 +455,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -535,7 +535,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -600,7 +600,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -661,7 +661,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -722,7 +722,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -783,7 +783,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -848,7 +848,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -926,7 +926,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1005,7 +1005,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1083,7 +1083,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1158,7 +1158,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1233,7 +1233,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1315,7 +1315,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1378,7 +1378,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1438,7 +1438,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1529,7 +1529,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1610,7 +1610,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1670,7 +1670,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1731,7 +1731,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(
+            context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")

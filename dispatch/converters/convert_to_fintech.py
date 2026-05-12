@@ -34,6 +34,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
+    create_edi_convert_wrapper,
 )
 
 logger = get_logger(__name__)
@@ -74,7 +75,7 @@ class FintechConverter(BaseEDIConverter):
         context.user_data["inv_fetcher"] = InvFetcher(None, context.settings_dict)
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -245,7 +246,5 @@ class FintechConverter(BaseEDIConverter):
         """
         return utils.datetime_from_invtime(inv_date).strftime("%m/%d/%Y")
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(FintechConverter, format_name="fintech")

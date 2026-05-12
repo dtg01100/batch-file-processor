@@ -21,7 +21,8 @@ from core.structured_logging import (
 from core.utils import normalize_bool
 from core.utils.folder_utils import build_effective_folder
 from dispatch.error_handler import ErrorHandler
-from dispatch.interfaces import DatabaseInterface
+from dispatch.interfaces import DatabaseInterface, RunLog
+from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import SendManager
 from dispatch.services.file_processor import (
@@ -92,7 +93,7 @@ class DispatchOrchestrator:
 
         folder_deps = FolderProcessingDependencies(
             file_processor=self.file_processor,
-            progress_reporter=config.progress_reporter,
+            progress_reporter=self._progress_service,
             get_upc_dictionary=lambda: self._get_upc_dictionary(self.config.settings),
             file_system=config.file_system,
             settings=config.settings,
@@ -102,7 +103,7 @@ class DispatchOrchestrator:
     def process_folder(
         self,
         folder: dict,
-        run_log: Any,
+        run_log: RunLog,
         processed_files: DatabaseInterface | None = None,
         pre_discovered_files: list[str] | None = None,
         folder_num: int | None = None,
@@ -151,7 +152,7 @@ class DispatchOrchestrator:
         self,
         folders: list[dict],
         processed_files: DatabaseInterface | None = None,
-        progress_reporter: Any | None = None,
+        progress_reporter: ProgressReporter | None = None,
     ) -> tuple[list[list[str]], int]:
         """Discover files pending send for each folder.
 
@@ -188,7 +189,7 @@ class DispatchOrchestrator:
     def discover_and_process_folder(
         self,
         folder: dict,
-        run_log: Any,
+        run_log: RunLog,
         processed_files: DatabaseInterface | None = None,
         effective_upc_dict: dict | None = None,
         folder_num: int | None = None,
@@ -275,7 +276,7 @@ class DispatchOrchestrator:
         folder: dict,
         effective_upc_dict: dict,
         processed_files: DatabaseInterface | None,
-        run_log: Any,
+        run_log: RunLog,
         result: FolderResult,
         total_files: int,
     ) -> None:
@@ -334,7 +335,7 @@ class DispatchOrchestrator:
         pre_discovered_files: list[str] | None,
         processed_files: DatabaseInterface | None,
         folder: dict,
-        run_log: Any,
+        run_log: RunLog,
     ) -> list[str] | None:
         """Wrapper for file discovery/filtering for a folder."""
         return self._discovery_service.discover_and_filter_files(
@@ -361,7 +362,7 @@ class DispatchOrchestrator:
         )
 
     def _folder_not_found_result(
-        self, folder_path: str, run_log: Any, result: FolderResult
+        self, folder_path: str, run_log: RunLog, result: FolderResult
     ) -> FolderResult:
         """Create error result for missing folder.
 
@@ -411,7 +412,7 @@ class DispatchOrchestrator:
         return result
 
     def _process_file_with_pipeline(
-        self, file_path: str, folder: dict, upc_dict: dict, run_log: Any = None
+        self, file_path: str, folder: dict, upc_dict: dict, run_log: RunLog | None = None
     ) -> FileResult:
         """Process single file with pipeline using the FileProcessor service.
 
@@ -443,7 +444,7 @@ class DispatchOrchestrator:
         file_basename: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        run_log: RunLog,
     ) -> bool:
         """Process split pipeline path. Returns True if split flow was executed."""
         split_edi = normalize_bool(context.effective_folder.get("split_edi", False))
@@ -472,7 +473,7 @@ class DispatchOrchestrator:
                     original_file_path=file_path,
                     context=context,
                     run_log=run_log,
-                    validation_passed=result.validated,
+                    _validation_passed=result.validated,
                 )
                 if did_convert:
                     result.converted = True
@@ -525,7 +526,7 @@ class DispatchOrchestrator:
         result: FileResult,
         file_basename: str,
         current_file: str,
-        run_log: Any,
+        run_log: RunLog,
     ) -> None:
         """Record non-split send failures and corresponding log messages."""
         send_errors = self.send_manager.get_errors()
@@ -548,7 +549,7 @@ class DispatchOrchestrator:
         )
 
     def _format_send_error(
-        self, backend_name: str, error_message: str, is_split_file: bool = False
+        self, backend_name: str, error_message: str, *, is_split_file: bool = False
     ) -> str:
         """Format a send error message for a specific backend."""
         file_type = "split file" if is_split_file else "file"
@@ -556,7 +557,7 @@ class DispatchOrchestrator:
 
     def _log_success_with_invoices(
         self,
-        run_log: Any,
+        run_log: RunLog,
         file_basename: str,
         file_path: str,
     ) -> None:
@@ -571,7 +572,7 @@ class DispatchOrchestrator:
         current_file: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        run_log: RunLog,
         file_basename: str,
     ) -> tuple[bool, str]:
         """Run validation and update processing state.
@@ -616,7 +617,7 @@ class DispatchOrchestrator:
         file_basename: str,
         original_file_path: str,
         context: ProcessingContext,
-        run_log: Any,
+        run_log: RunLog,
         *,
         _validation_passed: bool = True,
     ) -> tuple[str, bool]:
@@ -655,7 +656,7 @@ class DispatchOrchestrator:
             converted_file = self._execute_conversion_step(
                 converter_step=converter_step,
                 current_file=current_file,
-                original_file_path=original_file_path,
+                _original_file_path=original_file_path,
                 context=context,
             )
             if converted_file:
@@ -735,7 +736,7 @@ class DispatchOrchestrator:
         errors_or_file: Any,
         current_file: str,
         result: FileResult,
-        run_log: Any,
+        run_log: RunLog,
         file_basename: str,
         context: ProcessingContext,
     ) -> tuple[bool, str]:
@@ -810,7 +811,7 @@ class DispatchOrchestrator:
         return apply_file_rename(file_path, rename_template, temp_dirs)
 
     def _send_pipeline_file(
-        self, file_path: str, folder: dict, run_log: Any = None
+        self, file_path: str, folder: dict, run_log: RunLog | None = None
     ) -> bool:
         """Send file through pipeline to backends.
 
@@ -943,7 +944,7 @@ class DispatchOrchestrator:
         folder_index: int | None = None,
         folder_total: int | None = None,
         _folder_name: str | None = None,
-        progress_reporter: Any | None = None,
+        progress_reporter: ProgressReporter | None = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.
 
@@ -1071,7 +1072,7 @@ class DispatchOrchestrator:
             or normalize_bool(folder.get("force_edi_validation", False))
         )
 
-    def _log_message(self, run_log: Any, message: str) -> None:
+    def _log_message(self, run_log: RunLog | None, message: str) -> None:
         """Log a message to the run log and Python logger."""
         from dispatch.file_utils import write_to_run_log
 
@@ -1084,7 +1085,7 @@ class DispatchOrchestrator:
         )
         write_to_run_log(run_log, message)
 
-    def _log_error(self, run_log: Any, message: str) -> None:
+    def _log_error(self, run_log: RunLog | None, message: str) -> None:
         """Log an error message to the run log and Python logger."""
         from dispatch.file_utils import write_to_run_log
 

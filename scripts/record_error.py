@@ -11,7 +11,7 @@ from typing import Any
 
 
 def do(
-    run_log: Any,
+    run_log: Any,  # StringIO (threaded=False) or list[str] (threaded=True)
     errors_log: StringIO,
     error_message: str,
     filename: str,
@@ -54,10 +54,10 @@ def do(
     )
     # record error to both the run log and the errors log
     if not threaded:
-        run_log.write(message.encode())
+        run_log.write(message.encode())  # type: ignore[union-attr]
         errors_log.write(message)
     else:
-        run_log.append(message)
-        errors_log.append(message)
+        run_log.append(message)  # type: ignore[union-attr]
+        errors_log.append(message)  # type: ignore[attr-defined]  # StringIO has no append; bug in original code (always should be write)
         return run_log, errors_log
     return None

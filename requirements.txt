@@ -3,7 +3,7 @@
 # PyQt5 5.15 maximum - target system does not support Qt6
 
 altgraph>=0.17.2
-pytest>=7.4.3
+pytest>=9.0.3
 pytest-timeout>=2.2.0
 appdirs>=1.4.4
 attrs>=21.4.0
@@ -23,9 +23,9 @@ idna>=3.7
 jdcal>=1.4.1
 Jinja2>=3.1.6
 Levenshtein>=0.22.0
-lxml>=4.9.3
+lxml>=6.1.0
 macholib>=1.16
-Mako>=1.2.2
+Mako>=1.3.12
 MarkupSafe>=2.1.3
 openpyxl>=3.0.9
 packaging>=23.2
@@ -54,7 +54,7 @@ tomli>=2.0.1
 tqdm>=4.64.0
 typing_extensions>=4.2.0
 tzdata>=2023.3
-urllib3==2.6.3
+urllib3>=2.7.0
 validate-email>=1.3
 PyQt5==5.15.10
 pytest-qt>=4.5.0

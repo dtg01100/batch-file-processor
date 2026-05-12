@@ -38,7 +38,11 @@ from core.structured_logging import (
     set_correlation_id,
 )
 from core.utils.file_utils import calculate_file_checksum
+from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
 from dispatch.results import FolderResult
+from dispatch.services.file_processor import FileProcessor
+from dispatch.services.progress_reporter import ProgressReporter
+from dispatch.services.progress_reporting import ProgressReportingService
 
 logger = get_logger(__name__)
 
@@ -60,8 +64,8 @@ class FolderProcessingRequest:
     """
 
     folder: dict
-    run_log: Any
-    processed_files: Any = None
+    run_log: RunLog | None = None
+    processed_files: DatabaseInterface | None = None
     upc_dict: dict | None = None
     settings: dict | None = None
     pre_discovered_files: list[str] | None = None
@@ -82,10 +86,10 @@ class FolderProcessingDependencies:
 
     """
 
-    file_processor: Any = None
-    progress_reporter: Any = None
+    file_processor: FileProcessor | None = None
+    progress_reporter: ProgressReportingService | None = None
     get_upc_dictionary: Any = None
-    file_system: Any = None
+    file_system: FileSystemInterface | None = None
     settings: dict | None = None
 
 
@@ -230,7 +234,7 @@ class FolderPipelineExecutor:
     def _handle_folder_not_found(
         self,
         folder_path: str,
-        run_log: Any,
+        run_log: RunLog | None,
         result: FolderResult,
     ) -> FolderResult:
         """Handle case when folder doesn't exist.
@@ -327,7 +331,7 @@ class FolderPipelineExecutor:
     def _filter_processed_files(
         self,
         files: list[str],
-        processed_files: Any,
+        processed_files: DatabaseInterface | None,
         folder: dict,
     ) -> list[str]:
         """Filter out already-processed files based on checksum.
@@ -369,8 +373,8 @@ class FolderPipelineExecutor:
         files: list[str],
         folder: dict,
         effective_upc_dict: dict,
-        processed_files: Any,
-        run_log: Any,
+        processed_files: DatabaseInterface | None,
+        run_log: RunLog | None,
         result: FolderResult,
     ) -> None:
         """Process all files in folder and update result counters.
@@ -413,7 +417,7 @@ class FolderPipelineExecutor:
         file_path: str,
         folder: dict,
         upc_dict: dict,
-        run_log: Any,
+        run_log: RunLog | None,
     ) -> Any:
         """Process a single file through the pipeline.
 
@@ -478,7 +482,7 @@ class FolderPipelineExecutor:
 
     def _record_processed_file(
         self,
-        processed_files: Any,
+        processed_files: DatabaseInterface,
         folder: dict,
         file_result: Any,
     ) -> None:
@@ -575,7 +579,7 @@ class FolderPipelineExecutor:
         folder_name = folder.get("alias", folder.get("folder_name", ""))
         try:
             progress.start_folder(
-                alias=folder_name,
+                folder=folder,
                 total_files=total_files,
             )
         except TypeError:  # some reporters accept kwargs, others positional-only
@@ -601,7 +605,7 @@ class FolderPipelineExecutor:
             return self._deps.get_upc_dictionary()
         return {}
 
-    def _log_message(self, run_log: Any, message: str) -> None:
+    def _log_message(self, run_log: RunLog | None, message: str) -> None:
         """Write message to run log and Python logging."""
         from dispatch.file_utils import write_to_run_log
 
@@ -609,7 +613,7 @@ class FolderPipelineExecutor:
         logger.info(message)
         write_to_run_log(run_log, message)
 
-    def _log_error(self, run_log: Any, error_msg: str) -> None:
+    def _log_error(self, run_log: RunLog | None, error_msg: str) -> None:
         """Log an error message."""
         self._log_message(run_log, f"ERROR: {error_msg}")
         logger.error(error_msg)

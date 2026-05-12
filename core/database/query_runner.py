@@ -383,7 +383,7 @@ def create_query_runner_from_settings(
 
     return create_query_runner(
         username=settings_dict["as400_username"],
-        password=as400_password,
+        password=as400_password,  # type: ignore[arg-type]  # validated non-None: raises if both password and ssh_key absent
         dsn=settings_dict["as400_address"],
         database=database,
         ssh_key_filename=ssh_key_filename,

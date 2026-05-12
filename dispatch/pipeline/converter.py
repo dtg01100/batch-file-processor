@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 
 def _discover_supported_formats() -> list[str]:
     """Auto-discover supported conversion formats by scanning converters package."""
-    formats = []
+    formats: list[str] = []
     converter_path = os.path.join(os.path.dirname(__file__), "..", "converters")
     if not os.path.isdir(converter_path):
         return formats

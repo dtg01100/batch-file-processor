@@ -20,6 +20,7 @@ from core.structured_logging import (
 )
 from core.utils import normalize_bool
 from dispatch.error_handler import ErrorHandler
+from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunLog
 from dispatch.send_manager import SendManager
 
 logger = get_logger(__name__)
@@ -63,8 +64,8 @@ class ProcessingContext:
 
     folder: dict
     effective_folder: dict
-    settings: dict
-    upc_dict: dict
+    settings: dict | None = None
+    upc_dict: dict | None = None
     temp_dirs: list[str] = field(default_factory=list)
     temp_files: list[str] = field(default_factory=list)
 
@@ -95,11 +96,11 @@ class FileProcessor:
     def __init__(
         self,
         send_manager: SendManager,
-        error_handler: ErrorHandler,
+        error_handler: ErrorHandlerInterface,
         validator_step: Any | None = None,
         splitter_step: Any | None = None,
         converter_step: Any | None = None,
-        file_system: Any | None = None,
+        file_system: FileSystemInterface | None = None,
         audit_logger: Any = None,
     ) -> None:
         """Initialize the file processor.
@@ -136,8 +137,8 @@ class FileProcessor:
         file_path: str,
         folder: dict,
         upc_dict: dict,
-        run_log: Any = None,
-        effective_folder: dict | None = None,
+        run_log: RunLog | None = None,
+        effective_folder: dict | ProcessingContext | None = None,
     ) -> FileResult:
         """Process a single EDI file through the pipeline.
 
@@ -245,7 +246,7 @@ class FileProcessor:
         file_basename: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        run_log: RunLog | None,
     ) -> None:
         """Execute the core file processing pipeline.
 
@@ -387,7 +388,7 @@ class FileProcessor:
         current_file: str,
         context: ProcessingContext,
         result: FileResult,
-        _run_log: Any,
+        _run_log: RunLog | None,
         file_basename: str,
     ) -> tuple[bool, str]:
         """Run validation step of the pipeline.
@@ -525,7 +526,7 @@ class FileProcessor:
         file_basename: str,
         context: ProcessingContext,
         result: FileResult,
-        _run_log: Any,
+        _run_log: RunLog | None,
     ) -> bool:
         """Run splitting step of the pipeline.
 
@@ -568,7 +569,8 @@ class FileProcessor:
         file_basename: str,
         _original_file_path: str,
         context: ProcessingContext,
-        _run_log: Any,
+        _run_log: RunLog | None,
+        *,
         validation_passed: bool,
     ) -> tuple[str, bool, bool]:
         """Run conversion step of the pipeline.
@@ -651,7 +653,7 @@ class FileProcessor:
         file_basename: str,
         context: ProcessingContext,
         result: FileResult,
-        run_log: Any,
+        run_log: RunLog | None,
     ) -> None:
         """Send file to enabled backends.
 
@@ -709,8 +711,8 @@ class FileProcessor:
         self,
         file_path: str,
         folder: dict,
-        _run_log: Any,
-        settings: dict,
+        _run_log: RunLog | None,
+        settings: dict | None,
     ) -> bool:
         """Send file to all enabled backends via send_manager.
 
@@ -727,8 +729,9 @@ class FileProcessor:
         enabled_backends = self.send_manager.get_enabled_backends(folder)
         if not enabled_backends:
             return False
+        effective_settings = settings if settings is not None else {}
         send_results = self.send_manager.send_all(
-            enabled_backends, file_path, folder, settings
+            enabled_backends, file_path, folder, effective_settings
         )
         return bool(send_results) and all(send_results.values())
 
@@ -737,7 +740,7 @@ class FileProcessor:
         result: FileResult,
         file_basename: str,
         current_file: str,
-        _run_log: Any,
+        _run_log: RunLog | None,
     ) -> None:
         """Record send failure.
 
@@ -751,7 +754,7 @@ class FileProcessor:
         result.errors.append(f"Failed to send {file_basename}")
         logger.warning("Failed to send file: %s", current_file)
 
-    def _log_success(self, file_basename: str, file_path: str, _run_log: Any) -> None:
+    def _log_success(self, file_basename: str, file_path: str, _run_log: RunLog | None) -> None:
         """Log successful processing.
 
         Args:

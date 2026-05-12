@@ -26,6 +26,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
+    create_edi_convert_wrapper,
     normalize_parameter,
 )
 from dispatch.converters.csv_utils import apply_retail_uom
@@ -74,7 +75,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -206,8 +207,6 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         """
         return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     SimplifiedCSVConverter, format_name="simplified_csv"

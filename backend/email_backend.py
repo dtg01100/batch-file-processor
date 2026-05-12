@@ -47,6 +47,7 @@ def do(
     settings: dict,
     filename: str,
     smtp_client: SMTPClientProtocol | None = None,
+    *,
     disable_retry: bool = False,
 ) -> bool:
     """Send a file via email.
@@ -77,7 +78,7 @@ class EmailBackend(BackendBase):
     """
 
     def __init__(
-        self, smtp_client: SMTPClientProtocol | None = None, disable_retry: bool = False
+        self, smtp_client: SMTPClientProtocol | None = None, *, disable_retry: bool = False
     ) -> None:
         """Initialize email backend.
 

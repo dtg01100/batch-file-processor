@@ -64,6 +64,7 @@ def do(
     settings_dict: dict,
     filename: str,
     ftp_client: FTPClientProtocol | None = None,
+    *,
     disable_retry: bool = False,
 ) -> bool:
     """Send a file via FTP/FTPS.
@@ -94,7 +95,7 @@ class FTPBackend(BackendBase):
     """
 
     def __init__(
-        self, ftp_client: FTPClientProtocol | None = None, disable_retry: bool = False
+        self, ftp_client: FTPClientProtocol | None = None, *, disable_retry: bool = False
     ) -> None:
         """Initialize FTP backend.
 
@@ -107,7 +108,6 @@ class FTPBackend(BackendBase):
         self.ftp_client = ftp_client
         self._client = None
         self._use_tls_options = [False, True]
-        self._current_tls_index = 0
 
     def _execute(
         self,

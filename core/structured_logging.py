@@ -541,7 +541,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
 
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
-    ) -> tuple[str, MutableMapping[str, Any]]:  # type: ignore[override]
+    ) -> tuple[str, MutableMapping[str, Any]]:  # type: ignore[override]  # LoggerAdapter.process types differ from parent
         """Process the logging message and keyword arguments.
 
         Injects context variables into the extra dict.
@@ -1124,7 +1124,7 @@ class StructuredLogger:
             elif isinstance(result, dict):
                 result_summary = redact_sensitive_data(result)
             else:
-                result_summary = redact_value(result)  # type: ignore[assignment]
+                result_summary = redact_value(result)  # type: ignore[assignment]  # result could be any type, redact_value returns Any
             fields["output_summary"] = result_summary
         else:
             fields["output_summary"] = None
@@ -1341,7 +1341,7 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
         start_time = time.perf_counter()
 
         try:
-            result = await func(*args, **kwargs)  # type: ignore[misc]
+            result = await func(*args, **kwargs)  # type: ignore[misc]  # func is generic Callable; misc catches await on untyped coroutine
 
             # Calculate duration
             duration_ms = (time.perf_counter() - start_time) * 1000
@@ -1370,8 +1370,8 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
 
     # Return appropriate wrapper based on function type
     if inspect.iscoroutinefunction(func):
-        return async_wrapper  # type: ignore[return-value]
-    return sync_wrapper  # type: ignore[return-value]
+        return async_wrapper  # type: ignore[return-value]  # dynamically-created wrapper, type checker can't resolve
+    return sync_wrapper  # type: ignore[return-value]  # dynamically-created wrapper, type checker can't resolve
 
 
 # =============================================================================
@@ -1458,7 +1458,7 @@ class JSONFormatter(logging.Formatter):
             ensure_ascii: Whether to escape non-ASCII characters
 
         """
-        super().__init__(fmt, datefmt, style)  # type: ignore[arg-type]
+        super().__init__(fmt, datefmt, style)  # type: ignore[arg-type]  # logging.Formatter expects str | None, not our custom type
         self.indent = indent
         self.sort_keys = sort_keys
         self.ensure_ascii = ensure_ascii

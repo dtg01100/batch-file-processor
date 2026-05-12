@@ -42,6 +42,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
+    create_edi_convert_wrapper,
 )
 from dispatch.converters.customer_queries import (
     BASIC_CUSTOMER_FIELDS_LIST,
@@ -86,7 +87,7 @@ class JolleyCustomConverter(BaseEDIConverter):
         )
         self._uom_service = UOMLookupService(self._db_connector.query_runner)
 
-        context.output_file = open(
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
             context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
         context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -242,8 +243,6 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         self._db_connector.close()
 
-
-from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     JolleyCustomConverter, format_name="jolley_custom"

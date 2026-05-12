@@ -13,7 +13,7 @@ when a filter value is provided.
 from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
-import thefuzz.process  # type: ignore[import]
+import thefuzz.process  # type: ignore[import]  # thefuzz has no type stubs
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtWidgets import (
@@ -566,7 +566,7 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)
+        btn.setProperty("compact", True)  # noqa: FBT003 — Qt API requires positional bool
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

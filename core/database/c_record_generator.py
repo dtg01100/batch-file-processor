@@ -5,6 +5,7 @@ with the rest of the database layer.
 """
 
 from collections.abc import Callable
+from typing import Any
 
 
 class CRecGenerator:
@@ -22,7 +23,7 @@ class CRecGenerator:
                 Must include: as400_username, as400_password, as400_address.
 
         """
-        self.query_object = None
+        self.query_object: Any = None
         self._invoice_number = "0"
         self.unappended_records = False
         self.settings = settings_dict
@@ -63,6 +64,7 @@ class CRecGenerator:
         if self.query_object is None:
             self._db_connect()
 
+        assert self.query_object is not None
         qry_ret = self.query_object.run_query(
             """
             SELECT

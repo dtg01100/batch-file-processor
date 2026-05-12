@@ -10,9 +10,8 @@ Responsibilities:
 - Coordinate folder completion notifications
 """
 
-from typing import Any
-
 from core.structured_logging import get_logger
+from dispatch.services.progress_reporter import ProgressReporter
 
 logger = get_logger(__name__)
 
@@ -31,7 +30,7 @@ class ProgressReportingService:
 
     """
 
-    def __init__(self, progress_reporter: Any = None) -> None:
+    def __init__(self, progress_reporter: ProgressReporter | None = None) -> None:
         """Initialize the progress reporting service.
 
         Args:
@@ -83,7 +82,7 @@ class ProgressReportingService:
                 folder.get("alias", folder.get("folder_name", "")), total_files
             )
 
-    def complete_folder(self, success: bool) -> None:
+    def complete_folder(self, *, success: bool) -> None:
         """Notify progress reporter that folder processing is complete.
 
         Args:
