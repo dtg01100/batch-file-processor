@@ -11,9 +11,10 @@ import time
 from io import StringIO
 from typing import Any
 
-import scripts.record_error as record_error
 from core.structured_logging import get_logger, log_with_context
+from dispatch.file_system import RealFileSystem
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface
+from scripts import record_error
 
 logger = get_logger(__name__)
 
@@ -263,7 +264,7 @@ class ErrorHandler:
             self._persist_to_database(error_record)
 
         # Fire alert if configured and allowed
-        if self._alert_dispatcher is not None and context.get("alert_on_failure", True):
+        if self._alert_dispatcher is not None and (context or {}).get("alert_on_failure", True):
             try:
                 import traceback as tb
 
@@ -273,9 +274,9 @@ class ErrorHandler:
                         "error_message": str(error),
                         "stack_trace": tb.format_exc(),
                     },
-                    correlation_id=context.get("correlation_id", ""),
-                    folder_alias=context.get("folder_alias", ""),
-                    file_path=context.get("file_path", ""),
+                    correlation_id=(context or {}).get("correlation_id", ""),
+                    folder_alias=(context or {}).get("folder_alias", ""),
+                    file_path=(context or {}).get("file_path", ""),
                     processing_context=context,
                 )
             except Exception:
@@ -370,6 +371,7 @@ class ErrorHandler:
             error_record: Error record dictionary
 
         """
+        assert self.db is not None
         try:
             self.db.insert(error_record)
         except Exception as e:
@@ -527,70 +529,6 @@ class ErrorHandler:
         content = self.report_generator.generate_processing_report(errors, version)
         self.fs.write_file_text(folder_log_path, content)
         return folder_log_path
-
-
-class RealFileSystem:
-    """Real file system implementation for production use."""
-
-    def read_file(self, path: str) -> bytes:
-        """Read file contents as bytes."""
-        with open(path, "rb") as f:
-            return f.read()
-
-    def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents as text."""
-        with open(path, encoding=encoding) as f:
-            return f.read()
-
-    def write_file(self, path: str, data: bytes) -> None:
-        """Write bytes to a file."""
-        with open(path, "wb") as f:
-            f.write(data)
-
-    def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to a file."""
-        with open(path, "w", encoding=encoding) as f:
-            f.write(data)
-
-    def file_exists(self, path: str) -> bool:
-        """Check if a file exists."""
-        return os.path.isfile(path)
-
-    def dir_exists(self, path: str) -> bool:
-        """Check if a directory exists."""
-        return os.path.isdir(path)
-
-    def mkdir(self, path: str) -> None:
-        """Create a directory."""
-        os.mkdir(path)
-
-    def makedirs(self, path: str) -> None:
-        """Create a directory and all parent directories."""
-        os.makedirs(path, exist_ok=True)
-
-    def list_files(self, path: str) -> list[str]:
-        """List all files in a directory."""
-        if not os.path.isdir(path):
-            return []
-        return [
-            os.path.abspath(os.path.join(path, f))
-            for f in os.listdir(path)
-            if os.path.isfile(os.path.join(path, f))
-        ]
-
-    def copy_file(self, src: str, dst: str) -> None:
-        """Copy a file."""
-        import shutil
-
-        shutil.copyfile(src, dst)
-
-    def remove_file(self, path: str) -> None:
-        """Remove a file."""
-        os.remove(path)
-
-    def get_absolute_path(self, path: str) -> str:
-        """Get the absolute path."""
-        return os.path.abspath(path)
 
 
 # Backward-compatible function interface

@@ -1,0 +1,37 @@
+FROM ubuntu:22.04
+
+LABEL description="Windows test environment for batch-file-processor (runtime init)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV WINEPREFIX=/wineprefix
+ENV WINEDEBUG=-all
+ENV QT_QPA_PLATFORM=offscreen
+ENV WINEDLLOVERRIDES="mscoree,mshtml="
+ENV PYTHON_VERSION=3.11.9
+
+# Phase 1: OS packages + Python embeddable
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        wine64 \
+        wine32 \
+        wine \
+        xvfb \
+        xauth \
+        wget \
+        unzip \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/pywin && \
+    wget -q "https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-amd64.zip" \
+        -O /tmp/python-embed.zip && \
+    unzip -q /tmp/python-embed.zip -d /opt/pywin && \
+    rm /tmp/python-embed.zip && \
+    sed -i 's/#import site/import site/' /opt/pywin/python311._pth
+
+WORKDIR /src
+COPY . /src/
+
+# Wine prefix init + pip + deps done at RUNTIME (needs --privileged)
+# See scripts/run_windows_tests.sh

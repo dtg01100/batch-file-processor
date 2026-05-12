@@ -88,6 +88,35 @@ test-all:
 	$(PYTEST) -m "not qt" $(PYTEST_XDIST) -v
 	$(PYTEST) tests/unit/interface/qt/ $(PYTEST_QT) -v
 
+# =============================================================================
+# Windows Test Targets (via Wine in Docker)
+# =============================================================================
+# Run the test suite through Wine inside Docker to verify Windows compatibility.
+# This builds the Docker image on first run, then executes pytest through Wine.
+# =============================================================================
+
+# Run all non-Qt tests through Wine in Docker
+test-windows:
+	@./scripts/run_windows_tests.sh
+
+# Run Windows tests without rebuilding the Docker image
+test-windows-quick:
+	@SKIP_BUILD=1 ./scripts/run_windows_tests.sh
+
+# Rebuild the Windows test Docker image from scratch
+test-windows-rebuild:
+	@NO_CACHE=1 ./scripts/run_windows_tests.sh -m "not qt" --co
+
+# Run specific test file through Wine
+# Usage: make test-windows-file FILE=tests/unit/test_utils.py
+test-windows-file:
+ifndef FILE
+	@echo "Usage: make test-windows-file FILE=tests/unit/test_utils.py"
+	@exit 1
+endif
+	@./scripts/run_windows_tests.sh -x -v $(FILE)
+
+# =============================================================================
 # Run tests by marker (examples)
 test-backend:
 	$(PYTEST) -m backend $(PYTEST_XDIST) -v
