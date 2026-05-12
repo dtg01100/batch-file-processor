@@ -9,7 +9,7 @@ dual UI framework architecture.
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
-from .config_schemas import ConfigurationSchema, FieldType
+from .config_schemas import ConfigurationSchema, FieldDefinition, FieldType
 
 
 class WidgetBase(ABC):
@@ -123,7 +123,7 @@ class WidgetFactory(ABC):
 
     @abstractmethod
     def create_widget(
-        self, field_type: FieldType, field_definition: dict, parent: Any = None
+        self, field_type: FieldType, field_definition: FieldDefinition, parent: Any = None
     ) -> WidgetBase:
         """
         Create a widget for a specific field type.
@@ -207,9 +207,10 @@ class ConfigurationWidgetBuilder:
 
         """
         self.framework = framework
-        self.factory = WidgetFactoryRegistry.get_factory(framework)
-        if self.factory is None:
+        factory = WidgetFactoryRegistry.get_factory(framework)
+        if factory is None:
             raise ValueError(f"No widget factory registered for framework: {framework}")
+        self.factory = factory
 
     def build_widgets_from_schema(
         self, schema: ConfigurationSchema, parent: Any = None
@@ -289,7 +290,7 @@ class QtWidgetFactory(WidgetFactory):
     """
 
     def create_widget(
-        self, field_type: FieldType, field_definition: dict, parent: Any = None
+        self, field_type: FieldType, field_definition: FieldDefinition, parent: Any = None
     ) -> WidgetBase:
         """
         Create a Qt widget for a specific field type.
@@ -326,7 +327,7 @@ class QtWidgetBase(WidgetBase):
     Base class for Qt widgets.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         """
         Initialize the Qt widget base class.
 
@@ -336,7 +337,7 @@ class QtWidgetBase(WidgetBase):
 
         """
         self.field_definition = field_definition
-        self.widget = None
+        self.widget: Any = None
         self.parent = parent
 
     def get_widget(self) -> Any:
@@ -400,13 +401,13 @@ class QtLineEditWidget(QtWidgetBase):
     Qt line edit widget for string fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QLineEdit
 
         self.widget = QLineEdit(parent)
         if field_definition.default:
-            self.widget.setText(field_definition.default)
+            self.widget.setText(str(field_definition.default))
 
     def set_value(self, value: Any) -> None:
         if value is not None:
@@ -427,7 +428,7 @@ class QtSpinBoxWidget(QtWidgetBase):
     Qt spin box widget for integer fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QSpinBox
 
@@ -458,7 +459,7 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
     Qt double spin box widget for float fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QDoubleSpinBox
 
@@ -490,7 +491,7 @@ class QtComboBoxWidget(QtWidgetBase):
     Qt combo box widget for select fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QComboBox
 
@@ -523,7 +524,7 @@ class QtCheckBoxWidget(QtWidgetBase):
     Qt check box widget for boolean fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QCheckBox
 
@@ -553,7 +554,7 @@ class QtListWidgetWidget(QtWidgetBase):
     Qt list widget for multi-select fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
@@ -599,7 +600,7 @@ class QtTextEditWidget(QtWidgetBase):
     Qt text edit widget for list and dict fields.
     """
 
-    def __init__(self, field_definition: dict, parent: Any = None) -> None:
+    def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
         from PyQt5.QtWidgets import QTextEdit
 

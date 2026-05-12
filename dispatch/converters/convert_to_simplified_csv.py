@@ -74,7 +74,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -207,13 +207,8 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
+from .convert_base import create_edi_convert_wrapper
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(
     SimplifiedCSVConverter, format_name="simplified_csv"
 )

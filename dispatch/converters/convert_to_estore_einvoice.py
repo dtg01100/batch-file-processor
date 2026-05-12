@@ -91,7 +91,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             self.output_filename, "w", newline="", encoding="utf-8"
         )
         context.csv_writer = csv.writer(
@@ -271,13 +271,8 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         return self.output_filename
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
+from .convert_base import create_edi_convert_wrapper
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(
     EStoreEInvoiceConverter, format_name="estore_einvoice"
 )

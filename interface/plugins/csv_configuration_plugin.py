@@ -2,101 +2,36 @@
 CSV Configuration Plugin
 
 Implements the ConfigurationPlugin interface for CSV format configuration.
-Provides support for CSV-specific configuration fields and validation.
 """
 
 from typing import Any
 
 from ..models.folder_configuration import ConvertFormat, CSVConfiguration
+from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import FieldDefinition, FieldType
-from .configuration_plugin import ConfigurationPlugin
-from .ui_abstraction import ConfigurationWidgetBuilder
-from .validation_framework import ValidationResult
 
 
-class CSVConfigurationPlugin(ConfigurationPlugin):
-    """
-    CSV configuration plugin implementing the ConfigurationPlugin interface.
-
-    Provides support for CSV format configuration with specific fields and validation.
-    """
+class CSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
+    """CSV configuration plugin."""
 
     @classmethod
     def get_name(cls) -> str:
-        """
-        Get the human-readable name of the plugin.
-
-        Returns:
-            str: Plugin name for display purposes
-
-        """
         return "CSV Configuration"
 
     @classmethod
     def get_identifier(cls) -> str:
-        """
-        Get the unique identifier for the plugin.
-
-        Returns:
-            str: Unique plugin identifier
-
-        """
         return "csv_configuration"
 
     @classmethod
-    def get_description(cls) -> str:
-        """
-        Get a detailed description of the plugin's functionality.
-
-        Returns:
-            str: Plugin description
-
-        """
-        return "Provides CSV format configuration options for EDI conversion"
-
-    @classmethod
-    def get_version(cls) -> str:
-        """
-        Get the plugin version.
-
-        Returns:
-            str: Plugin version string
-
-        """
-        return "1.0.0"
-
-    @classmethod
     def get_format_name(cls) -> str:
-        """
-        Get the human-readable name of the configuration format.
-
-        Returns:
-            str: Format name for display purposes
-
-        """
         return "CSV"
 
     @classmethod
     def get_format_enum(cls) -> ConvertFormat:
-        """
-        Get the ConvertFormat enum value associated with this format.
-
-        Returns:
-            ConvertFormat: The format enum from folder_configuration
-
-        """
         return ConvertFormat.CSV
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        """
-        Get the list of field definitions for this configuration format.
-
-        Returns:
-            List[FieldDefinition]: List of field definitions that define the
-            configuration schema for this format.
-
-        """
         fields = [
             FieldDefinition(
                 name="include_headers",
@@ -143,33 +78,7 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
-        """
-        Validate configuration data against the format's schema.
-
-        Args:
-            config: Configuration data to validate
-
-        Returns:
-            ValidationResult: Result of the validation operation
-
-        """
-        schema = self.get_configuration_schema()
-        if schema:
-            return schema.validate(config)
-        return ValidationResult(success=True, errors=[])
-
     def create_config(self, data: dict[str, Any]) -> CSVConfiguration:
-        """
-        Create a configuration instance from raw data.
-
-        Args:
-            data: Raw data to create the configuration from
-
-        Returns:
-            CSVConfiguration: CSV configuration instance
-
-        """
         return CSVConfiguration(
             include_headers=data.get("include_headers", False),
             filter_ampersand=data.get("filter_ampersand", False),
@@ -182,16 +91,6 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         )
 
     def serialize_config(self, config: CSVConfiguration) -> dict[str, Any]:
-        """
-        Serialize a configuration instance to dictionary format.
-
-        Args:
-            config: Configuration instance or dict to serialize
-
-        Returns:
-            Dict[str, Any]: Serialized configuration data
-
-        """
         if isinstance(config, dict):
             return {
                 "include_headers": config.get("include_headers", False),
@@ -215,69 +114,6 @@ class CSVConfigurationPlugin(ConfigurationPlugin):
         }
 
     def deserialize_config(self, data: dict[str, Any]) -> CSVConfiguration:
-        """
-        Deserialize stored data into a configuration instance.
-
-        Args:
-            data: Stored data dict to deserialize
-
-        Returns:
-            CSVConfiguration: CSV configuration instance
-
-        """
         if isinstance(data, CSVConfiguration):
             return data
         return self.create_config(data)
-
-    def initialize(self, config: dict[str, Any] | None = None) -> None:
-        """
-        Initialize the plugin with configuration.
-
-        Called when the plugin is first loaded.
-
-        Args:
-            config: Optional configuration dictionary
-
-        """
-        if config:
-            self._config = self.create_config(config)
-        else:
-            self._config = self.create_config({})
-
-    def activate(self) -> None:
-        """
-        Activate the plugin.
-
-        Called when the plugin is activated for use.
-        """
-
-    def deactivate(self) -> None:
-        """
-        Deactivate the plugin.
-
-        Called when the plugin is deactivated or the application shuts down.
-        """
-
-    def create_widget(self, parent: Any = None) -> Any:
-        """
-        Create a UI widget for configuring the plugin.
-
-        The returned widget should be compatible with the current UI framework
-        (either Qt or Tkinter).
-
-        Args:
-            parent: Optional parent widget
-
-        Returns:
-            Any: UI widget for plugin configuration
-
-        """
-        schema = self.get_configuration_schema()
-        if schema:
-            builder = ConfigurationWidgetBuilder()
-            return builder.build_configuration_panel(
-                schema,
-                self._config.__dict__ if hasattr(self, "_config") else {},
-                parent,
-            )
-        return None

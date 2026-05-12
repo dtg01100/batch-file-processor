@@ -36,6 +36,7 @@ import csv
 from typing import Any
 
 from core import utils
+from core.exceptions import CustomerLookupError
 from core.utils import prettify_dates
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -47,15 +48,12 @@ from dispatch.converters.customer_queries import (
     BASIC_CUSTOMER_QUERY_SQL,
 )
 from dispatch.converters.mixins import build_jolley_header_dict
+from dispatch.services.customer_lookup_service import CustomerLookupService
 from dispatch.services.database_connector import DatabaseConnector
 from dispatch.services.item_processing import ItemProcessor
 from dispatch.services.uom_lookup_service import UOMLookupService
 
 __all__ = ["CustomerLookupError"]
-
-from core.exceptions import CustomerLookupError
-from dispatch.converters.convert_base import create_edi_convert_wrapper
-from dispatch.services.customer_lookup_service import CustomerLookupService
 
 
 class JolleyCustomConverter(BaseEDIConverter):
@@ -88,7 +86,7 @@ class JolleyCustomConverter(BaseEDIConverter):
         )
         self._uom_service = UOMLookupService(self._db_connector.query_runner)
 
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
         context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -244,6 +242,8 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         self._db_connector.close()
 
+
+from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     JolleyCustomConverter, format_name="jolley_custom"

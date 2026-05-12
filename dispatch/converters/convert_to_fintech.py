@@ -74,7 +74,7 @@ class FintechConverter(BaseEDIConverter):
         context.user_data["inv_fetcher"] = InvFetcher(None, context.settings_dict)
 
         # Open output file and create CSV writer
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -246,11 +246,6 @@ class FintechConverter(BaseEDIConverter):
         return utils.datetime_from_invtime(inv_date).strftime("%m/%d/%Y")
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
+from .convert_base import create_edi_convert_wrapper
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(FintechConverter, format_name="fintech")

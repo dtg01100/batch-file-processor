@@ -2,16 +2,13 @@
 Simplified CSV Configuration Plugin
 
 Implements the ConfigurationPlugin interface for Simplified CSV format configuration.
-Provides support for Simplified CSV-specific configuration fields and validation.
 """
 
 from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
+from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import FieldDefinition, FieldType
-from .configuration_plugin import ConfigurationPlugin
-from .ui_abstraction import ConfigurationWidgetBuilder
-from .validation_framework import ValidationResult
 
 
 class SimplifiedCSVConfiguration:
@@ -33,47 +30,27 @@ class SimplifiedCSVConfiguration:
         self.simple_csv_sort_order = simple_csv_sort_order
 
 
-class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
-    """
-    Simplified CSV configuration plugin implementing the ConfigurationPlugin interface.
-
-    Provides support for Simplified CSV format configuration with
-    specific fields and validation.
-    """
+class SimplifiedCSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
+    """Simplified CSV configuration plugin."""
 
     @classmethod
     def get_name(cls) -> str:
-        """Get the human-readable name of the plugin."""
         return "Simplified CSV Configuration"
 
     @classmethod
     def get_identifier(cls) -> str:
-        """Get the unique identifier for the plugin."""
         return "simplified_csv_configuration"
 
     @classmethod
-    def get_description(cls) -> str:
-        """Get a detailed description of the plugin's functionality."""
-        return "Provides Simplified CSV format configuration options for EDI conversion"
-
-    @classmethod
-    def get_version(cls) -> str:
-        """Get the plugin version."""
-        return "1.0.0"
-
-    @classmethod
     def get_format_name(cls) -> str:
-        """Get the human-readable name of the configuration format."""
         return "Simplified CSV"
 
     @classmethod
     def get_format_enum(cls) -> ConvertFormat:
-        """Get the ConvertFormat enum value associated with this format."""
         return ConvertFormat.SIMPLIFIED_CSV
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
                 name="retail_uom",
@@ -108,22 +85,15 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="Simple CSV Sort Order",
                 description=(
-                    "Sort order for simple CSV format" " (comma-separated column names)"
+                    "Sort order for simple CSV format"
+                    " (comma-separated column names)"
                 ),
                 default="",
             ),
         ]
         return fields
 
-    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
-        """Validate configuration data against the format's schema."""
-        schema = self.get_configuration_schema()
-        if schema:
-            return schema.validate(config)
-        return ValidationResult(success=True, errors=[])
-
     def create_config(self, data: dict[str, Any]) -> SimplifiedCSVConfiguration:
-        """Create a configuration instance from raw data."""
         return SimplifiedCSVConfiguration(
             retail_uom=data.get("retail_uom", False),
             include_headers=data.get("include_headers", False),
@@ -133,7 +103,6 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
         )
 
     def serialize_config(self, config: SimplifiedCSVConfiguration) -> dict[str, Any]:
-        """Serialize a configuration instance to dictionary format."""
         return {
             "retail_uom": config.retail_uom,
             "include_headers": config.include_headers,
@@ -143,30 +112,4 @@ class SimplifiedCSVConfigurationPlugin(ConfigurationPlugin):
         }
 
     def deserialize_config(self, data: dict[str, Any]) -> SimplifiedCSVConfiguration:
-        """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
-
-    def initialize(self, config: dict[str, Any] | None = None) -> None:
-        """Initialize the plugin with configuration."""
-        if config:
-            self._config = self.create_config(config)
-        else:
-            self._config = self.create_config({})
-
-    def activate(self) -> None:
-        """Activate the plugin."""
-
-    def deactivate(self) -> None:
-        """Deactivate the plugin."""
-
-    def create_widget(self, parent: Any = None) -> Any:
-        """Create a UI widget for configuring the plugin."""
-        schema = self.get_configuration_schema()
-        if schema:
-            builder = ConfigurationWidgetBuilder()
-            return builder.build_configuration_panel(
-                schema,
-                self._config.__dict__ if hasattr(self, "_config") else {},
-                parent,
-            )
-        return None

@@ -211,11 +211,9 @@ class FieldDefinition:
             if invalid_values:
                 valid_choices = ", ".join(valid_values)
             errors.append(
-
-                    f"Field '{self.name}' contains invalid values:"
-                    f" {', '.join(invalid_values)}."
-                    f" Valid choices are: {valid_choices}"
-
+                f"Field '{self.name}' contains invalid values:"
+                f" {', '.join(invalid_values)}."
+                f" Valid choices are: {valid_choices}"
             )
         return errors
 

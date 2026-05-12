@@ -102,7 +102,7 @@ class CSVConverter(BaseEDIConverter):
         )
 
         # Open output file and create CSV writer
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
         )
         context.csv_writer = create_csv_writer(
@@ -302,7 +302,7 @@ class CSVConverter(BaseEDIConverter):
         if calc_upc:
             return process_upc_for_output(
                 fields,
-                calc_check_digit_flag=True,
+                _calc_check_digit_flag=True,
                 upc_target_length=user_data["upc_target_length"],
                 upc_padding=user_data["upc_padding_pattern"],
             )
@@ -336,12 +336,6 @@ class CSVConverter(BaseEDIConverter):
         return filter_description(desc, filter_ampersand=filter_ampersand)
 
 
-# Backward Compatibility Wrapper
-# =============================================================================
+from .convert_base import create_edi_convert_wrapper
 
-# Import at bottom for backward compatibility. The module-level edi_convert()
-# function must exist at the same import path callers expect.
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(CSVConverter, format_name="csv")

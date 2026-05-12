@@ -75,7 +75,7 @@ class ScannerWareConverter(BaseEDIConverter):
         context.user_data["output_path"] = output_path
 
         # Open output file in binary mode (matching original behavior)
-        context.output_file = open(output_path, "wb")  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(output_path, "wb")
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
@@ -187,7 +187,7 @@ class ScannerWareConverter(BaseEDIConverter):
 # Backward Compatibility Wrapper
 # =============================================================================
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
+from .convert_base import create_edi_convert_wrapper
 
 # Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(
@@ -195,28 +195,4 @@ edi_convert = create_edi_convert_wrapper(
 )
 
 
-if __name__ == "__main__":
-    import os
-    import tempfile
 
-    with tempfile.TemporaryDirectory() as workdir:
-        infile_path = os.path.abspath(input("input file path: "))
-        outfile_path = os.path.join(
-            os.path.expanduser("~"), os.path.basename(infile_path)
-        )
-        new_outfile = edi_convert(
-            infile_path,
-            outfile_path,
-            {},  # settings_dict
-            {  # parameters_dict
-                "a_record_padding": "CAPCDY",
-                "append_a_records": "True",
-                "a_record_append_text": "123456",
-                "force_txt_file_ext": "False",
-                "invoice_date_offset": 0,
-            },
-            {},  # upc_lookup
-        )
-        with open(new_outfile, encoding="utf-8") as new_outfile_handle:
-            for entry in new_outfile_handle.readlines():
-                print(repr(entry))

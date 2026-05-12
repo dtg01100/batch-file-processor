@@ -327,7 +327,7 @@ class PluginRegistry:
 
         """
         return [
-            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)
+            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]
             for plugin_id, plugin_class in sorted(cls._convert_plugins.items())
         ]
 
@@ -340,7 +340,7 @@ class PluginRegistry:
 
         """
         return [
-            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)
+            (plugin_id, plugin_class.PLUGIN_NAME, plugin_class.PLUGIN_DESCRIPTION)  # type: ignore[attr-defined]
             for plugin_id, plugin_class in sorted(cls._send_plugins.items())
         ]
 
@@ -417,4 +417,4 @@ def get_plugin_config(
     if plugin_class is None:
         return None
 
-    return plugin_class.get_config_fields()
+    return plugin_class.get_config_fields()  # type: ignore[attr-defined]

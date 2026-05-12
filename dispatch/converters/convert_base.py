@@ -34,7 +34,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, TextIO
 
-import core.utils as utils
+from core import utils
 
 
 @dataclass
@@ -338,9 +338,7 @@ class BaseEDIConverter(ABC):
         """
         context.arec_header = record.fields
 
-    def process_c_record(  # noqa: B027 - intentionally empty default implementation
-        self, record: EDIRecord, context: ConversionContext
-    ) -> None:
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:  # noqa: B027
         """Process a C record (charge/tax record).
 
         Default implementation does nothing. Subclasses should override
@@ -369,7 +367,7 @@ class BaseEDIConverter(ABC):
             context.output_file.close()
             context.output_file = None
 
-    def _handle_unknown_record(  # noqa: B027 - intentionally empty default implementation
+    def _handle_unknown_record(  # noqa: B027
         self, record: EDIRecord, context: ConversionContext
     ) -> None:
         """Handle unknown record types.
@@ -487,17 +485,6 @@ def normalize_parameter(
     return value
 
 
-# =============================================================================
-# Legacy Converter Classes Removed
-# =============================================================================
-# The following legacy classes have been removed:
-# - BaseConverter (use BaseEDIConverter instead)
-# - CSVConverter (use BaseEDIConverter with CSV initialization instead)
-# - DBEnabledConverter (use DatabaseConnectionMixin + BaseEDIConverter instead)
-#
-# All converters should now use the modern BaseEDIConverter class and mixins
-# from this module or dispatch.converters.mixins.
-# =============================================================================
 
 
 def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):

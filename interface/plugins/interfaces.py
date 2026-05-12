@@ -12,7 +12,7 @@ from .config_schemas import ConfigurationSchema
 from .validation_framework import ValidationResult
 
 
-class IPlugin(ABC):  # noqa: B024 - abstract base class enforced via __init_subclass__
+class IPlugin(ABC):  # noqa: B024
     """Core plugin interface - lifecycle and identification."""
 
     def __init_subclass__(cls, **kwargs):
@@ -58,7 +58,7 @@ class IPlugin(ABC):  # noqa: B024 - abstract base class enforced via __init_subc
         raise NotImplementedError
 
 
-class IConfigurablePlugin(ABC):  # noqa: B024 - abstract base class enforced via __init_subclass__
+class IConfigurablePlugin(ABC):  # noqa: B024
     """Plugin interface for configuration management."""
 
     def __init_subclass__(cls, **kwargs):
@@ -82,7 +82,7 @@ class IConfigurablePlugin(ABC):  # noqa: B024 - abstract base class enforced via
         raise NotImplementedError
 
 
-class IUIPlugin(ABC):  # noqa: B024 - abstract base class enforced via __init_subclass__
+class IUIPlugin(ABC):  # noqa: B024
     """Plugin interface for UI widget creation."""
 
     def __init_subclass__(cls, **kwargs):
@@ -95,7 +95,7 @@ class IUIPlugin(ABC):  # noqa: B024 - abstract base class enforced via __init_su
         raise NotImplementedError
 
 
-class IPluginCompatibility(ABC):  # noqa: B024 - abstract base class with default implementations
+class IPluginCompatibility(ABC):  # noqa: B024
     """Plugin interface for compatibility checking."""
 
     @classmethod

@@ -2,16 +2,13 @@
 ScannerWare Configuration Plugin
 
 Implements the ConfigurationPlugin interface for ScannerWare format configuration.
-Provides support for ScannerWare-specific configuration fields and validation.
 """
 
 from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
+from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import FieldDefinition, FieldType
-from .configuration_plugin import ConfigurationPlugin
-from .ui_abstraction import ConfigurationWidgetBuilder
-from .validation_framework import ValidationResult
 
 
 class ScannerWareConfiguration:
@@ -35,47 +32,27 @@ class ScannerWareConfiguration:
         self.retail_uom = retail_uom
 
 
-class ScannerWareConfigurationPlugin(ConfigurationPlugin):
-    """
-    ScannerWare configuration plugin implementing the ConfigurationPlugin interface.
-
-    Provides support for ScannerWare format configuration with
-    specific fields and validation.
-    """
+class ScannerWareConfigurationPlugin(BaseSimpleConfigurationPlugin):
+    """ScannerWare configuration plugin."""
 
     @classmethod
     def get_name(cls) -> str:
-        """Get the human-readable name of the plugin."""
         return "ScannerWare Configuration"
 
     @classmethod
     def get_identifier(cls) -> str:
-        """Get the unique identifier for the plugin."""
         return "scannerware_configuration"
 
     @classmethod
-    def get_description(cls) -> str:
-        """Get a detailed description of the plugin's functionality."""
-        return "Provides ScannerWare format configuration options for EDI conversion"
-
-    @classmethod
-    def get_version(cls) -> str:
-        """Get the plugin version."""
-        return "1.0.0"
-
-    @classmethod
     def get_format_name(cls) -> str:
-        """Get the human-readable name of the configuration format."""
         return "ScannerWare"
 
     @classmethod
     def get_format_enum(cls) -> ConvertFormat:
-        """Get the ConvertFormat enum value associated with this format."""
         return ConvertFormat.SCANNERWARE
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        """Get the list of field definitions for this configuration format."""
         fields = [
             FieldDefinition(
                 name="a_record_padding",
@@ -131,15 +108,7 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
-        """Validate configuration data against the format's schema."""
-        schema = self.get_configuration_schema()
-        if schema:
-            return schema.validate(config)
-        return ValidationResult(success=True, errors=[])
-
     def create_config(self, data: dict[str, Any]) -> ScannerWareConfiguration:
-        """Create a configuration instance from raw data."""
         return ScannerWareConfiguration(
             a_record_padding=data.get("a_record_padding", ""),
             append_a_records=data.get("append_a_records", False),
@@ -150,7 +119,6 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
         )
 
     def serialize_config(self, config: ScannerWareConfiguration) -> dict[str, Any]:
-        """Serialize a configuration instance to dictionary format."""
         return {
             "a_record_padding": config.a_record_padding,
             "append_a_records": config.append_a_records,
@@ -161,30 +129,4 @@ class ScannerWareConfigurationPlugin(ConfigurationPlugin):
         }
 
     def deserialize_config(self, data: dict[str, Any]) -> ScannerWareConfiguration:
-        """Deserialize stored data into a configuration instance."""
         return self.create_config(data)
-
-    def initialize(self, config: dict[str, Any] | None = None) -> None:
-        """Initialize the plugin with configuration."""
-        if config:
-            self._config = self.create_config(config)
-        else:
-            self._config = self.create_config({})
-
-    def activate(self) -> None:
-        """Activate the plugin."""
-
-    def deactivate(self) -> None:
-        """Deactivate the plugin."""
-
-    def create_widget(self, parent: Any = None) -> Any:
-        """Create a UI widget for configuring the plugin."""
-        schema = self.get_configuration_schema()
-        if schema:
-            builder = ConfigurationWidgetBuilder()
-            return builder.build_configuration_panel(
-                schema,
-                self._config.__dict__ if hasattr(self, "_config") else {},
-                parent,
-            )
-        return None

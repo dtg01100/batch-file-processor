@@ -2,108 +2,68 @@
 Tweaks Configuration Plugin
 
 Implements the ConfigurationPlugin interface for Tweaks format configuration.
-Provides support for Tweaks-specific configuration fields and validation based
-on the EDITweaker's TweakerConfig options.
 """
 
+from dataclasses import dataclass
 from typing import Any
 
 from ..models.folder_configuration import ConvertFormat
+from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import FieldDefinition, FieldType
-from .configuration_plugin import ConfigurationPlugin
-from .ui_abstraction import ConfigurationWidgetBuilder
-from .validation_framework import ValidationResult
 
 
+@dataclass
 class TweaksConfiguration:
     """Tweaks configuration data class."""
 
-    def __init__(
-        self,
-        *,
-        pad_arec: bool = False,
-        arec_padding: str = "",
-        arec_padding_len: int = 0,
-        append_arec: bool = False,
-        append_arec_text: str = "",
-        invoice_date_custom_format: bool = False,
-        invoice_date_custom_format_string: str = "%Y-%m-%d",
-        force_txt_file_ext: bool = False,
-        calc_upc: bool = False,
-        invoice_date_offset: int = 0,
-        retail_uom: bool = False,
-        override_upc: bool = False,
-        override_upc_level: int = 1,
-        override_upc_category_filter: str = "ALL",
-        split_prepaid_sales_tax_crec: bool = False,
-        upc_target_length: int = 11,
-        upc_padding_pattern: str = "           ",
-    ) -> None:
-        self.pad_arec = pad_arec
-        self.arec_padding = arec_padding
-        self.arec_padding_len = arec_padding_len
-        self.append_arec = append_arec
-        self.append_arec_text = append_arec_text
-        self.invoice_date_custom_format = invoice_date_custom_format
-        self.invoice_date_custom_format_string = invoice_date_custom_format_string
-        self.force_txt_file_ext = force_txt_file_ext
-        self.calc_upc = calc_upc
-        self.invoice_date_offset = invoice_date_offset
-        self.retail_uom = retail_uom
-        self.override_upc = override_upc
-        self.override_upc_level = override_upc_level
-        self.override_upc_category_filter = override_upc_category_filter
-        self.split_prepaid_sales_tax_crec = split_prepaid_sales_tax_crec
-        self.upc_target_length = upc_target_length
-        self.upc_padding_pattern = upc_padding_pattern
+    pad_arec: bool = False
+    arec_padding: str = ""
+    arec_padding_len: int = 0
+    append_arec: bool = False
+    append_arec_text: str = ""
+    invoice_date_custom_format: bool = False
+    invoice_date_custom_format_string: str = "%Y-%m-%d"
+    force_txt_file_ext: bool = False
+    calc_upc: bool = False
+    invoice_date_offset: int = 0
+    retail_uom: bool = False
+    override_upc: bool = False
+    override_upc_level: int = 1
+    override_upc_category_filter: str = "ALL"
+    split_prepaid_sales_tax_crec: bool = False
+    upc_target_length: int = 11
+    upc_padding_pattern: str = "           "
 
 
-class TweaksConfigurationPlugin(ConfigurationPlugin):
-    """
-    Tweaks configuration plugin implementing the ConfigurationPlugin interface.
-
-    Provides support for Tweaks format configuration with specific fields
-    based on EDITweaker's TweakerConfig options.
-    """
+class TweaksConfigurationPlugin(BaseSimpleConfigurationPlugin):
+    """Tweaks configuration plugin."""
 
     @classmethod
     def get_name(cls) -> str:
-        """Get the human-readable name of the plugin."""
         return "Tweaks Configuration"
 
     @classmethod
     def get_identifier(cls) -> str:
-        """Get the unique identifier for the plugin."""
         return "tweaks_configuration"
 
     @classmethod
     def get_description(cls) -> str:
-        """Get a detailed description of the plugin's functionality."""
         return (
             "Provides Tweaks format configuration options for EDI tweaking "
             "including A-record padding, invoice date handling, UPC modifications"
         )
 
     @classmethod
-    def get_version(cls) -> str:
-        """Get the plugin version."""
-        return "1.0.0"
-
-    @classmethod
     def get_format_name(cls) -> str:
-        """Get the human-readable name of the configuration format."""
         return "Tweaks"
 
     @classmethod
     def get_format_enum(cls) -> ConvertFormat:
-        """Get the ConvertFormat enum value associated with this format."""
         return ConvertFormat.TWEAKS
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        """Get the list of field definitions for this configuration format."""
         fields = [
-            # A-Record Padding
             FieldDefinition(
                 name="pad_arec",
                 field_type=FieldType.BOOLEAN,
@@ -129,7 +89,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                     {"label": "30", "value": 30},
                 ],
             ),
-            # A-Record Appending
             FieldDefinition(
                 name="append_arec",
                 field_type=FieldType.BOOLEAN,
@@ -142,11 +101,11 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 field_type=FieldType.STRING,
                 label="A-Record Append Text",
                 description=(
-                    "Text to append to A records" " (use %po_str% for PO number lookup)"
+                    "Text to append to A records"
+                    " (use %po_str% for PO number lookup)"
                 ),
                 default="",
             ),
-            # Invoice Date Handling
             FieldDefinition(
                 name="invoice_date_custom_format",
                 field_type=FieldType.BOOLEAN,
@@ -170,7 +129,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 min_value=-365,
                 max_value=365,
             ),
-            # Output File Options
             FieldDefinition(
                 name="force_txt_file_ext",
                 field_type=FieldType.BOOLEAN,
@@ -178,7 +136,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 description="Force .txt extension on output file",
                 default=False,
             ),
-            # UPC Options
             FieldDefinition(
                 name="calc_upc",
                 field_type=FieldType.BOOLEAN,
@@ -193,7 +150,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 description="Convert to retail UOM (case to each)",
                 default=False,
             ),
-            # Tax Handling
             FieldDefinition(
                 name="split_prepaid_sales_tax_crec",
                 field_type=FieldType.BOOLEAN,
@@ -201,7 +157,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 description="Split prepaid sales tax into C records",
                 default=False,
             ),
-            # UPC Override
             FieldDefinition(
                 name="override_upc",
                 field_type=FieldType.BOOLEAN,
@@ -228,7 +183,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
                 ),
                 default="ALL",
             ),
-            # UPC Padding
             FieldDefinition(
                 name="upc_target_length",
                 field_type=FieldType.INTEGER,
@@ -248,15 +202,7 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
         ]
         return fields
 
-    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
-        """Validate configuration data against the format's schema."""
-        schema = self.get_configuration_schema()
-        if schema:
-            return schema.validate(config)
-        return ValidationResult(success=True, errors=[])
-
     def create_config(self, data: dict[str, Any]) -> TweaksConfiguration:
-        """Create a configuration instance from raw data."""
         return TweaksConfiguration(
             pad_arec=data.get("pad_arec", False),
             arec_padding=data.get("arec_padding", ""),
@@ -284,7 +230,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
         )
 
     def serialize_config(self, config: TweaksConfiguration) -> dict[str, Any]:
-        """Serialize a configuration instance to dictionary format."""
         if isinstance(config, dict):
             return config
         return {
@@ -310,32 +255,6 @@ class TweaksConfigurationPlugin(ConfigurationPlugin):
         }
 
     def deserialize_config(self, data: dict[str, Any]) -> TweaksConfiguration:
-        """Deserialize stored data into a configuration instance."""
         if isinstance(data, TweaksConfiguration):
             return data
         return self.create_config(data)
-
-    def initialize(self, config: dict[str, Any] | None = None) -> None:
-        """Initialize the plugin with configuration."""
-        if config:
-            self._config = self.create_config(config)
-        else:
-            self._config = self.create_config({})
-
-    def activate(self) -> None:
-        """Activate the plugin."""
-
-    def deactivate(self) -> None:
-        """Deactivate the plugin."""
-
-    def create_widget(self, parent: Any = None) -> Any:
-        """Create a UI widget for configuring the plugin."""
-        schema = self.get_configuration_schema()
-        if schema:
-            builder = ConfigurationWidgetBuilder()
-            return builder.build_configuration_panel(
-                schema,
-                self._config.__dict__ if hasattr(self, "_config") else {},
-                parent,
-            )
-        return None

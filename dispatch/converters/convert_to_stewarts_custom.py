@@ -37,6 +37,7 @@ from dispatch.converters.convert_base import (
     EDIRecord,
 )
 from dispatch.converters.customer_queries import STEWARTS_CUSTOMER_QUERY_SQL
+from dispatch.services.customer_lookup_service import CustomerLookupService
 from dispatch.services.database_connector import DatabaseConnector
 from dispatch.services.item_processing import ItemProcessor
 from dispatch.services.uom_lookup_service import UOMLookupService
@@ -72,7 +73,7 @@ class StewartsCustomConverter(BaseEDIConverter):
         )
         self._uom_service = UOMLookupService(self._db_connector.query_runner)
 
-        context.output_file = open(  # noqa: SIM115 - file managed by converter lifecycle, closed in _finalize_output
+        context.output_file = open(
             context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
         )
         context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -262,13 +263,7 @@ class StewartsCustomConverter(BaseEDIConverter):
         self._db_connector.close()
 
 
-# Backward Compatibility Wrapper
-# Import at bottom for backward compatibility. The module-level edi_convert()
-# function must exist at the same import path callers expect.
-from dispatch.converters.convert_base import create_edi_convert_wrapper  # noqa: E402
-from dispatch.services.customer_lookup_service import (  # noqa: E402
-    CustomerLookupService,
-)
+from .convert_base import create_edi_convert_wrapper
 
 edi_convert = create_edi_convert_wrapper(
     StewartsCustomConverter, format_name="stewarts_custom"

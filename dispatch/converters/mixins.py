@@ -23,7 +23,6 @@ Example:
 
 """
 
-from abc import ABC
 from typing import Any
 
 from core.database import QueryRunner
@@ -35,7 +34,7 @@ from dispatch.services.item_processing import ItemProcessor
 logger = get_logger(__name__)
 
 
-class DatabaseConnectionMixin(ABC):  # noqa: B024 - concrete base class with mixin behavior
+class DatabaseConnectionMixin:
     """Mixin for converters that require database connections.
 
     Provides common database initialization logic using QueryRunner.
@@ -93,7 +92,7 @@ class DatabaseConnectionMixin(ABC):  # noqa: B024 - concrete base class with mix
         self._db_initialized = False
 
 
-class CustomerLookupMixin(ABC):
+class CustomerLookupMixin:
     """Mixin for converters that perform customer header lookups.
 
     Provides common customer header field retrieval logic for AS400 data.
@@ -188,7 +187,7 @@ class CustomerLookupMixin(ABC):
         return self.header_fields_dict
 
 
-class UOMLookupMixin(ABC):
+class UOMLookupMixin:
     """Mixin for converters that perform UOM (Unit of Measure) lookups.
 
     Provides common UOM lookup and resolution logic.
@@ -311,7 +310,7 @@ class UOMLookupMixin(ABC):
             return "?"
 
 
-class ItemProcessingMixin(ABC):  # noqa: B024 - concrete base class with mixin behavior
+class ItemProcessingMixin:
     """Mixin for converters that process line items.
 
     Provides common item total calculation and UPC generation logic.
