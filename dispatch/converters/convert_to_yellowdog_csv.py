@@ -156,7 +156,7 @@ class YellowDogConverter(BaseEDIConverter):
         self.arec_line = record.fields
         self.brec_index = 0
 
-    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
         """Process a B record (line item), adding to batch.
 
         Args:
@@ -166,7 +166,7 @@ class YellowDogConverter(BaseEDIConverter):
         """
         self.brec_lines.append(record.fields)
 
-    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_c_record(self, record: EDIRecord, _context: ConversionContext) -> None:
         """Process a C record (charge/tax), adding to batch.
 
         Args:

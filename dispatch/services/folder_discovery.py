@@ -12,7 +12,6 @@ Responsibilities:
 """
 
 import os
-from typing import Any
 
 from core.structured_logging import get_logger
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog

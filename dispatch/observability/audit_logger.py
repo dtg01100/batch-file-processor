@@ -27,8 +27,7 @@ class AuditEvent:
             self.timestamp = datetime.now(UTC).isoformat()
 
     def to_dict(self) -> dict[str, Any]:
-        result = asdict(self)
-        return result
+        return asdict(self)
 
 
 class AuditLogger:

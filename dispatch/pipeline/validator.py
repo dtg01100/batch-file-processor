@@ -288,8 +288,7 @@ class EDIValidationStep:
             True if processing should be blocked on validation failure
 
         """
-        report_edi_errors = params.get("report_edi_errors", False)
-        return report_edi_errors
+        return params.get("report_edi_errors", False)
 
     def execute(self, file_path: str, folder: dict) -> tuple[bool, list[str] | str]:
         """Execute validation step (wrapper for pipeline compatibility).

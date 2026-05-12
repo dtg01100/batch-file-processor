@@ -19,7 +19,6 @@ from core.structured_logging import (
     log_file_operation,
 )
 from core.utils import normalize_bool
-from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunLog
 from dispatch.send_manager import SendManager
 
@@ -754,7 +753,9 @@ class FileProcessor:
         result.errors.append(f"Failed to send {file_basename}")
         logger.warning("Failed to send file: %s", current_file)
 
-    def _log_success(self, file_basename: str, file_path: str, _run_log: RunLog | None) -> None:
+    def _log_success(
+        self, file_basename: str, file_path: str, _run_log: RunLog | None
+    ) -> None:
         """Log successful processing.
 
         Args:

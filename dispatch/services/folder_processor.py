@@ -41,7 +41,6 @@ from core.utils.file_utils import calculate_file_checksum
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
 from dispatch.results import FolderResult
 from dispatch.services.file_processor import FileProcessor
-from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.services.progress_reporting import ProgressReportingService
 
 logger = get_logger(__name__)

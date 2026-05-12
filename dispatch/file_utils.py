@@ -10,14 +10,13 @@ import os
 import re
 import shutil
 import tempfile
-from typing import Any
 
 from core.structured_logging import get_logger
-from dispatch.interfaces import FileSystemInterface, RunLog
 
 # Backward-compatible re-export: callers use do_clear_old_files from this module.
 # Import directly from core.utils.file_utils in new code.
 from core.utils.file_utils import clear_old_files as do_clear_old_files
+from dispatch.interfaces import FileSystemInterface, RunLog
 
 logger = get_logger(__name__)
 
@@ -65,9 +64,8 @@ def build_output_filename(
         rename_file = original
 
     # Strip invalid characters
-    stripped_filename = _INVALID_FILENAME_CHARS_RE.sub("", rename_file)
+    return _INVALID_FILENAME_CHARS_RE.sub("", rename_file)
 
-    return stripped_filename
 
 
 def build_error_log_filename(
@@ -96,9 +94,8 @@ def build_error_log_filename(
     log_name = f"{cleaned_alias} errors.{timestamp}.txt"
 
     # Build full path
-    full_path = os.path.join(errors_folder, os.path.basename(folder_name), log_name)
+    return os.path.join(errors_folder, os.path.basename(folder_name), log_name)
 
-    return full_path
 
 
 def get_file_extension(filename: str) -> str:
@@ -335,7 +332,7 @@ def write_to_run_log(run_log: RunLog | None, message: str, prefix: str = "") -> 
     full_message = f"{prefix}{message}" if prefix else message
     if hasattr(run_log, "write"):
         with contextlib.suppress(Exception):
-            result = run_log.write(full_message)
+            run_log.write(full_message)
     elif hasattr(run_log, "append"):
         with contextlib.suppress(Exception):
             run_log.append(full_message)

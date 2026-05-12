@@ -31,9 +31,8 @@ Example usage:
 
 import csv
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, TextIO
+from typing import Any, TextIO
 
 from core import utils
 
