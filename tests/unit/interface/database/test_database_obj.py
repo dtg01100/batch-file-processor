@@ -228,7 +228,7 @@ class TestDatabaseObjVersionChecking:
     @pytest.fixture
     def mock_tables(self):
         """Create mock table objects."""
-        tables = {
+        return {
             "folders": MagicMock(),
             "emails_to_send": MagicMock(),
             "working_batch_emails_to_send": MagicMock(),
@@ -238,7 +238,6 @@ class TestDatabaseObjVersionChecking:
             "settings": MagicMock(),
             "version": MagicMock(),
         }
-        return tables
 
     def test_version_too_old_triggers_upgrade(self, mock_tables):
         """Test that old database version triggers upgrade when no connection injected."""

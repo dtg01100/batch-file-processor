@@ -533,8 +533,7 @@ class TestSchemaErrorHandling:
     @pytest.fixture
     def mock_database(self):
         """Create a mock database connection."""
-        mock_db = MagicMock()
-        return mock_db
+        return MagicMock()
 
     def test_handles_query_error_gracefully(self, mock_database):
         """Test that ensure_schema handles query errors gracefully."""

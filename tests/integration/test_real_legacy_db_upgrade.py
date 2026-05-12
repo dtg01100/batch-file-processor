@@ -1141,23 +1141,20 @@ class TestNoBehavioralChangeAfterUpgrade:
     ]
 
     def _snapshot_folders(self, conn):
-        rows = conn.execute(
+        return conn.execute(
             f"SELECT {', '.join(self._FOLDER_BEHAVIORAL_COLS)} FROM folders ORDER BY id"
         ).fetchall()
-        return rows
 
     def _snapshot_processed_files(self, conn):
-        rows = conn.execute(
+        return conn.execute(
             f"SELECT {', '.join(self._PROCESSED_FILES_DEDUP_COLS)} "
             f"FROM processed_files ORDER BY id"
         ).fetchall()
-        return rows
 
     def _snapshot_settings(self, conn):
-        rows = conn.execute(
+        return conn.execute(
             f"SELECT {', '.join(self._SETTINGS_BEHAVIORAL_COLS)} FROM settings ORDER BY id"
         ).fetchall()
-        return rows
 
     @pytest.fixture
     def snapshots_and_migrated(self, legacy_db, tmp_path):

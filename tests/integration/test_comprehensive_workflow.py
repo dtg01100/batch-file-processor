@@ -262,9 +262,8 @@ def run_dispatch(orchestrator, folder, db):
     processed_files = db.processed_files
 
     # Process the folder
-    result = orchestrator.process_folder(folder, run_log, processed_files)
+    return orchestrator.process_folder(folder, run_log, processed_files)
 
-    return result
 
 
 def verify_file_in_folder(folder_path: Path, filename_pattern: str = "*") -> list[Path]:

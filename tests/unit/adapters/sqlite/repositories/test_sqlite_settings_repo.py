@@ -9,8 +9,7 @@ from core.ports.repositories import ISettingsRepository
 
 
 def _make_db():
-    db = MagicMock()
-    return db
+    return MagicMock()
 
 
 class TestISettingsRepositoryConformance:

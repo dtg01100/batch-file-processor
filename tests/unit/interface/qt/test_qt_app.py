@@ -70,14 +70,12 @@ def mock_progress_service():
 @pytest.fixture
 def qt_app():
     """Create QApplication instance for tests."""
-    app = QApplication([]) if not QApplication.instance() else QApplication.instance()
-    return app
+    return QApplication([]) if not QApplication.instance() else QApplication.instance()
 
 
 def _make_app(**kwargs):
     """Helper to create a QtBatchFileSenderApp with minimal required parameters."""
-    app = QtBatchFileSenderApp(**kwargs)
-    return app
+    return QtBatchFileSenderApp(**kwargs)
 
 
 class TestQtAppInitialization:

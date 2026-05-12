@@ -43,8 +43,7 @@ from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 @pytest.fixture
 def qt_app():
     """Create QApplication instance for tests."""
-    app = QApplication([]) if not QApplication.instance() else QApplication.instance()
-    return app
+    return QApplication([]) if not QApplication.instance() else QApplication.instance()
 
 
 @pytest.fixture

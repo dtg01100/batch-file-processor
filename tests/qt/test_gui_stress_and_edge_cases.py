@@ -1249,8 +1249,7 @@ class TestAppSmokeActions:
             running_platform=platform.system(),
         )
 
-        app = QtBatchFileSenderApp(appname=appname, version="1.0", database_obj=db_obj)
-        return app
+        return QtBatchFileSenderApp(appname=appname, version="1.0", database_obj=db_obj)
 
     def test_set_defaults_action_no_crash(self, app, qtbot, monkeypatch):
         """Test that clicking 'Set Defaults' doesn't crash (fixes recent NameError/QLayout issues)."""

@@ -169,7 +169,7 @@ def get_to_dict_keys_with_http() -> set[str]:
 def get_from_dict_expected_keys() -> set[str]:
     """Get all keys that from_dict() expects to read."""
     # Create a comprehensive dict with all possible keys
-    all_keys = {
+    return {
         # Identity
         "folder_name",
         "folder_is_active",
@@ -232,7 +232,6 @@ def get_from_dict_expected_keys() -> set[str]:
         "simple_csv_sort_order",
         "split_prepaid_sales_tax_crec",
     }
-    return all_keys
 
 
 def get_extractor_fields() -> set[str]:

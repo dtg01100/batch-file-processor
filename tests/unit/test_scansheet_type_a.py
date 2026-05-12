@@ -65,14 +65,13 @@ def run_scansheet_converter(
     output_path = os.path.join(output_dir, "output.xlsx")
 
     try:
-        result = edi_convert(
+        return edi_convert(
             input_file,
             output_path,
             settings_dict,
             filter_params,
             {},
         )
-        return result
     except Exception as e:
         pytest.fail(f"Conversion failed: {e}")
 

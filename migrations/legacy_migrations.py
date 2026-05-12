@@ -722,5 +722,4 @@ def run_legacy_migrations(
             db_version.update(update_version, ["id"])
             _log_migration_step("32", "33")
 
-    db_version_dict = db_version.find_one(id=1)
-    return db_version_dict
+    return db_version.find_one(id=1)

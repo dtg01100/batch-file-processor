@@ -123,7 +123,7 @@ def run_wine(cmd, cwd=None, *, check=True, timeout=None):
     env["WINEPREFIX"] = str(WINE_PREFIX)
     env["WINEDEBUG"] = "-all"  # Suppress wine debug output
 
-    result = subprocess.run(
+    return subprocess.run(
         wine_cmd,
         cwd=cwd,
         env=env,
@@ -132,7 +132,6 @@ def run_wine(cmd, cwd=None, *, check=True, timeout=None):
         text=True,
         timeout=timeout,
     )
-    return result
 
 
 def setup_python():

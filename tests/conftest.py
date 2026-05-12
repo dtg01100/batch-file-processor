@@ -263,11 +263,10 @@ def temp_database(tmp_path):
     db_path = tmp_path / "test_folders.db"
 
     # Create database with current schema
-    db = DatabaseObj(
+    return DatabaseObj(
         database_path=str(db_path),
         database_version=CURRENT_DATABASE_VERSION,
         config_folder=str(tmp_path),
         running_platform="Linux",
     )
 
-    return db

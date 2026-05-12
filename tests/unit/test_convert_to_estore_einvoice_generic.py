@@ -55,8 +55,7 @@ class SQLiteTestConnection:
         # Remove schema prefix
         query = query.replace("dacdata.", "")
         # Remove trim() function calls - SQLite doesn't need them for text columns
-        query = re.sub(r"trim\((\w+)\)", r"\1", query, flags=re.IGNORECASE)
-        return query
+        return re.sub(r"trim\((\w+)\)", r"\1", query, flags=re.IGNORECASE)
 
     def execute(self, query: str, params: tuple | None = None) -> list[dict]:
         """Execute query and return results as list of dicts.
