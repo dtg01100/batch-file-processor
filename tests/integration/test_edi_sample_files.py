@@ -77,6 +77,7 @@ def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
             time.sleep(0.01)
     raise RuntimeError(f"Server on {host}:{port} did not start within {timeout}s")
 
+
 def _wait_for_messages(
     handler, count: int, timeout: float = 5.0, interval: float = 0.01
 ) -> None:
@@ -87,6 +88,7 @@ def _wait_for_messages(
         if remaining <= 0:
             break
         time.sleep(min(interval, remaining))
+
 
 def _count_a_records(file_path):
     count = 0

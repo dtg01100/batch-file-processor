@@ -273,9 +273,7 @@ class TestResourceContention:
         for folder_config in multiple_folders_workspace["folders"]:
             # Add folder id to config
             folder_cfg = folder_config["config"].copy()
-            folder_cfg["id"] = (
-                folder_config.get("folders_id", None)
-            )
+            folder_cfg["id"] = folder_config.get("folders_id", None)
             result = orchestrator.process_folder(
                 folder_cfg, run_log, temp_database.processed_files
             )

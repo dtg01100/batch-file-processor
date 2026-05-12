@@ -1139,12 +1139,12 @@ class TestEstoreEinvoiceGenericQtyToInt(TestEstoreEinvoiceGenericFixtures):
         """Test conversion of positive quantity string."""
         # The function is local, but we can test through edi_convert behavior
         # This tests the edge cases covered in the code
-        pass  # Tested implicitly through converter tests
+        # Tested implicitly through converter tests
 
     def test_qty_to_int_negative(self):
         """Test conversion of negative quantity string."""
         # Quantity starting with '-' should be made positive
-        pass  # Tested implicitly through converter tests
+        # Tested implicitly through converter tests
 
 
 class TestEstoreEinvoiceGenericPurchaseOrder(TestEstoreEinvoiceGenericFixtures):

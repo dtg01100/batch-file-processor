@@ -1331,7 +1331,7 @@ class TestEditFoldersDialogStress:
             None,
             sparse_config,
             settings_provider=lambda: {"enable_email": False},
-            alias_provider=lambda: [],
+            alias_provider=list,
         )
         qtbot.addWidget(dialog)
 
@@ -1366,7 +1366,7 @@ class TestEditFoldersDialogStress:
             None,
             malformed_config,
             settings_provider=lambda: {"enable_email": False},
-            alias_provider=lambda: [],
+            alias_provider=list,
         )
         qtbot.addWidget(dialog)
 

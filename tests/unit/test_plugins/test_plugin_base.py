@@ -49,6 +49,7 @@ class TestPlugin(PluginBase):
     def create_widget(self, parent: Any = None) -> Any:
         return None
 
+
 class TestPluginWithConfig(TestPlugin):
     """
     Test plugin with configuration schema.
@@ -77,6 +78,7 @@ class TestPluginWithConfig(TestPlugin):
             ),
         ]
         return ConfigurationSchema(fields)
+
 
 class TestPluginBase(unittest.TestCase):
     """
@@ -199,6 +201,7 @@ class TestPluginBase(unittest.TestCase):
 
         self.assertTrue(result.success)
         mock_initialize.assert_called_once_with(valid_config)
+
 
 if __name__ == "__main__":
     unittest.main()

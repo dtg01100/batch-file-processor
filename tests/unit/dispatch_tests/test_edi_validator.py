@@ -5,7 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from dispatch.edi_validator import EDIValidator, RealFileSystem
+from dispatch.edi_validator import EDIValidator
+from dispatch.file_system import RealFileSystem
 
 
 class MockFileSystem:

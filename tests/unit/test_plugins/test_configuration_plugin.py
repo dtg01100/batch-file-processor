@@ -105,6 +105,7 @@ class TestConfigurationPluginInterface(unittest.TestCase):
         self.assertEqual(len(schema.fields), 1)
         self.assertEqual(schema.fields[0].name, "test_field")
 
+
 class TestCSVConfigurationPlugin(unittest.TestCase):
     """Tests for CSVConfigurationPlugin implementation."""
 
@@ -297,6 +298,7 @@ class TestCSVConfigurationPlugin(unittest.TestCase):
         # Test activate/deactivate
         self.plugin.activate()
         self.plugin.deactivate()
+
 
 if __name__ == "__main__":
     unittest.main()

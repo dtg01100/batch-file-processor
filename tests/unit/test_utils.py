@@ -10,7 +10,7 @@ Tests cover:
 - utils.dactime_from_invtime() - converts invoice time string to DAC time
 - utils.apply_retail_uom_transform() - transforms B record to each-level retail UOM
 - utils.apply_upc_override() - overrides UPC from lookup table
-- utils.do_clear_old_files() - removes oldest files when folder exceeds maximum count
+- utils.clear_old_files() - removes oldest files when folder exceeds maximum count
 """
 
 import pytest
@@ -549,14 +549,14 @@ class TestApplyUpcOverride:
 
 
 # =============================================================================
-# utils.do_clear_old_files() tests
+# utils.clear_old_files() tests
 # =============================================================================
 
 
 class TestDoClearOldFiles:
-    """Tests for utils.do_clear_old_files() function.
+    """Tests for utils.clear_old_files() function.
 
-    utils.do_clear_old_files(folder_path, maximum_files) removes the oldest files
+    utils.clear_old_files(folder_path, maximum_files) removes the oldest files
     (by ctime) until the folder contains at most maximum_files files.
     """
 
@@ -564,33 +564,33 @@ class TestDoClearOldFiles:
         """When file count equals maximum_files, nothing should be removed."""
         for i in range(3):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
-        utils.do_clear_old_files(str(tmp_path), 3)
+        utils.clear_old_files(str(tmp_path), 3)
         assert len(list(tmp_path.iterdir())) == 3
 
     def test_no_files_removed_when_below_limit(self, tmp_path):
         """When file count is below maximum_files, nothing should be removed."""
         for i in range(2):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
-        utils.do_clear_old_files(str(tmp_path), 5)
+        utils.clear_old_files(str(tmp_path), 5)
         assert len(list(tmp_path.iterdir())) == 2
 
     def test_removes_files_to_reach_limit(self, tmp_path):
         """When file count exceeds maximum_files, files should be removed."""
         for i in range(5):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
-        utils.do_clear_old_files(str(tmp_path), 3)
+        utils.clear_old_files(str(tmp_path), 3)
         assert len(list(tmp_path.iterdir())) == 3
 
     def test_removes_all_files_when_limit_is_zero(self, tmp_path):
         """When maximum_files is 0, all files should be removed."""
         for i in range(4):
             (tmp_path / f"file_{i}.txt").write_text(f"content {i}")
-        utils.do_clear_old_files(str(tmp_path), 0)
+        utils.clear_old_files(str(tmp_path), 0)
         assert len(list(tmp_path.iterdir())) == 0
 
     def test_empty_folder_does_nothing(self, tmp_path):
         """An empty folder should not raise any errors."""
-        utils.do_clear_old_files(str(tmp_path), 3)
+        utils.clear_old_files(str(tmp_path), 3)
         assert len(list(tmp_path.iterdir())) == 0
 
     def test_removes_oldest_file_by_ctime(self, tmp_path):
@@ -616,7 +616,7 @@ class TestDoClearOldFiles:
             return ctime_map.get(path, original_getctime(path))
 
         with patch("os.path.getctime", side_effect=mock_getctime):
-            utils.do_clear_old_files(str(tmp_path), 2)
+            utils.clear_old_files(str(tmp_path), 2)
 
         remaining = {f.name for f in tmp_path.iterdir()}
         assert "file_a.txt" not in remaining

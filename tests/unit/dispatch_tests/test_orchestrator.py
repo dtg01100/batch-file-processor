@@ -72,7 +72,6 @@ class TestDispatchConfig:
         assert config.validator_step is None
         assert config.error_handler is None
         assert config.settings == {}
-        assert config.version == "1.0.0"
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -88,7 +87,6 @@ class TestDispatchConfig:
             validator_step=validator_step,
             error_handler=handler,
             settings={"key": "value"},
-            version="2.0.0",
         )
 
         assert config.database is db
@@ -97,7 +95,6 @@ class TestDispatchConfig:
         assert config.validator_step is validator_step
         assert config.error_handler is handler
         assert config.settings == {"key": "value"}
-        assert config.version == "2.0.0"
 
 
 class TestFolderResult:

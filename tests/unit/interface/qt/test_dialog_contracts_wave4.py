@@ -194,7 +194,7 @@ class TestNonApplyDialogRejectContracts:
 
 class TestAccessibilityContracts:
     def test_edit_settings_key_controls_have_accessibility_metadata(self, qtbot):
-        dialog = EditSettingsDialog(None, {}, settings_provider=lambda: {})
+        dialog = EditSettingsDialog(None, {}, settings_provider=dict)
         qtbot.addWidget(dialog)
 
         controls = [
@@ -244,7 +244,7 @@ class TestAccessibilityContracts:
 
 class TestValidationFocusContracts:
     def test_edit_settings_focuses_first_invalid_field(self, qtbot):
-        dialog = EditSettingsDialog(None, {}, settings_provider=lambda: {})
+        dialog = EditSettingsDialog(None, {}, settings_provider=dict)
         qtbot.addWidget(dialog)
 
         dialog._enable_email_cb.setChecked(True)

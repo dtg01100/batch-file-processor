@@ -249,7 +249,6 @@ class MockQueryRunner:
 
     def close(self) -> None:
         """No-op close."""
-        pass
 
 
 @pytest.fixture(autouse=True)

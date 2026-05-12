@@ -94,7 +94,7 @@ class TestUILayoutBuilder:
             dialog=dialog,
             fields=fields,
             folder_config={"folder_name": "template"},
-            alias_provider=lambda: [],
+            alias_provider=list,
             on_update_backend_states=MagicMock(),
             on_convert_format_changed=MagicMock(),
             on_ok=MagicMock(),

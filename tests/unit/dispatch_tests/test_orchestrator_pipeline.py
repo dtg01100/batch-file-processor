@@ -42,7 +42,6 @@ class FakeValidationStep:
 
     def validate(self, file_path: str, filename_for_log: str):
         """For compatibility with legacy interface."""
-        pass
 
 
 class FakeConverterStep:

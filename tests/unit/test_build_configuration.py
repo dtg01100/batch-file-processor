@@ -30,15 +30,20 @@ def get_python_packages():
     """Find all Python packages in the project."""
     packages = []
     for item in PROJECT_ROOT.iterdir():
-        if item.is_dir() and (item / "__init__.py").exists() and item.name not in {
-            ".venv",
-            "test_venv",
-            ".git",
-            "__pycache__",
-            "build",
-            "dist",
-            "hooks",
-        }:
+        if (
+            item.is_dir()
+            and (item / "__init__.py").exists()
+            and item.name
+            not in {
+                ".venv",
+                "test_venv",
+                ".git",
+                "__pycache__",
+                "build",
+                "dist",
+                "hooks",
+            }
+        ):
             packages.append(item.name)
     return packages
 
@@ -61,7 +66,9 @@ def get_spec_hidden_imports():
                 func_name = func.attr
             if func_name == "Analysis":
                 for keyword in node.keywords:
-                    if keyword.arg == "hiddenimports" and isinstance(keyword.value, ast.List):
+                    if keyword.arg == "hiddenimports" and isinstance(
+                        keyword.value, ast.List
+                    ):
                         return [
                             elt.value
                             for elt in keyword.value.elts

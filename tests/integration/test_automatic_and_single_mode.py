@@ -727,7 +727,10 @@ class TestBackupIncrementLogic:
         }
 
         # Simulate backup trigger
-        if settings["enable_interval_backups"] and settings["backup_counter"] >= settings["backup_counter_maximum"]:
+        if (
+            settings["enable_interval_backups"]
+            and settings["backup_counter"] >= settings["backup_counter_maximum"]
+        ):
             # Would call backup_increment.do_backup here
             settings["backup_counter"] = 0
 

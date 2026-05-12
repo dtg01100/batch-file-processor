@@ -172,7 +172,7 @@ class TestFTPRetryLogic:
             mock_client.add_error(ftplib.error_temp("Server unavailable"))
 
         with patch("backend.backend_base.time.sleep"):
-            with pytest.raises(Exception):  # noqa: B017 - retry exhaustion re-raises original exception
+            with pytest.raises(Exception, match=r"."):
                 ftp_backend.do(
                     FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
                 )
@@ -310,7 +310,7 @@ class TestEmailRetryLogic:
             mock_client.add_error(smtplib.SMTPConnectError(421, "Unavailable"))
 
         with patch("backend.email_backend.time.sleep"):
-            with pytest.raises(Exception):  # noqa: B017 - retry exhaustion re-raises original exception
+            with pytest.raises(Exception, match=r"."):
                 email_backend.do(
                     EMAIL_PARAMS,
                     EMAIL_SETTINGS,

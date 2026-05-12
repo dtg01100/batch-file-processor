@@ -40,11 +40,13 @@ from interface.operations.folder_data_extractor import ExtractedDialogFields
 # FIELD COLLECTION UTILITIES
 # =============================================================================
 
+
 def get_dataclass_fields_flat(dataclass_type) -> set[str]:
     """Get all field names from a dataclass, excluding nested dataclasses."""
     if not is_dataclass(dataclass_type):
         return set()
     return {f.name for f in fields(dataclass_type)}
+
 
 def get_all_nested_fields_flat(dataclass_type) -> set[str]:
     """Get all field names from a dataclass including nested dataclass fields."""
@@ -66,6 +68,7 @@ def get_all_nested_fields_flat(dataclass_type) -> set[str]:
             all_fields.add(f.name)
 
     return all_fields
+
 
 def get_to_dict_keys() -> set[str]:
     """Get all keys that to_dict() produces."""
@@ -133,6 +136,7 @@ def get_to_dict_keys() -> set[str]:
     )
     return set(config.to_dict().keys())
 
+
 def get_to_dict_keys_with_http() -> set[str]:
     """Get all keys that to_dict() produces when HTTP backend is configured."""
     config = FolderConfiguration(
@@ -160,6 +164,7 @@ def get_to_dict_keys_with_http() -> set[str]:
         api_key="",
     )
     return set(config.to_dict().keys())
+
 
 def get_from_dict_expected_keys() -> set[str]:
     """Get all keys that from_dict() expects to read."""
@@ -229,9 +234,11 @@ def get_from_dict_expected_keys() -> set[str]:
     }
     return all_keys
 
+
 def get_extractor_fields() -> set[str]:
     """Get all fields extracted by ExtractedDialogFields."""
     return get_dataclass_fields_flat(ExtractedDialogFields)
+
 
 def get_database_columns_from_create_db() -> set[str]:
     """Get database columns defined in create_database.py initial_db_dict."""
@@ -264,6 +271,7 @@ def get_database_columns_from_create_db() -> set[str]:
         "edi_output_folder",
     }
 
+
 def get_backend_required_fields() -> dict[str, set[str]]:
     """Get required fields for each backend."""
     return {
@@ -271,6 +279,7 @@ def get_backend_required_fields() -> dict[str, set[str]]:
         "email": {"email_to", "email_subject_line"},
         "copy": {"copy_to_directory"},
     }
+
 
 def get_dispatch_required_fields() -> set[str]:
     """Get fields used by dispatch.py for processing."""
@@ -300,6 +309,7 @@ def get_dispatch_required_fields() -> set[str]:
         "ftp_folder",
         "email_to",
     }
+
 
 # =============================================================================
 # EXPECTED FIELD DEFINITIONS
@@ -471,6 +481,7 @@ EXPECTED_EXTRACTOR_FIELDS = {
 # =============================================================================
 # TEST CLASSES
 # =============================================================================
+
 
 class TestFieldCoverageAnalysis:
     """Analyze and report field coverage across the pipeline."""
@@ -773,6 +784,7 @@ class TestFieldCoverageAnalysis:
             f"folders table columns: {sorted(missing_columns)}"
         )
 
+
 class TestNestedConfigurationCoverage:
     """Test coverage of nested configuration classes."""
 
@@ -900,6 +912,7 @@ class TestNestedConfigurationCoverage:
             csv_fields == expected
         ), f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
 
+
 class TestFieldCoverageReport:
     """Generate comprehensive field coverage report."""
 
@@ -963,6 +976,7 @@ class TestFieldCoverageReport:
 
         # Keep a concrete invariant so this test verifies report inputs are valid
         assert len(to_dict_keys) > 0
+
 
 class TestRoundTripIntegrity:
     """Test that fields survive a complete round trip."""
@@ -1198,6 +1212,7 @@ class TestRoundTripIntegrity:
         print("ROUNDTRIP TEST PASSED")
         print(f"{'='*60}")
         print(f"All {len(dict_form)} fields survived the round trip!")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

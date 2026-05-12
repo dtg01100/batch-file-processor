@@ -3,6 +3,7 @@
 Tests focus on services that might have Qt-specific implementations.
 """
 
+import contextlib
 import os
 import sys
 
@@ -75,13 +76,8 @@ class TestQtServicesIntegration:
 
     def test_services_implement_protocols(self):
         """Test that Qt services implement the required protocols."""
-        try:
-            pass
-            # This would test if they implement these protocols
+        with contextlib.suppress(ImportError):
             assert QtUIService is not None  # Basic check
-        except ImportError:
-            # If protocol not available, still pass
-            pass
 
 
 class TestQtUIServiceErrorHandling:

@@ -80,7 +80,9 @@ def _make_edi_dir(tmp_path, name="in"):
     return d
 
 
-def _run_folder_from_db(db, folder_id: int, extra_settings: dict | None = None) -> tuple:
+def _run_folder_from_db(
+    db, folder_id: int, extra_settings: dict | None = None
+) -> tuple:
     """Load a folder from the DB and run it through the orchestrator."""
     loaded = dict(db["folders"].find_one(id=folder_id))
     backend = CaptureBackend()

@@ -5,7 +5,8 @@ import tempfile
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
-from dispatch.error_handler import ErrorHandler, RealFileSystem, do
+from dispatch.error_handler import ErrorHandler, do
+from dispatch.file_system import RealFileSystem
 
 
 class MockDatabase:

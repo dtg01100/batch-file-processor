@@ -179,7 +179,12 @@ def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:
                                         value = v_elem.text
 
                                     # Only count actual UPC values (not header text)
-                                    if value and value not in header_values and value.isdigit() and len(value) >= 6:
+                                    if (
+                                        value
+                                        and value not in header_values
+                                        and value.isdigit()
+                                        and len(value) >= 6
+                                    ):
                                         result["upc_values"].append(value)
 
     except zipfile.BadZipFile:

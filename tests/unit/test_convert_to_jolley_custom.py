@@ -83,7 +83,9 @@ class QueryRunnerWithTestData:
                 "Corporate Customer Email",
                 "Corporate Customer Email 2",
             ]
-            return [dict(zip(columns, row, strict=False)) for row in self._customer_data]
+            return [
+                dict(zip(columns, row, strict=False)) for row in self._customer_data
+            ]
         # Check if this is a UOM query (has odhst)
         if "ODHS" in query_upper:
             if not self._uom_data:
@@ -336,7 +338,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -394,7 +396,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -453,7 +455,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -533,7 +535,7 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -598,7 +600,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -659,7 +661,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -720,7 +722,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -781,7 +783,7 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -846,7 +848,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -924,7 +926,7 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1003,7 +1005,7 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1081,7 +1083,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1156,7 +1158,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1231,7 +1233,7 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1313,7 +1315,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1376,7 +1378,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1436,7 +1438,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1527,7 +1529,7 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1608,7 +1610,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1668,7 +1670,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")
@@ -1729,7 +1731,7 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
             self.header_fields_dict = {}
             self.uom_lookup_list = []
             self.header_a_record = {}
-            context.output_file = open(  # noqa: SIM115 - file handle stored in context for later cleanup by converter
+            context.output_file = open(
                 context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
             )
             context.csv_writer = csv.writer(context.output_file, dialect="unix")

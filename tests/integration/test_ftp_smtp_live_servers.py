@@ -47,14 +47,17 @@ pytestmark = [pytest.mark.integration, pytest.mark.backend]
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _free_port() -> int:
     """Return an OS-assigned free TCP port."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
+
 def _md5(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
+
 
 def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
     """Poll until a server is accepting connections on host:port, with timeout."""
@@ -67,6 +70,7 @@ def _wait_for_server(host: str, port: int, timeout: float = 5.0) -> None:
             time.sleep(0.01)
     raise RuntimeError(f"Server on {host}:{port} did not start within {timeout}s")
 
+
 def _wait_for_messages(
     handler, count: int, timeout: float = 5.0, interval: float = 0.01
 ) -> None:
@@ -77,6 +81,7 @@ def _wait_for_messages(
         if remaining <= 0:
             break
         time.sleep(min(interval, remaining))
+
 
 class _NoTLSSMTPClient(RealSMTPClient):
     """RealSMTPClient that silently skips STARTTLS when not supported.
@@ -93,9 +98,11 @@ class _NoTLSSMTPClient(RealSMTPClient):
         with contextlib.suppress(smtplib.SMTPNotSupportedError):
             super().starttls()
 
+
 # ---------------------------------------------------------------------------
 # FTP server fixture
 # ---------------------------------------------------------------------------
+
 
 class _FTPFixture:
     """Wraps a pyftpdlib server started in a daemon thread."""
@@ -147,6 +154,7 @@ class _FTPFixture:
         with open(target, "rb") as fh:
             return fh.read()
 
+
 @pytest.fixture()
 def ftp_server(tmp_path):
     """Start a real FTP server; yield (_FTPFixture, process_parameters dict)."""
@@ -169,9 +177,11 @@ def ftp_server(tmp_path):
     yield srv, params
     srv.stop()
 
+
 # ---------------------------------------------------------------------------
 # SMTP server fixture
 # ---------------------------------------------------------------------------
+
 
 class _CapturingHandler:
     """aiosmtpd handler that appends received envelopes to a list."""
@@ -188,6 +198,7 @@ class _CapturingHandler:
             }
         )
         return "250 Message accepted"
+
 
 @pytest.fixture()
 def smtp_server():
@@ -210,6 +221,7 @@ def smtp_server():
     yield handler, settings
     controller.stop()
 
+
 def _make_email_params(
     recipient: str = "recipient@test.com", subject: str = "Test %filename%"
 ) -> dict:
@@ -219,18 +231,22 @@ def _make_email_params(
         "process_backend_email": True,
     }
 
+
 # ---------------------------------------------------------------------------
 # Helper: create temp file with content
 # ---------------------------------------------------------------------------
+
 
 def _make_file(tmp_path, name: str, content: bytes) -> str:
     p = tmp_path / name
     p.write_bytes(content)
     return str(p)
 
+
 # ---------------------------------------------------------------------------
 # FTP Tests
 # ---------------------------------------------------------------------------
+
 
 class TestFTPLiveServer:
     """FTP integration tests against a real pyftpdlib server."""
@@ -467,9 +483,11 @@ class TestFTPLiveServer:
         assert mock.connections[0][0] == "10.0.0.1"
         assert mock.connections[0][1] == 2121
 
+
 # ---------------------------------------------------------------------------
 # SMTP Tests
 # ---------------------------------------------------------------------------
+
 
 class TestSMTPLiveServer:
     """SMTP integration tests against a real aiosmtpd server."""
@@ -738,9 +756,11 @@ class TestSMTPLiveServer:
         assert len(attachment_content) == len(content)
         assert _md5(attachment_content) == _md5(content)
 
+
 # ---------------------------------------------------------------------------
 # Combined FTP + SMTP Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCombinedBackends:
     """Tests that exercise FTP and SMTP (and copy) backends together."""

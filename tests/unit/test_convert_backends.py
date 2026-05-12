@@ -25,6 +25,18 @@ pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 import os
 from unittest.mock import MagicMock, patch
 
+
+def _default_edi_content() -> str:
+    """Return default sample EDI content shared by most converter tests."""
+    return (
+        "AVENDOR 00000000010101250000010000"  # Header: 33 chars
+        "\n"
+        "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
+        "\n"
+        "CTABSales Tax                    000010000"  # Tax: 38 chars
+        "\n"
+    )
+
 # =============================================================================
 # EDI FORMAT SPECIFICATIONS
 # =============================================================================
@@ -592,15 +604,7 @@ class TestConvertToSimplifiedCSV:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
     @pytest.fixture
     def sample_parameters_dict(self):
@@ -636,15 +640,7 @@ class TestConvertToYellowdogCSV:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
     def test_strict_mode_requires_as400_settings(self, tmp_path):
         """Strict DB mode should fail fast when AS400 credentials are missing."""
@@ -685,15 +681,7 @@ class TestConvertToEstoreEinvoice:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
     def test_convert_to_price_function(self):
         """Test the convert_to_price helper function."""
@@ -716,15 +704,7 @@ class TestConvertToEstoreEinvoiceGeneric:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertToCSV:
@@ -732,15 +712,7 @@ class TestConvertToCSV:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertToScannerware:
@@ -748,15 +720,7 @@ class TestConvertToScannerware:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertToScansheetTypeA:
@@ -764,15 +728,7 @@ class TestConvertToScansheetTypeA:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertToJolleyCustom:
@@ -780,15 +736,7 @@ class TestConvertToJolleyCustom:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertToStewartsCustom:
@@ -796,15 +744,7 @@ class TestConvertToStewartsCustom:
 
     @pytest.fixture
     def sample_edi_content(self):
-        """Create sample EDI content with accurate field widths."""
-        return (
-            "AVENDOR 00000000010101250000010000"  # Header: 33 chars
-            "\n"
-            "B01234567890Test Item Description     1234560001000100000100010991001000000"  # Detail: 76 chars
-            "\n"
-            "CTABSales Tax                    000010000"  # Tax: 38 chars
-            "\n"
-        )
+        return _default_edi_content()
 
 
 class TestConvertFormatConfiguration:

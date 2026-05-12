@@ -30,9 +30,9 @@ def built_executable(tmp_path_factory):
     Skips if PyInstaller is not installed.
     Does NOT clean up dist/build directories so they can be inspected on failure.
     """
-    try:
-        import PyInstaller  # noqa: F401
-    except ImportError:
+    from importlib import util
+
+    if not util.find_spec("PyInstaller"):
         pytest.skip("PyInstaller is not installed")
 
     result = subprocess.run(
