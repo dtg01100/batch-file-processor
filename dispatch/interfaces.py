@@ -243,7 +243,7 @@ class BackendInterface(Protocol):
     (FTP, email, copy, etc.).
     """
 
-    def send(self, params: dict, settings: dict, filename: str) -> None:
+    def send(self, params: dict, settings: dict, filename: str) -> bool | None:
         """Send a file using this backend.
 
         Args:

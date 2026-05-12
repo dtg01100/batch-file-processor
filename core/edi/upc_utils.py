@@ -9,6 +9,12 @@ Reference:
 
 import logging
 
+from core.constants import (
+    UPC_A_LENGTH,
+    UPCE_7_DIGIT_LENGTH,
+    UPCE_LENGTH,
+    UPCE_SHORT_LENGTH,
+)
 from core.structured_logging import get_logger, log_with_context
 
 logger = get_logger(__name__)
@@ -58,11 +64,11 @@ def convert_upce_to_upca(upce_value: str) -> str:
         '041800000265'
 
     """
-    if len(upce_value) == 6:
+    if len(upce_value) == UPCE_SHORT_LENGTH:
         middle_digits = upce_value
-    elif len(upce_value) == 7:
+    elif len(upce_value) == UPCE_7_DIGIT_LENGTH:
         middle_digits = upce_value[:6]
-    elif len(upce_value) == 8:
+    elif len(upce_value) == UPCE_LENGTH:
         middle_digits = upce_value[1:7]
     else:
         return ""
@@ -106,7 +112,7 @@ def validate_upc(upc: str) -> bool:
     if not upc or not upc.isdigit():
         return False
 
-    if len(upc) < 12:
+    if len(upc) < UPC_A_LENGTH:
         return False
 
     value = upc[:-1]

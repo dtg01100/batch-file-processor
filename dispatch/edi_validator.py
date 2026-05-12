@@ -4,10 +4,16 @@ This module provides a testable wrapper around the EDI validation functionality,
 using dependency injection for file system operations.
 """
 
-import os
 from io import StringIO
 
+from core.constants import (
+    EDI_B_RECORD_NO_PRICING_LENGTH,
+    EDI_B_RECORD_STANDARD_LENGTH,
+    UPC_A_NO_CHECK_LENGTH,
+    UPCE_LENGTH,
+)
 from core.structured_logging import get_logger, log_file_operation, log_with_context
+from dispatch.file_system import RealFileSystem
 from dispatch.interfaces import FileSystemInterface
 
 logger = get_logger(__name__)
@@ -141,6 +147,9 @@ class EDIValidator:
     ) -> tuple[bool, list[str], list[str]]:
         """Validate an EDI file and return both errors and warnings.
 
+        Delegates to validate() and categorizes its results into
+        errors (format failures) and warnings (minor issues).
+
         Args:
             file_path: Path to the EDI file to validate
 
@@ -148,55 +157,10 @@ class EDIValidator:
             Tuple of (is_valid, errors, warnings)
 
         """
-        logger.debug("Validating EDI file (with warnings): %s", file_path)
-        self.errors = StringIO()
-        self.has_errors = False
-        self.has_minor_errors = False
-        errors: list[str] = []
-        warnings: list[str] = []
-
-        try:
-            # Read file once and pass content to all validation methods
-            content = self.fs.read_file_text(file_path)
-            is_valid_edi, check_line = self._check_edi_format(file_path, content)
-
-            if not is_valid_edi:
-                self.has_errors = True
-                error_msg = f"EDI check failed on line number: {check_line}"
-                self.errors.write(error_msg + "\r\n")
-                errors.append(error_msg)
-                logger.error(
-                    "EDI validation failed: %s (%d error(s))", file_path, len(errors)
-                )
-                return False, errors, warnings
-
-            # Check for issues and categorize them
-            self._check_edi_issues_with_warnings(file_path, content, errors, warnings)
-
-            is_valid = not self.has_errors
-            if is_valid and not warnings:
-                logger.info("EDI validation passed (no warnings): %s", file_path)
-            elif is_valid:
-                logger.info(
-                    "EDI validation passed with %d warning(s): %s",
-                    len(warnings),
-                    file_path,
-                )
-            else:
-                logger.error(
-                    "EDI validation failed: %s (%d error(s))",
-                    file_path,
-                    len(errors),
-                )
-
-            return is_valid, errors, warnings
-
-        except Exception as e:
-            self.has_errors = True
-            error_msg = f"Validation error: {e!s}"
-            self.errors.write(error_msg + "\r\n")
-            errors.append(error_msg)
-            return False, errors, warnings
+        is_valid, issues = self.validate(file_path)
+        if is_valid:
+            return True, [], issues
+        return False, issues, []
 
     def _check_edi_format(self, file_path: str, content: str) -> tuple[bool, int]:
         """Check if file is a valid EDI format.
@@ -259,14 +223,14 @@ class EDIValidator:
 
         # Validate B records
         if first_char == "B":
-            if len(line) != 76 and len(line) != 70:
+            if len(line) != EDI_B_RECORD_STANDARD_LENGTH and len(line) != EDI_B_RECORD_NO_PRICING_LENGTH:
                 logger.debug(
                     "EDI format check failed at line %d: %s", line_num, file_path
                 )
                 return False, line_num
 
             # Check for missing pricing in 70-char lines
-            if len(line) == 70 and line[51:67] != "                ":
+            if len(line) == EDI_B_RECORD_NO_PRICING_LENGTH and line[51:67] != "                ":
                 logger.debug(
                     "EDI format check failed at line %d: %s", line_num, file_path
                 )
@@ -289,7 +253,6 @@ class EDIValidator:
         issues: list[str] = []
 
         try:
-            # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
             content = content.replace("\x1a", "")
             lines = content.splitlines()
 
@@ -330,87 +293,24 @@ class EDIValidator:
             self.has_minor_errors = True
             msgs.append(msg)
 
-        # Check for non-numeric UPC (not blank)
         if proposed_upc != "           ":
             try:
                 int(proposed_upc)
             except ValueError:
                 _append_minor(f"Non-numeric UPC in {item_ctx}")
 
-        # Check for suppressed UPC (8 chars)
-        if len(stripped_upc) == 8:
+        if len(stripped_upc) == UPCE_LENGTH:
             _append_minor(f"Suppressed UPC in {item_ctx}")
-
-        # Check for truncated UPC (1-10 chars)
-        elif 0 < len(stripped_upc) < 11:
+        elif 0 < len(stripped_upc) < UPC_A_NO_CHECK_LENGTH:
             _append_minor(f"Truncated UPC in {item_ctx}")
 
-        # Check for blank UPC
         if line[1:12] == "           ":
             _append_minor(f"Blank UPC in {item_ctx}")
 
-        # Check for missing pricing
-        if len(line) == 70:
+        if len(line) == EDI_B_RECORD_NO_PRICING_LENGTH:
             _append_minor(f"Missing pricing information in {item_ctx}")
 
         return msgs
-
-    def _check_edi_issues_with_warnings(
-        self, _file_path: str, content: str, errors: list[str], warnings: list[str]
-    ) -> None:
-        """Check for EDI issues and categorize as errors or warnings.
-
-        Args:
-            file_path: Path to the file to check
-            content: File content to validate (already read)
-            errors: List to append error messages to
-            warnings: List to append warning messages to
-
-        """
-        try:
-            # Strip Windows Ctrl-Z EOF marker (0x1A) before processing
-            content = content.replace("\x1a", "")
-            lines = content.splitlines()
-
-            for line_num, line in enumerate(lines, start=1):
-                if not line or line[0] != "B":
-                    continue
-
-                proposed_upc = line[1:12]
-                stripped_upc = str(proposed_upc).strip()
-                description = line[12:37].strip()
-                item_ctx = (
-                    f"line {line_num}"
-                    f" (UPC: {proposed_upc.strip()!r},"
-                    f" desc: {description!r})"
-                )
-
-                # Warnings (minor errors)
-                if proposed_upc != "           ":
-                    try:
-                        int(proposed_upc)
-                    except ValueError:
-                        self.has_minor_errors = True
-                        warnings.append(f"Non-numeric UPC in {item_ctx}")
-
-                if len(stripped_upc) == 8:
-                    self.has_minor_errors = True
-                    warnings.append(f"Suppressed UPC in {item_ctx}")
-                elif 0 < len(stripped_upc) < 11:
-                    self.has_minor_errors = True
-                    warnings.append(f"Truncated UPC in {item_ctx}")
-
-                if line[1:12] == "           ":
-                    self.has_minor_errors = True
-                    warnings.append(f"Blank UPC in {item_ctx}")
-
-                if len(line) == 70:
-                    self.has_minor_errors = True
-                    warnings.append(f"Missing pricing information in {item_ctx}")
-
-        except Exception as e:
-            self.has_errors = True
-            errors.append(f"Error checking EDI issues: {e!s}")
 
     def get_error_log(self) -> str:
         """Get the current error log contents.
@@ -428,99 +328,4 @@ class EDIValidator:
         self.has_minor_errors = False
 
 
-class RealFileSystem:
-    """Real file system implementation for production use.
 
-    This class provides direct file system access, suitable for
-    production use but difficult to test.
-    """
-
-    def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents as text.
-
-        Args:
-            path: Path to the file
-            encoding: Text encoding (default: utf-8)
-
-        Returns:
-            File contents as string
-
-        """
-        with open(path, encoding=encoding) as f:
-            return f.read()
-
-    def read_file(self, path: str) -> bytes:
-        """Read file contents as bytes.
-
-        Args:
-            path: Path to the file
-
-        Returns:
-            File contents as bytes
-
-        """
-        with open(path, "rb") as f:
-            return f.read()
-
-    def write_file(self, path: str, data: bytes) -> None:
-        """Write bytes to a file.
-
-        Args:
-            path: Path to the file
-            data: Bytes to write
-
-        """
-        with open(path, "wb") as f:
-            f.write(data)
-
-    def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to a file.
-
-        Args:
-            path: Path to the file
-            data: String to write
-            encoding: Text encoding (default: utf-8)
-
-        """
-        with open(path, "w", encoding=encoding) as f:
-            f.write(data)
-
-    def file_exists(self, path: str) -> bool:
-        """Check if a file exists."""
-        return os.path.isfile(path)
-
-    def dir_exists(self, path: str) -> bool:
-        """Check if a directory exists."""
-        return os.path.isdir(path)
-
-    def list_files(self, path: str) -> list[str]:
-        """List all files in a directory."""
-        if not os.path.isdir(path):
-            return []
-        return [
-            os.path.abspath(os.path.join(path, f))
-            for f in os.listdir(path)
-            if os.path.isfile(os.path.join(path, f))
-        ]
-
-    def mkdir(self, path: str) -> None:
-        """Create a directory."""
-        os.mkdir(path)
-
-    def makedirs(self, path: str) -> None:
-        """Create a directory and all parent directories."""
-        os.makedirs(path, exist_ok=True)
-
-    def copy_file(self, src: str, dst: str) -> None:
-        """Copy a file."""
-        import shutil
-
-        shutil.copyfile(src, dst)
-
-    def remove_file(self, path: str) -> None:
-        """Remove a file."""
-        os.remove(path)
-
-    def get_absolute_path(self, path: str) -> str:
-        """Get the absolute path."""
-        return os.path.abspath(path)

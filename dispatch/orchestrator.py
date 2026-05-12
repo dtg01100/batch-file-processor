@@ -548,7 +548,7 @@ class DispatchOrchestrator:
         )
 
     def _format_send_error(
-        self, backend_name: str, error_message: str, is_split_file: bool = False  # noqa: FBT001,FBT002 - boolean flag for error formatting
+        self, backend_name: str, error_message: str, is_split_file: bool = False
     ) -> str:
         """Format a send error message for a specific backend."""
         file_type = "split file" if is_split_file else "file"
@@ -683,8 +683,6 @@ class DispatchOrchestrator:
 
         Kept as a separate method to keep _apply_conversion concise.
         """
-        # The converter API expects: (input_path, folder, settings,
-        # upc_dict, context=...)
         return converter_step.execute(
             current_file,
             context.effective_folder,

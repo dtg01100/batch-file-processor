@@ -24,6 +24,7 @@ Example:
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from core.constants import UPC_A_LENGTH, UPC_A_NO_CHECK_LENGTH, UPCE_LENGTH
 from core.structured_logging import get_logger
 from core.utils import calc_check_digit, convert_upce_to_upca, safe_int
 
@@ -172,11 +173,11 @@ def process_upc_for_output(
     proposed_upc = upc_field
     upc_len = len(str(proposed_upc))
 
-    if upc_len == 12:
+    if upc_len == UPC_A_LENGTH:
         upc_string = str(proposed_upc)
-    elif upc_len == 11:
+    elif upc_len == UPC_A_NO_CHECK_LENGTH:
         upc_string = str(proposed_upc) + str(calc_check_digit(proposed_upc))
-    elif upc_len == 8:
+    elif upc_len == UPCE_LENGTH:
         converted = convert_upce_to_upca(proposed_upc)
         upc_string = converted if isinstance(converted, str) else ""
     elif upc_len < upc_target_length:

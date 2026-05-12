@@ -41,6 +41,7 @@ from PIL import Image as pil_Image
 from PIL import ImageOps as pil_ImageOps
 
 from core import utils
+from core.constants import BARCODE_BATCH_SAVE_INTERVAL, UPC_A_NO_CHECK_LENGTH
 from core.structured_logging import get_logger
 from dispatch.converters.convert_base import BaseEDIConverter, ConversionContext
 
@@ -68,11 +69,9 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
 
     def _initialize_output(self, context: ConversionContext) -> None:
         """Stub implementation - not used since edi_convert is overridden."""
-        pass
 
     def process_b_record(self, record: Any, context: ConversionContext) -> None:
         """Stub implementation - not used since edi_convert is overridden."""
-        pass
 
     def edi_convert(
         self,
@@ -121,12 +120,10 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             work_file_lined = [n for n in work_file.readlines()]
             for line in work_file_lined:
                 input_edi_dict = utils.capture_records(line)
-                try:
-                    if input_edi_dict["record_type"] == "A":
-                        invoice_list.append(input_edi_dict["invoice_number"][-7:])
-                except TypeError:
-                    # capture_records may return None for malformed lines
-                    pass
+                if input_edi_dict is None:
+                    continue
+                if input_edi_dict["record_type"] == "A":
+                    invoice_list.append(input_edi_dict["invoice_number"][-7:])
         logger.debug(
             "Extracted %d invoice numbers from %s",
             len(invoice_list),
@@ -185,15 +182,17 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                         AND bue4qt <> 0""",
                 (invoice,),
             )
-            rows_for_export = []
+            rows_for_export: list[list] = []
             for row in result:
                 trow = [""]
                 for entry in row:
-                    try:
+                    if hasattr(entry, 'strip'):
                         trow.append(entry.strip())
-                    except AttributeError:
+                    else:
                         trow.append(entry)
                 rows_for_export.append(trow)
+            if not self.output_worksheet or not self.output_spreadsheet:
+                raise RuntimeError("Workbook not initialized")
             self.output_worksheet.append(["", invoice])
             self.invoice_row_counter += 1
             self.invoice_rows.append(self.invoice_row_counter)
@@ -218,8 +217,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             column = col[0].column_letter
             for cell in col:
                 try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
+                    max_length = max(max_length, len(str(cell.value)))
                 except Exception as resize_error:
                     logger.warning("Column resize error: %s", resize_error)
             adjusted_width = (max_length + 2) * 1.2
@@ -245,11 +243,11 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                         generated_barcode_path, width, height = self._generate_barcode(
                             upc_barcode_string, tempdir
                         )
-                        self.output_worksheet.column_dimensions["A"].width = (
-                            math.ceil(float(width) * 0.15)
+                        self.output_worksheet.column_dimensions["A"].width = math.ceil(
+                            float(width) * 0.15
                         )
-                        self.output_worksheet.row_dimensions[count].height = (
-                            math.ceil(float(height) * 0.75)
+                        self.output_worksheet.row_dimensions[count].height = math.ceil(
+                            float(height) * 0.75
                         )
                         img = OpenPyXlImage(generated_barcode_path)
                         self.output_worksheet.add_image(img, anchor="A" + str(count))
@@ -261,12 +259,10 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 except Exception as barcode_error:
                     barcodes_skipped += 1
                     logger.warning("Barcode error: %s", barcode_error)
-                if save_counter >= 100:
+                if save_counter >= BARCODE_BATCH_SAVE_INTERVAL:
                     logger.debug(
-
-                            "saving intermediate workbook to free file handles"
-                            " (batch of 100)"
-
+                        "saving intermediate workbook to free file handles"
+                        " (batch of 100)"
                     )
                     self.output_spreadsheet.save(self.output_spreadsheet_name)
                     logger.debug("intermediate save successful")
@@ -352,20 +348,15 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         )
         if normalized == "":
             raise ValueError("Input contents are not an integer")
-        if len(normalized) < 11:
-            normalized = normalized.zfill(11)
-        elif len(normalized) > 11:
-            normalized = normalized[-11:]
+        if len(normalized) < UPC_A_NO_CHECK_LENGTH:
+            normalized = normalized.zfill(UPC_A_NO_CHECK_LENGTH)
+        elif len(normalized) > UPC_A_NO_CHECK_LENGTH:
+            normalized = normalized[-UPC_A_NO_CHECK_LENGTH:]
         return normalized
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
+from .convert_base import create_edi_convert_wrapper
 
-from .convert_base import create_edi_convert_wrapper  # noqa: E402
-
-# Auto-generated wrapper using the standard template
 edi_convert = create_edi_convert_wrapper(
     ScanSheetTypeAConverter, format_name="scansheet_type_a"
 )

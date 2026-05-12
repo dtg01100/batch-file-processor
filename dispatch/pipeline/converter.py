@@ -19,6 +19,7 @@ from core.structured_logging import (
 from core.utils.bool_utils import normalize_bool
 from core.utils.format_utils import normalize_convert_to_format
 from dispatch.interfaces import FileSystemInterface
+from dispatch.pipeline.interfaces import ErrorRecordingMixin
 from dispatch.pipeline.temp_dir_utils import (
     cleanup_pipeline_temp_dir,
     create_pipeline_temp_dir,
@@ -264,7 +265,7 @@ class MockConverter:
         self._result = result
 
 
-class EDIConverterStep:
+class EDIConverterStep(ErrorRecordingMixin):
     """EDI converter step for the dispatch pipeline.
 
     This class handles format conversion using dynamically loaded
@@ -365,25 +366,6 @@ class EDIConverterStep:
 
         """
         return SUPPORTED_FORMATS.copy()
-
-    def _record_error(self, filename: str, error_msg: str) -> None:
-        """Record an error to the error handler.
-
-        Args:
-            filename: Filename being processed
-            error_msg: Error message
-
-        """
-        if self._error_handler is None:
-            return
-
-        self._error_handler.record_error(
-            folder="",
-            filename=filename,
-            error=Exception(error_msg),
-            context={"source": "EDIConverterStep"},
-            error_source="EDIConverter",
-        )
 
     def _is_noop_conversion(
         self,
@@ -497,7 +479,10 @@ class EDIConverterStep:
                 duration_ms,
             )
             errors = [error_msg]
-            self._record_error(input_path, error_msg)
+            self._record_error(
+                input_path, error_msg,
+                source="EDIConverterStep", error_source="EDIConverter",
+            )
             return True, ConverterResult(
                 output_path=input_path,
                 format_used=convert_to_format,
@@ -541,7 +526,10 @@ class EDIConverterStep:
                     duration_ms,
                 )
                 errors = [error_msg]
-                self._record_error(input_path, error_msg)
+                self._record_error(
+                    input_path, error_msg,
+                    source="EDIConverterStep", error_source="EDIConverter",
+                )
                 return True, ConverterResult(
                     output_path=input_path,
                     format_used=convert_to_format,
@@ -771,7 +759,10 @@ class EDIConverterStep:
         errors = [error_msg]
         # Record via error handler (non-fatal if recording itself fails)
         try:
-            self._record_error(input_path, error_msg)
+            self._record_error(
+                input_path, error_msg,
+                source="EDIConverterStep", error_source="EDIConverter",
+            )
         except Exception:  # best-effort error recording; original error already handled
             logger.warning(
                 "Failed to record conversion error for %s: %s", input_path, error_msg

@@ -14,7 +14,6 @@ CURRENT_DATABASE_VERSION = "50"
 SMTP_TIMEOUT_SECONDS = 30
 FTP_TIMEOUT_SECONDS = 30
 HASH_CALC_MAX_RETRIES = 5
-DEFAULT_MAX_RETRIES = 10
 
 # Date boundary constants for legacy date handling
 MIN_DATE = datetime(1900, 1, 1)
@@ -22,12 +21,33 @@ MAX_DATE = datetime(9999, 12, 31)
 
 # EDI field sentinel values
 EMPTY_DATE_MMDDYY = "000000"
-EMPTY_DATE_YYYYMMDD = "00000000"
 EMPTY_PARENT_ITEM = "000000"
-EMPTY_NEWLINE = "\n"
 
 # UPC padding pattern for EDI files (11 spaces)
 UPC_PADDING_PATTERN = " " * 11
+
+# EDI record minimum lengths
+EDI_A_RECORD_MIN_LENGTH = 33
+EDI_B_RECORD_MIN_LENGTH = 50
+EDI_C_RECORD_MIN_LENGTH = 38
+
+# EDI B-record standard lengths
+EDI_B_RECORD_STANDARD_LENGTH = 76
+EDI_B_RECORD_NO_PRICING_LENGTH = 70
+
+# UPC/GTIN standard lengths
+UPCE_SHORT_LENGTH = 6     # UPC-E middle digits (no check digit)
+UPCE_7_DIGIT_LENGTH = 7   # UPC-E with 7 digits
+UPCE_LENGTH = 8           # Full UPC-E
+UPC_A_NO_CHECK_LENGTH = 11  # UPC-A without check digit
+UPC_A_LENGTH = 12         # Full UPC-A with check digit
+GTIN13_LENGTH = 13        # GTIN-13 (EAN-13)
+
+# Price decimal places
+PRICE_DECIMAL_PLACES = 2
+
+# Barcode batch save interval (number of records between intermediate saves)
+BARCODE_BATCH_SAVE_INTERVAL = 100
 
 # Default folder configuration values for processing.
 # These mirror the defaults applied when opening the edit dialog.

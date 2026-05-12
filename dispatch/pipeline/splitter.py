@@ -12,6 +12,7 @@ from core.edi.edi_splitter import EDISplitter, SplitConfig
 from core.structured_logging import get_logger, log_file_operation
 from core.utils.bool_utils import normalize_bool, normalize_db_bool
 from dispatch.interfaces import FileSystemInterface
+from dispatch.pipeline.interfaces import ErrorRecordingMixin
 
 logger = get_logger(__name__)
 
@@ -250,7 +251,7 @@ class FilesystemAdapter:
         return self._fs.list_files(path)
 
 
-class EDISplitterStep:
+class EDISplitterStep(ErrorRecordingMixin):
     """EDI splitter step for the dispatch pipeline.
 
     This class wraps the EDISplitter and integrates with the error handler
@@ -500,7 +501,10 @@ class EDISplitterStep:
             logger.warning("No valid invoices after filtering %s: %s", input_path, e)
             error_msg = f"No valid invoices after filtering: {e}"
             errors.append(error_msg)
-            self._record_error(input_path, error_msg)
+            self._record_error(
+                input_path, error_msg,
+                source="EDISplitterStep", error_source="EDISplitter",
+            )
             return SplitterResult(
                 files=[(input_path, "", "")],
                 was_split=False,
@@ -578,7 +582,10 @@ class EDISplitterStep:
                 )
                 error_msg = f"Category filtering failed: {e}"
                 errors.append(error_msg)
-                self._record_error(input_path, error_msg)
+                self._record_error(
+                input_path, error_msg,
+                source="EDISplitterStep", error_source="EDISplitter",
+            )
 
         return SplitterResult(
             files=[(output_path, "", "")],
@@ -642,25 +649,6 @@ class EDISplitterStep:
             "After credit/invoice filter: %d files remain", len(filtered_files)
         )
         return filtered_files
-
-    def _record_error(self, filename: str, error_msg: str) -> None:
-        """Record an error to the error handler.
-
-        Args:
-            filename: Filename being processed
-            error_msg: Error message
-
-        """
-        if self._error_handler is None:
-            return
-
-        self._error_handler.record_error(
-            folder="",
-            filename=filename,
-            error=Exception(error_msg),
-            context={"source": "EDISplitterStep"},
-            error_source="EDISplitter",
-        )
 
     def execute(self, file_path: str, folder: dict) -> list[str]:
         """Execute split step (wrapper for pipeline compatibility).

@@ -34,7 +34,14 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Protocol, TextIO, runtime_checkable
 
-from core.constants import EMPTY_DATE_MMDDYY
+from core.constants import (
+    EDI_B_RECORD_STANDARD_LENGTH,
+    EMPTY_DATE_MMDDYY,
+    GTIN13_LENGTH,
+    UPC_A_LENGTH,
+    UPC_A_NO_CHECK_LENGTH,
+    UPCE_LENGTH,
+)
 from core.edi.c_rec_generator import CRecGenerator
 from core.edi.po_fetcher import POFetcher
 from core.structured_logging import (
@@ -562,15 +569,10 @@ class EDITweaker:
             vendor_item = int(fields["vendor_item"].strip())
             category_filter = self.config.override_upc_category_filter.strip()
 
-            if category_filter == "" or category_filter == "ALL":
+            if category_filter in ("", "ALL") or upc_dict[vendor_item][0] in category_filter.split(","):
                 fields["upc_number"] = upc_dict[vendor_item][
                     self.config.override_upc_level
                 ]
-            else:
-                if upc_dict[vendor_item][0] in category_filter.split(","):
-                    fields["upc_number"] = upc_dict[vendor_item][
-                        self.config.override_upc_level
-                    ]
         except (KeyError, TypeError):
             fields["upc_number"] = ""
 
@@ -656,13 +658,13 @@ class EDITweaker:
             # Prefer explicit check-digit calculation for 11-digit UPCs when enabled.
             # This ensures calculate_upc_check_digit behavior is applied even when
             # upc_target_length defaults to 11.
-            if upc_len == 11:
+            if upc_len == UPC_A_NO_CHECK_LENGTH:
                 check_digit = utils.calc_check_digit(proposed_upc)
                 fields["upc_number"] = str(proposed_upc) + str(check_digit)
             elif upc_len == self.config.upc_target_length:
                 # Already the desired length — no change required
                 pass
-            elif upc_len == 12 and self.config.upc_target_length == 13:
+            elif upc_len == UPC_A_LENGTH and self.config.upc_target_length == GTIN13_LENGTH:
                 fields["upc_number"] = str(proposed_upc).rjust(
                     self.config.upc_target_length,
                     (
@@ -671,7 +673,7 @@ class EDITweaker:
                         else " "
                     ),
                 )
-            elif upc_len == 8:
+            elif upc_len == UPCE_LENGTH:
                 fields["upc_number"] = str(utils.convert_upce_to_upca(proposed_upc))
         else:
             fields["upc_number"] = self.config.upc_padding_pattern[
@@ -756,6 +758,6 @@ class EDITweaker:
             Modified fields dictionary
 
         """
-        if len(projected_line) < 76:
+        if len(projected_line) < EDI_B_RECORD_STANDARD_LENGTH:
             fields["parent_item_number"] = ""
         return fields

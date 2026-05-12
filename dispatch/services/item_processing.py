@@ -2,6 +2,7 @@
 
 import decimal
 
+from core.constants import UPC_A_LENGTH, UPC_A_NO_CHECK_LENGTH, UPCE_LENGTH
 from core.utils import (
     calc_check_digit,
     convert_to_price,
@@ -37,12 +38,12 @@ class ItemProcessor:
             return ""
         proposed_upc = input_upc
         upc_len = len(str(proposed_upc))
-        if upc_len == 11:
+        if upc_len == UPC_A_NO_CHECK_LENGTH:
             upc_string = str(proposed_upc) + str(self._calc_check_digit(proposed_upc))
-        elif upc_len == 8:
+        elif upc_len == UPCE_LENGTH:
             converted = convert_upce_to_upca(proposed_upc)
             upc_string = converted if isinstance(converted, str) else ""
-        elif upc_len == 12:
+        elif upc_len == UPC_A_LENGTH:
             upc_string = str(proposed_upc)
         else:
             upc_string = ""
