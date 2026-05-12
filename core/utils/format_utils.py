@@ -19,5 +19,4 @@ def normalize_convert_to_format(value: Any) -> str:
         return ""
     normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
     normalized = re.sub(r"[^a-z0-9_]", "_", normalized)
-    normalized = re.sub(r"_+", "_", normalized).strip("_")
-    return normalized
+    return re.sub(r"_+", "_", normalized).strip("_")

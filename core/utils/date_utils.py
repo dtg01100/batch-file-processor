@@ -10,10 +10,9 @@ logger = get_logger(__name__)
 
 def dactime_from_datetime(date_time: datetime) -> str:
     dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
-    dactime_date = dactime_date_century_digit + str(
+    return dactime_date_century_digit + str(
         datetime.strftime(date_time.date(), "%y%m%d")
     )
-    return dactime_date
 
 
 def datetime_from_dactime(dac_time: int) -> datetime:
@@ -27,8 +26,7 @@ def datetime_from_invtime(invtime: str) -> datetime:
 
 def dactime_from_invtime(inv_no: str):
     datetime_obj = datetime_from_invtime(inv_no)
-    dactime = dactime_from_datetime(datetime_obj)
-    return dactime
+    return dactime_from_datetime(datetime_obj)
 
 
 def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> str:

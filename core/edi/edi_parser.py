@@ -282,8 +282,7 @@ def build_a_record(
         Complete A record line with newline
 
     """
-    line = f"A{cust_vendor}{invoice_number}{invoice_date}{invoice_total}{append_text}\n"
-    return line
+    return f"A{cust_vendor}{invoice_number}{invoice_date}{invoice_total}{append_text}\n"
 
 
 def build_b_record(

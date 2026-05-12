@@ -46,8 +46,7 @@ def calc_check_digit(value: str | int) -> int:
         odd_pos = not odd_pos
     check_digit = check_digit % 10
     check_digit = 10 - check_digit
-    check_digit = check_digit % 10
-    return check_digit
+    return check_digit % 10
 
 
 def convert_upce_to_upca(upce_value: str) -> str:
