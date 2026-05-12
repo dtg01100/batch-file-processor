@@ -153,8 +153,8 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             output_filename: Base path for output file (without extension)
 
         """
-        self.output_spreadsheet = openpyxl.Workbook()
-        self.output_worksheet = self.output_spreadsheet.worksheets[0]
+        self.output_spreadsheet = openpyxl.Workbook()  # type: ignore[assignment]
+        self.output_worksheet = self.output_spreadsheet.worksheets[0]  # type: ignore[attr-defined]
         self.output_spreadsheet_name = output_filename + ".xlsx"
         self.invoice_rows = []
         self.invoice_row_counter = 0
@@ -166,6 +166,9 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             invoice_list: List of invoice numbers to query
 
         """
+        assert self.query_object is not None, "Database must be initialized"
+        assert self.output_worksheet is not None, "Workbook must be initialized"
+        assert self.output_spreadsheet is not None, "Workbook must be initialized"
         total_rows = 0
         for idx, invoice in enumerate(invoice_list):
             if idx > 0 and idx % 10 == 0:
@@ -195,8 +198,6 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                     else:
                         trow.append(entry)
                 rows_for_export.append(trow)
-            if not self.output_worksheet or not self.output_spreadsheet:
-                raise RuntimeError("Workbook not initialized")
             self.output_worksheet.append(["", invoice])
             self.invoice_row_counter += 1
             self.invoice_rows.append(self.invoice_row_counter)
@@ -229,6 +230,8 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
 
     def _process_barcodes(self) -> None:
         """Generate and insert barcodes for each item in the workbook."""
+        assert self.output_worksheet is not None, "Workbook must be initialized"
+        assert self.output_spreadsheet is not None, "Workbook must be initialized"
         logger.debug("creating temp directory")
         with tempfile.TemporaryDirectory() as tempdir:
             logger.debug("temp directory created as: %s", tempdir)

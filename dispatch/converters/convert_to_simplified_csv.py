@@ -121,7 +121,9 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             else:
                 headers.append(header_map.get(column, column))
 
-        context.csv_writer.writerow(headers)
+        csv_writer = context.csv_writer
+        assert csv_writer is not None
+        csv_writer.writerow(headers)
 
     def _add_row(self, rowdict: dict, context: ConversionContext) -> None:
         """Add a row to CSV with column layout filtering.
@@ -147,7 +149,9 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             else:
                 column_list.append(rowdict.get(column, ""))
 
-        context.csv_writer.writerow(column_list)
+        csv_writer = context.csv_writer
+        assert csv_writer is not None
+        csv_writer.writerow(column_list)
 
     def _should_process_record_type(
         self, record_type: str, _context: ConversionContext

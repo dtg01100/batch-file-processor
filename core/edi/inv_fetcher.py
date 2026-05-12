@@ -53,7 +53,7 @@ class InvFetcher:
     """
 
     def __init__(
-        self, query_runner: QueryRunnerProtocol, settings: dict | None = None
+        self, query_runner: QueryRunnerProtocol | None, settings: dict | None = None
     ) -> None:
         """Initialize InvFetcher with query runner.
 

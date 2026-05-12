@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 class UOMLookupService:
     """Service for UOM lookup and resolution from database queries."""
 
-    def __init__(self, query_runner: QueryRunner):
+    def __init__(self, query_runner: QueryRunner | None):
         """Initialize with query runner.
 
         Args:
@@ -22,6 +22,10 @@ class UOMLookupService:
 
     def init_uom_lookup(self, invoice_number: str) -> list[dict[str, Any]]:
         """Initialize UOM lookup and fetch UOM data."""
+        if self._query_runner is None:
+            logger.warning("UOMLookupService: no query_runner, returning empty list")
+            self.uom_lookup_list = []
+            return self.uom_lookup_list
         self.uom_lookup_list = self._query_runner.run_query(
             self._get_uom_query_sql(), (invoice_number,)
         )
@@ -57,6 +61,8 @@ class UOMLookupService:
 
     def _uom_safe_int_eq(self, a: str | None, b: str) -> bool:
         try:
+            if a is None:
+                return False
             return int(a) == int(b)
         except (ValueError, TypeError):
             return False

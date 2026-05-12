@@ -90,13 +90,16 @@ class StewartsCustomConverter(BaseEDIConverter):
         super().process_a_record(record, context)
         self._header_a_record = record.fields
 
+        assert self._customer_service is not None, "_initialize_output must set _customer_service"
+        assert self._uom_service is not None, "_initialize_output must set _uom_service"
+
         self._customer_service.lookup(record.fields["invoice_number"])
         self._uom_service.init_uom_lookup(record.fields["invoice_number"])
 
         self._header_fields_dict = self._customer_service.header_dict
 
         csv_writer = context.csv_writer
-
+        assert csv_writer is not None
         csv_writer.writerow(["Invoice Details"])
         csv_writer.writerow([""])
         csv_writer.writerow(
@@ -192,10 +195,13 @@ class StewartsCustomConverter(BaseEDIConverter):
             context: The conversion context
 
         """
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer must be set by _initialize_output"
+        assert self._uom_service is not None, "_initialize_output must set _uom_service"
         total_price, qtyint = self._item_processor.convert_to_item_total(
             record.fields["unit_cost"], record.fields["qty_of_units"]
         )
-        context.csv_writer.writerow(
+        csv_writer.writerow(
             [
                 self._header_a_record["invoice_number"],
                 self._header_fields_dict.get("Customer_Store_Number", ""),
@@ -219,7 +225,9 @@ class StewartsCustomConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None
+        csv_writer.writerow(
             [
                 record.fields["description"],
                 "000000000000",
@@ -238,7 +246,9 @@ class StewartsCustomConverter(BaseEDIConverter):
 
         """
         if self._header_a_record:
-            context.csv_writer.writerow(
+            csv_writer = context.csv_writer
+            assert csv_writer is not None
+            csv_writer.writerow(
                 [
                     "",
                     "",

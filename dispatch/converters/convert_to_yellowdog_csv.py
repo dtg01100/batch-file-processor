@@ -122,7 +122,9 @@ class YellowDogConverter(BaseEDIConverter):
         )
 
         # Write headers
-        context.csv_writer.writerow(
+        writer = context.csv_writer
+        assert writer is not None
+        writer.writerow(
             [
                 "Invoice Total",
                 "Description",
@@ -154,7 +156,7 @@ class YellowDogConverter(BaseEDIConverter):
         self.arec_line = record.fields
         self.brec_index = 0
 
-    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item), adding to batch.
 
         Args:
@@ -164,7 +166,7 @@ class YellowDogConverter(BaseEDIConverter):
         """
         self.brec_lines.append(record.fields)
 
-    def process_c_record(self, record: EDIRecord, _context: ConversionContext) -> None:
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax), adding to batch.
 
         Args:
@@ -205,6 +207,7 @@ class YellowDogConverter(BaseEDIConverter):
 
         """
         csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer must be initialized in _initialize_output"
 
         # Reverse record order (original behavior)
         self.brec_lines.reverse()
@@ -233,8 +236,8 @@ class YellowDogConverter(BaseEDIConverter):
             invoice_number = "0"
 
         # Fetch customer info from database
-        customer_name = self.inv_fetcher.fetch_cust_name(invoice_number)
-        customer_po = self.inv_fetcher.fetch_po(invoice_number)
+        customer_name = self.inv_fetcher.fetch_cust_name(safe_int(invoice_number))
+        customer_po = self.inv_fetcher.fetch_po(safe_int(invoice_number))
         # Write B records (line items)
         lineno = 0
         while self.brec_lines:
@@ -242,8 +245,8 @@ class YellowDogConverter(BaseEDIConverter):
 
             # Fetch UOM description
             uom_desc = self.inv_fetcher.fetch_uom_desc(
-                curline["vendor_item"],
-                curline["unit_multiplier"],
+                safe_int(curline["vendor_item"]),
+                safe_int(curline["unit_multiplier"]),
                 lineno,
                 safe_int(invoice_number),
             )

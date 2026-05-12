@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 class CustomerLookupService:
     """Service for customer header field lookups from AS400 database."""
 
-    def __init__(self, query_runner: QueryRunner, sql_query: str):
+    def __init__(self, query_runner: QueryRunner | None, sql_query: str):
         """Initialize with query runner and SQL query template.
 
         Args:
@@ -29,7 +29,7 @@ class CustomerLookupService:
         return self._header_dict
 
     def lookup(self, invoice_number: str) -> dict[str, Any]:
-        """Look up customer header fields by invoice number.
+        """Look up customer header fields for an invoice.
 
         Args:
             invoice_number: Invoice number to look up
@@ -40,6 +40,10 @@ class CustomerLookupService:
         Raises:
             CustomerLookupError: If customer not found
         """
+        if self._query_runner is None:
+            logger.warning("CustomerLookupService: no query_runner, returning empty header")
+            self._header_dict = {}
+            return self._header_dict
         invoice_param = invoice_number.lstrip("0")
 
         header_fields = self._query_runner.run_query(self._sql_query, (invoice_param,))
