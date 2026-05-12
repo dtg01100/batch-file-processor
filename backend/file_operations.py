@@ -157,8 +157,7 @@ class RealFileOperations:
 
         """
         logger.debug("Checking if path exists: %s", path)
-        result = os.path.exists(path)
-        return result
+        return os.path.exists(path)
 
     def makedirs(self, path: str, *, exist_ok: bool = False) -> None:
         """Create directory and all parent directories.
@@ -242,8 +241,7 @@ class RealFileOperations:
 
         """
         logger.debug("Checking if path is file: %s", path)
-        result = os.path.isfile(path)
-        return result
+        return os.path.isfile(path)
 
     def isdir(self, path: str) -> bool:
         """Check if path is a directory.
@@ -256,8 +254,7 @@ class RealFileOperations:
 
         """
         logger.debug("Checking if path is directory: %s", path)
-        result = os.path.isdir(path)
-        return result
+        return os.path.isdir(path)
 
     def listdir(self, path: str) -> list[str]:
         """List contents of a directory.
@@ -270,8 +267,7 @@ class RealFileOperations:
 
         """
         logger.debug("Listing directory: %s", path)
-        result = os.listdir(path)
-        return result
+        return os.listdir(path)
 
     def getsize(self, path: str) -> int:
         """Get file size in bytes.
@@ -284,8 +280,7 @@ class RealFileOperations:
 
         """
         logger.debug("Getting size of: %s", path)
-        result = os.path.getsize(path)
-        return result
+        return os.path.getsize(path)
 
     def move(self, src: str, dst: str) -> None:
         """Move a file or directory.
