@@ -51,7 +51,7 @@ class SimplifiedCSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="retail_uom",
                 field_type=FieldType.BOOLEAN,
@@ -91,7 +91,6 @@ class SimplifiedCSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 default="",
             ),
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> SimplifiedCSVConfiguration:
         return SimplifiedCSVConfiguration(

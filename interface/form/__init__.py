@@ -40,11 +40,13 @@ Usage Example:
 
     # Validate
     result = generator.validate()
-    if result.success:
-        print("Form is valid")
-    else:
-        print(f"Errors: {result.errors}")
+    logger.debug(
+        "Form validation result",
+        extra={"success": result.success, "errors": result.errors},
+    )
 """
+
+from core.structured_logging import get_logger
 
 from .config_section_widgets import (
     CollapsibleSectionWidget,
@@ -60,6 +62,8 @@ from .section_factory import (
     SectionFactory,
     SectionFactoryRegistry,
 )
+
+logger = get_logger(__name__)
 
 __all__ = [
     "CollapsibleSectionWidget",

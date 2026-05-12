@@ -46,7 +46,7 @@ class EStoreEInvoiceConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="estore_store_number",
                 field_type=FieldType.STRING,
@@ -76,7 +76,6 @@ class EStoreEInvoiceConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 default="",
             ),
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> EStoreEInvoiceConfiguration:
         return EStoreEInvoiceConfiguration(

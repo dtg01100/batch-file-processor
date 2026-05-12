@@ -53,7 +53,7 @@ class ScannerWareConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="a_record_padding",
                 field_type=FieldType.STRING,
@@ -106,7 +106,6 @@ class ScannerWareConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 default=False,
             ),
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> ScannerWareConfiguration:
         return ScannerWareConfiguration(

@@ -32,7 +32,7 @@ class CSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="include_headers",
                 field_type=FieldType.BOOLEAN,
@@ -76,7 +76,6 @@ class CSVConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 default=False,
             ),
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> CSVConfiguration:
         return CSVConfiguration(

@@ -5,7 +5,7 @@ Provides a common base class for all Qt dialogs, replacing the tkinter Dialog cl
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QVBoxLayout, QWidget
@@ -110,7 +110,11 @@ class BaseDialog(QDialog):
             return button_box
 
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            cast(
+                QDialogButtonBox.StandardButtons,
+                QDialogButtonBox.StandardButton.Ok
+                | QDialogButtonBox.StandardButton.Cancel,
+            )
         )
         button_box.accepted.connect(self._on_ok)
         button_box.rejected.connect(self.reject)
@@ -158,7 +162,10 @@ class BaseDialog(QDialog):
             self,
             title,
             message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            cast(
+                QMessageBox.StandardButtons,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            ),
             QMessageBox.StandardButton.No,
         )
         return reply == QMessageBox.StandardButton.Yes
@@ -169,7 +176,10 @@ class BaseDialog(QDialog):
             self,
             title,
             message,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            cast(
+                QMessageBox.StandardButtons,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            ),
             QMessageBox.StandardButton.Cancel,
         )
         return reply == QMessageBox.StandardButton.Ok

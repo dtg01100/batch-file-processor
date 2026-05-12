@@ -39,7 +39,7 @@ class FintechConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="fintech_division_id",
                 field_type=FieldType.STRING,
@@ -50,7 +50,6 @@ class FintechConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 max_length=50,
             )
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> FintechConfiguration:
         return FintechConfiguration(

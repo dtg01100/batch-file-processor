@@ -63,7 +63,7 @@ class TweaksConfigurationPlugin(BaseSimpleConfigurationPlugin):
 
     @classmethod
     def get_config_fields(cls) -> list[FieldDefinition]:
-        fields = [
+        return [
             FieldDefinition(
                 name="pad_arec",
                 field_type=FieldType.BOOLEAN,
@@ -200,7 +200,6 @@ class TweaksConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 default="           ",
             ),
         ]
-        return fields
 
     def create_config(self, data: dict[str, Any]) -> TweaksConfiguration:
         return TweaksConfiguration(
