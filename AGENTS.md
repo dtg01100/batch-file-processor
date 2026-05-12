@@ -261,18 +261,6 @@ Contains deprecated code kept for reference and potential rollback. **Do not imp
 | `edi_tweaks.py` | `dispatch.pipeline.tweaker.EDITweakerStep` | Use pipeline step |
 | `_dispatch_legacy.py` | `dispatch/orchestrator.py` | Refactored with DI |
 
-### Compatibility Layer (`dispatch/compatibility.py`)
-
-Provides backward-compatible imports with deprecation warnings for legacy code. **New code should import directly from dispatch package modules.**
-
-```python
-# Legacy (with deprecation warning)
-from dispatch.compatibility import DispatchOrchestrator
-
-# Modern (recommended)
-from dispatch import DispatchOrchestrator
-```
-
 ### Feature Flags (`dispatch/feature_flags.py`)
 
 Runtime configuration via environment variables:

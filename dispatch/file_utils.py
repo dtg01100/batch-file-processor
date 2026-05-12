@@ -28,7 +28,7 @@ _INVALID_ALIAS_CHARS_RE = re.compile(r"[^a-zA-Z0-9 ]")
 
 def build_output_filename(
     original: str,
-    _format: str,
+    format: str,  # noqa: ARG001 - unused parameter, kept for API compatibility
     params: dict,
     filename_prefix: str = "",
     filename_suffix: str = "",
