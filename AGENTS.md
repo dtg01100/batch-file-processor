@@ -1,441 +1,391 @@
-# AGENTS.md
+# Batch File Processor — Technical Reference
 
-**Version:** 1.0
-**Date:** 2026-04-28
-**Purpose:** Technical reference for batch-file-processor development
-
----
-
-## Project Overview
-
-**batch-file-processor** is a Python/PyQt5 GUI application for processing EDI/batch files with email, FTP, and copy backends.
-
-- **Language:** Python 3.11+ (tested with 3.13)
-- **GUI Framework:** PyQt5 5.15
-- **Architecture:** MVC with service layer, pipeline-based processing
-- **Testing:** pytest with 1300+ tests
+**Version:** 1.0 | **Last Updated:** 2026-05-11
+**Purpose:** Development guide for contributors and maintainers
 
 ---
 
-## Quick Setup
+## Table of Contents
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Create virtual environment (recommended)
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run GUI application
-./.venv/bin/python interface/qt/app.py
-
-# Run in automatic/headless mode
-./.venv/bin/python interface/qt/app.py -a
-
-# Run tests
-./.venv/bin/pytest tests/
-
-# Run tests excluding Qt tests (faster)
-./.venv/bin/pytest -m "not qt" -n auto
-```
-
-## Version Constraints
-
-**CRITICAL: This project targets Python 3.11 and Qt5.**
-
-- **Python 3.11** is the maximum supported version (target system does not support 3.12+)
-- **Qt5/PyQt5** is the maximum supported version (target system does not support Qt6)
-- Do NOT update to Python 3.12, 3.13, or newer
-- Do NOT update to PyQt6 or Qt6
-
-## PyInstaller Windows Build
-
-This project is packaged for Windows using PyInstaller via the `batonogov/pyinstaller-windows` Docker container.
-
-### Build Files
-
-| File | Purpose |
-|------|---------|
-| `Dockerfile.windows.build` | Docker build file for Windows executable |
-| `main_interface.spec` | PyInstaller spec file for Windows build |
-| `Dockerfile` | Linux dev environment (Python 3.11) |
-
-### Build Process
-
-```bash
-# Build Windows executable via Docker
-docker build -f Dockerfile.windows.build -t batch-file-processor .
-
-# Output: dist/Batch File Sender.exe
-```
-
-### Spec File Details
-
-The `main_interface.spec` file includes:
-- All PyQt5 modules (QtCore, QtGui, QtWidgets, QtNetwork, etc.)
-- All backend modules (email, FTP, copy)
-- All dispatch converters (scannerware, csv, tweaks, etc.)
-- All interface modules (Qt dialogs, operations, services)
-
-### Hidden Imports
-
-PyInstaller cannot detect these imports automatically, so they are explicitly listed:
-- PyQt5.sip and all Qt modules
-- All backend modules (database, FTP, SMTP, copy)
-- All converters in `dispatch.converters.*`
-- Archive modules for legacy support
+1. [Architecture Overview](#architecture-overview)
+2. [Directory Structure](#directory-structure)
+3. [Key Entry Points](#key-entry-points)
+4. [Import Conventions](#import-conventions)
+5. [Core Patterns](#core-patterns)
+6. [Legacy & Compatibility](#legacy--compatibility)
+7. [Testing](#testing)
+8. [Common Tasks](#common-tasks)
+9. [Anti-Patterns](#anti-patterns)
 
 ---
 
-## Architecture
+## Architecture Overview
 
 ```
-User Input (PyQt5 GUI)
-    |
-    v
-interface/qt/app.py (Main Application)
-    |
-    v
-dispatch/orchestrator.py (DispatchOrchestrator)
-    |
-    +-- dispatch/services/file_processor.py (FileProcessor)
-    |       |
-    |       +-- dispatch/edi_validator.py (EDI Validation)
-    |       +-- dispatch/converters/* (Format Conversion)
-    |       +-- backend/* (Email, FTP, Copy, HTTP)
-    |
-    v
-Results → interface/models → PyQt5 UI Updates
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER (PyQt5 GUI)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         interface/qt/app.py                                  │
+│                           Main Application                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DispatchOrchestrator (dispatch/)                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │ FolderProcessor │  │  FileProcessor  │  │      SendManager           │  │
+│  │  (per-folder)   │  │   (per-file)    │  │      (backends)             │  │
+│  └────────┬────────┘  └────────┬────────┘  └──────────────┬──────────────┘  │
+│           │                    │                          │                 │
+│           ▼                    ▼                          ▼                 │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                      Pipeline Steps                                  │  │
+│  │  Validator → Splitter → Converter → Tweaker → Sender                │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+              ┌──────────┐    ┌──────────────┐   ┌──────────┐
+              │  Email   │    │     FTP      │   │   Copy   │
+              │ (SMTP)   │    │  (backend/)  │   │  Backend │
+              └──────────┘    └──────────────┘   └──────────┘
 ```
+
+### Data Flow
+
+1. **User triggers processing** via Qt UI or automatic mode
+2. **DispatchOrchestrator** coordinates per-folder processing
+3. **FolderProcessor** discovers files, skips already-processed (checksum)
+4. **FileProcessor** runs each file through the pipeline:
+   - EDI validation
+   - Splitting (if enabled)
+   - Format conversion
+   - Tweaks (if enabled)
+5. **SendManager** delivers output via configured backends
 
 ---
 
 ## Directory Structure
 
-| Path | Purpose |
+| Path | Purpose | Key Files |
+|------|---------|-----------|
+| **interface/** | PyQt5 GUI layer | `qt/app.py`, `qt/main_window.py`, `application_controller.py` |
+| **interface/qt/** | Qt widgets and dialogs | `dialogs/`, `widgets/`, `theme.py`, `run_coordinator.py` |
+| **interface/models/** | Data models (dataclasses) | `folder_configuration.py` |
+| **interface/operations/** | Business logic | `folder_operations.py`, `processing.py`, `maintenance.py` |
+| **interface/database/** | Database access | `database_manager.py`, `Table` wrapper |
+| **dispatch/** | Core file processing | `orchestrator.py`, `send_manager.py`, `edi_validator.py` |
+| **dispatch/services/** | Processing services | `file_processor.py`, `folder_processor.py` |
+| **dispatch/pipeline/** | Pipeline steps | `validator.py`, `splitter.py`, `converter.py` |
+| **dispatch/converters/** | 12 format converters | `convert_to_csv.py`, `convert_to_scannerware.py`, etc. |
+| **backend/** | Output backends | `email_backend.py`, `ftp_backend.py`, `copy_backend.py`, `http_backend.py` |
+| **core/** | Shared utilities | `structured_logging.py`, `constants.py`, `exceptions.py` |
+| **core/edi/** | EDI parsing | `edi_parser.py`, `edi_splitter.py`, `edi_tweaker.py` |
+| **core/database/** | Database layer | SQLite adapter and repositories |
+| **adapters/** | Database adapters | `adapters/sqlite/` (current), `adapters/db2ssh/` (future) |
+| **tests/** | Test suite (~4757 tests) | `unit/`, `integration/`, `qt/`, `convert_backends/` |
+| **archive/** | Deprecated code | Legacy `dispatch_process.py`, `edi_tweaks.py` (read-only) |
+
+---
+
+## Key Entry Points
+
+| File | Purpose |
 |------|---------|
-| `interface/` | PyQt5 GUI application layer |
-| `interface/qt/` | Qt widgets, dialogs, main app |
-| `interface/models/` | Data models (Folder, ProcessedFile, Settings) |
-| `interface/operations/` | Business logic operations |
-| `interface/plugins/` | Plugin system for extensions |
-| `dispatch/` | Core file processing orchestration |
-| `dispatch/pipeline/` | Pipeline step interfaces and adapters |
-| `dispatch/services/` | File and folder processing services |
-| `dispatch/converters/` | 10+ format converters |
-| `backend/` | Output backends (email, FTP, copy, HTTP) |
-| `core/` | Shared utilities, constants, structured logging |
-| `core/edi/` | EDI parsing and validation |
-| `core/database/` | Database layer |
-| `tests/` | Test suite (see `tests/AGENTS.md`) |
+| `main_qt.py` | Desktop shortcut entry point (delegates to `main_interface`) |
+| `main_interface.py` | Application bootstrap — arg parsing, DB path, window creation |
+| `interface/qt/app.py` | QApplication setup, theme, window instantiation |
+| `interface/qt/bootstrap.py` | Service initialization (DB, config, window factory) |
+
+### Running the Application
+
+```bash
+# GUI mode
+.venv/bin/python interface/qt/app.py
+
+# Automatic/headless mode
+.venv/bin/python interface/qt/app.py -a
+
+# Legacy entry point (wraps main_interface)
+.venv/bin/python main_qt.py
+```
 
 ---
 
-## Code Style
+## Import Conventions
 
-### Python Conventions
+### Recommended Import Patterns
 
-- **Line length:** 88 characters (Black formatter)
-- **Indentation:** 4 spaces (no tabs)
-- **Type hints:** Required for function signatures
-- **Docstrings:** Google style for public APIs
+**For new code, prefer explicit imports:**
 
-### noqa Comments — Always Justify
-
-When adding `# noqa` suppressions, always include a justification comment explaining **why** the suppression is needed. Never leave a bare `# noqa`.
-
-**Good:**
 ```python
-context: dict[str, Any],  # noqa: ARG001 - required by PipelineStep protocol but unused by adapter
+# ✓ Recommended - explicit and searchable
+from dispatch.orchestrator import DispatchOrchestrator
+from dispatch.edi_validator import EDIValidator
+from backend.email_backend import do as email_do
+
+# ✓ Recommended - import from module root when using multiple items
+from dispatch import EDIValidator, SendManager
 ```
 
-**Bad:**
+### Module Aliases Used in Codebase
+
 ```python
-context: dict[str, Any],  # noqa: ARG001
+dispatch        # → dispatch/ package
+backend         # → backend/ package
+core            # → core/ package
+interface       # → interface/ package
 ```
 
-### Justification Requirements by Error Type
+### Anti-pattern to Avoid
 
-| Error Code | Meaning | When Appropriate |
-|------------|---------|-----------------|
-| `ARG001` | Unused argument | Required by protocol/interface but not used in implementation |
-| `FBT001/FBT003` | Qt boolean-to-int conversion | Qt signal handlers that require specific signatures |
-| `N802` | Qt method override naming | Qt method overrides using Qt conventional parameter names |
-| `E402` | Module import at module level | Backward compatibility re-exports |
-| `F401` | Unused import | Re-exports for backward compatibility |
-| `BLE001` | Bare except clause | Intentional exception fallthrough in logging |
-| `type: ignore[arg-type]` | PyQt5 stub incompatibilities | PyQt5 type stubs are incorrect, code works at runtime |
+```python
+# ✗ Avoid - unclear where DispatchOrchestrator comes from
+from dispatch import DispatchOrchestrator
 
-### Resolution Before Suppression
+# ✓ Better - explicit import from actual location
+from dispatch.orchestrator import DispatchOrchestrator
+```
 
-Always try to fix the underlying issue first. Suppressions should be a last resort when:
-- The code is correct but linter/type checker is wrong
-- External API requires specific signatures
-- Type stubs are incorrect (document which)
+**Exception:** Importing multiple items from `dispatch` root is acceptable when using multiple classes from the same package:
+
+```python
+# ✓ Acceptable - multiple items from same package
+from dispatch import EDIValidator, SendManager
+
+# ✗ Avoid - single item import from root
+from dispatch import EDIValidator
+```
 
 ---
 
-## Module Naming Conventions
+## Core Patterns
 
-| Prefix | Purpose | Examples |
-|--------|---------|----------|
-| `interface/qt/` | Qt widgets and dialogs | `app.py`, `main_window.py`, `run_coordinator.py` |
-| `interface/models/` | Data models | `folder.py`, `processed_file.py` |
-| `interface/operations/` | Business logic | `folder_operations.py`, `processed_files.py` |
-| `dispatch/` | Core processing | `orchestrator.py`, `send_manager.py` |
-| `dispatch/services/` | Processing services | `file_processor.py`, `folder_processor.py` |
-| `dispatch/converters/` | Format converters | `convert_to_csv.py`, `convert_to_scannerware.py` |
-| `backend/` | Output backends | `email_backend.py`, `ftp_backend.py`, `copy_backend.py` |
-| `core/` | Shared utilities | `structured_logging.py`, `constants.py` |
+### 1. Pipeline Step Pattern
+
+Standard interface for processing steps:
+
+```python
+from dispatch.pipeline.interfaces import PipelineStep
+
+class MyStep(PipelineStep):
+    def execute(self, input_path: str, context: dict) -> tuple[bool, str, list[str]]:
+        """Execute the pipeline step.
+        
+        Returns:
+            Tuple of (success, output_path, errors)
+        """
+        ...
+```
+
+### 2. Backend Pattern
+
+All backends implement the same interface:
+
+```python
+def do(
+    process_parameters: dict,  # Backend-specific config
+    settings_dict: dict,      # Global settings
+    filename: str,            # File to send
+    disable_retry: bool = False,
+) -> bool:
+    """Send a file via backend.
+    
+    Returns:
+        True if successful
+    """
+```
+
+### 3. Converter Pattern
+
+Converters receive a structured EDI process dict:
+
+```python
+def edi_convert(
+    edi_process: dict,        # EDI processing context
+    output_filename: str,      # Target output path
+    settings_dict: dict,       # Global settings
+    parameters_dict: dict,     # Converter-specific params
+    upc_lookup: dict = None,   # UPC lookup table
+) -> tuple[bool, str, list[str]]:
+    """Convert EDI file to target format.
+    
+    Returns:
+        Tuple of (success, output_path, errors)
+    """
+```
+
+### 4. Error Handling Pattern
+
+```python
+from dispatch.error_handler import ErrorHandler
+
+handler = ErrorHandler(errors_folder=errors_path)
+handler.record_error(
+    folder_id=folder.id,
+    file_path=file_path,
+    error_type="ValidationError",
+    error_message="Invalid EDI format",
+    stack_trace=traceback.format_exc(),
+)
+```
+
+### 5. Logging Pattern
+
+```python
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
+
+logger.info("Processing started", extra={"folder": folder.alias})
+logger.debug("File discovered", extra={"path": file_path, "size": size})
+logger.error("Backend failed", extra={"backend": "ftp", "retry": 2})
+```
+
+---
+
+## Legacy & Compatibility
+
+### Archive Directory (`archive/`)
+
+Contains deprecated code kept for reference and potential rollback. **Do not import from here for new development.**
+
+| Archived File | Superseded By | Migration Notes |
+|--------------|--------------|-----------------|
+| `dispatch_process.py` | `dispatch.orchestrator.DispatchOrchestrator` | Use instance-based API |
+| `mtc_edi_validator.py` | `dispatch.edi_validator.EDIValidator` | Use class-based validator |
+| `edi_tweaks.py` | `dispatch.pipeline.tweaker.EDITweakerStep` | Use pipeline step |
+| `_dispatch_legacy.py` | `dispatch/orchestrator.py` | Refactored with DI |
+
+### Compatibility Layer (`dispatch/compatibility.py`)
+
+Provides backward-compatible imports with deprecation warnings for legacy code. **New code should import directly from dispatch package modules.**
+
+```python
+# Legacy (with deprecation warning)
+from dispatch.compatibility import DispatchOrchestrator
+
+# Modern (recommended)
+from dispatch import DispatchOrchestrator
+```
+
+### Feature Flags (`dispatch/feature_flags.py`)
+
+Runtime configuration via environment variables:
+
+```python
+from dispatch.feature_flags import get_feature_flags, set_feature_flag
+
+flags = get_feature_flags()
+if flags.get("DISPATCH_DEBUG_MODE"):
+    logger.setLevel(logging.DEBUG)
+```
 
 ---
 
 ## Testing
 
-### Before Committing
+### Test Markers
+
+| Marker | Purpose | Execution |
+|--------|---------|-----------|
+| `unit` | Fast unit tests | `pytest -m unit -n auto` |
+| `integration` | Database/integration tests | `pytest -m integration -n auto` |
+| `qt` | PyQt5 UI tests | `pytest -m qt -n0` (single-threaded) |
+| `conversion` | Converter parity tests | `pytest -m conversion -n auto` |
+| `backend` | Backend tests | `pytest -m backend -n auto` |
+| `fast` | Tests <5 seconds | `pytest -m "unit and fast" -n auto` |
+
+### Running Tests
 
 ```bash
-# Run all tests (excluding Qt)
+# All tests (excludes Qt, parallel)
 make test-parallel
 
-# Run unit tests only
-make test-unit
-
-# Run fast unit tests
-make test-unit-fast
-
-# Run Qt tests (single-threaded required)
+# Qt tests only (single-threaded - required!)
 make test-qt
 
-# Run specific test file
-make test-file FILE=tests/unit/test_utils.py
+# Unit tests
+make test-unit
 
-# Run tests with fail-fast
+# Specific file
+make test-file FILE=tests/unit/dispatch/test_orchestrator.py
+
+# Fail-fast
 make test-failfast
 ```
 
-### Qt Tests
+### Qt Test Rules
 
-Qt tests **MUST** be run with `-n0` (single-threaded) because PyQt5 widgets with background threads cause segfaults with pytest-xdist parallel execution.
-
-```bash
-# Correct
-./.venv/bin/pytest tests/unit/interface/qt/ -n0
-
-# Wrong (may cause segfaults)
-./.venv/bin/pytest tests/unit/interface/qt/ -n auto
-```
-
-### Test Markers
-
-| Marker | Purpose |
-|--------|---------|
-| `unit` | Unit tests (fast, isolated) |
-| `integration` | Integration tests |
-| `qt` | Qt UI tests (single-threaded) |
-| `conversion` | File conversion tests |
-| `backend` | Backend tests (FTP, Email, Copy) |
-| `dispatch` | Dispatch/orchestration tests |
-| `fast` | Fast tests (<5 seconds) |
-| `slow` | Slow tests (>30 seconds) |
-
----
-
-## Commit Format
-
-```
-type(scope): brief description
-
-Problem: What was broken/incomplete
-Solution: How you fixed it
-Testing: How you verified the fix
-```
-
-**Types:** `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
-
-**Example:**
+⚠️ **Qt tests MUST run single-threaded (`-n0`)** due to PyQt5 + pytest-xdist segfaults from worker thread cleanup.
 
 ```bash
-git add -A
-git commit -m "fix(dispatch): resolve retry logic in FTP backend
+# ✓ Correct
+pytest tests/unit/interface/qt/ -n0
 
-Problem: time.sleep was being patched on wrong module
-Solution: Patched backend_base.time.sleep instead
-Testing: All retry tests pass, integration verified"
+# ✗ Wrong (may segfault)
+pytest tests/unit/interface/qt/ -n auto
 ```
 
 ---
 
-## Development Tools
+## Common Tasks
 
-### Common Commands
+### Where to look for common tasks:
 
-```bash
-# Run GUI
-./.venv/bin/python interface/qt/app.py
+| Task | Location | Notes |
+|------|----------|-------|
+| Add new UI dialog | `interface/qt/dialogs/` | Follow existing dialog patterns |
+| Add new backend | `backend/` | Implement `do()` function, add to `BackendFactory` |
+| Add new converter | `dispatch/converters/` | Implement `edi_convert()` function |
+| Add pipeline step | `dispatch/pipeline/` | Implement `PipelineStep` protocol |
+| Add folder operation | `interface/operations/folder_operations.py` | Use `DatabaseManager` for DB access |
+| Modify EDI validation | `dispatch/edi_validator.py` | `EDIValidator` class |
+| Modify file splitting | `core/edi/edi_splitter.py` | `split_edi_file()` function |
+| Add database migration | `migrations/` | Follow versioned migration pattern |
 
-# Run headless
-./.venv/bin/python interface/qt/app.py -a
+### Adding a New Backend
 
-# Install package
-./.venv/bin/pip install -e .
+1. Create `backend/my_backend.py` with `do()` function
+2. Add to `send_manager.py` `BackendFactory` class
+3. Register in `DispatchConfig` backend list
+4. Add tests in `tests/unit/backend/`
 
-# Run linter
-ruff check .
+### Adding a New Converter
 
-# Format code
-black .
-
-# Type check
-mypy .
-```
-
----
-
-## Common Patterns
-
-### Pipeline Step Pattern
-
-```python
-class PipelineStep(Protocol):
-    def execute(self, input_path: str, context: dict) -> tuple[bool, str, list[str]]:
-        """Execute the pipeline step.
-        
-        Args:
-            input_path: Path to input file
-            context: Processing context with settings
-            
-        Returns:
-            Tuple of (success, output_path, errors)
-        """
-        ...
-
-# Adapter for existing functions
-def wrap_as_pipeline_step(func):
-    def execute(self, input_path: str, context: dict):
-        return func(input_path, context), input_path, []
-    return execute
-```
-
-### Backend Pattern
-
-```python
-def do(
-    process_parameters: dict,
-    settings_dict: dict,
-    filename: str,
-    disable_retry: bool = False,
-) -> bool:
-    """Send a file via backend.
-    
-    Args:
-        process_parameters: Backend-specific parameters
-        settings_dict: Global settings
-        filename: File to send
-        disable_retry: Skip retry logic (for testing)
-        
-    Returns:
-        True if successful
-    """
-    backend = MyBackend(disable_retry=disable_retry)
-    return backend.send(process_parameters, settings_dict, filename)
-```
+1. Create `dispatch/converters/convert_to_format.py`
+2. Implement `edi_convert()` function
+3. Register in `dispatch/converters/__init__.py`
+4. Add converter tests in `tests/convert_backends/`
 
 ---
 
-## Documentation
+## Anti-Patterns
 
-### Module Documentation
-
-Each module should have:
-- Module docstring explaining purpose
-- Class docstrings with Attributes section
-- Method docstrings with Args, Returns sections
-
-### What Needs Documentation
-
-| Change Type | Required Documentation |
-|-------------|----------------------|
-| New module | Docstring + AGENTS.md update |
-| API change | Update docstrings + changelog |
-| New feature | Update relevant AGENTS.md section |
-| Backend change | Update `backend/` section in AGENTS.md |
-
-### Documentation Files
-
-| File | Purpose |
-|------|---------|
-| `AGENTS.md` | This file - technical reference |
-| `interface/AGENTS.md` | Interface module details |
-| `dispatch/AGENTS.md` | Dispatch module details |
-| `tests/AGENTS.md` | Test suite details |
+| Pattern | Why Wrong | Correct Approach |
+|---------|-----------|------------------|
+| Import from `dispatch` root | Unclear source, breaks encapsulation | Import from `dispatch.module` explicitly |
+| Business logic in UI widgets | Couples UI to logic, hard to test | Put logic in `interface/operations/` |
+| Direct DB queries from widgets | Breaks MVC, tight coupling | Use controller → operations → DB manager |
+| Qt tests with `-n auto` | Segfaults with pytest-xdist | Use `-n0` for Qt tests |
+| Bare `# noqa` | Unjustified suppression | Always add justification comment |
+| Hardcoded converter names | Reduces flexibility | Use dynamic import patterns |
 
 ---
 
-## Anti-Patterns (What NOT To Do)
+## Version Constraints
 
-| Anti-Pattern | Why It's Wrong | What To Do |
-|--------------|----------------|------------|
-| Use `python` instead of `.venv/bin/python` | Wrong Python environment | Always use `.venv/bin/python` |
-| Run Qt tests with `-n auto` | Causes segfaults | Use `-n0` for Qt tests |
-| Skip pytest markers | Loses test categorization | Use `-m` markers appropriately |
-| Use bare `# noqa` | Unclear why linting is suppressed | Always justify noqa comments |
-| Import from `dispatch` root | Old pattern, breaks encapsulation | Import from `dispatch.module` |
-| Hardcode converter/backend names | Reduces flexibility | Use dynamic import patterns |
+- **Python:** 3.11 maximum (target system limitation)
+- **Qt:** PyQt5 5.15 / Qt5 maximum (target system limitation)
+- **Do NOT update** to Python 3.12+ or PyQt6/Qt6
 
 ---
 
-## PyInstaller Windows Build
-
-The project is packaged for Windows using PyInstaller via the `batonogov/pyinstaller-windows:v4.0.1` Docker container.
-
-### Build Files
-
-| File | Purpose |
-|------|---------|
-| `Dockerfile.windows.build` | Docker build file targeting Python 3.11 |
-| `main_interface.spec` | PyInstaller spec with all hidden imports |
-| `Dockerfile` | Linux development environment |
-
-### Build Process
-
-```bash
-# Build Windows executable via Docker
-docker build -f Dockerfile.windows.build -t batch-file-processor .
-
-# Output: dist/Batch File Sender.exe
-```
-
-### Spec File Requirements
-
-The `main_interface.spec` explicitly lists hidden imports because PyInstaller cannot detect them from:
-- Dynamic imports (`importlib.import_module()`)
-- Plugin discovery patterns
-- Qt signal/slot connections
-
-**Required hidden imports:**
-- PyQt5 modules: QtCore, QtGui, QtWidgets, QtNetwork, QtSvg, QtXml, QtPrintSupport, sip
-- Backend modules: database_obj, ftp_client, smtp_client, copy_backend, email_backend, ftp_backend
-- Converters: All modules in `dispatch.converters.*`
-- Archive: Legacy modules for backward compatibility
-
----
-
-## Quick Reference
-
-| Command | Description |
-|---------|-------------|
-| `./.venv/bin/python interface/qt/app.py` | Run GUI |
-| `./.venv/bin/python interface/qt/app.py -a` | Run headless |
-| `./.venv/bin/pytest tests/ -m "not qt"` | Run tests (no Qt) |
-| `./.venv/bin/pytest tests/unit/interface/qt/ -n0` | Run Qt tests |
-| `make test-unit` | Unit tests |
-| `make test-qt` | Qt tests (single-threaded) |
-| `ruff check .` | Lint code |
-| `black .` | Format code |
-
----
-
-*For project methodology and workflow, see .clio/instructions.md*
+*For project methodology and workflow, see `.clio/instructions.md`*
+*For test suite details, see `tests/AGENTS.md`*
+*For interface module details, see `interface/AGENTS.md`*
+*For dispatch module details, see `dispatch/AGENTS.md`*

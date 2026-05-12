@@ -87,16 +87,13 @@ class PipelineStep(Protocol):
 ## CONFIGURATION
 
 ```python
-from dispatch.config_builder import DispatchConfigBuilder
 from dispatch.edi_validator import EDIValidator
 
-config = (
-    DispatchConfigBuilder()
-    .with_validator(EDIValidator())
-    .with_settings({"email_host": "smtp.example.com"})
-    .with_backends({"email": email_backend})
-    .build()
-)
+config = {
+    "validator": EDIValidator(),
+    "settings": {"email_host": "smtp.example.com"},
+    "backends": {"email": email_backend},
+}
 
 orchestrator = DispatchOrchestrator(config)
 ```
