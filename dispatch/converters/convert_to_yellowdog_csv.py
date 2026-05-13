@@ -207,7 +207,9 @@ class YellowDogConverter(BaseEDIConverter):
 
         """
         csv_writer = context.csv_writer
-        assert csv_writer is not None, "csv_writer must be initialized in _initialize_output"
+        assert csv_writer is not None, (
+            "csv_writer must be initialized in _initialize_output"
+        )
 
         # Reverse record order (original behavior)
         self.brec_lines.reverse()

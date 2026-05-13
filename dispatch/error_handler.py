@@ -264,7 +264,9 @@ class ErrorHandler:
             self._persist_to_database(error_record)
 
         # Fire alert if configured and allowed
-        if self._alert_dispatcher is not None and (context or {}).get("alert_on_failure", True):
+        if self._alert_dispatcher is not None and (context or {}).get(
+            "alert_on_failure", True
+        ):
             try:
                 import traceback as tb
 

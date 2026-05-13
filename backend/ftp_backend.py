@@ -95,7 +95,10 @@ class FTPBackend(BackendBase):
     """
 
     def __init__(
-        self, ftp_client: FTPClientProtocol | None = None, *, disable_retry: bool = False
+        self,
+        ftp_client: FTPClientProtocol | None = None,
+        *,
+        disable_retry: bool = False,
     ) -> None:
         """Initialize FTP backend.
 
@@ -205,7 +208,7 @@ class FTPBackend(BackendBase):
             raise ValueError(f"Invalid filename for FTP upload: {filename_no_path}")
 
         with open(filename, "rb") as send_file:
-            client.storbinary("stor " + safe_filename, send_file)
+            client.storbinary(f"STOR {safe_filename}", send_file)
 
         logger.info("Successfully sent file %s", filename_no_path)
         log_file_operation(

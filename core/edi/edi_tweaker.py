@@ -330,7 +330,8 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
-        raise RuntimeError(f"unreachable: _open_input_with_retry always returns or raises for {filepath}")  # type: ignore[unreachable]
+        msg = f"unreachable: _open_input_with_retry always returns or raises for {filepath}"  # noqa: E501
+        raise RuntimeError(msg)  # type: ignore[unreachable]
 
     def _open_output_with_retry(self, filepath: str) -> TextIO:
         """Open output file with retry logic."""
@@ -356,7 +357,8 @@ class EDITweaker:
                         exc_info=True,
                     )
                     raise
-        raise RuntimeError(f"unreachable: _open_output_with_retry always returns or raises for {filepath}")  # type: ignore[unreachable]
+        msg = f"unreachable: _open_output_with_retry always returns or raises for {filepath}"  # noqa: E501
+        raise RuntimeError(msg)  # type: ignore[unreachable]
 
     def _process_records(
         self, lines: list[str], output_file: TextIO, upc_dict: dict
@@ -569,10 +571,8 @@ class EDITweaker:
             vendor_item = int(fields["vendor_item"].strip())
             category_filter = self.config.override_upc_category_filter.strip()
 
-            if category_filter in ("", "ALL") or upc_dict[vendor_item][0] in category_filter.split(","):
-                fields["upc_number"] = upc_dict[vendor_item][
-                    self.config.override_upc_level
-                ]
+            if category_filter in ("", "ALL") or upc_dict[vendor_item][0] in category_filter.split(","):  # noqa: E501
+                fields["upc_number"] = upc_dict[vendor_item][self.config.override_upc_level]  # noqa: E501
         except (KeyError, TypeError):
             fields["upc_number"] = ""
 
@@ -664,7 +664,7 @@ class EDITweaker:
             elif upc_len == self.config.upc_target_length:
                 # Already the desired length — no change required
                 pass
-            elif upc_len == UPC_A_LENGTH and self.config.upc_target_length == GTIN13_LENGTH:
+            elif upc_len == UPC_A_LENGTH and self.config.upc_target_length == GTIN13_LENGTH:  # noqa: E501
                 fields["upc_number"] = str(proposed_upc).rjust(
                     self.config.upc_target_length,
                     (

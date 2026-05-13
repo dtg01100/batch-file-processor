@@ -123,7 +123,10 @@ class WidgetFactory(ABC):
 
     @abstractmethod
     def create_widget(
-        self, field_type: FieldType, field_definition: FieldDefinition, parent: Any = None
+        self,
+        field_type: FieldType,
+        field_definition: FieldDefinition,
+        parent: Any = None,
     ) -> WidgetBase:
         """
         Create a widget for a specific field type.
@@ -290,7 +293,10 @@ class QtWidgetFactory(WidgetFactory):
     """
 
     def create_widget(
-        self, field_type: FieldType, field_definition: FieldDefinition, parent: Any = None
+        self,
+        field_type: FieldType,
+        field_definition: FieldDefinition,
+        parent: Any = None,
     ) -> WidgetBase:
         """
         Create a Qt widget for a specific field type.

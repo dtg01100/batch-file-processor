@@ -329,8 +329,43 @@ def do_split_edi(
     return edi_send_list
 
 
+def _should_include_b_record(
+    record: str, upc_dict: dict, categories_list: list[str], filter_mode: str
+) -> bool:
+    """Determine if a B record should be included based on category filter.
+
+    Returns:
+        True if the record should be included, False otherwise.
+    """
+    b_rec_dict = capture_records(record)
+    if b_rec_dict is None:
+        return True
+
+    vendor_item_str = b_rec_dict.get("vendor_item", "").strip()
+    if not vendor_item_str:
+        return True
+
+    try:
+        vendor_item = int(vendor_item_str)
+    except ValueError:
+        return True
+
+    if vendor_item not in upc_dict:
+        return True
+
+    item_category = str(upc_dict[vendor_item][0]).lower()
+    category_in_list = item_category in categories_list
+
+    if filter_mode == "include":
+        return category_in_list
+    return not category_in_list
+
+
 def filter_b_records_by_category(
-    b_records: list[str], upc_dict: dict | None, filter_categories: str, filter_mode: str
+    b_records: list[str],
+    upc_dict: dict | None,
+    filter_categories: str,
+    filter_mode: str,
 ) -> list[str]:
     """Filter B records based on item category.
 
@@ -345,44 +380,15 @@ def filter_b_records_by_category(
         List of filtered B record lines
 
     """
-    if upc_dict is None:
-        return b_records
-
-    if filter_categories == "ALL":
-        return b_records
-
-    if not upc_dict:
+    if upc_dict is None or filter_categories == "ALL" or not upc_dict:
         return b_records
 
     categories_list = [c.strip().lower() for c in filter_categories.split(",")]
-    filtered_records = []
-
-    for record in b_records:
-        try:
-            b_rec_dict = capture_records(record)
-            if b_rec_dict is None:
-                # Include unparsable records in output
-                filtered_records.append(record)
-                continue
-            vendor_item = int(b_rec_dict["vendor_item"].strip())
-
-            if vendor_item in upc_dict:
-                item_category = str(upc_dict[vendor_item][0]).lower()
-                category_in_list = item_category in categories_list
-
-                if filter_mode == "include":
-                    if category_in_list:
-                        filtered_records.append(record)
-                elif not category_in_list:
-                    filtered_records.append(record)
-            else:
-                # Item not in upc_dict - include by default (fail-open)
-                filtered_records.append(record)
-        except (ValueError, KeyError):
-            # On error, include the record (fail-open)
-            filtered_records.append(record)
-
-    return filtered_records
+    return [
+        r
+        for r in b_records
+        if _should_include_b_record(r, upc_dict, categories_list, filter_mode)
+    ]
 
 
 def filter_edi_file_by_category(

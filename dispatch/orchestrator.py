@@ -22,7 +22,6 @@ from core.utils import normalize_bool
 from core.utils.folder_utils import build_effective_folder
 from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import DatabaseInterface, RunLog
-from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import SendManager
 from dispatch.services.file_processor import (
@@ -31,6 +30,7 @@ from dispatch.services.file_processor import (
     ProcessingContext,
 )
 from dispatch.services.folder_discovery import FolderDiscoveryService
+from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
 
@@ -412,7 +412,11 @@ class DispatchOrchestrator:
         return result
 
     def _process_file_with_pipeline(
-        self, file_path: str, folder: dict, upc_dict: dict, run_log: RunLog | None = None
+        self,
+        file_path: str,
+        folder: dict,
+        upc_dict: dict,
+        run_log: RunLog | None = None,
     ) -> FileResult:
         """Process single file with pipeline using the FileProcessor service.
 

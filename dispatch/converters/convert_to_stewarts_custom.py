@@ -90,7 +90,9 @@ class StewartsCustomConverter(BaseEDIConverter):
         super().process_a_record(record, context)
         self._header_a_record = record.fields
 
-        assert self._customer_service is not None, "_initialize_output must set _customer_service"
+        assert self._customer_service is not None, (
+            "_initialize_output must set _customer_service"
+        )
         assert self._uom_service is not None, "_initialize_output must set _uom_service"
 
         self._customer_service.lookup(record.fields["invoice_number"])

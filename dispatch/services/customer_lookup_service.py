@@ -41,7 +41,9 @@ class CustomerLookupService:
             CustomerLookupError: If customer not found
         """
         if self._query_runner is None:
-            logger.warning("CustomerLookupService: no query_runner, returning empty header")
+            logger.warning(
+            "CustomerLookupService: no query_runner, returning empty header"
+        )
             self._header_dict = {}
             return self._header_dict
         invoice_param = invoice_number.lstrip("0")

@@ -78,7 +78,10 @@ class EmailBackend(BackendBase):
     """
 
     def __init__(
-        self, smtp_client: SMTPClientProtocol | None = None, *, disable_retry: bool = False
+        self,
+        smtp_client: SMTPClientProtocol | None = None,
+        *,
+        disable_retry: bool = False,
     ) -> None:
         """Initialize email backend.
 
