@@ -174,7 +174,7 @@ def capture_records(line: str, parser=None) -> dict | None:
             if line.strip() == "":
                 return None
             raise EDIParseError("Not An EDI")
-        return result
+        return result  # type: ignore[no-any-return]
 
     if not line or line.startswith("") or not line.strip():
         return None

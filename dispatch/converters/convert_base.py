@@ -429,7 +429,7 @@ def create_csv_writer(
     file_handle: TextIO,
     dialect: str = "excel",
     lineterminator: str = "\r\n",
-    quoting: int = csv.QUOTE_ALL,  # type: ignore[annotation-union-mismatch]  # Literal[1] but csv.QUOTE_ALL is int
+    quoting: int = csv.QUOTE_ALL,
 ) -> Any:
     """Create a CSV writer with common settings.
 

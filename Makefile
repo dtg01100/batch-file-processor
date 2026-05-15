@@ -5,7 +5,7 @@ PYTEST := .venv/bin/pytest
 PYTEST_XDIST := -n auto
 PYTEST_QT := -n0
 
-.PHONY: help test test-unit test-unit-fast test-integration test-file test-parallel test-quick test-all test-failfast test-qt test-qt-single test-no-qt
+.PHONY: help test test-unit test-unit-fast test-integration test-file test-parallel test-quick test-all test-failfast test-qt test-qt-single test-no-qt lint type-check
 
 help:
 	@echo "Testing targets:"
@@ -22,6 +22,10 @@ help:
 	@echo "  make test-qt          - Run all Qt tests (single-threaded)"
 	@echo "  make test-qt-single   - Run Qt tests from single file"
 	@echo "  make test-qt-file FILE= - Run Qt tests in specific file"
+	@echo ""
+	@echo "Linting targets:"
+	@echo "  make lint             - Run ruff linter"
+	@echo "  make type-check       - Run mypy type checker"
 
 # Default: show available targets
 test:
@@ -115,6 +119,16 @@ ifndef FILE
 	@exit 1
 endif
 	@./scripts/run_windows_tests.sh -x -v $(FILE)
+
+# =============================================================================
+# Linting and Type Checking
+# =============================================================================
+
+lint:
+	.venv/bin/ruff check .
+
+type-check:
+	.venv/bin/mypy backend core dispatch interface
 
 # =============================================================================
 # Run tests by marker (examples)

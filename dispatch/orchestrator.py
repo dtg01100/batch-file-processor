@@ -690,7 +690,7 @@ class DispatchOrchestrator:
 
         Kept as a separate method to keep _apply_conversion concise.
         """
-        return converter_step.execute(
+        return converter_step.execute(  # type: ignore[no-any-return]
             current_file,
             context.effective_folder,
             context.settings,

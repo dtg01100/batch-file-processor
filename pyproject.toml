@@ -65,3 +65,26 @@ keep-runtime-typing = true
 "migrations/folders_database_migrator.py" = ["C90"]
 "main_qt.py" = ["E402"]
 "interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = [
+    "archive.*",
+    "scripts.*",
+    "tests.*",
+    "migrations.*",
+    "adapters.sqlite.*",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["appdirs", "barcode.*", "barcode", "openpyxl.*", "win32print"]
+ignore_missing_imports = true

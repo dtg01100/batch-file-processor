@@ -281,11 +281,11 @@ class HTTPClientProtocol(Protocol):
     def post(
         self,
         url: str,
-        data: dict | None = None,
-        files: dict | None = None,
-        headers: dict | None = None,
+        data: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         timeout: float | None = None,
-    ) -> requests.Response:
+    ) -> Any:
         """Send a POST request.
 
         Args:

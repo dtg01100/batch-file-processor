@@ -136,7 +136,7 @@ class WindowsPrintService(BasePrintService):
         if win32print is None:
             return None
         try:
-            return win32print.GetDefaultPrinter()
+            return win32print.GetDefaultPrinter()  # type: ignore[no-any-return]
         except Exception as e:
             logger.error("Failed to get default printer: %s", e, exc_info=True)
             return None

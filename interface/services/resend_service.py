@@ -38,7 +38,7 @@ class ResendService:
 
     def has_processed_files(self) -> bool:
         """Check if there are any processed files."""
-        return self._processed_files.count() > 0
+        return self._processed_files.count() > 0  # type: ignore[no-any-return]
 
     def get_total_file_count(self) -> int:
         """Get total count of unique processed files.

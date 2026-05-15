@@ -331,7 +331,7 @@ class EDITweaker:
                     )
                     raise
         msg = f"unreachable: _open_input_with_retry always returns or raises for {filepath}"  # noqa: E501
-        raise RuntimeError(msg)  # type: ignore[unreachable]
+        raise RuntimeError(msg)
 
     def _open_output_with_retry(self, filepath: str) -> TextIO:
         """Open output file with retry logic."""
@@ -358,7 +358,7 @@ class EDITweaker:
                     )
                     raise
         msg = f"unreachable: _open_output_with_retry always returns or raises for {filepath}"  # noqa: E501
-        raise RuntimeError(msg)  # type: ignore[unreachable]
+        raise RuntimeError(msg)
 
     def _process_records(
         self, lines: list[str], output_file: TextIO, upc_dict: dict
@@ -394,17 +394,17 @@ class EDITweaker:
 
             if writeable_line.startswith("A"):
                 a_records += 1
-                writeable_line = self._process_a_record(input_edi_dict, output_file)  # type: ignore[arg-type]
+                writeable_line = self._process_a_record(input_edi_dict, output_file)
 
             if writeable_line.startswith("B"):
                 b_records += 1
                 writeable_line = self._process_b_record(
-                    input_edi_dict, output_file, upc_dict  # type: ignore[arg-type]
+                    input_edi_dict, output_file, upc_dict
                 )
 
             if writeable_line.startswith("C"):
                 c_records += 1
-                writeable_line = self._process_c_record(input_edi_dict, output_file)  # type: ignore[arg-type]
+                writeable_line = self._process_c_record(input_edi_dict, output_file)
 
             if writeable_line:
                 output_file.write(writeable_line)
@@ -550,7 +550,7 @@ class EDITweaker:
             self.crec_appender.fetch_splitted_sales_tax_totals(output_file)
             return ""
 
-        return (
+        return (  # type: ignore[no-any-return]
             fields["record_type"]
             + "".join(v for k, v in fields.items() if k != "record_type")
             + "\n"

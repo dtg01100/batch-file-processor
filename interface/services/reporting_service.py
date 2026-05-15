@@ -134,7 +134,7 @@ class ReportingService:
 
         """
         if self._utils is not None:
-            return self._utils.normalize_bool(value)
+            return self._utils.normalize_bool(value)  # type: ignore[no-any-return]
         if isinstance(value, bool):
             return value
         if isinstance(value, str):

@@ -5,7 +5,7 @@ managing widget container creation, spacing, and scroll area setup.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -188,7 +188,7 @@ class UILayoutBuilder:
 
         # Add button box
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel  # type: ignore[arg-type]
+            cast("QDialogButtonBox.StandardButtons", QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         )
         if self.on_ok:
             button_box.accepted.connect(self.on_ok)

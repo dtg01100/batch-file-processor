@@ -413,7 +413,7 @@ class QtUIService:
             title,
             message,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
-            QMessageBox.StandardButton.No,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
+            QMessageBox.StandardButton.No,
         )
         return result == QMessageBox.StandardButton.Yes
 
@@ -424,7 +424,7 @@ class QtUIService:
             title,
             message,
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
-            QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
+            QMessageBox.StandardButton.Cancel,
         )
         return result == QMessageBox.StandardButton.Ok
 

@@ -246,7 +246,7 @@ class QtRunCoordinator:
                 "folders_processed": len(folders),
             },
         )
-        return run_summary_string
+        return run_summary_string  # type: ignore[no-any-return]
 
     def _build_dispatch_config(self, folders_table_process, settings_dict):
         from dispatch.pipeline import create_standard_pipeline

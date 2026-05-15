@@ -80,7 +80,7 @@ class EditSettingsDialog(BaseDialog):
 
     def body(self, parent: QWidget) -> QWidget | None:
         """Create dialog body."""
-        layout = parent.layout()
+        layout: QVBoxLayout = parent.layout()  # type: ignore[assignment]
         if layout is None:
             layout = QVBoxLayout(parent)
 
@@ -96,7 +96,7 @@ class EditSettingsDialog(BaseDialog):
         main_hlayout.addLayout(left_column, 1)
         main_hlayout.addLayout(right_column, 1)
 
-        layout.addLayout(main_hlayout)  # type: ignore[union-attr,attr-defined]
+        layout.addLayout(main_hlayout)
 
         self.setSizeGripEnabled(False)
 

@@ -224,7 +224,7 @@ class ProcessedFilesDialog(BaseDialog):
             self._database_obj,
         )
 
-    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # type: ignore[override]
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
         if event is not None and event.key() == Qt.Key.Key_Escape:
             self.reject()
         elif event is not None:

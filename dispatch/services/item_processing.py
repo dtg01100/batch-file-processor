@@ -51,4 +51,4 @@ class ItemProcessor:
 
     def _calc_check_digit(self, upc: str) -> int:
         """Calculate UPC check digit."""
-        return calc_check_digit(upc)
+        return calc_check_digit(upc)  # type: ignore[no-any-return]

@@ -245,10 +245,10 @@ class UOMLookupMixin:
         for key in keys:
             for k, v in entry.items():
                 if k.upper() == key.upper():
-                    return v
+                    return v  # type: ignore[no-any-return]
             for k, v in entry.items():
                 if k.lower() == key.lower():
-                    return v
+                    return v  # type: ignore[no-any-return]
         return None
 
     def _uom_build_stage_1_list(self, item_number: str) -> list[dict[str, Any]]:

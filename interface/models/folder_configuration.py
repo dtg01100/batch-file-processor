@@ -83,7 +83,7 @@ class _ConvertFormatMeta(type):
             raise AttributeError(name)
         key = name.upper().replace("-", "_").replace(" ", "_")
         if hasattr(cls, key):
-            return getattr(cls, key)
+            return getattr(cls, key)  # type: ignore[no-any-return]
         raise AttributeError(name)
 
 

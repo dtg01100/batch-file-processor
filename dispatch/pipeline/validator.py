@@ -145,7 +145,7 @@ class MockValidator:
         """
         if self.should_pass:
             return False
-        return params.get("report_edi_errors", False)
+        return params.get("report_edi_errors", False)  # type: ignore[no-any-return]
 
     def reset(self) -> None:
         """Reset the mock state to initial values.
@@ -288,7 +288,7 @@ class EDIValidationStep:
             True if processing should be blocked on validation failure
 
         """
-        return params.get("report_edi_errors", False)
+        return params.get("report_edi_errors", False)  # type: ignore[no-any-return]
 
     def execute(self, file_path: str, folder: dict) -> tuple[bool, list[str] | str]:
         """Execute validation step (wrapper for pipeline compatibility).

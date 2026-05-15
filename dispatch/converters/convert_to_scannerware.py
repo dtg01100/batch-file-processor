@@ -185,7 +185,7 @@ class ScannerWareConverter(BaseEDIConverter):
             The path to the generated output file
 
         """
-        return context.user_data.get("output_path", context.output_filename)
+        return context.user_data.get("output_path", context.output_filename)  # type: ignore[no-any-return]
 
 
 edi_convert = make_edi_convert(ScannerWareConverter)

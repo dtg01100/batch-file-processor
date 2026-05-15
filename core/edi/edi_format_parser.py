@@ -19,6 +19,10 @@ Example:
 
 import json
 from pathlib import Path
+
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
 from typing import Any, ClassVar
 
 
@@ -203,6 +207,11 @@ class EDIFormatParser:
                 )
             except Exception:
                 # Skip invalid files
+                logger.debug(
+                    "Skipping invalid format config file %s",
+                    file_path,
+                    exc_info=True,
+                )
                 continue
 
         return formats
@@ -251,7 +260,7 @@ class EDIFormatParser:
         # Try to identify based on first character (most common case)
         first_char = line[0]
         if first_char in self._record_type_map:
-            return self._record_type_map[first_char]["type"]
+            return self._record_type_map[first_char]["type"]  # type: ignore[no-any-return]
 
         return None
 
@@ -310,7 +319,7 @@ class EDIFormatParser:
             Record type configuration dictionary or None if not found
 
         """
-        return self.record_types.get(record_type)
+        return self.record_types.get(record_type)  # type: ignore[no-any-return]
 
     def get_field_definition(
         self, record_type: str, field_name: str
@@ -331,7 +340,7 @@ class EDIFormatParser:
 
         for field_def in record_config["fields"]:
             if field_def["name"] == field_name:
-                return field_def
+                return field_def  # type: ignore[no-any-return]
 
         return None
 
@@ -359,6 +368,6 @@ class EDIFormatParser:
 
         """
         if "allowed_record_types" in self.validation_rules:
-            return self.validation_rules["allowed_record_types"]
+            return self.validation_rules["allowed_record_types"]  # type: ignore[no-any-return]
         return list(self._record_type_map.keys())
 

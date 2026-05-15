@@ -187,7 +187,7 @@ class QtDiagnosticsService:
         failures += self._build_and_verify_ui()
 
         QTimer.singleShot(2000, self._close_and_report(failures))
-        return self._app._app.exec()
+        return self._app._app.exec()  # type: ignore[no-any-return]
 
     def _create_qapplication(self) -> bool:
         print("\n1. Creating QApplication...")

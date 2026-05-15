@@ -87,7 +87,7 @@ class UPCLookupService:
                 if upc_dict:
                     self.upc_dict = upc_dict
                     logger.debug("UPC dictionary loaded: %d entries", len(upc_dict))
-                    return upc_dict
+                    return upc_dict  # type: ignore[no-any-return]
             except Exception as exc:
                 if strict_db_mode:
                     raise

@@ -138,7 +138,7 @@ class CopyBackend(BackendBase):
 
     def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get copy destination for logging."""
-        return process_parameters.get("copy_to_directory", "")
+        return str(process_parameters.get("copy_to_directory", ""))
 
     def _cleanup(self) -> None:
         """Cleanup connections and resources.

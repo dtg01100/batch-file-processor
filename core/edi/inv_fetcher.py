@@ -345,7 +345,7 @@ class InvFetcher:
             if qry_ret:
                 row = qry_ret[0]
                 if isinstance(row, dict):
-                    return next(iter(row.values()))
+                    return next(iter(row.values()))  # type: ignore[no-any-return]
                 return row[0]
             if self._strict_database_lookup:
                 raise LookupError(

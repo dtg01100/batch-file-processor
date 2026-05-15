@@ -541,7 +541,7 @@ class StructuredLogAdapter(logging.LoggerAdapter):
 
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
-    ) -> tuple[str, MutableMapping[str, Any]]:  # type: ignore[override]  # LoggerAdapter.process types differ from parent
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """Process the logging message and keyword arguments.
 
         Injects context variables into the extra dict.
@@ -1124,7 +1124,7 @@ class StructuredLogger:
             elif isinstance(result, dict):
                 result_summary = redact_sensitive_data(result)
             else:
-                result_summary = redact_value(result)  # type: ignore[assignment]  # result could be any type, redact_value returns Any
+                result_summary = redact_value(result)
             fields["output_summary"] = result_summary
         else:
             fields["output_summary"] = None
@@ -1349,7 +1349,7 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
             # Log exit
             StructuredLogger.log_exit(logger, func_name, module, result, duration_ms)
 
-            return result
+            return result  # type: ignore[no-any-return]
 
         except Exception as e:
             # Calculate duration
@@ -1371,7 +1371,7 @@ def logged(func: Callable[..., T]) -> Callable[..., T]:
     # Return appropriate wrapper based on function type
     if inspect.iscoroutinefunction(func):
         return async_wrapper  # type: ignore[return-value]  # dynamically-created wrapper, type checker can't resolve
-    return sync_wrapper  # type: ignore[return-value]  # dynamically-created wrapper, type checker can't resolve
+    return sync_wrapper
 
 
 # =============================================================================

@@ -658,8 +658,8 @@ class DatabaseObj:
         if record is None:
             default_record = default_factory()
             table_obj.insert(default_record)
-            return default_record
-        return record
+            return default_record  # type: ignore[no-any-return]
+        return record  # type: ignore[no-any-return]
 
     def get_settings_or_default(self) -> dict:
         """Get application settings, creating with defaults if missing."""

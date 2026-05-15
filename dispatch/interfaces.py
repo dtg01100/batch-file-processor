@@ -89,6 +89,16 @@ class DatabaseInterface(Protocol):
         """
         ...
 
+    def update(self, record: dict, keys: list[str]) -> None:
+        """Update an existing record in the database.
+
+        Args:
+            record: Dictionary of field name/value pairs to update
+            keys: List of field names that identify the record to update
+
+        """
+        ...
+
 
 @runtime_checkable
 class FileSystemInterface(Protocol):

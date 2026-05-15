@@ -105,7 +105,7 @@ class DefaultCreditDetector:
         """
         from core import utils
 
-        return utils.detect_invoice_is_credit(file_path)
+        return utils.detect_invoice_is_credit(file_path)  # type: ignore[no-any-return]
 
 
 class MockSplitter:

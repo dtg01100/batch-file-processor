@@ -130,7 +130,7 @@ class MaintenanceDialog(BaseDialog):
         if path:
             self._mf.database_import_wrapper(path)
 
-    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # type: ignore[override]
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
         if event is None:
             return
         if event.key() == Qt.Key.Key_Escape:

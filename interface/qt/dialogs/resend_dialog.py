@@ -828,7 +828,7 @@ class ResendDialog(BaseDialog):
         except Exception as e:
             self.show_error("Database Error", f"Database error: {e}")
 
-    def closeEvent(self, event: QCloseEvent | None) -> None:  # type: ignore[override]
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         """Handle dialog close — cancel file check worker if running."""
         self._cancel_file_check_worker()
         if event is not None:

@@ -215,7 +215,7 @@ class DatabaseImportDialog(BaseDialog):
         setattr(result_event, "result", self.confirm_yes_no(title, message))
         result_event.set()
 
-    def closeEvent(self, event: QCloseEvent | None) -> None:  # type: ignore[override]
+    def closeEvent(self, event: QCloseEvent | None) -> None:
         """Handle dialog close — cancel import thread if still running."""
         if event is not None:
             super().closeEvent(event)

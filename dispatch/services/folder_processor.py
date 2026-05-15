@@ -603,7 +603,7 @@ class FolderPipelineExecutor:
             UPC lookup dictionary
         """
         if self._deps.get_upc_dictionary:
-            return self._deps.get_upc_dictionary()
+            return self._deps.get_upc_dictionary()  # type: ignore[no-any-return]
         return {}
 
     def _log_message(self, run_log: RunLog | None, message: str) -> None:

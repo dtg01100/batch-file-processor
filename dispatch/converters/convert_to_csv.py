@@ -317,7 +317,7 @@ class CSVConverter(BaseEDIConverter):
                 upc_target_length=user_data["upc_target_length"],
                 upc_padding=user_data["upc_padding_pattern"],
             )
-        return fields["upc_number"]
+        return fields["upc_number"]  # type: ignore[no-any-return]
 
     @staticmethod
     def _process_quantity(qty_str: str) -> str:
@@ -330,7 +330,7 @@ class CSVConverter(BaseEDIConverter):
             Quantity with leading zeros stripped, or original if all zeros
 
         """
-        return format_quantity(qty_str)
+        return format_quantity(qty_str)  # type: ignore[no-any-return]
 
     @staticmethod
     def _process_description(desc: str, *, filter_ampersand: bool) -> str:

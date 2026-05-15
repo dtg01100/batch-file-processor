@@ -417,4 +417,4 @@ def get_plugin_config(
     if plugin_class is None:
         return None
 
-    return plugin_class.get_config_fields()  # type: ignore[attr-defined]  # plugin_class is Any due to dynamic import
+    return plugin_class.get_config_fields()  # type: ignore[attr-defined,no-any-return]  # plugin_class is Any due to dynamic import

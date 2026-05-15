@@ -550,7 +550,7 @@ class MockFileOperations:
 
         """
         if path in self._file_sizes:
-            return self._file_sizes[path]
+            return self._file_sizes[path]  # type: ignore[no-any-return]
         if path in self._files:
             content = self._files[path]
             if isinstance(content, bytes):

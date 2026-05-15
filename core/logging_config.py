@@ -273,9 +273,9 @@ class RunLogHandler(logging.Handler):
         try:
             message = self.format(record)
 
-            if hasattr(self.run_log, "write"):
+            if isinstance(self.run_log, IO):
                 self.run_log.write((message + "\r\n").encode())
-            elif hasattr(self.run_log, "append"):
+            elif isinstance(self.run_log, list):
                 self.run_log.append(message)
         except Exception:
             # Intentional fallthrough: errors in run_log writing are handled

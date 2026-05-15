@@ -6,6 +6,7 @@ and loose coupling from the underlying database implementation.
 """
 
 import re
+import sqlite3
 from typing import Protocol, runtime_checkable
 
 _READ_ONLY_SQL_START = {"SELECT", "WITH"}
@@ -198,9 +199,9 @@ class SQLiteConnection:
 
         """
         self.db_path = db_path
-        self._connection = None
+        self._connection: sqlite3.Connection | None = None
 
-    def _connect(self):
+    def _connect(self) -> sqlite3.Connection:
         """Establish the database connection.
 
         Returns:
@@ -210,8 +211,9 @@ class SQLiteConnection:
         import sqlite3
 
         if self._connection is None:
-            self._connection = sqlite3.connect(self.db_path)
-            self._connection.row_factory = sqlite3.Row
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            self._connection = conn
         return self._connection
 
     def execute(self, query: str, params: tuple | None = None) -> list[dict]:

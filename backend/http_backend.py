@@ -241,7 +241,7 @@ class HTTPBackend(BackendBase):
 
     def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get HTTP endpoint for logging."""
-        return process_parameters.get("http_url", "")
+        return str(process_parameters.get("http_url", ""))
 
     def _cleanup(self) -> None:
         """Close HTTP connection."""

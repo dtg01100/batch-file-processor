@@ -76,7 +76,7 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
         """Validate configuration data against the format's schema."""
         schema = self.get_configuration_schema()
         if schema:
-            return schema.validate(config)
+            return schema.validate(config)  # type: ignore[no-any-return]
         return ValidationResult(success=True, errors=[])
 
     def create_config(self, _data: dict[str, Any]) -> Any:
@@ -86,7 +86,7 @@ class BaseSimpleConfigurationPlugin(ConfigurationPlugin):
     def serialize_config(self, config: Any) -> dict[str, Any]:
         """Serialize a configuration instance to dictionary format."""
         if hasattr(config, "__dict__"):
-            return config.__dict__.copy()
+            return config.__dict__.copy()  # type: ignore[no-any-return]
         return {}
 
     def deserialize_config(self, data: dict[str, Any]) -> Any:
