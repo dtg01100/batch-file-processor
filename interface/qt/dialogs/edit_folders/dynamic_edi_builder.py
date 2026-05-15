@@ -49,8 +49,8 @@ class DynamicEDIBuilder:
         self,
         fields: dict[str, Any],
         folder_config: dict[str, Any],
-        dynamic_container: QWidget,
-        dynamic_layout: QVBoxLayout,
+        dynamic_container: QWidget | None = None,
+        dynamic_layout: QVBoxLayout | None = None,
         on_convert_format_changed: Callable[[str], None] | None = None,
         on_dynamic_form_changed: Callable[[], None] | None = None,
         plugin_manager: Optional["PluginManager"] = None,
@@ -77,10 +77,12 @@ class DynamicEDIBuilder:
         self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
 
         # Widget references
-        self.edi_options_check = None
-        self.convert_format_combo = None
-        self.convert_sub_container = None
-        self.convert_sub_layout = None
+        from PyQt5.QtWidgets import QCheckBox, QComboBox, QVBoxLayout, QWidget
+
+        self.edi_options_check: QCheckBox | None = None
+        self.convert_format_combo: QComboBox | None = None
+        self.convert_sub_container: QWidget | None = None
+        self.convert_sub_layout: QVBoxLayout | None = None
 
         # State tracking
         self._edi_option_processing = False
@@ -251,11 +253,12 @@ class DynamicEDIBuilder:
         )
         self._snapshot_upc_override()
         try:
-            keys_to_remove = []
+            keys_to_remove: list[str] = []
 
             # Store items to remove in a list to avoid modifying
             # the layout during iteration
             items_to_remove = []
+            assert self.dynamic_layout is not None
             while self.dynamic_layout.count():
                 items_to_remove.append(self.dynamic_layout.takeAt(0))
 
@@ -382,6 +385,7 @@ class DynamicEDIBuilder:
         # convert_to_format as "" rather than retaining a stale format value.
         self.fields["convert_formats_var"] = ""
         label = QLabel("Send As Is")
+        assert self.dynamic_layout is not None
         self.dynamic_layout.addWidget(label)
 
     def _build_convert_edi_area(self) -> None:
@@ -423,6 +427,7 @@ class DynamicEDIBuilder:
             self.convert_format_combo.setCurrentIndex(idx)
         self.handle_convert_format_changed(self.convert_format_combo.currentText())
 
+        assert self.dynamic_layout is not None
         self.dynamic_layout.addWidget(wrapper)
 
     def handle_convert_format_changed(self, fmt: str) -> None:
@@ -513,7 +518,7 @@ class DynamicEDIBuilder:
             List of field keys to remove
 
         """
-        keys_to_remove = []
+        keys_to_remove: list[str] = []
         items_to_remove = []
         layout = self.convert_sub_layout
         if layout is None:

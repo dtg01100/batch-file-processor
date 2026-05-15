@@ -288,14 +288,11 @@ class EditFoldersDialog(BaseDialog):
             "upc_padding_pattern_entry",
         ]
 
-        widgets = [
-            self._fields.get(key)
-            for key in ordered_keys
-            if self._fields.get(key) is not None
-            and hasattr(self._fields.get(key), "setFocus")
-            and hasattr(self._fields.get(key), "isVisible")
-            and self._fields.get(key).isVisible()
-        ]
+        widgets = []
+        for key in ordered_keys:
+            widget = self._fields.get(key)
+            if widget is not None and hasattr(widget, "isVisible") and widget.isVisible():
+                widgets.append(widget)
 
         for idx in range(len(widgets) - 1):
             self.setTabOrder(widgets[idx], widgets[idx + 1])
@@ -691,7 +688,7 @@ class EditFoldersDialog(BaseDialog):
         if self._validator is not None:
             return self._validator
 
-        existing_aliases = []
+        existing_aliases: list[str] = []
         if self._alias_provider:
             existing_aliases = self._alias_provider() or []
 

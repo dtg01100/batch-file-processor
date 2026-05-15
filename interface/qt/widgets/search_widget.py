@@ -111,10 +111,12 @@ class SearchWidget(QWidget):
 
         self._entry = QLineEdit()
         self._entry.setPlaceholderText("Search folders...")
-        search_icon = self.style().standardIcon(
-            QStyle.StandardPixmap.SP_FileDialogContentsView
-        )
-        self._entry.addAction(search_icon, QLineEdit.ActionPosition.LeadingPosition)
+        style = self.style()
+        if style is not None:
+            search_icon = style.standardIcon(
+                QStyle.StandardPixmap.SP_FileDialogContentsView
+            )
+            self._entry.addAction(search_icon, QLineEdit.ActionPosition.LeadingPosition)
         self._entry.setToolTip("Type folder name text to filter folders as you type")
         self._entry.setAccessibleName("Folder search")
         self._entry.setAccessibleDescription(

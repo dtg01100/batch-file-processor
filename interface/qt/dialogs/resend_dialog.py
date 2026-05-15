@@ -246,13 +246,19 @@ class ResendDialog(BaseDialog):
         self._clear_date_range_button.setEnabled(False)
 
         search_layout.addWidget(search_label)
+        search_layout.addSpacing(6)
         search_layout.addWidget(self._search_field_selector)
+        search_layout.addSpacing(6)
         search_layout.addWidget(self._search_input)
+        search_layout.addSpacing(12)
         search_layout.addWidget(self._date_filter_checkbox)
+        search_layout.addSpacing(6)
         search_layout.addWidget(QLabel("From:"))
         search_layout.addWidget(self._date_from_input)
+        search_layout.addSpacing(6)
         search_layout.addWidget(QLabel("To:"))
         search_layout.addWidget(self._date_to_input)
+        search_layout.addSpacing(6)
         search_layout.addWidget(self._clear_date_range_button)
         main_layout.addLayout(search_layout)
 
@@ -266,7 +272,9 @@ class ResendDialog(BaseDialog):
         self._table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self._table.itemSelectionChanged.connect(self._on_table_selection_changed)
         self._table.setSortingEnabled(True)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        header = self._table.horizontalHeader()
+        assert header is not None
+        header.setStretchLastSection(True)
         self._table.setAccessibleName("Files table")
         self._table.setAccessibleDescription(
             "Table of processed files with resend options"
@@ -396,11 +404,11 @@ class ResendDialog(BaseDialog):
                 self._table.selectRow(row)
 
             folder_item = QTableWidgetItem(file_info["folder_alias"])
-            folder_item.setFlags(folder_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            folder_item.setFlags(folder_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # type: ignore[arg-type]
             self._table.setItem(row, 1, folder_item)
 
             file_item = QTableWidgetItem(file_info["file_name"])
-            file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            file_item.setFlags(file_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # type: ignore[arg-type]
             self._table.setItem(row, 2, file_item)
 
             sent_date_str = file_info.get("sent_date_time") or ""
@@ -414,19 +422,21 @@ class ResendDialog(BaseDialog):
             except (ValueError, TypeError):
                 sent_date = str(sent_date_str) if sent_date_str else ""
             date_item = QTableWidgetItem(sent_date)
-            date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            date_item.setFlags(date_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # type: ignore[arg-type]
             self._table.setItem(row, 3, date_item)
 
             status = "Yes" if file_info["resend_flag"] else "No"
             status_item = QTableWidgetItem(status)
-            status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            status_item.setFlags(status_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # type: ignore[arg-type]
             self._table.setItem(row, 4, status_item)
 
         self._table.setColumnWidth(0, 50)
         self._table.setColumnWidth(1, 150)
         self._table.setColumnWidth(3, 120)
         self._table.setColumnWidth(4, 80)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        header = self._table.horizontalHeader()
+        assert header is not None
+        header.setStretchLastSection(True)
         self._is_updating_selection = False
 
     def _check_files_exist_async(self) -> None:
@@ -545,6 +555,7 @@ class ResendDialog(BaseDialog):
 
         if not text:
             self._current_offset = 0
+            assert self._service is not None
             try:
                 self._all_files = self._service.get_all_files_for_resend(
                     check_file_exists=False,
@@ -559,6 +570,7 @@ class ResendDialog(BaseDialog):
             self._has_more_data = len(self._all_files) == self.PAGE_SIZE
         else:
             self._current_offset = 0
+            assert self._service is not None
             try:
                 self._filtered_files = self._service.search_files_for_resend(
                     text,
@@ -599,9 +611,13 @@ class ResendDialog(BaseDialog):
                     if selected:
                         self._table.selectRow(row)
                     else:
-                        self._table.selectionModel().select(
-                            self._table.model().index(row, 0),
-                            QItemSelectionModel.Deselect | QItemSelectionModel.Rows,
+                        sel_model = self._table.selectionModel()
+                        assert sel_model is not None
+                        model = self._table.model()
+                        assert model is not None
+                        sel_model.select(
+                            model.index(row, 0),
+                            QItemSelectionModel.SelectionFlag.Deselect | QItemSelectionModel.SelectionFlag.Rows,  # type: ignore[call-overload]
                         )
                     break
             self._is_updating_selection = False
@@ -715,6 +731,7 @@ class ResendDialog(BaseDialog):
             # Load more search results
             self._search_offset += self.PAGE_SIZE
             search_field = self._get_selected_search_field()
+            assert self._service is not None
             try:
                 new_files = self._service.search_files_for_resend(
                     self._search_text,
@@ -729,6 +746,7 @@ class ResendDialog(BaseDialog):
         else:
             # Load more regular results
             self._current_offset += self.PAGE_SIZE
+            assert self._service is not None
             try:
                 new_files = self._service.get_all_files_for_resend(
                     check_file_exists=False,
@@ -775,6 +793,7 @@ class ResendDialog(BaseDialog):
     def _mark_selected_for_resend(self) -> None:
         """Mark selected files for resend."""
         try:
+            assert self._service is not None
             file_ids = list(self._selected_files)
             self._service.set_resend_flags_batch(file_ids, resend_flag=True)
             selected_set = set(file_ids)
@@ -793,6 +812,7 @@ class ResendDialog(BaseDialog):
     def _clear_selected_resend_flags(self) -> None:
         """Clear resend flags for selected files."""
         try:
+            assert self._service is not None
             file_ids = list(self._selected_files)
             self._service.set_resend_flags_batch(file_ids, resend_flag=False)
             selected_set = set(file_ids)
@@ -808,10 +828,11 @@ class ResendDialog(BaseDialog):
         except Exception as e:
             self.show_error("Database Error", f"Database error: {e}")
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent | None) -> None:  # type: ignore[override]
         """Handle dialog close — cancel file check worker if running."""
         self._cancel_file_check_worker()
-        super().closeEvent(event)
+        if event is not None:
+            super().closeEvent(event)
 
     def deleteLater(self) -> None:
         """Handle widget deletion — cancel file check worker if running.

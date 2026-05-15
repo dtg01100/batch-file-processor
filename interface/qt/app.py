@@ -194,20 +194,24 @@ class QtBatchFileSenderApp:
 
     def run(self) -> int:
         if self._args is not None and self._args.automatic:
-            self._automatic_process_directories(self._database.folders_table)
+            db = self._database
+            assert db is not None
+            self._automatic_process_directories(db.folders_table)
             return 0
         if self._window is None:
             raise RuntimeError("Application not initialized - call initialize() first")
         self._window.show()
         if self._args is not None and getattr(self._args, "graphical_automatic", False):
+            db = self._database
+            assert db is not None
             QTimer.singleShot(
                 500,
                 lambda: self._graphical_process_directories(
-                    self._database.folders_table
+                    db.folders_table
                 ),
             )
         QApplication.exec()
-        return None
+        return 0
 
     def shutdown(self) -> None:
         if self._progress_service is not None:
@@ -279,24 +283,30 @@ class QtBatchFileSenderApp:
         if not self._preselect_select_folder_checks():
             return
 
-        prior_folder = self._database.get_oversight_or_default()
+        db = self._database
+        assert db is not None
+        prior_folder = db.get_oversight_or_default()
         initial_directory = prior_folder.get("single_add_folder_prior", "")
         if not initial_directory or not os.path.exists(initial_directory):
             initial_directory = os.path.expanduser("~")
 
-        selected_folder = self._ui_service.ask_directory(
+        ui = self._ui_service
+        assert ui is not None
+        selected_folder = ui.ask_directory(
             title="Select Directory",
             initial_dir=initial_directory,
         )
         if not selected_folder or not os.path.exists(selected_folder):
             return
 
-        if self._database.oversight_and_defaults:
-            self._database.oversight_and_defaults.update(
+        if db.oversight_and_defaults:
+            db.oversight_and_defaults.update(
                 {"id": 1, "single_add_folder_prior": selected_folder},
                 ["id"],
             )
-        existing_folders = self._folder_manager.check_folder_exists(selected_folder)
+        fm = self._folder_manager
+        assert fm is not None
+        existing_folders = fm.check_folder_exists(selected_folder)
 
         if existing_folders["truefalse"] and self._handle_existing_folder_choice(
             existing_folders
@@ -305,7 +315,7 @@ class QtBatchFileSenderApp:
 
         if self._progress_service:
             self._progress_service.show("Adding Folder...")
-        self._folder_manager.add_folder(selected_folder)
+        fm.add_folder(selected_folder)
         # Only ask about marking processed if folder is new (no existing configs)
         if not existing_folders["truefalse"]:
             self._maybe_mark_as_processed(selected_folder)
@@ -315,8 +325,10 @@ class QtBatchFileSenderApp:
 
     def _maybe_mark_as_processed(self, selected_folder: str) -> None:
         """Ask user whether to mark files as processed and perform marking if agreed."""
+        ui = self._ui_service
+        assert ui is not None
         if (
-            self._ui_service.ask_yes_no(
+            ui.ask_yes_no(
                 "Mark Processed", "Do you want to mark files in folder as processed?"
             )
             and self._database
@@ -341,10 +353,12 @@ class QtBatchFileSenderApp:
 
         Returns True if dialog action handled and caller should return.
         """
+        ui = self._ui_service
+        assert ui is not None
         # Folder already exists - give user three choices
         existing_count = len(existing_folders["all_matched_folders"])
         msg = f"This folder has {existing_count} existing configuration(s)."
-        choice = self._ui_service.ask_three_choices(
+        choice = ui.ask_three_choices(
             "Folder Already Exists",
             msg,
             "Add Another",  # 0
@@ -745,7 +759,7 @@ class QtBatchFileSenderApp:
             refresh_callback=self._refresh_users_list,
             set_button_states_callback=self._set_main_button_states,
             delete_folder_callback=(
-                self._folder_manager.delete_folder_with_related
+                (lambda folder_id, fm=self._folder_manager: (fm.delete_folder_with_related(folder_id), None)[1] if fm else None)  # type: ignore[misc]
                 if self._folder_manager
                 else None
             ),
@@ -783,7 +797,7 @@ class QtBatchFileSenderApp:
         dlg.exec()
 
     def _show_resend_dialog(self) -> None:
-        if self._database is None:
+        if self._database is None or self._window is None:
             return
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
@@ -829,7 +843,7 @@ class QtBatchFileSenderApp:
             database_obj=self._database,
             refresh_callback=self._refresh_users_list,
             set_button_states_callback=self._set_main_button_states,
-            delete_folder_callback=self._folder_manager.delete_folder_with_related,
+            delete_folder_callback=lambda folder_id, fm=self._folder_manager: (fm.delete_folder_with_related(folder_id), None)[1],  # type: ignore[misc]
             database_path=self._database_path,
             running_platform=self._running_platform,
             database_version=self._database_version,

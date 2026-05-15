@@ -75,13 +75,15 @@ class UILayoutBuilder:
         self.on_cancel = on_cancel
 
         # Component instances
-        self.column_builders = None
-        self.dynamic_edi_builder = None
+        from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget
+
+        self.column_builders: ColumnBuilders | None = None
+        self.dynamic_edi_builder: DynamicEDIBuilder | None = None
 
         # Widget references
-        self.active_checkbox = None
-        self.dynamic_edi_container = None
-        self.dynamic_edi_layout = None
+        self.active_checkbox: QPushButton | None = None
+        self.dynamic_edi_container: QWidget | None = None
+        self.dynamic_edi_layout: QVBoxLayout | None = None
 
     def build_ui(self):
         """Build the complete dialog UI layout."""
@@ -172,8 +174,9 @@ class UILayoutBuilder:
         self._add_dynamic_edi_container(edi_column)
 
         # Now wire the dynamic container into the builder
-        self.dynamic_edi_builder.dynamic_container = self.dynamic_edi_container
-        self.dynamic_edi_builder.dynamic_layout = self.dynamic_edi_layout
+        if self.dynamic_edi_container is not None and self.dynamic_edi_layout is not None:
+            self.dynamic_edi_builder.dynamic_container = self.dynamic_edi_container
+            self.dynamic_edi_builder.dynamic_layout = self.dynamic_edi_layout
 
         columns_layout.addWidget(edi_column)
         columns_layout.addSpacing(Theme.SPACING_MD_INT)
@@ -185,7 +188,7 @@ class UILayoutBuilder:
 
         # Add button box
         button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel  # type: ignore[arg-type]
         )
         if self.on_ok:
             button_box.accepted.connect(self.on_ok)
@@ -208,7 +211,7 @@ class UILayoutBuilder:
         self.dynamic_edi_layout.setContentsMargins(0, 0, 0, 0)
 
         container_layout.addWidget(self.dynamic_edi_container)
-        container_layout.addStretch()
+        container_layout.addStretch()  # type: ignore[attr-defined]
 
     def _add_edi_options_check(self, container: QWidget) -> None:
         """Add Convert EDI checkbox to the EDI column."""
@@ -216,25 +219,31 @@ class UILayoutBuilder:
         if not container_layout:
             container_layout = QVBoxLayout(container)
 
+        assert self.dynamic_edi_builder is not None
         edi_check = self.dynamic_edi_builder.build_edi_options_check()
-        container_layout.insertWidget(0, edi_check)
+        container_layout.insertWidget(0, edi_check)  # type: ignore[attr-defined]
 
     def get_column_builders(self) -> ColumnBuilders:
         """Get the column builders instance."""
+        assert self.column_builders is not None
         return self.column_builders
 
     def get_dynamic_edi_builder(self) -> DynamicEDIBuilder:
         """Get the dynamic EDI builder instance."""
+        assert self.dynamic_edi_builder is not None
         return self.dynamic_edi_builder
 
     def get_active_checkbox(self) -> QPushButton:
         """Get the active state checkbox widget."""
+        assert self.active_checkbox is not None
         return self.active_checkbox
 
     def get_dynamic_edi_container(self) -> QWidget:
         """Get the dynamic EDI container widget."""
+        assert self.dynamic_edi_container is not None
         return self.dynamic_edi_container
 
     def get_dynamic_edi_layout(self) -> QVBoxLayout:
         """Get the dynamic EDI layout."""
+        assert self.dynamic_edi_layout is not None
         return self.dynamic_edi_layout

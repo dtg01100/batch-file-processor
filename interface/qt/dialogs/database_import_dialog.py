@@ -212,12 +212,13 @@ class DatabaseImportDialog(BaseDialog):
         self, title: str, message: str, result_event: threading.Event
     ) -> None:
         """Handle confirmation request from background thread."""
-        # Store result in the thread's result container via the event's dict
-        result_event.result = self.confirm_yes_no(title, message)
+        setattr(result_event, "result", self.confirm_yes_no(title, message))
         result_event.set()
 
-    def closeEvent(self, event: QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent | None) -> None:  # type: ignore[override]
         """Handle dialog close — cancel import thread if still running."""
+        if event is not None:
+            super().closeEvent(event)
         thread = getattr(self, "_import_thread", None)
         if (
             thread is not None
@@ -289,7 +290,7 @@ class ImportThread(QThread):
             return reply == QMessageBox.StandardButton.Yes
 
         result_event = threading.Event()
-        result_event.result = False
+        setattr(result_event, "result", False)
 
         # Emit signal to main thread - handler will set result_event.result
         # and call result_event.set()

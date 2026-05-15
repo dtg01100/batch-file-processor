@@ -1021,10 +1021,10 @@ class Theme:
 
     @staticmethod
     def apply_theme(_widget) -> None:
-        app = QApplication.instance()
-        if app:
-            # Apply a sanitized stylesheet to avoid Qt warnings
-            # about unsupported properties
+        from PyQt5.QtWidgets import QApplication as QtApp
+
+        app = QtApp.instance()
+        if isinstance(app, QtApp):
             app.setStyleSheet(Theme.get_stylesheet())
 
     @staticmethod

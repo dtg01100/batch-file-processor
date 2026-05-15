@@ -96,7 +96,7 @@ class EditSettingsDialog(BaseDialog):
         main_hlayout.addLayout(left_column, 1)
         main_hlayout.addLayout(right_column, 1)
 
-        layout.addLayout(main_hlayout)
+        layout.addLayout(main_hlayout)  # type: ignore[union-attr,attr-defined]
 
         self.setSizeGripEnabled(False)
 
@@ -137,6 +137,7 @@ class EditSettingsDialog(BaseDialog):
 
         key_layout = QHBoxLayout()
         key_layout.addWidget(self._ssh_key_file)
+        key_layout.addSpacing(8)
         key_layout.addWidget(self._ssh_key_browse)
 
         form.addRow("AS400 &Address:", self._as400_address)
@@ -524,7 +525,7 @@ class EditSettingsDialog(BaseDialog):
                     "Confirm",
                     f"This will disable the email backend in {num_backends} folders.\n"
                     f"As a result, {num_disabled} folders will be disabled",
-                    QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]
                     QMessageBox.StandardButton.Cancel,
                 )
                 if result != QMessageBox.StandardButton.Ok:

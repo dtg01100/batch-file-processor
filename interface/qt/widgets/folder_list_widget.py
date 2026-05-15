@@ -467,13 +467,17 @@ class FolderListWidget(QWidget):
     def get_scroll_position(self) -> int:
         """Return the current vertical scroll position."""
         if self._scroll_area is not None:
-            return self._scroll_area.verticalScrollBar().value()
+            sb = self._scroll_area.verticalScrollBar()
+            if sb is not None:
+                return sb.value()
         return 0
 
     def set_scroll_position(self, position: int) -> None:
         """Restore a previously saved vertical scroll position."""
         if self._scroll_area is not None:
-            self._scroll_area.verticalScrollBar().setValue(position)
+            sb = self._scroll_area.verticalScrollBar()
+            if sb is not None:
+                sb.setValue(position)
 
     def update_folder_row(self, folder_id: int) -> bool:
         """Replace a single folder row in-place after a state change.
@@ -575,8 +579,10 @@ class FolderListWidget(QWidget):
             }}
         """
         btn.setStyleSheet(base_stylesheet + compact_override)
-        btn.style().unpolish(btn)
-        btn.style().polish(btn)
+        style = btn.style()
+        if style is not None:
+            style.unpolish(btn)
+            style.polish(btn)
 
     def _calculate_edit_button_min_width(
         self, folder_list: list[dict[str, Any]]

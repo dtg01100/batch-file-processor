@@ -59,16 +59,19 @@ class MaintenanceDialog(BaseDialog):
             ("Clear sent file records", self._clear_processed_files_log),
             ("Import old configurations...", self._import_old_configurations),
         ]
-        for text, slot in buttons:
+        for i, (text, slot) in enumerate(buttons):
             btn = QPushButton(text)
             btn.clicked.connect(slot)
             btn.setAccessibleName(text)
             btn.setAccessibleDescription(f"Run maintenance operation: {text}")
             button_layout.addWidget(btn)
+            if i < len(buttons) - 1:
+                button_layout.addSpacing(6)
             self._buttons.append(btn)
 
         root_layout = QHBoxLayout()
         root_layout.addLayout(button_layout)
+        root_layout.addSpacing(16)
 
         warning_label = QLabel("WARNING:\nFOR\nADVANCED\nUSERS\nONLY!")
         warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -77,7 +80,11 @@ class MaintenanceDialog(BaseDialog):
         )
         root_layout.addWidget(warning_label)
 
-        parent.layout().addLayout(root_layout)
+        parent_layout = parent.layout()
+        if parent_layout is not None:
+            parent_layout.addLayout(root_layout)  # type: ignore[attr-defined]
+
+        return None
 
         return None
 
@@ -123,7 +130,7 @@ class MaintenanceDialog(BaseDialog):
         if path:
             self._mf.database_import_wrapper(path)
 
-    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # type: ignore[override]
         if event is None:
             return
         if event.key() == Qt.Key.Key_Escape:
