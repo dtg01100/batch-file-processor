@@ -10,6 +10,7 @@ import types
 from unittest.mock import MagicMock
 
 from core.constants import CURRENT_DATABASE_VERSION
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 
 
 @pytest.mark.qt
@@ -117,7 +118,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_yes_no.return_value = True
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
@@ -129,7 +130,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_yes_no.return_value = False
         app._folder_manager = MagicMock()
         app._delete_folder_entry_wrapper(42, "test")
@@ -165,8 +166,8 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._process_directories = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -191,8 +192,8 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._process_directories = MagicMock()
 
         folders_table = MagicMock()
@@ -211,8 +212,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._process_directories = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -334,7 +335,7 @@ class TestQtBatchFileSenderApp:
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "41"
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
 
@@ -404,7 +405,7 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
         app._database.folders_table.find_one.return_value = None
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         app._edit_folder_selector(99)
 
@@ -417,8 +418,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._graphical_process_directories = MagicMock()
 
         single_table = MagicMock()
@@ -442,8 +443,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._graphical_process_directories = MagicMock()
 
         single_table = MagicMock()
@@ -487,8 +488,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._database.get_oversight_or_default.return_value = {
             "batch_add_folder_prior": ""
@@ -510,8 +511,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
 
@@ -537,8 +538,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._open_edit_folders_dialog = MagicMock()
 
@@ -594,8 +595,8 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._mark_active_as_processed_wrapper = MagicMock()
@@ -623,7 +624,7 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
         app._window = MagicMock()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         processed_exec = MagicMock()
         resend_exec = MagicMock()
@@ -687,6 +688,7 @@ class TestQtBatchFileSenderApp:
             "lxml",
             "lxml.etree",
             "PyQt5.sip",
+            "archive",
         }
 
         def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -836,7 +838,7 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._version = "1.0"
         app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._check_logs_directory = MagicMock(return_value=True)
 
         backup_called = []
@@ -885,7 +887,7 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._version = "1.0"
         app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._check_logs_directory = MagicMock(return_value=True)
 
         backup_called = []
@@ -932,7 +934,7 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._version = "1.0"
         app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._check_logs_directory = MagicMock(return_value=True)
         app._args = argparse.Namespace(automatic=False)
 
@@ -989,9 +991,9 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._version = "1.0"
         app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._args = argparse.Namespace(automatic=False)
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_ok_cancel.return_value = False
 
         # Always return False to trigger the error path
@@ -1036,7 +1038,7 @@ class TestQtBatchFileSenderApp:
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._version = "1.0"
         app._errors_directory = str(tmp_path / "errors")
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._args = argparse.Namespace(automatic=True)
         app._log_critical_error = MagicMock()
 
@@ -1447,8 +1449,8 @@ class TestQtBatchFileSenderApp:
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
-        app._progress_service = MagicMock()
-        app._ui_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         backup_called = []
         monkeypatch.setattr(
@@ -1596,7 +1598,7 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._database.folders_table.find_one.return_value = {
             "id": 12,
             "folder_name": "/tmp/f",
@@ -1614,8 +1616,8 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._open_edit_folders_dialog = MagicMock()
 
@@ -1641,8 +1643,8 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._mark_active_as_processed_wrapper = MagicMock()
@@ -1677,8 +1679,8 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
 
@@ -1699,7 +1701,7 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
@@ -1718,7 +1720,7 @@ class TestQtAppInteractionWorkflows:
         app = QtBatchFileSenderApp()
         app._window = MagicMock()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         captured = {}
 
@@ -1836,8 +1838,8 @@ class TestQtAppInteractionWorkflows:
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
-        app._progress_service = MagicMock()
-        app._ui_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_ok_cancel.return_value = True
 
         monkeypatch.setattr("scripts.backup_increment.do_backup", lambda *_: None)
@@ -1862,10 +1864,8 @@ class TestQtAppInteractionWorkflows:
         app._show_maintenance_dialog_wrapper()
 
         # Verify callback wiring into maintenance functions
-        assert (
-            captured["delete_folder_callback"]
-            is app._folder_manager.delete_folder_with_related
-        )
+        captured["delete_folder_callback"](42)
+        app._folder_manager.delete_folder_with_related.assert_called_once_with(42)
         assert captured["refresh_callback"] is app._refresh_users_list
         assert captured["set_button_states_callback"] is app._set_main_button_states
         # confirm_callback delegates to UI service
@@ -1882,7 +1882,7 @@ class TestQtAppInteractionWorkflows:
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "41"
-        app._progress_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
 
@@ -1902,10 +1902,8 @@ class TestQtAppInteractionWorkflows:
 
         app._mark_active_as_processed_wrapper(selected_folder=99)
 
-        assert (
-            captured["delete_folder_callback"]
-            is app._folder_manager.delete_folder_with_related
-        )
+        captured["delete_folder_callback"](42)
+        app._folder_manager.delete_folder_with_related.assert_called_once_with(42)
         assert captured["selected_folder"] == 99
 
     def test_set_defaults_popup_populates_advanced_defaults(self):
@@ -1992,8 +1990,8 @@ class TestQtAppInteractionWorkflows:
         app._folder_manager = MagicMock()
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
-        app._progress_service = MagicMock()
-        app._ui_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         monkeypatch.setattr("scripts.backup_increment.do_backup", lambda *_: None)
 
@@ -2038,8 +2036,8 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._database = MagicMock()
-        app._ui_service = MagicMock()
-        app._progress_service = MagicMock()
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._folder_manager = MagicMock()
 
         app._database.get_oversight_or_default.return_value = {

@@ -17,6 +17,12 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
+from dispatch.interfaces import DatabaseInterface
+
+
+def _mock_table() -> MagicMock:
+    return MagicMock(spec=DatabaseInterface)
+
 
 class TestEmailComposition:
     """Test suite for email composition based on log count."""
@@ -42,7 +48,7 @@ class TestEmailComposition:
     @pytest.fixture
     def mock_emails_table_single(self):
         """Create mock emails table with single log."""
-        table = MagicMock()
+        table = _mock_table()
         table.count.return_value = 1
         log_entry = {
             "id": "log_001",
@@ -54,7 +60,7 @@ class TestEmailComposition:
     @pytest.fixture
     def mock_emails_table_multiple(self):
         """Create mock emails table with multiple logs."""
-        table = MagicMock()
+        table = _mock_table()
         table.count.return_value = 3
         log_entries = [
             {"id": "log_001", "log": "/path/to/run_20230101.log"},
@@ -67,15 +73,13 @@ class TestEmailComposition:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch("scripts.batch_log_sender.smtplib.SMTP")
@@ -210,7 +214,7 @@ class TestSMTPConnection:
     @pytest.fixture
     def mock_emails_table(self):
         """Create mock emails table with single log."""
-        table = MagicMock()
+        table = _mock_table()
         table.count.return_value = 1
         log_entry = {
             "id": "log_001",
@@ -222,15 +226,13 @@ class TestSMTPConnection:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch("scripts.batch_log_sender.smtplib.SMTP")
@@ -271,8 +273,8 @@ class TestSMTPConnection:
             progress_callback=mock_progress_callback,
         )
 
-        # Verify SMTP was called with correct server and port (port is converted to string)
-        mock_smtp.assert_called_once_with("smtp.example.com", "587")
+        # Verify SMTP was called with correct server and port (port is converted to int)
+        mock_smtp.assert_called_once_with("smtp.example.com", 587)
 
         # Verify SMTP methods were called in order
         mock_smtp_instance = mock_smtp.return_value
@@ -321,8 +323,8 @@ class TestSMTPConnection:
             progress_callback=mock_progress_callback,
         )
 
-        # Verify SMTP was called with correct server and port (port is converted to string)
-        mock_smtp.assert_called_once_with("smtp.example.com", "587")
+        # Verify SMTP was called with correct server and port (port is converted to int)
+        mock_smtp.assert_called_once_with("smtp.example.com", 587)
 
         # Verify SMTP methods were called but login was NOT called
         mock_smtp_instance = mock_smtp.return_value
@@ -359,7 +361,7 @@ class TestAttachmentHandling:
     @pytest.fixture
     def mock_emails_table(self):
         """Create mock emails table with log files."""
-        table = MagicMock()
+        table = _mock_table()
         table.count.return_value = 1
         log_entry = {
             "id": "log_001",
@@ -371,15 +373,13 @@ class TestAttachmentHandling:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch("scripts.batch_log_sender.mimetypes.guess_type")
@@ -554,15 +554,13 @@ class TestQueueManagement:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch("scripts.batch_log_sender.smtplib.SMTP")
@@ -590,7 +588,7 @@ class TestQueueManagement:
         mock_file.return_value.__exit__ = MagicMock(return_value=False)
 
         # Create mock table with a log that has id field
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         log_entry = {
             "id": "original_id_123",
@@ -649,7 +647,7 @@ class TestQueueManagement:
         mock_file.return_value.__exit__ = MagicMock(return_value=False)
 
         # Create mock table with a log that has .zip extension
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -705,7 +703,7 @@ class TestQueueManagement:
         mock_file.return_value.__exit__ = MagicMock(return_value=False)
 
         # Create mock table with a log that doesn't have .zip extension
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         original_log_path = "/path/to/run_20230101.log"
         mock_log_entry = {
@@ -761,15 +759,13 @@ class TestErrorHandling:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch(
@@ -800,7 +796,7 @@ class TestErrorHandling:
         mock_smtp.side_effect = ConnectionRefusedError("Connection refused")
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -845,7 +841,7 @@ class TestErrorHandling:
         mock_smtp.return_value = mock_smtp_instance
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -890,7 +886,7 @@ class TestErrorHandling:
         import scripts.batch_log_sender as batch_log_sender
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -938,8 +934,7 @@ class TestProgressCallback:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @patch("scripts.batch_log_sender.smtplib.SMTP")
@@ -962,10 +957,9 @@ class TestProgressCallback:
 
         # Create mock progress callback
         mock_progress_callback = MagicMock()
-        mock_progress_callback.update_message = MagicMock()
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -1008,7 +1002,7 @@ class TestProgressCallback:
         mock_file.return_value.__exit__ = MagicMock(return_value=False)
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -1051,15 +1045,13 @@ class TestEmailAddressHandling:
     @pytest.fixture
     def mock_queue(self):
         """Create mock sent_emails_removal_queue."""
-        queue = MagicMock()
-        queue.insert = MagicMock()
+        queue = _mock_table()
         return queue
 
     @pytest.fixture
     def mock_progress_callback(self):
         """Create mock progress callback."""
         callback = MagicMock()
-        callback.update_message = MagicMock()
         return callback
 
     @patch("scripts.batch_log_sender.smtplib.SMTP")
@@ -1086,7 +1078,7 @@ class TestEmailAddressHandling:
         }
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",
@@ -1139,7 +1131,7 @@ class TestEmailAddressHandling:
         }
 
         # Create mock table
-        mock_table = MagicMock()
+        mock_table = _mock_table()
         mock_table.count.return_value = 1
         mock_log_entry = {
             "id": "log_001",

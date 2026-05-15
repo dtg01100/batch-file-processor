@@ -11,6 +11,7 @@ This test module focuses on:
 
 import os
 from unittest.mock import MagicMock
+from interface.services.smtp_service import SMTPServiceProtocol
 
 import pytest
 from PyQt5.QtWidgets import QMessageBox, QPushButton, QWidget
@@ -113,7 +114,7 @@ class TestEditSettingsDialogStress:
         """
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.side_effect = TimeoutError("Connection timed out")
 
         mock_critical = MagicMock()
@@ -144,7 +145,7 @@ class TestEditSettingsDialogStress:
         """
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.side_effect = RuntimeError("Unexpected error")
 
         mock_critical = MagicMock()
@@ -169,7 +170,7 @@ class TestEditSettingsDialogStress:
         """Test various invalid email formats are rejected."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         mock_critical = MagicMock()
@@ -209,7 +210,7 @@ class TestEditSettingsDialogStress:
         """Test validation of multiple comma-separated destination emails."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         mock_critical = MagicMock()
@@ -235,7 +236,7 @@ class TestEditSettingsDialogStress:
         """Test Unicode characters in email fields."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         mock_critical = MagicMock()
@@ -261,7 +262,7 @@ class TestEditSettingsDialogStress:
         """Test backup interval at boundary values."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
 
         mock_critical = MagicMock()
         monkeypatch.setattr(QMessageBox, "critical", mock_critical)
@@ -296,7 +297,7 @@ class TestEditSettingsDialogStress:
         """Test apply() when callback functions are None."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         dialog = EditSettingsDialog(
@@ -317,7 +318,7 @@ class TestEditSettingsDialogStress:
         """Test apply() when callback raises an exception."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         failing_callback = MagicMock(side_effect=RuntimeError("Callback failed"))
@@ -340,7 +341,7 @@ class TestEditSettingsDialogStress:
         """Test log directory selection when user cancels."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
 
         monkeypatch.setattr(
             "interface.qt.dialogs.edit_settings_dialog.QFileDialog.getExistingDirectory",
@@ -362,7 +363,7 @@ class TestEditSettingsDialogStress:
         """Test log directory selection with nonexistent initial path."""
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
 
         monkeypatch.setattr(
             "interface.qt.dialogs.edit_settings_dialog.QFileDialog.getExistingDirectory",
@@ -389,7 +390,7 @@ class TestEditSettingsDialogStress:
         """
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         mock_critical = MagicMock()

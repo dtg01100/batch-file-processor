@@ -10,6 +10,7 @@ import pytest
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
 from unittest.mock import MagicMock
+from interface.services.smtp_service import SMTPServiceProtocol
 
 import pytest
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt
@@ -526,7 +527,7 @@ class TestEditSettingsDialog:
     def _make_dialog(self, qtbot, sample_folder_config, **kwargs):
         from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
         dialog = EditSettingsDialog(
             None,

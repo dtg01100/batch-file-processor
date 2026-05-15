@@ -17,6 +17,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
+from dispatch.pipeline.interfaces import PipelineStep
+from dispatch.send_manager import SendManager
 from dispatch.services.file_processor import (
     FileProcessor,
     FileResult,
@@ -95,12 +98,12 @@ class TestFileProcessorInitialization:
 
     def test_init_with_all_steps(self):
         """Test initialization with all pipeline steps."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        validator = MagicMock()
-        splitter = MagicMock()
-        converter = MagicMock()
-        file_system = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        validator = MagicMock(spec=PipelineStep)
+        splitter = MagicMock(spec=PipelineStep)
+        converter = MagicMock(spec=PipelineStep)
+        file_system = MagicMock(spec=FileSystemInterface)
 
         processor = FileProcessor(
             send_manager=send_manager,
@@ -120,8 +123,8 @@ class TestFileProcessorInitialization:
 
     def test_init_with_minimal_args(self):
         """Test initialization with minimal arguments."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
 
         processor = FileProcessor(
             send_manager=send_manager,
@@ -142,8 +145,8 @@ class TestBuildContext:
 
     def test_build_context_simple(self):
         """Test building context with simple folder dict."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = processor._build_context(
@@ -159,8 +162,8 @@ class TestBuildContext:
 
     def test_build_context_with_effective_folder(self):
         """Test building context with effective folder."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = processor._build_context(
@@ -177,8 +180,8 @@ class TestBuildContext:
 
     def test_build_context_reuses_processing_context(self):
         """Test that passing ProcessingContext returns it unchanged."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         existing_context = ProcessingContext(
@@ -244,8 +247,8 @@ class TestApplyRename:
 
     def test_apply_rename_no_template(self, temp_file):
         """Test rename with empty template returns original."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -261,8 +264,8 @@ class TestApplyRename:
 
     def test_apply_rename_with_datetime(self, temp_file):
         """Test rename with %datetime% placeholder."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -281,8 +284,8 @@ class TestApplyRename:
 
     def test_apply_rename_invalid_path(self, temp_file):
         """Test rename with invalid path raises."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -297,8 +300,8 @@ class TestApplyRename:
 
     def test_apply_rename_sanitizes_special_chars(self, temp_file):
         """Test rename sanitizes special characters."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -322,8 +325,8 @@ class TestCleanupTempArtifacts:
 
     def test_cleanup_empty_context(self):
         """Test cleanup with no temp artifacts."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -342,8 +345,8 @@ class TestCleanupTempArtifacts:
     @patch("dispatch.services.file_processor.shutil.rmtree")
     def test_cleanup_removes_dirs(self, mock_rmtree, mock_exists):
         """Test cleanup removes temp directories."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         mock_exists.return_value = True
@@ -364,8 +367,8 @@ class TestCleanupTempArtifacts:
     @patch("dispatch.services.file_processor.os.remove")
     def test_cleanup_removes_files(self, mock_remove, mock_exists):
         """Test cleanup removes temp files."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         mock_exists.return_value = True
@@ -388,8 +391,8 @@ class TestRunValidation:
 
     def test_validation_no_step(self):
         """Test validation with no validator step returns True."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = FileResult(file_name="test.edi", checksum="")
@@ -413,9 +416,9 @@ class TestRunValidation:
 
     def test_validation_success(self):
         """Test validation with successful result."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        validator = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        validator = MagicMock(spec=PipelineStep)
         validator.execute.return_value = (True, "/path/to/validated.edi")
 
         processor = FileProcessor(send_manager, error_handler, validator_step=validator)
@@ -442,9 +445,9 @@ class TestRunValidation:
 
     def test_validation_failure(self):
         """Test validation with failed result."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        validator = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        validator = MagicMock(spec=PipelineStep)
         validator.execute.return_value = (False, "Validation error message")
 
         processor = FileProcessor(send_manager, error_handler, validator_step=validator)
@@ -471,9 +474,9 @@ class TestRunValidation:
 
     def test_validation_exception(self):
         """Test validation with exception."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        validator = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        validator = MagicMock(spec=PipelineStep)
         validator.execute.side_effect = Exception("Validation exception")
 
         processor = FileProcessor(send_manager, error_handler, validator_step=validator)
@@ -503,8 +506,8 @@ class TestRunSplitting:
 
     def test_splitting_no_step(self):
         """Test splitting with no splitter step returns False."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = FileResult(file_name="test.edi", checksum="")
@@ -528,9 +531,9 @@ class TestRunSplitting:
 
     def test_splitting_no_output(self):
         """Test splitting with no output returns False."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        splitter = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        splitter = MagicMock(spec=PipelineStep)
         splitter.execute.return_value = []
 
         processor = FileProcessor(send_manager, error_handler, splitter_step=splitter)
@@ -556,9 +559,9 @@ class TestRunSplitting:
 
     def test_splitting_with_output(self):
         """Test splitting with output returns True."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        splitter = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        splitter = MagicMock(spec=PipelineStep)
         splitter.execute.return_value = ["/path/to/output1.edi", "/path/to/output2.edi"]
 
         processor = FileProcessor(send_manager, error_handler, splitter_step=splitter)
@@ -588,8 +591,8 @@ class TestRunConversion:
 
     def test_conversion_no_step(self):
         """Test conversion with no converter step."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         context = ProcessingContext(
@@ -614,9 +617,9 @@ class TestRunConversion:
 
     def test_conversion_success(self):
         """Test conversion with successful result."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        converter = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        converter = MagicMock(spec=PipelineStep)
         converter.execute.return_value = "/path/to/converted.edi"
 
         processor = FileProcessor(send_manager, error_handler, converter_step=converter)
@@ -643,9 +646,9 @@ class TestRunConversion:
 
     def test_conversion_no_output(self):
         """Test conversion with no output treats as failure."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        converter = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        converter = MagicMock(spec=PipelineStep)
         converter.execute.return_value = None
 
         processor = FileProcessor(send_manager, error_handler, converter_step=converter)
@@ -670,9 +673,9 @@ class TestRunConversion:
 
     def test_conversion_skipped_when_validation_failed(self):
         """Test conversion is skipped when validation failed."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        converter = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        converter = MagicMock(spec=PipelineStep)
 
         processor = FileProcessor(send_manager, error_handler, converter_step=converter)
 
@@ -697,9 +700,9 @@ class TestRunConversion:
 
     def test_conversion_step_output_is_accepted(self):
         """Test converter_step output is accepted as converted output."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
-        tweaker = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
+        tweaker = MagicMock(spec=PipelineStep)
         tweaker.execute.return_value = "/path/to/tweaked.edi"
 
         processor = FileProcessor(send_manager, error_handler, converter_step=tweaker)
@@ -730,10 +733,10 @@ class TestSendFile:
 
     def test_send_no_backends_enabled(self):
         """Test send with no enabled backends."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = set()
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = FileResult(file_name="test.edi", checksum="")
@@ -758,11 +761,11 @@ class TestSendFile:
 
     def test_send_success(self):
         """Test successful send."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = {"copy"}
         send_manager.send_all.return_value = {"copy": True}
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = FileResult(file_name="test.edi", checksum="")
@@ -786,12 +789,12 @@ class TestSendFile:
 
     def test_send_failure(self):
         """Test send failure records error."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = {"copy"}
         send_manager.send_all.return_value = {"copy": False}
         send_manager.errors = {"copy": "Connection failed"}
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = FileResult(file_name="test.edi", checksum="")
@@ -832,11 +835,11 @@ class TestProcessFile:
 
     def test_process_file_basic(self, temp_file):
         """Test basic file processing."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = {"copy"}
         send_manager.send_all.return_value = {"copy": True}
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
 
         processor = FileProcessor(send_manager, error_handler)
 
@@ -849,10 +852,10 @@ class TestProcessFile:
 
     def test_process_file_with_exception(self, temp_file):
         """Test process_file handles exceptions."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.side_effect = Exception("Test error")
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
 
         processor = FileProcessor(send_manager, error_handler)
 
@@ -868,8 +871,8 @@ class TestExtractInvoiceNumbers:
 
     def test_extract_no_file(self):
         """Test extraction handles missing file."""
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = processor._extract_invoice_numbers("/nonexistent/file.edi")
@@ -885,8 +888,8 @@ class TestExtractInvoiceNumbers:
             {"record_type": "A", "invoice_number": "INV002"},
         ]
 
-        send_manager = MagicMock()
-        error_handler = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         with tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".edi") as f:
@@ -905,10 +908,10 @@ class TestSendToBackends:
 
     def test_send_to_backends_no_enabled(self):
         """Test send_to_backends with no enabled backends."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = set()
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = processor._send_to_backends(
@@ -922,11 +925,11 @@ class TestSendToBackends:
 
     def test_send_to_backends_success(self):
         """Test send_to_backends with success."""
-        send_manager = MagicMock()
+        send_manager = MagicMock(spec=SendManager)
         send_manager.get_enabled_backends.return_value = {"copy"}
         send_manager.send_all.return_value = {"copy": True}
 
-        error_handler = MagicMock()
+        error_handler = MagicMock(spec=ErrorHandlerInterface)
         processor = FileProcessor(send_manager, error_handler)
 
         result = processor._send_to_backends(

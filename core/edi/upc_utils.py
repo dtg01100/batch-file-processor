@@ -76,16 +76,16 @@ def convert_upce_to_upca(upce_value: str) -> str:
 
     if d6 in ["0", "1", "2"]:
         mfrnum = d1 + d2 + d6 + "00"
-        itemnum = "00" + d3 + d4 + d5
+        itemnum = (d3 + d4 + d5).zfill(5)
     elif d6 == "3":
         mfrnum = d1 + d2 + d3 + "00"
-        itemnum = "000" + d4 + d5
+        itemnum = (d4 + d5).zfill(5)
     elif d6 == "4":
         mfrnum = d1 + d2 + d3 + d4 + "0"
-        itemnum = "0000" + d5
+        itemnum = d5.zfill(5)
     else:
         mfrnum = d1 + d2 + d3 + d4 + d5
-        itemnum = "0000" + d6
+        itemnum = d6.zfill(5)
 
     newmsg = "0" + mfrnum + itemnum
     check_digit = calc_check_digit(newmsg)

@@ -5,10 +5,15 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from backend.database import sqlite_wrapper
+from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
+from dispatch.pipeline.interfaces import PipelineStep
+from dispatch.send_manager import SendManager
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
@@ -269,4 +274,54 @@ def temp_database(tmp_path):
         config_folder=str(tmp_path),
         running_platform="Linux",
     )
+
+
+# ---------------------------------------------------------------------------
+# Shared mock factories — provide spec'd mocks for common test patterns
+# ---------------------------------------------------------------------------
+
+
+class MockFactories:
+    """Factory methods for spec'd MagicMock instances.
+
+    Using spec= ensures mocks stay in sync with real interfaces —
+    typos and missing methods are caught at test time rather than
+    silently passing with bare MagicMock.
+    """
+
+    @staticmethod
+    def ui_service() -> MagicMock:
+        return MagicMock(spec=UIServiceProtocol)
+
+    @staticmethod
+    def progress_service() -> MagicMock:
+        return MagicMock(spec=ProgressServiceProtocol)
+
+    @staticmethod
+    def send_manager() -> MagicMock:
+        return MagicMock(spec=SendManager)
+
+    @staticmethod
+    def error_handler() -> MagicMock:
+        return MagicMock(spec=ErrorHandlerInterface)
+
+    @staticmethod
+    def file_system() -> MagicMock:
+        return MagicMock(spec=FileSystemInterface)
+
+    @staticmethod
+    def pipeline_step() -> MagicMock:
+        return MagicMock(spec=PipelineStep)
+
+    @staticmethod
+    def validator_step() -> MagicMock:
+        return MagicMock(spec=PipelineStep)
+
+    @staticmethod
+    def splitter_step() -> MagicMock:
+        return MagicMock(spec=PipelineStep)
+
+    @staticmethod
+    def converter_step() -> MagicMock:
+        return MagicMock(spec=PipelineStep)
 

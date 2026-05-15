@@ -12,12 +12,12 @@ from typing import Any
 
 def do(
     run_log: Any,  # StringIO (threaded=False) or list[str] (threaded=True)
-    errors_log: StringIO,
+    errors_log: Any,  # StringIO (threaded=False) or list[str] (threaded=True)
     error_message: str,
     filename: str,
     error_source: str,
     threaded: bool = False,
-) -> tuple[Any, StringIO] | None:
+) -> tuple[Any, Any] | None:
     """Record an error message to both run log and errors log.
 
     Formats an error message with timestamp, source module, and filename,
@@ -58,6 +58,6 @@ def do(
         errors_log.write(message)
     else:
         run_log.append(message)  # type: ignore[union-attr]
-        errors_log.append(message)  # type: ignore[attr-defined]  # StringIO has no append; bug in original code (always should be write)
+        errors_log.write(message)
         return run_log, errors_log
     return None

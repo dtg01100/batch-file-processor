@@ -56,12 +56,11 @@ class DatabaseInterface(Protocol):
         """
         ...
 
-    def update(self, record: dict, keys: list) -> None:
-        """Update an existing record.
+    def all(self) -> list[dict]:
+        """Retrieve all records from the table.
 
-        Args:
-            record: Dictionary with updated values and key fields
-            keys: List of field names to use as keys for matching
+        Returns:
+            List of all records as dictionaries
 
         """
         ...

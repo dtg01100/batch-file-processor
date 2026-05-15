@@ -754,15 +754,15 @@ class QtBatchFileSenderApp:
                 logger.debug("Database import failed: %s", e)
                 return False
 
+        def _delete_folder(folder_id: int) -> None:
+            if self._folder_manager:
+                self._folder_manager.delete_folder_with_related(folder_id)
+
         maintenance = MaintenanceFunctions(
             database_obj=self._database,
             refresh_callback=self._refresh_users_list,
             set_button_states_callback=self._set_main_button_states,
-            delete_folder_callback=(
-                (lambda folder_id, fm=self._folder_manager: (fm.delete_folder_with_related(folder_id), None)[1] if fm else None)  # type: ignore[misc]
-                if self._folder_manager
-                else None
-            ),
+            delete_folder_callback=_delete_folder,
             database_path=self._database_path,
             running_platform=self._running_platform,
             database_version=self._database_version,
@@ -839,11 +839,16 @@ class QtBatchFileSenderApp:
             return
         from interface.operations.maintenance_functions import MaintenanceFunctions
 
+        def _delete_folder(folder_id: int) -> None:
+            fm = self._folder_manager
+            if fm:
+                fm.delete_folder_with_related(folder_id)
+
         maintenance = MaintenanceFunctions(
             database_obj=self._database,
             refresh_callback=self._refresh_users_list,
             set_button_states_callback=self._set_main_button_states,
-            delete_folder_callback=lambda folder_id, fm=self._folder_manager: (fm.delete_folder_with_related(folder_id), None)[1],  # type: ignore[misc]
+            delete_folder_callback=_delete_folder,
             database_path=self._database_path,
             running_platform=self._running_platform,
             database_version=self._database_version,

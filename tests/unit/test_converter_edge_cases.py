@@ -28,9 +28,13 @@ pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 
 import csv
 import os
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from core.database.query_runner import QueryRunner
+from core.edi.inv_fetcher import InvFetcher
 
 # ---------------------------------------------------------------------------
 # EDI record builders
@@ -189,7 +193,7 @@ def output_base(tmp_path):
 @pytest.fixture
 def mock_inv_fetcher():
     """Return a MagicMock that mimics InvFetcher."""
-    fetcher_instance = MagicMock()
+    fetcher_instance = MagicMock(spec=InvFetcher)
     fetcher_instance.fetch_cust_no.return_value = 12345
     fetcher_instance.fetch_cust_name.return_value = "Test Customer"
     fetcher_instance.fetch_po.return_value = "PO-001"
@@ -201,7 +205,7 @@ def mock_inv_fetcher():
 @pytest.fixture
 def mock_query_runner():
     """Return a MagicMock that mimics core.database.query_runner."""
-    qr_instance = MagicMock()
+    qr_instance = MagicMock(spec=QueryRunner)
     # Return a minimal result set for header queries
     qr_instance.run_query.return_value = [
         (
@@ -325,7 +329,7 @@ class TestConverterEmptyFileHandling:
         with patch("dispatch.converters.convert_to_fintech.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.return_value = None
-            mock_utils.datetime_from_invtime.return_value = MagicMock()
+            mock_utils.datetime_from_invtime.return_value = datetime.now()
             mock_utils.convert_to_price.return_value = "1.00"
 
             result = convert_to_fintech.edi_convert(
@@ -404,9 +408,8 @@ class TestConverterEmptyFileHandling:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = ""
-            mock_fetcher_instance.fetch_cust.return_value = ""
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -436,7 +439,7 @@ class TestConverterEmptyFileHandling:
         }
 
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunner)
             mock_qr_instance.run_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
@@ -459,7 +462,7 @@ class TestConverterEmptyFileHandling:
 
         # Mock the query_runner to return valid data
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunner)
             # Return valid header query result
             mock_qr_instance.run_query.return_value = [
                 (
@@ -537,7 +540,7 @@ class TestConverterEmptyFileHandling:
         }
 
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunner)
             mock_qr_instance.run_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
@@ -560,7 +563,7 @@ class TestConverterEmptyFileHandling:
 
         # Mock the query_runner to return valid data
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunner)
             # Return valid header query result
             mock_qr_instance.run_query.return_value = [
                 (
@@ -642,7 +645,7 @@ class TestConverterEmptyFileHandling:
         from dispatch.converters import convert_to_scansheet_type_a
 
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunner)
             mock_qr_instance.run_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
@@ -650,8 +653,10 @@ class TestConverterEmptyFileHandling:
             with patch(
                 "dispatch.converters.convert_to_scansheet_type_a.openpyxl"
             ) as mock_openpyxl:
-                mock_wb = MagicMock()
-                mock_ws = MagicMock()
+                import openpyxl
+
+                mock_wb = MagicMock(spec=openpyxl.Workbook)
+                mock_ws = MagicMock(spec=openpyxl.worksheet.worksheet.Worksheet)
                 mock_ws.columns = []
                 mock_wb.worksheets = [mock_ws]
                 mock_openpyxl.Workbook.return_value = mock_wb
@@ -1261,8 +1266,7 @@ class TestConverterEmptyUpcLut:
                     )
                 )
             )
-            mock_dt = MagicMock()
-            mock_dt.strftime.return_value = "01/01/2025"
+            mock_dt = datetime(2025, 1, 1)
             mock_utils.datetime_from_invtime.return_value = mock_dt
             mock_utils.convert_to_price.return_value = "1.00"
 
@@ -1487,9 +1491,8 @@ class TestEstoreEinvoiceOutputFilenameGeneration:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
-            mock_fetcher_instance.fetch_cust.return_value = "Test Customer"
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -1656,9 +1659,8 @@ class TestEstoreEinvoiceGenericProcessing:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = ""
-            mock_fetcher_instance.fetch_cust.return_value = ""
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -1692,9 +1694,8 @@ class TestEstoreEinvoiceGenericProcessing:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
-            mock_fetcher_instance.fetch_cust.return_value = "CUST001"
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -1727,9 +1728,8 @@ class TestEstoreEinvoiceGenericProcessing:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
-            mock_fetcher_instance.fetch_cust.return_value = "CUST001"
 
             def mock_uom_desc(itemno, uommult, lineno, invno):
                 return "CS"
@@ -1769,9 +1769,8 @@ class TestEstoreEinvoiceGenericProcessing:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
-            mock_fetcher_instance.fetch_cust.return_value = "CUST001"
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
@@ -1808,9 +1807,8 @@ class TestEstoreEinvoiceGenericProcessing:
         with patch(
             "dispatch.converters.convert_to_estore_einvoice_generic.InvFetcher"
         ) as mock_fetcher_class:
-            mock_fetcher_instance = MagicMock()
+            mock_fetcher_instance = MagicMock(spec=InvFetcher)
             mock_fetcher_instance.fetch_po.return_value = "PO-001"
-            mock_fetcher_instance.fetch_cust.return_value = "CUST001"
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 

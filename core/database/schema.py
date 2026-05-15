@@ -456,7 +456,10 @@ def ensure_schema(database_connection) -> None:
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
     # Handle ALTER statements separately for compatibility and best-effort behavior.
-    raw_conn = getattr(database_connection, "_conn", None)
+    if hasattr(type(database_connection), "raw_connection"):
+        raw_conn = database_connection.raw_connection
+    else:
+        raw_conn = getattr(database_connection, "_conn", None)
 
     try:
         if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
@@ -549,7 +552,10 @@ def _apply_statement_to_connection(
     sqlite3.Connection objects stored in _conn. Logs failures but attempts
     several strategies for best-effort idempotent behavior.
     """
-    raw_conn = getattr(database_connection, "_conn", None)
+    if hasattr(type(database_connection), "raw_connection"):
+        raw_conn = database_connection.raw_connection
+    else:
+        raw_conn = getattr(database_connection, "_conn", None)
 
     if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
         try:

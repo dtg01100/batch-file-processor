@@ -48,42 +48,36 @@ class FTPService(FTPServiceProtocol):
 
         """
         ftp = ftplib.FTP()
+        stage = "server"
 
         try:
-            # Test server connection
             ftp.connect(str(server), int(port))
+            stage = "login"
 
-            try:
-                # Test login
-                ftp.login(username, password)
+            ftp.login(username, password)
+            stage = "cwd"
 
-                try:
-                    # Test folder access
-                    ftp.cwd(folder)
-                    return FTPConnectionResult(success=True)
-
-                except Exception as e:
-                    logger.debug("FTP cwd failed: %s", e)
-                    return FTPConnectionResult(
-                        success=False,
-                        error_message="FTP Folder Field Incorrect",
-                        error_type="cwd",
-                    )
-
-            except Exception as e:
-                logger.debug("FTP login failed: %s", e)
-                return FTPConnectionResult(
-                    success=False,
-                    error_message="FTP Username or Password Incorrect",
-                    error_type="login",
-                )
+            ftp.cwd(folder)
+            return FTPConnectionResult(success=True)
 
         except Exception as e:
-            logger.debug("FTP server connection failed: %s", e)
+            logger.debug("FTP %s failed: %s", stage, e)
+            error_map = {
+                "server": (
+                    "FTP Server or Port Field Incorrect",
+                    "server",
+                ),
+                "login": (
+                    "FTP Username or Password Incorrect",
+                    "login",
+                ),
+                "cwd": ("FTP Folder Field Incorrect", "cwd"),
+            }
+            msg, error_type = error_map.get(stage, ("Unexpected FTP error", "unknown"))
             return FTPConnectionResult(
                 success=False,
-                error_message="FTP Server or Port Field Incorrect",
-                error_type="server",
+                error_message=msg,
+                error_type=error_type,
             )
 
         finally:
@@ -129,7 +123,7 @@ class MockFTPService(FTPServiceProtocol):
         self.connection_attempts: list[dict[str, Any]] = []
 
     def test_connection(
-        self, server: str, port: int, username: str, _password: str, folder: str
+        self, server: str, port: int, username: str, password: str, folder: str
     ) -> FTPConnectionResult:
         """Record connection attempt and return configured result."""
         self.connection_attempts.append(

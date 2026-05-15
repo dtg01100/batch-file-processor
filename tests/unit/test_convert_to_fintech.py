@@ -17,6 +17,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from core.edi.inv_fetcher import InvFetcher
+
 # Import the module to test
 from dispatch.converters import convert_to_fintech
 
@@ -133,7 +135,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
     ):
         """Test that edi_convert returns the expected CSV filename."""
         # Mock the InvFetcher
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -164,7 +166,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that the CSV file is actually created."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -198,7 +200,7 @@ class TestConvertToFintechHeaders(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that CSV has correct column headers."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -248,7 +250,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that division ID appears in output."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -279,7 +281,7 @@ class TestConvertToFintechDivisionId(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test with custom division ID."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -316,7 +318,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that UOM is 'CS' for unit multiplier of 1."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -369,7 +371,7 @@ class TestConvertToFintechUOM(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that UOM is 'EA' for unit multiplier > 1."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -426,7 +428,7 @@ class TestConvertToFintechTaxRecords(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that C records are included in output."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -466,7 +468,7 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test UPC lookup from LUT."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -525,7 +527,7 @@ class TestConvertToFintechUPCHandling(TestConvertToFintechFixtures):
         have error handling for missing UPCs, so we use a UPC that exists
         in the LUT to test the basic functionality works.
         """
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -579,7 +581,7 @@ class TestConvertToFintechDateHandling(TestConvertToFintechFixtures):
         """Test that invoice date is formatted correctly."""
         from datetime import datetime
 
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -636,7 +638,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test handling of empty EDI file."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_inv_fetcher.return_value = mock_fetcher
 
         input_file = tmp_path / "input.edi"
@@ -664,7 +666,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test with only header record (no details)."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -706,7 +708,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
         This test verifies that having only B records (no A record) is handled.
         The code will fail with KeyError - this test documents expected behavior.
         """
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -757,7 +759,7 @@ class TestConvertToFintechEdgeCases(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test handling of invalid record types."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_inv_fetcher.return_value = mock_fetcher
 
         input_file = tmp_path / "input.edi"
@@ -790,7 +792,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that invoice number is converted to int."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -825,7 +827,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that quantity is converted to int."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -860,7 +862,7 @@ class TestConvertToFintechDataTransformation(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that price is formatted correctly."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -898,7 +900,7 @@ class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test conversion with multiple detail records."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 
@@ -962,7 +964,7 @@ class TestConvertToFintechMultipleRecords(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test conversion with multiple invoices."""
-        mock_fetcher = MagicMock()
+        mock_fetcher = MagicMock(spec=InvFetcher)
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher
 

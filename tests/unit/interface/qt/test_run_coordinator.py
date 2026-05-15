@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.run_coordinator import QtRunCoordinator
 
 
@@ -76,8 +77,8 @@ def test_process_directories_writes_validation_report_when_enabled(
     app._args = argparse.Namespace(automatic=False)
     app._backup_increment_module = MagicMock()
     app._check_logs_directory = MagicMock(return_value=True)
-    app._progress_service = MagicMock()
-    app._ui_service = MagicMock()
+    app._progress_service = MagicMock(spec=ProgressServiceProtocol)
+    app._ui_service = MagicMock(spec=UIServiceProtocol)
     app._reporting_service = MagicMock()
 
     app._utils_module = SimpleNamespace(
