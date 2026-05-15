@@ -132,22 +132,22 @@ class HTTPBackend(BackendBase):
         """
         super().__init__(disable_retry=disable_retry)
         self.http_client = http_client
-        self._client = None
+        self._client: HTTPClientProtocol | None = None
 
     def _execute(
         self,
-        process_parameters: dict,
-        _settings: dict,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
         filename: str,
-        **_kwargs: Any,
+        **kwargs: Any,
     ) -> bool:
         """Send file via HTTP POST.
 
         Args:
             process_parameters: HTTP configuration parameters
-            _settings: Settings dictionary (ignored)
+            settings: Settings dictionary (ignored)
             filename: File to send
-            _kwargs: Additional arguments (ignored)
+            kwargs: Additional arguments (ignored)
 
         Returns:
             True if file was sent successfully
@@ -239,7 +239,7 @@ class HTTPBackend(BackendBase):
         """Get backend name for logging."""
         return "http"
 
-    def _get_endpoint(self, process_parameters: dict, _settings: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get HTTP endpoint for logging."""
         return process_parameters.get("http_url", "")
 
@@ -253,12 +253,13 @@ class HTTPBackend(BackendBase):
 
     def _prepare_for_retry(
         self,
-        _process_parameters: dict,
-        _settings: dict,
-        _filename: str,
-        **_kwargs: Any,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
+        filename: str,
+        **kwargs: Any,
     ) -> None:
         """Prepare for retry by resetting state."""
+        del process_parameters, settings, filename, kwargs  # unused
         self._client = None
 
     def send(

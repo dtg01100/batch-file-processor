@@ -309,7 +309,7 @@ def _run_query(ssh: paramiko.SSHClient, sql: str) -> tuple[str, str, int]:
 class Cursor:
     """DB-API 2.0 cursor for IBM i Db2 over SSH."""
 
-    description = None
+    description: list[tuple] | None = None
     rowcount = -1
     arraysize = 1
 
@@ -320,10 +320,10 @@ class Cursor:
             connection: DB-API Connection object to execute queries against.
 
         """
-        self._connection = connection
+        self._connection: Connection | None = connection
         self._rows: list[tuple] = []
         self._pos = 0
-        self.description = None
+        self.description: list[tuple] | None = None
         self.rowcount = -1
 
     def execute(self, operation: str, parameters: tuple | None = None) -> "Cursor":
@@ -341,6 +341,8 @@ class Cursor:
             ProgrammingError: If the SQL execution fails.
 
         """
+        if self._connection is None:
+            raise InterfaceError("Connection is not available")
         if self._connection._closed:
             raise InterfaceError("Connection is closed")
 

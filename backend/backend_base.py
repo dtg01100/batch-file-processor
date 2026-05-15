@@ -273,8 +273,8 @@ class BackendBase(ABC):
     @abstractmethod
     def _prepare_for_retry(
         self,
-        process_parameters: dict,
-        settings: dict,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
         filename: str,
         **kwargs: Any,
     ) -> None:
@@ -303,8 +303,8 @@ class BackendBase(ABC):
     @abstractmethod
     def _execute(
         self,
-        process_parameters: dict,
-        settings: dict,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
         filename: str,
         **kwargs: Any,
     ) -> bool:

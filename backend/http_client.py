@@ -50,13 +50,11 @@ class RealHTTPClient:
                 Takes precedence over timeout if both are specified.
 
         """
-        if connect_timeout is not None or read_timeout is not None:
-            self.timeout = (
-                connect_timeout if connect_timeout is not None else 30.0,
-                read_timeout if read_timeout is not None else 30.0,
-            )
-        else:
-            self.timeout = timeout
+        self.timeout: float | tuple[float, float] = (
+            (connect_timeout if connect_timeout is not None else 30.0, read_timeout if read_timeout is not None else 30.0)
+            if connect_timeout is not None or read_timeout is not None
+            else timeout
+        )
         self._session: requests.Session | None = None
 
     def post(
@@ -190,7 +188,7 @@ class MockHTTPClient:
         data: dict[str, Any] | None = None,
         files: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-        _timeout: float | None = None,
+        timeout: float | None = None,
     ) -> "MockHTTPResponse":
         """Record POST request.
 
@@ -248,6 +246,10 @@ class MockHTTPClient:
         self._response_status_code = 200
         self._response_text = ""
         self._response_headers = {}
+
+    def close(self) -> None:
+        """Close the mock HTTP client (no-op for mock)."""
+        pass
 
 
 class MockHTTPResponse:

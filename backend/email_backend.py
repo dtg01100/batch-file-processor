@@ -93,10 +93,10 @@ class EmailBackend(BackendBase):
         """
         super().__init__(disable_retry=disable_retry)
         self.smtp_client = smtp_client
-        self._server = None
-        self._file_content = None
-        self._maintype = None
-        self._subtype = None
+        self._server: SMTPClientProtocol | None = None
+        self._file_content: bytes | None = None
+        self._maintype: str | None = None
+        self._subtype: str | None = None
 
     def _execute(
         self,
@@ -224,7 +224,7 @@ class EmailBackend(BackendBase):
             isinstance(error, (PermissionError, FileNotFoundError, TimeoutError))
         )
 
-    def _get_endpoint(self, _process_parameters: dict, settings: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get SMTP endpoint for logging."""
         return (
             f"{settings.get('email_smtp_server', '')}:{settings.get('smtp_port', '')}"
@@ -240,10 +240,10 @@ class EmailBackend(BackendBase):
 
     def _prepare_for_retry(
         self,
-        _process_parameters: dict,
-        _settings: dict,
-        _filename: str,
-        **_kwargs: Any,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
+        filename: str,
+        **kwargs: Any,
     ) -> None:
         """Prepare for retry by resetting state.
 

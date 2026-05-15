@@ -53,7 +53,7 @@ class DB2SSHConnection:
             config: Connection configuration containing credentials and host
         """
         self.config = config
-        self._connection = None
+        self._connection: Any = None
         self._connection_id = uuid.uuid4().hex[:8]
         self._logger = get_logger(__name__)
 

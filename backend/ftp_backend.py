@@ -109,7 +109,7 @@ class FTPBackend(BackendBase):
         """
         super().__init__(disable_retry=disable_retry)
         self.ftp_client = ftp_client
-        self._client = None
+        self._client: FTPClientProtocol | None = None
         self._use_tls_options = [False, True]
 
     def _execute(

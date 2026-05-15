@@ -98,10 +98,10 @@ class CopyBackend(BackendBase):
 
     def _execute(
         self,
-        process_parameters: dict,
-        _settings: dict,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
         filename: str,
-        **_kwargs: Any,
+        **kwargs: Any,
     ) -> bool:
         """Copy file to destination directory.
 
@@ -136,7 +136,7 @@ class CopyBackend(BackendBase):
         """Get backend name for logging."""
         return "copy"
 
-    def _get_endpoint(self, process_parameters: dict, _settings: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, settings: dict) -> str:
         """Get copy destination for logging."""
         return process_parameters.get("copy_to_directory", "")
 
@@ -151,10 +151,10 @@ class CopyBackend(BackendBase):
 
     def _prepare_for_retry(
         self,
-        _process_parameters: dict,
-        _settings: dict,
-        _filename: str,
-        **_kwargs: Any,
+        process_parameters: dict[Any, Any],
+        settings: dict[Any, Any],
+        filename: str,
+        **kwargs: Any,
     ) -> None:
         """Prepare for retry by resetting state.
 
@@ -168,6 +168,7 @@ class CopyBackend(BackendBase):
             **kwargs: Additional backend-specific arguments (unused)
 
         """
+        del process_parameters, settings, filename, kwargs  # unused
         pass
 
     def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:

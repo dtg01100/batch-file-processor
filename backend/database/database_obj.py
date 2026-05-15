@@ -42,6 +42,10 @@ class DatabaseConnectionProtocol(Protocol):
         """Close the database connection."""
         ...
 
+    def query(self, sql: str) -> list[dict[str, Any]]:
+        """Execute raw SQL and return results as dictionaries."""
+        ...
+
 
 @runtime_checkable
 class TableProtocol(Protocol):
@@ -150,17 +154,28 @@ class DatabaseObj:
         self._show_popup_func = show_popup_func
         self._destroy_popup_func = destroy_popup_func
 
-        self.database_connection = None
-        self.session_database = None
+        self.database_connection: DatabaseConnectionProtocol
+        self.session_database: DatabaseConnectionProtocol
 
         # Table references (will be set during initialization)
-        self.folders_table = None
-        self.emails_table = None
-        self.emails_table_batch = None
-        self.sent_emails_removal_queue = None
-        self.oversight_and_defaults = None
-        self.processed_files = None
-        self.settings = None
+        self.folders_table: TableProtocol
+        self.emails_table: TableProtocol
+        self.emails_table_batch: TableProtocol
+        self.sent_emails_removal_queue: TableProtocol
+        self.oversight_and_defaults: TableProtocol
+        self.processed_files: TableProtocol
+        self.settings: TableProtocol
+
+        # Initialize to None for now - will be set in _initialize_connection or when connection is injected
+        self.database_connection = None  # type: ignore[assignment]
+        self.session_database = None  # type: ignore[assignment]
+        self.folders_table = None  # type: ignore[assignment]
+        self.emails_table = None  # type: ignore[assignment]
+        self.emails_table_batch = None  # type: ignore[assignment]
+        self.sent_emails_removal_queue = None  # type: ignore[assignment]
+        self.oversight_and_defaults = None  # type: ignore[assignment]
+        self.processed_files = None  # type: ignore[assignment]
+        self.settings = None  # type: ignore[assignment]
 
         if self._connection is None:
             self._initialize_connection()
