@@ -1,6 +1,6 @@
 # Batch File Processor — Technical Reference
 
-**Version:** 1.0 | **Last Updated:** 2026-05-11
+**Version:** 1.1 | **Last Updated:** 2026-05-15
 **Purpose:** Development guide for contributors and maintainers
 
 ---
@@ -234,6 +234,19 @@ handler.record_error(
 )
 ```
 
+**Always include `exc_info=True`** when logging exceptions, even in "non-fatal" handlers:
+
+```python
+except Exception:
+    # Errors in error recording are silently ignored to avoid cascading failures.
+    # The original error is already logged or will be recorded via other paths.
+    logger.debug(
+        "Failed to dispatch error alert (non-fatal)",
+        exc_info=True,
+        extra={"folder_alias": (context or {}).get("folder_alias", "")},
+    )
+```
+
 ### 5. Logging Pattern
 
 ```python
@@ -362,6 +375,28 @@ pytest tests/unit/interface/qt/ -n auto
 | Qt tests with `-n auto` | Segfaults with pytest-xdist | Use `-n0` for Qt tests |
 | Bare `# noqa` | Unjustified suppression | Always add justification comment |
 | Hardcoded converter names | Reduces flexibility | Use dynamic import patterns |
+| Silent `except: pass` | Hides errors from debugging | Use `logger.debug(..., exc_info=True)` |
+| Tuple-return lambda trick `(expr, None)[1]` | Obfuscatory | Use named helper function |
+| Nested try/except pyramid (3+ levels) | Hard to follow | Use `stage` variable with single try/except |
+| Bare `MagicMock()` without spec | Auto-creates any attribute, hides typos | Use `MagicMock(spec=ProtocolOrClass)` |
+| getattr for private `_conn` without hasattr check | MagicMock returns new MagicMock for any attr | Use `hasattr(type(obj), "attr")` pattern |
+| Magic padding `"00" + x` | Locale-dependent, unreadable | Use `x.zfill(2)` or `f"{x:02d}"` |
+
+---
+
+## Bug-Hunting Checklist
+
+When auditing code, check for:
+
+1. **Silent exception swallowing** — `except Exception: pass` without logging
+2. **File handle leaks** — Files opened without context manager or try/finally
+3. **DB recording failures** — Processing succeeds but DB write fails silently (causes reprocessing)
+4. **Magic padding in string formatting** — `"00" + x` instead of `x.zfill(2)` or `f"{x:02d}"`
+5. **getattr on unknown objects** — Without hasattr check, MagicMock auto-creates attrs
+6. **Dead code in mocks** — spec= catches methods that don't exist on real objects
+7. **Lambda returning None implicitly** — Use explicit `return None` or named function
+8. **Awkward workarounds** — Tuple tricks, monkeypatching stdlib, etc.
+9. **Bare MagicMock()** — Use spec= to catch typos and undefined attributes at test time
 
 ---
 

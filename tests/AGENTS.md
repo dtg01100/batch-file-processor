@@ -56,3 +56,34 @@ tests/
 **DB tests**: Use `DatabaseConnectionManager` context manager (enforces PRAGMA foreign_keys, unique connection names)
 
 **Migration tests**: `generate_database_at_version(version)` creates v5 baseline then migrates to target version using real migrator
+
+## MOCKING CONVENTIONS
+
+**Use `spec=` for all `MagicMock()` calls** — This enforces the mock to only allow attributes that exist on the specified class/protocol. Without spec, MagicMock auto-creates any attribute, hiding typos and making tests pass for wrong reasons.
+
+```python
+# ✗ Wrong - allows any attribute
+mock_handler = MagicMock()
+
+# ✓ Correct - only allows real attributes
+mock_handler = MagicMock(spec=ErrorHandler)
+mock_db = MagicMock(spec=DatabaseManager)
+```
+
+**Use `MockFactories` from `conftest.py`** for reusable spec'd mocks:
+
+```python
+from tests.conftest import MockFactories
+
+mock_factories = MockFactories()
+
+# In tests
+ftp_service = mock_factories.ftp_service()  # spec'd to FTPSyncService
+email_service = mock_factories.email_service()  # spec'd to SMTPSyncService
+```
+
+**Use real values for datetime objects** — Avoid `MagicMock(spec=datetime)` for datetime values. Use `datetime(2025, 1, 1)` instead.
+
+**Callback mocks** — Bare `MagicMock()` is acceptable for callbacks (e.g., `on_complete=MagicMock()`) since the callback signature is unknown and there's no protocol to spec against.
+
+**When `spec=` catches bugs** — If you get `AttributeError: Mock object has no attribute 'xyz'`, that mock was never properly configured in the real code. This is a test catching a real bug, not a test being too strict.
