@@ -71,7 +71,7 @@ class PluginManager:
             List[str]: List of discovered plugin identifiers
 
         """
-        discovered = []
+        discovered: list[str] = []
 
         # Search in plugin directories
         for directory in self._plugin_directories:

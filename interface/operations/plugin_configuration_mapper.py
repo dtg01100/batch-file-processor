@@ -343,8 +343,8 @@ class PluginConfigurationMapper:
                 self.state_manager.update_state(
                     plugin.get_format_name(),
                     config,
-                    validation.success,
-                    validation.errors,
+                    is_valid=validation.success,
+                    validation_errors=validation.errors,
                 )
             except Exception as e:
                 if get_strict_testing_mode():
@@ -607,7 +607,9 @@ class PluginConfigurationMapper:
 
         def _set_list_widget_selection(w: QListWidget, v: object) -> None:
             for i in range(w.count()):
-                w.item(i).setSelected(w.item(i).data(0) in v)
+                item = w.item(i)
+                if item is not None:
+                    item.setSelected(item.data(0) in v if hasattr(v, "__contains__") else False)
 
         _WIDGET_VALUE_SETTERS = {
             QLineEdit: lambda w, v: w.setText(str(v)),

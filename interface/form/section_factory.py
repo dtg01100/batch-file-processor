@@ -92,6 +92,7 @@ class QtSectionFactory(SectionFactory):
             ConfigSectionWidget: Created section widget
 
         """
+        widget: ConfigSectionWidget
         if section_type == "tabbed":
             if not isinstance(schema, list):
                 raise ValueError("Tabbed section requires a list of schemas")

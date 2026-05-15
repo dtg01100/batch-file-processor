@@ -264,7 +264,6 @@ class ConfigurationWidgetBuilder:
 
         return self._layout_widgets(widgets, schema, parent)
 
-    @abstractmethod
     def _layout_widgets(
         self,
         widgets: dict[str, WidgetBase],
@@ -283,6 +282,7 @@ class ConfigurationWidgetBuilder:
             Any: Container widget with layout
 
         """
+        raise NotImplementedError("Subclasses must implement _layout_widgets")
 
 
 class QtWidgetFactory(WidgetFactory):

@@ -8,7 +8,7 @@ validation and serialization/deserialization methods.
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Iterator
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
@@ -62,6 +62,12 @@ def _discover_format_values() -> list[tuple[str, str]]:
 class _ConvertFormatMeta(type):
     """Metaclass to enable ConvertFormat class iteration."""
 
+    _discovered: list[str]
+    _display_values: dict[str, str]
+
+    def _ensure_discovered(cls) -> None:
+        ...
+
     def __iter__(cls):
         cls._ensure_discovered()
         for v in cls._discovered:
@@ -70,6 +76,15 @@ class _ConvertFormatMeta(type):
     def __len__(cls):
         cls._ensure_discovered()
         return len(cls._discovered)
+
+    def __getattr__(cls, name: str) -> "ConvertFormat":
+        cls._ensure_discovered()
+        if name.startswith("_"):
+            raise AttributeError(name)
+        key = name.upper().replace("-", "_").replace(" ", "_")
+        if hasattr(cls, key):
+            return getattr(cls, key)
+        raise AttributeError(name)
 
 
 class ConvertFormat(metaclass=_ConvertFormatMeta):

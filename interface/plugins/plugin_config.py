@@ -332,7 +332,7 @@ class PluginRegistry:
         ]
 
     @classmethod
-    def get_send_plugin_info(cls) -> list[tuple[int, str, str]]:
+    def get_send_plugin_info(cls) -> list[tuple[str, str, str]]:
         """Get info about all registered send plugins.
 
         Returns:

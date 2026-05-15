@@ -287,11 +287,13 @@ class FormGenerator(ABC):
 
         """
         for section in sections:
-            self.add_plugin_section(
-                section.get("id", f"section_{len(self._plugin_sections)}"),
-                section.get("schema"),
-                section.get("config"),
-            )
+            schema = section.get("schema")
+            if schema is not None:
+                self.add_plugin_section(
+                    section.get("id", f"section_{len(self._plugin_sections)}"),
+                    schema,
+                    section.get("config"),
+                )
 
     def get_plugin_section_values(self) -> dict[str, dict[str, Any]]:
         """
@@ -305,7 +307,7 @@ class FormGenerator(ABC):
         for section in self._plugin_sections:
             if hasattr(section, "get_values"):
                 section_id = getattr(section, "section_id", "unknown")
-                values[section_id] = section.get_values()
+                values[section_id] = getattr(section, "get_values")()
         return values
 
     def set_plugin_section_values(self, configs: dict[str, dict[str, Any]]) -> None:
@@ -319,7 +321,8 @@ class FormGenerator(ABC):
         for section in self._plugin_sections:
             section_id = getattr(section, "section_id", None)
             if section_id and section_id in configs:
-                section.set_values(configs[section_id])
+                if hasattr(section, "set_values"):
+                    getattr(section, "set_values")(configs[section_id])
 
     def validate_plugin_sections(self) -> ValidationResult:
         """
@@ -333,8 +336,12 @@ class FormGenerator(ABC):
         for section in self._plugin_sections:
             if hasattr(section, "validate"):
                 result = section.validate()
-                if not result.success:
-                    all_errors.extend(result.errors)
+                if isinstance(result, ValidationResult):
+                    if not result.success:
+                        all_errors.extend(result.errors)
+                elif not result:
+                    if hasattr(section, "get_validation_errors"):
+                        all_errors.extend(section.get_validation_errors())
             elif hasattr(section, "get_validation_errors"):
                 all_errors.extend(section.get_validation_errors())
 
@@ -372,8 +379,10 @@ class QtFormGenerator(FormGenerator):
         # Build widgets once and store references in self.widgets so that
         # get_values() / set_values() operate on the same widgets that are
         # displayed to the user.
+        factory = self.factory
+        assert factory is not None, "factory not initialized"
         for field in self.schema.fields:
-            widget = self.factory.create_widget(field.field_type, field, parent)
+            widget = factory.create_widget(field.field_type, field, parent)
             self.widgets[field.name] = widget
             native_widget = widget.get_widget()
 
@@ -424,8 +433,8 @@ class QtFormGenerator(FormGenerator):
                 )
 
                 if section_widget:
-                    section_widget.section_id = section_id
-                    self._plugin_sections.append(section_widget)
+                    setattr(section_widget, "section_id", section_id)
+                    self._plugin_sections.append(section_widget)  # type: ignore[arg-type]
                     native_widget = section_widget.render(config)
                     section_layout.addWidget(native_widget)
 
