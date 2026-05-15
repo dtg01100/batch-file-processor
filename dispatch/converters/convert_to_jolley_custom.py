@@ -103,15 +103,21 @@ class JolleyCustomConverter(BaseEDIConverter):
         super().process_a_record(record, context)
         self._header_a_record = record.fields
 
-        self._customer_service.lookup(record.fields["invoice_number"])
-        self._uom_service.init_uom_lookup(record.fields["invoice_number"])
+        customer_service = self._customer_service
+        assert customer_service is not None, "customer_service not initialized"
+        uom_service = self._uom_service
+        assert uom_service is not None, "uom_service not initialized"
 
-        raw_header_dict = self._customer_service.header_dict
+        customer_service.lookup(record.fields["invoice_number"])
+        uom_service.init_uom_lookup(record.fields["invoice_number"])
+
+        raw_header_dict = customer_service.header_dict
         self._header_fields_dict = build_jolley_header_dict(
             raw_header_dict, BASIC_CUSTOMER_FIELDS_LIST
         )
 
         csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
 
         csv_writer.writerow(["Invoice Details"])
         csv_writer.writerow([""])
@@ -178,15 +184,20 @@ class JolleyCustomConverter(BaseEDIConverter):
             context: The conversion context
 
         """
+        uom_service = self._uom_service
+        assert uom_service is not None, "uom_service not initialized"
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+
         total_price, qtyint = self._item_processor.convert_to_item_total(
             record.fields["unit_cost"], record.fields["qty_of_units"]
         )
-        context.csv_writer.writerow(
+        csv_writer.writerow(
             [
                 record.fields["description"],
                 self._item_processor.generate_full_upc(record.fields["upc_number"]),
                 qtyint,
-                self._uom_service.get_uom(
+                uom_service.get_uom(
                     record.fields["vendor_item"], record.fields["unit_multiplier"]
                 ),
                 "$" + str(utils.convert_to_price(record.fields["unit_cost"])),
@@ -202,7 +213,9 @@ class JolleyCustomConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+        csv_writer.writerow(
             [
                 record.fields["description"],
                 "000000000000",
@@ -221,7 +234,9 @@ class JolleyCustomConverter(BaseEDIConverter):
 
         """
         if self._header_a_record:
-            context.csv_writer.writerow(
+            csv_writer = context.csv_writer
+            assert csv_writer is not None, "csv_writer not initialized"
+            csv_writer.writerow(
                 [
                     "",
                     "",

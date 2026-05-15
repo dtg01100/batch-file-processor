@@ -30,7 +30,10 @@ Backward Compatibility:
 import math
 import os
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from core.database.query_runner import QueryRunner
 
 import barcode
 import openpyxl
@@ -64,7 +67,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
     def __init__(self) -> None:
         """Initialize the converter."""
         super().__init__()
-        self.query_object = None
+        self.query_object: QueryRunner | None = None
         self.output_spreadsheet = None
         self.output_worksheet = None
         self.output_spreadsheet_name = ""
@@ -82,8 +85,8 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         edi_process: str,
         output_filename: str,
         settings_dict: dict[str, Any],
-        _parameters_dict: dict[str, Any],
-        _upc_lut: dict[int, tuple],
+        parameters_dict: dict[str, Any],
+        upc_lut: dict[int, tuple],
     ) -> str:
         """Convert EDI file to ScanSheet Type A Excel format.
 
@@ -101,12 +104,16 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             Path to the generated Excel file
 
         """
+        del parameters_dict, upc_lut  # unused - data comes from DB
         invoice_list = self._extract_invoices_from_edi(edi_process)
         self._initialize_database(settings_dict)
         self._initialize_workbook(output_filename)
         self._populate_workbook(invoice_list)
         self._process_barcodes()
-        self._finalize_output(None)
+        self._finalize_output(ConversionContext(
+            edi_filename="", output_filename="", settings_dict={},
+            parameters_dict={}, upc_lut={}
+        ))
         return self.output_spreadsheet_name
 
     def _extract_invoices_from_edi(self, edi_process: str) -> list[str]:
@@ -283,13 +290,14 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 barcodes_skipped,
             )
 
-    def _finalize_output(self, _context: ConversionContext | None) -> None:
+    def _finalize_output(self, context: ConversionContext) -> None:
         """Finalize output by closing database connection.
 
         Args:
             context: The conversion context (not used in this converter)
 
         """
+        del context  # unused - data comes from DB
         if self.query_object is not None:
             try:
                 self.query_object.close()

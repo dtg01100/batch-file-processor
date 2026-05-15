@@ -242,7 +242,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             "Vendor OId": self.vendor_oid,
             "Invoice Number": record.fields["invoice_number"],
             "Purchase Order": self.inv_fetcher.fetch_po(
-                record.fields["invoice_number"]
+                int(record.fields["invoice_number"])
             ),
             "Invoice Date": write_invoice_date,
             "Total Invoice Cost": utils.convert_to_price(
@@ -251,7 +251,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         }
         self.invoice_index += 1
 
-    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item), handling shipper mode.
 
         Args:
@@ -259,6 +259,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             context: The conversion context
 
         """
+        del context  # unused in this method
         # Lookup UPC from the lookup table
         try:
             upc_entry = self.upc_lookup[int(record.fields["vendor_item"])][1]
@@ -317,7 +318,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         self.invoice_index += 1
         self.invoice_accum.append(row_dict["Extended Cost"])
 
-    def process_c_record(self, record: EDIRecord, _context: ConversionContext) -> None:
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge), writing to CSV.
 
         Args:
@@ -325,6 +326,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             context: The conversion context
 
         """
+        del context  # unused in this method
         row_dict = {
             "Detail Type": "S",
             "Subcategory OId": self.c_record_oid,
@@ -361,7 +363,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             context.output_file.close()
             context.output_file = None
 
-    def _get_return_value(self, _context: ConversionContext) -> str:
+    def _get_return_value(self, context: ConversionContext) -> str:
         """Get the return value - the generated filename.
 
         Args:
@@ -371,6 +373,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             Path to the generated CSV file
 
         """
+        del context  # unused in this method
         return self.output_filename
 
 

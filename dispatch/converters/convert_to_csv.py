@@ -115,7 +115,9 @@ class CSVConverter(BaseEDIConverter):
 
         # Write headers if enabled
         if context.user_data["inc_headers"]:
-            context.csv_writer.writerow(
+            csv_writer = context.csv_writer
+            assert csv_writer is not None, "csv_writer not initialized"
+            csv_writer.writerow(
                 [
                     "UPC",
                     "Qty. Shipped",
@@ -159,6 +161,8 @@ class CSVConverter(BaseEDIConverter):
 
         """
         user_data = context.user_data
+
+        assert context.csv_writer is not None, "csv_writer not initialized"
 
         # Apply padding if enabled
         if user_data["pad_arec"]:
@@ -214,8 +218,11 @@ class CSVConverter(BaseEDIConverter):
         case_pack = self._process_quantity(fields["unit_multiplier"])
         item_number = self._process_quantity(fields["vendor_item"])
 
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+
         # Write the CSV row
-        context.csv_writer.writerow(
+        csv_writer.writerow(
             [
                 upc_in_csv,
                 quantity_shipped,
@@ -235,7 +242,10 @@ class CSVConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+
+        csv_writer.writerow(
             [
                 record.fields["record_type"],
                 record.fields["charge_type"],

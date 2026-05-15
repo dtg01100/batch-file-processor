@@ -115,7 +115,9 @@ class ScannerWareConverter(BaseEDIConverter):
             line_builder_list.append(user_data["append_arec_text"])
 
         writeable_line = "".join(line_builder_list)
-        context.output_file.write((writeable_line + "\r\n").encode())
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        output_file.write((writeable_line + "\r\n").encode())
 
         # Store header in context
         context.arec_header = fields
@@ -145,7 +147,9 @@ class ScannerWareConverter(BaseEDIConverter):
         ]
 
         writeable_line = "".join(line_builder_list)
-        context.output_file.write((writeable_line + "\r\n").encode())
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        output_file.write((writeable_line + "\r\n").encode())
 
     def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax) in fixed-width format.
@@ -165,7 +169,9 @@ class ScannerWareConverter(BaseEDIConverter):
         ]
 
         writeable_line = "".join(line_builder_list)
-        context.output_file.write((writeable_line + "\r\n").encode())
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        output_file.write((writeable_line + "\r\n").encode())
 
     def _get_return_value(self, context: ConversionContext) -> str:
         """Get the return value for edi_convert().

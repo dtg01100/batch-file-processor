@@ -86,7 +86,9 @@ class FintechConverter(BaseEDIConverter):
         )
 
         # Write Fintech header row
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+        csv_writer.writerow(
             [
                 "Division_id",
                 "invoice_number",
@@ -155,7 +157,9 @@ class FintechConverter(BaseEDIConverter):
             )
 
         # Write the CSV row
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+        csv_writer.writerow(
             [
                 fintech_division_id,
                 invoice_number_int,
@@ -199,7 +203,9 @@ class FintechConverter(BaseEDIConverter):
             )
 
         # Write the CSV row for charge
-        context.csv_writer.writerow(
+        csv_writer = context.csv_writer
+        assert csv_writer is not None, "csv_writer not initialized"
+        csv_writer.writerow(
             [
                 fintech_division_id,
                 invoice_number_int,

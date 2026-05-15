@@ -21,6 +21,8 @@ Backward Compatibility:
     settings_dict, parameters_dict, upc_lut)
 """
 
+from typing import TextIO, cast
+
 from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
@@ -40,7 +42,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
 
     def __init__(self) -> None:
         """Initialize the tweaks converter."""
-        self._tweaker = None
+        self._tweaker: EDITweaker | None = None
 
     def _initialize_output(self, context: ConversionContext) -> None:
         """Initialize output file and EDITweaker instance.
@@ -70,10 +72,15 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
             context: The conversion context
 
         """
-        transformed = self._tweaker._process_a_record(
-            record.fields, context.output_file
+        tweaker = self._tweaker
+        assert tweaker is not None, "tweaker not initialized"
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        text_output = cast(TextIO, output_file)
+        transformed = tweaker._process_a_record(
+            record.fields, text_output
         )
-        context.output_file.write(transformed)
+        text_output.write(transformed)
 
     def process_b_record(self, record, context: ConversionContext) -> None:
         """Process and transform a B record.
@@ -83,10 +90,15 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
             context: The conversion context
 
         """
-        transformed = self._tweaker._process_b_record(
-            record.fields, context.output_file, context.upc_lut
+        tweaker = self._tweaker
+        assert tweaker is not None, "tweaker not initialized"
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        text_output = cast(TextIO, output_file)
+        transformed = tweaker._process_b_record(
+            record.fields, text_output, context.upc_lut
         )
-        context.output_file.write(transformed)
+        text_output.write(transformed)
 
     def process_c_record(self, record, context: ConversionContext) -> None:
         """Process and transform a C record.
@@ -96,11 +108,16 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
             context: The conversion context
 
         """
-        transformed = self._tweaker._process_c_record(
-            record.fields, context.output_file
+        tweaker = self._tweaker
+        assert tweaker is not None, "tweaker not initialized"
+        output_file = context.output_file
+        assert output_file is not None, "output_file not initialized"
+        text_output = cast(TextIO, output_file)
+        transformed = tweaker._process_c_record(
+            record.fields, text_output
         )
         if transformed:
-            context.output_file.write(transformed)
+            text_output.write(transformed)
 
     def _finalize_output(self, context: ConversionContext) -> None:
         """Close output file.

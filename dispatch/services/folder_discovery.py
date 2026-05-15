@@ -250,8 +250,8 @@ class FolderDiscoveryService:
                 progress_reporter, "update_discovery_file"
             ):
                 progress_reporter.update_discovery_file(
-                    folder_num=folder_index,
-                    folder_total=folder_total,
+                    folder_num=folder_index if folder_index is not None else 0,
+                    folder_total=folder_total if folder_total is not None else 0,
                     file_num=idx + 1,
                     file_total=len(files),
                     filename=os.path.basename(file_path),

@@ -53,9 +53,9 @@ def _strip_sql_leading_comments(query: str) -> str:
 
 def _parse_sql_statements(query: str) -> list[str]:
     """Split SQL query into individual statements by semicolon."""
-    statements = []
+    statements: list[str] = []
     in_string = False
-    current = []
+    current: list[str] = []
 
     i = 0
     while i < len(query):
