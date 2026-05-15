@@ -213,7 +213,7 @@ class QtRunCoordinator:
 
     def _write_run_header(self, run_log, run_log_path: str) -> None:
         logger.debug("Run log: %s", run_log_path)
-        self._app._utils_module.do_clear_old_files(run_log_path, 1000)
+        self._app._utils_module.clear_old_files(run_log_path, 1000)
         run_log.write((f"Batch File Sender Version {self._app._version}\r\n").encode())
         run_log.write((f"starting run at {time.ctime()}\r\n").encode())
 

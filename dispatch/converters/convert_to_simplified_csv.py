@@ -26,7 +26,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    create_edi_convert_wrapper,
+    make_edi_convert,
     normalize_parameter,
 )
 from dispatch.converters.csv_utils import apply_retail_uom
@@ -212,6 +212,4 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
 
-edi_convert = create_edi_convert_wrapper(
-    SimplifiedCSVConverter, format_name="simplified_csv"
-)
+edi_convert = make_edi_convert(SimplifiedCSVConverter)

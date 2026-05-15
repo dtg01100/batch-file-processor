@@ -81,7 +81,7 @@ def test_process_directories_writes_validation_report_when_enabled(
     app._reporting_service = MagicMock()
 
     app._utils_module = SimpleNamespace(
-        do_clear_old_files=lambda *_: None,
+        clear_old_files=lambda *_: None,
         normalize_bool=lambda v: (
             bool(v)
             if isinstance(v, bool)
@@ -112,7 +112,7 @@ def test_process_directories_writes_validation_report_when_enabled(
         {"id": 1, "alias": "A", "folder_name": str(tmp_path)}
     ]
 
-    monkeypatch.setattr("dispatch.DispatchOrchestrator", _FakeOrchestrator)
+    monkeypatch.setattr("dispatch.orchestrator.DispatchOrchestrator", _FakeOrchestrator)
     monkeypatch.setattr(
         "dispatch.pipeline.validator.EDIValidationStep", _FakeValidationStep
     )

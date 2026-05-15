@@ -415,7 +415,7 @@ class MockFTPClient:
         Args:
             cmd: FTP command
             fp: File-like object
-            blocksize: Block size (ignored in mock)
+            _blocksize: Block size (ignored in mock)
 
         """
         self._raise_error_if_set()
@@ -461,7 +461,7 @@ class MockFTPClient:
         Args:
             cmd: FTP command
             callback: Callback function
-            blocksize: Block size (ignored in mock)
+            _blocksize: Block size (ignored in mock)
 
         """
         self._raise_error_if_set()

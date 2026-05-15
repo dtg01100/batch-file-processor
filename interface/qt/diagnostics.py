@@ -9,6 +9,11 @@ from typing import Any
 import appdirs
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
+from adapters.sqlite.repositories.sqlite_folder_repo import SqliteFolderRepository
+from adapters.sqlite.repositories.sqlite_processed_files_repo import (
+    SqliteProcessedFilesRepository,
+)
+from adapters.sqlite.repositories.sqlite_settings_repo import SqliteSettingsRepository
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
 
@@ -225,7 +230,15 @@ class QtDiagnosticsService:
             failures += 1
 
         try:
-            self._app._folder_manager = FolderManager(self._app._database)
+            db = self._app._database
+            folder_repo = SqliteFolderRepository(db)
+            settings_repo = SqliteSettingsRepository(db)
+            processed_files_repo = SqliteProcessedFilesRepository(db)
+            self._app._folder_manager = FolderManager(
+                folder_repo=folder_repo,
+                settings_repo=settings_repo,
+                processed_files_repo=processed_files_repo,
+            )
             print("  [OK] FolderManager initialized")
         except Exception as e:
             print(f"  [FAIL] FolderManager initialization failed: {e}")

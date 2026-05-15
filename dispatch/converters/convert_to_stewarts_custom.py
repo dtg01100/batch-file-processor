@@ -35,7 +35,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 from dispatch.converters.customer_queries import STEWARTS_CUSTOMER_QUERY_SQL
 from dispatch.services.customer_lookup_service import CustomerLookupService
@@ -276,6 +276,4 @@ class StewartsCustomConverter(BaseEDIConverter):
         self._db_connector.close()
 
 
-edi_convert = create_edi_convert_wrapper(
-    StewartsCustomConverter, format_name="stewarts_custom"
-)
+edi_convert = make_edi_convert(StewartsCustomConverter)

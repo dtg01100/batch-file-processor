@@ -12,10 +12,6 @@ import shutil
 import tempfile
 
 from core.structured_logging import get_logger
-
-# Backward-compatible re-export: callers use do_clear_old_files from this module.
-# Import directly from core.utils.file_utils in new code.
-from core.utils.file_utils import clear_old_files as do_clear_old_files
 from dispatch.interfaces import FileSystemInterface, RunLog
 
 logger = get_logger(__name__)
@@ -343,7 +339,6 @@ __all__ = [
     "build_error_log_filename",
     "build_output_filename",
     "build_processed_file_record",
-    "do_clear_old_files",
     "ensure_directory_exists",
     "extract_invoice_numbers",
     "get_file_extension",

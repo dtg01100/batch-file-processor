@@ -10,7 +10,6 @@ from core.utils.bool_utils import normalize_db_bool
 from dispatch.pipeline.splitter import (
     DefaultCreditDetector,
     EDISplitterStep,
-    FilesystemAdapter,
     MockSplitter,
     SplitterResult,
     _normalize_include_flag,
@@ -424,85 +423,6 @@ class TestMockSplitter:
         assert result == custom_result
         assert result.files == [("/output/test.inv", "A_", ".inv")]
 
-
-class TestFilesystemAdapter:
-    """Tests for FilesystemAdapter class."""
-
-    def test_adapts_read_file_text(self):
-        """Test that read_file properly adapts read_file_text."""
-        mock_fs = MockFileSystem({"/test/file.edi": "test content"})
-        adapter = FilesystemAdapter(mock_fs)
-
-        result = adapter.read_file("/test/file.edi")
-
-        assert result == "test content"
-
-    def test_adapts_write_file_text(self):
-        """Test that write_file properly adapts write_file_text."""
-        mock_fs = MockFileSystem()
-        adapter = FilesystemAdapter(mock_fs)
-
-        adapter.write_file("/test/file.edi", "new content")
-
-        assert mock_fs.text_files["/test/file.edi"] == "new content"
-
-    def test_adapts_write_binary(self):
-        """Test that write_binary properly delegates."""
-        mock_fs = MockFileSystem()
-        adapter = FilesystemAdapter(mock_fs)
-
-        adapter.write_binary("/test/file.edi", b"binary content")
-
-        assert mock_fs.binary_files["/test/file.edi"] == b"binary content"
-
-    def test_adapts_file_exists(self):
-        """Test that file_exists properly delegates."""
-        mock_fs = MockFileSystem({"/test/file.edi": "content"})
-        adapter = FilesystemAdapter(mock_fs)
-
-        assert adapter.file_exists("/test/file.edi") is True
-        assert adapter.file_exists("/test/nonexistent.edi") is False
-
-    def test_adapts_directory_exists(self):
-        """Test that directory_exists properly delegates."""
-        mock_fs = MockFileSystem()
-        mock_fs.directories.add("/test/dir")
-        adapter = FilesystemAdapter(mock_fs)
-
-        assert adapter.directory_exists("/test/dir") is True
-        assert adapter.directory_exists("/test/nonexistent") is False
-
-    def test_adapts_create_directory(self):
-        """Test that create_directory properly delegates to makedirs."""
-        mock_fs = MockFileSystem()
-        adapter = FilesystemAdapter(mock_fs)
-
-        adapter.create_directory("/test/newdir")
-
-        assert "/test/newdir" in mock_fs.directories
-
-    def test_adapts_remove_file(self):
-        """Test that remove_file properly delegates."""
-        mock_fs = MockFileSystem({"/test/file.edi": "content"})
-        adapter = FilesystemAdapter(mock_fs)
-
-        adapter.remove_file("/test/file.edi")
-
-        assert "/test/file.edi" in mock_fs.removed_files
-
-    def test_adapts_list_files(self):
-        """Test that list_files properly delegates."""
-        mock_fs = MockFileSystem(
-            {
-                "/test/file1.edi": "content1",
-                "/test/file2.edi": "content2",
-            }
-        )
-        adapter = FilesystemAdapter(mock_fs)
-
-        result = adapter.list_files("/test")
-
-        assert len(result) == 2
 
 
 class TestEDISplitterStep:

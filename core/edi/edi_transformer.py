@@ -78,4 +78,4 @@ def detect_invoice_is_credit(edi_process) -> bool:
             "[Invoice Type Detection]: Somehow ended up in the middle"
             " of a file, this should not happen"
         )
-    return not dac_str_int_to_int(fields["invoice_total"]) >= 0
+    return dac_str_int_to_int(fields["invoice_total"]) < 0

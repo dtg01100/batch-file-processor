@@ -10,7 +10,7 @@ exact same behavior and output format.
 
 The converter features:
 - Shipper mode: Parent items with child components
-- Database lookups via invFetcher for PO numbers and UOM descriptions
+- Database lookups via InvFetcher for PO numbers and UOM descriptions
 - Row buffering with deferred writing
 - C record (charge) processing with configurable OID
 - CSV header row with column names
@@ -23,7 +23,7 @@ Shipper Mode Logic:
     the count of child items when leaving shipper mode.
 
 Database Lookups:
-    The invFetcher class provides cached database lookups for:
+    The InvFetcher class provides cached database lookups for:
     - PO numbers by invoice number
     - Customer names by invoice number
     - UOM descriptions by item number and multiplier
@@ -37,10 +37,8 @@ Output Format:
 
 Backward Compatibility:
     The module-level edi_convert() function maintains the same signature
-    as before: edi_convert(edi_process, output_filename_initial, settings_dict,
+    as before: edi_convert(edi_process, output_filename, settings_dict,
     parameters_dict, upc_lookup)
-
-    The invFetcher class is also preserved for external use.
 """
 
 import csv
@@ -57,106 +55,10 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 
 logger = get_logger(__name__)
-
-
-class invFetcher:
-    """Adapter wrapping core InvFetcher for backward compatibility.
-
-    This class provides the same interface as the original invFetcher
-    while delegating to the core.edi.inv_fetcher.InvFetcher implementation.
-    Uses dependency injection internally for better testability.
-
-    Attributes:
-        settings: Database connection settings
-        _fetcher: The underlying InvFetcher instance
-
-    """
-
-    def __init__(self, settings_dict: dict[str, Any]) -> None:
-        """Initialize the invoice fetcher adapter.
-
-        Args:
-            settings_dict: Dictionary containing database connection settings.
-                Must include: as400_username, as400_password, as400_address
-
-        """
-        self.settings = settings_dict
-        # Create a new QueryRunner for the core InvFetcher
-        from core.database.query_runner import create_query_runner_from_settings
-
-        runner = create_query_runner_from_settings(settings_dict)
-        # Create adapter for the core InvFetcher's protocol
-        self._fetcher = InvFetcher(runner, settings_dict)
-
-    @property
-    def last_invoice_number(self):
-        """Forward to core fetcher for compatibility."""
-        return self._fetcher.last_invoice_number
-
-    @property
-    def uom_lut(self):
-        """Forward to core fetcher for compatibility."""
-        return self._fetcher.uom_lut
-
-    @property
-    def last_invno(self):
-        """Forward to core fetcher for compatibility."""
-        return self._fetcher.last_invno
-
-    @property
-    def po(self):
-        """Forward to core fetcher for compatibility."""
-        return self._fetcher.po
-
-    @property
-    def cust(self):
-        """Forward to core fetcher's custname for compatibility."""
-        return self._fetcher.custname
-
-    def fetch_po(self, invoice_number: str) -> str:
-        """Fetch PO number for an invoice, with caching.
-
-        Args:
-            invoice_number: The invoice number to look up (as string)
-
-        Returns:
-            The PO number string
-
-        """
-        return self._fetcher.fetch_po(int(invoice_number))
-
-    def fetch_cust(self, invoice_number: str) -> str:
-        """Fetch customer name for an invoice.
-
-        Args:
-            invoice_number: The invoice number to look up
-
-        Returns:
-            The customer name string
-
-        """
-        return self._fetcher.fetch_cust_name(int(invoice_number))
-
-    def fetch_uom_desc(self, itemno: str, uommult: str, lineno: int, invno: str) -> str:
-        """Fetch UOM description for an item.
-
-        Args:
-            itemno: The item number
-            uommult: The UOM multiplier
-            lineno: The line number
-            invno: The invoice number
-
-        Returns:
-            The UOM description string (e.g., 'HI', 'LO', or specific UOM)
-
-        """
-        return self._fetcher.fetch_uom_desc(
-            int(itemno), int(uommult), lineno, int(invno)
-        )
 
 
 class EStoreEInvoiceGenericConverter(BaseEDIConverter):
@@ -165,7 +67,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
     This class implements the hook methods required by BaseEDIConverter
     to produce EStore Generic-compatible CSV output. It features:
     - Shipper mode handling for parent/child item relationships
-    - Database lookups via invFetcher for PO numbers
+    - Database lookups via InvFetcher for PO numbers
     - Row buffering with deferred writing
     - C record processing with configurable OID
     - CSV header row
@@ -187,8 +89,14 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         self.c_record_oid = params.get("estore_c_record_OID", "")
         self.upc_lookup = context.upc_lut
 
-        # Initialize invFetcher for database lookups
-        self.inv_fetcher = invFetcher(context.settings_dict)
+        # Initialize InvFetcher for database lookups
+        from core.database.query_runner import create_query_runner_from_settings
+
+        try:
+            runner = create_query_runner_from_settings(context.settings_dict)
+        except ValueError:
+            runner = None
+        self.inv_fetcher = InvFetcher(runner, context.settings_dict)
 
         # Initialize state
         self.row_dict_list: list[dict] = []
@@ -466,6 +374,4 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         return self.output_filename
 
 
-edi_convert = create_edi_convert_wrapper(
-    EStoreEInvoiceGenericConverter, format_name="estore_einvoice_generic"
-)
+edi_convert = make_edi_convert(EStoreEInvoiceGenericConverter)

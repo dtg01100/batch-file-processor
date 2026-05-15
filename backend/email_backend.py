@@ -10,6 +10,7 @@ import os
 import re
 import time
 from email.message import EmailMessage
+from typing import Any
 
 from backend.backend_base import BackendBase
 from backend.protocols import SMTPClientProtocol
@@ -242,10 +243,16 @@ class EmailBackend(BackendBase):
         _process_parameters: dict,
         _settings: dict,
         _filename: str,
-        **_kwargs,
+        **_kwargs: Any,
     ) -> None:
-        """Prepare for retry by resetting state."""
+        """Prepare for retry by resetting state.
+
+        Note: process_parameters, settings, filename, and kwargs are accepted
+        for interface compatibility with BackendBase but are not used.
+        """
         self._server = None
+        # Reset file content so it gets re-read on retry
+        self._file_content = None
 
     def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:
         """Send a file via email.

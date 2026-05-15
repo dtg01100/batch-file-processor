@@ -30,7 +30,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_edi_convert_wrapper,
+    make_edi_convert,
     normalize_parameter,
 )
 
@@ -75,7 +75,6 @@ class ScannerWareConverter(BaseEDIConverter):
         # Store output path for later use
         context.user_data["output_path"] = output_path
 
-        # Open output file in binary mode (matching original behavior)
         context.output_file = open(output_path, "wb")  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
@@ -115,7 +114,6 @@ class ScannerWareConverter(BaseEDIConverter):
         if user_data["append_arec"]:
             line_builder_list.append(user_data["append_arec_text"])
 
-        # Write the line
         writeable_line = "".join(line_builder_list)
         context.output_file.write((writeable_line + "\r\n").encode())
 
@@ -184,14 +182,7 @@ class ScannerWareConverter(BaseEDIConverter):
         return context.user_data.get("output_path", context.output_filename)
 
 
-# =============================================================================
-# Backward Compatibility Wrapper
-# =============================================================================
-
-# Auto-generated wrapper using the standard template
-edi_convert = create_edi_convert_wrapper(
-    ScannerWareConverter, format_name="scannerware"
-)
+edi_convert = make_edi_convert(ScannerWareConverter)
 
 
 

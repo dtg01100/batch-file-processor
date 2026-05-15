@@ -56,10 +56,10 @@ def fresh_db(db_template, tmp_path):
 
 
 class FakeQueryRunner:
-    """Query runner for invFetcher tests using SQLite.
+    """Query runner for InvFetcher tests using SQLite.
 
-    Implements the QueryRunnerProtocol for invFetcher with a local SQLite
-    database containing the tables that invFetcher queries (ohhst, odhst).
+    Implements the QueryRunnerProtocol for InvFetcher with a local SQLite
+    database containing the tables that InvFetcher queries (ohhst, odhst).
     """
 
     def __init__(self, conn: sqlite3.Connection):
@@ -76,10 +76,10 @@ class FakeQueryRunner:
 
 @pytest.fixture
 def invfetcher_test_db(tmp_path):
-    """Create a test database for invFetcher with AS400-compatible schema.
+    """Create a test database for InvFetcher with AS400-compatible schema.
 
     Creates a SQLite database with tables matching the AS400 schema that
-    invFetcher queries (ohhst for invoice headers, odhst for invoice details).
+    InvFetcher queries (ohhst for invoice headers, odhst for invoice details).
     Populates with test data for invoice number 1 (0000000001).
 
     Returns:
@@ -139,7 +139,7 @@ def invfetcher_test_db(tmp_path):
 
 @pytest.fixture
 def invfetcher_with_test_data(invfetcher_test_db):
-    """Provide an invFetcher instance with test database.
+    """Provide an InvFetcher instance with test database.
 
     Creates and configures an InvFetcher instance that uses the test database,
     ready to use in converter tests.

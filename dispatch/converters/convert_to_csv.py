@@ -33,7 +33,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    create_edi_convert_wrapper,
+    make_edi_convert,
     normalize_parameter,
 )
 from dispatch.converters.csv_utils import (
@@ -337,4 +337,4 @@ class CSVConverter(BaseEDIConverter):
         return filter_description(desc, filter_ampersand=filter_ampersand)
 
 
-edi_convert = create_edi_convert_wrapper(CSVConverter, format_name="csv")
+edi_convert = make_edi_convert(CSVConverter)

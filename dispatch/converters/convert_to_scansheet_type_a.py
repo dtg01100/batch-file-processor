@@ -46,7 +46,7 @@ from core.structured_logging import get_logger
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 
 logger = get_logger(__name__)
@@ -173,7 +173,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         for idx, invoice in enumerate(invoice_list):
             if idx > 0 and idx % 10 == 0:
                 logger.debug("Processing invoices: %d/%d", idx, len(invoice_list))
-            result = self.query_object.run_arbitrary_query(
+            result = self.query_object.run_query(
                 """SELECT buj4cd AS "UPC",
                     bubacd AS "Item",
                     bufbtx AS "Description",
@@ -192,7 +192,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             rows_for_export: list[list] = []
             for row in result:
                 trow = [""]
-                for entry in row:
+                for entry in row.values():
                     if hasattr(entry, 'strip'):
                         trow.append(entry.strip())
                     else:
@@ -362,6 +362,4 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         return normalized
 
 
-edi_convert = create_edi_convert_wrapper(
-    ScanSheetTypeAConverter, format_name="scansheet_type_a"
-)
+edi_convert = make_edi_convert(ScanSheetTypeAConverter)

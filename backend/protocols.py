@@ -300,3 +300,10 @@ class HTTPClientProtocol(Protocol):
 
         """
         ...
+
+    def close(self) -> None:
+        """Close the HTTP client connection.
+
+        Implementations should close any open sessions or connections.
+        """
+        ...

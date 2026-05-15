@@ -95,10 +95,6 @@ class QueryRunnerWithTestData:
         # Fall back to SQLite execution for other queries
         return self._sqlite_runner.run_query(query, params)
 
-    def run_arbitrary_query(self, query, params=None):
-        """Alias for run_query for backward compatibility."""
-        return self.run_query(query, params)
-
     def close(self):
         """Close the underlying connection."""
         self._sqlite_runner.close()

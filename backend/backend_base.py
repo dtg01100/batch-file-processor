@@ -214,7 +214,8 @@ class BackendBase(ABC):
                 if delay > 0:
                     time.sleep(delay)
 
-                # Prepare for retry
+                # Clean up and prepare for retry
+                self._cleanup()
                 self._prepare_for_retry(
                     process_parameters, settings, filename, **kwargs
                 )
@@ -269,7 +270,8 @@ class BackendBase(ABC):
                 return True
         return False
 
-    def _prepare_for_retry(  # noqa: B027
+    @abstractmethod
+    def _prepare_for_retry(
         self,
         process_parameters: dict,
         settings: dict,
@@ -289,7 +291,8 @@ class BackendBase(ABC):
 
         """
 
-    def _cleanup(self) -> None:  # noqa: B027
+    @abstractmethod
+    def _cleanup(self) -> None:
         """Cleanup connections and resources.
 
         Override this method to perform cleanup operations.

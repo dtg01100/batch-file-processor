@@ -36,12 +36,7 @@ class MaintenanceDialog(BaseDialog):
         maintenance_functions: Any,
         ui_service: UIServiceProtocol | None = None,
     ) -> None:
-        # Backward compatibility: some legacy call sites/tests still pass a
-        # database object directly. If so, construct MaintenanceFunctions here.
-        if hasattr(maintenance_functions, "set_operation_callbacks"):
-            self._mf = maintenance_functions
-        else:
-            self._mf = MaintenanceFunctions(database_obj=maintenance_functions)
+        self._mf = maintenance_functions
         self._ui = ui_service
         self._buttons: list[QPushButton] = []
         super().__init__(parent, "Maintenance Functions", action_mode="none")

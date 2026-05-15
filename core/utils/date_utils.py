@@ -9,10 +9,8 @@ logger = get_logger(__name__)
 
 
 def dactime_from_datetime(date_time: datetime) -> str:
-    dactime_date_century_digit = str(int(datetime.strftime(date_time, "%Y")[:2]) - 19)
-    return dactime_date_century_digit + str(
-        datetime.strftime(date_time.date(), "%y%m%d")
-    )
+    dactime_date_century_digit = str(int(date_time.strftime("%Y")[:2]) - 19)
+    return dactime_date_century_digit + date_time.strftime("%y%m%d")
 
 
 def datetime_from_dactime(dac_time: int) -> datetime:

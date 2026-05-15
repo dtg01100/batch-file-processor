@@ -1,10 +1,10 @@
 """EDI Converters package.
 
-Exports create_edi_convert_wrapper for all converter modules.
+Exports make_edi_convert for all converter modules.
 """
 
-from dispatch.converters.convert_base import create_edi_convert_wrapper
+from dispatch.converters.convert_base import make_edi_convert
 
 __all__ = [
-    "create_edi_convert_wrapper",
+    "make_edi_convert",
 ]

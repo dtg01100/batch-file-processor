@@ -14,7 +14,7 @@ FORBIDDEN_SQL_KEYWORDS = re.compile(
     r"\b(insert|update|delete|merge|alter|drop|create|truncate)\b",
     re.IGNORECASE,
 )
-ODBC_QUERY_METHODS = {"run_query", "run_arbitrary_query", "execute"}
+ODBC_QUERY_METHODS = {"run_query", "execute"}
 
 
 ODBC_EXCLUDED_PREFIXES = [

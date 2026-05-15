@@ -30,6 +30,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from adapters.sqlite.repositories.sqlite_folder_repo import SqliteFolderRepository
+from adapters.sqlite.repositories.sqlite_processed_files_repo import (
+    SqliteProcessedFilesRepository,
+)
+from adapters.sqlite.repositories.sqlite_settings_repo import SqliteSettingsRepository
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
 from dispatch.results import FolderResult
@@ -109,7 +114,14 @@ def run_graphical_mock_automatic(
     settings["backup_counter_maximum"] = 100
     db.settings.update(settings, ["id"])
 
-    folder_manager = FolderManager(db)
+    folder_repo = SqliteFolderRepository(db)
+    settings_repo = SqliteSettingsRepository(db)
+    processed_files_repo = SqliteProcessedFilesRepository(db)
+    folder_manager = FolderManager(
+        folder_repo=folder_repo,
+        settings_repo=settings_repo,
+        processed_files_repo=processed_files_repo,
+    )
     folder_manager.add_folder(str(input_dir))
     folder = db.folders_table.find_one(folder_name=str(input_dir))
     if folder is None:

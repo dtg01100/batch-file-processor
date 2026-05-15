@@ -30,11 +30,22 @@ Example usage:
 """
 
 import csv
+import logging
+import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, TextIO
+from typing import Any, IO, TextIO
 
 from core import utils
+from core.structured_logging import (
+    get_logger,
+    get_or_create_correlation_id,
+    log_file_operation,
+    log_with_context,
+)
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -89,7 +100,7 @@ class ConversionContext:
     arec_header: dict[str, str] | None = field(default=None)
     line_num: int = field(default=0)
     records_processed: int = field(default=0)
-    output_file: TextIO | None = field(default=None, repr=False)
+    output_file: IO | None = field(default=None, repr=False)
     csv_writer: Any | None = field(default=None, repr=False)
     user_data: dict[str, Any] = field(default_factory=dict)
 
@@ -162,7 +173,6 @@ class BaseEDIConverter(ABC):
             Path to the generated output file
 
         """
-        # Create conversion context to hold shared state
         context = ConversionContext(
             edi_filename=edi_process,
             output_filename=output_filename,
@@ -171,21 +181,14 @@ class BaseEDIConverter(ABC):
             upc_lut=upc_lut,
         )
 
-        # Store context reference for subclasses that need access via _csv_file property
         self._context = context
 
-        # Step 1: Initialize output (hook method)
         self._initialize_output(context)
 
         try:
-            # Step 2: Process EDI file line by line
             self._process_edi_file(context)
-
-            # Step 3: Finalize output (hook method)
             self._finalize_output(context)
-
         except Exception as e:
-            # Ensure cleanup on error
             self._cleanup_on_error(context, e)
             raise
 
@@ -487,29 +490,18 @@ def normalize_parameter(
 
 
 
-def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
-    """Create the legacy module-level ``edi_convert`` wrapper with logging.
+def make_edi_convert(converter_class):
+    """Create module-level ``edi_convert`` function with operational logging.
 
     Args:
         converter_class: The converter class to instantiate
-        format_name: Name of the format for logging (e.g., "jolley_custom", "csv")
 
     """
-    import logging
-    import os
-    import time
-
-    from core.structured_logging import (
-        get_logger,
-        get_or_create_correlation_id,
-        log_file_operation,
-        log_with_context,
-    )
+    format_name = converter_class.__name__.replace("Converter", "").lower()
 
     def edi_convert(
         edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
     ):
-        logger = get_logger(__name__)
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
 
@@ -535,10 +527,14 @@ def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
         try:
             converter = converter_class()
             result = converter.edi_convert(
-                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+                edi_process,
+                output_filename,
+                settings_dict,
+                parameters_dict,
+                upc_lookup,
             )
-            duration_ms = time.perf_counter() - start_time
 
+            duration_ms = time.perf_counter() - start_time
             log_with_context(
                 logger,
                 logging.INFO,
@@ -560,7 +556,9 @@ def create_edi_convert_wrapper(converter_class, format_name: str = "edi"):
                 duration_ms=duration_ms * 1000,
                 correlation_id=correlation_id,
             )
+
             return result
+
         except Exception as e:
             duration_ms = time.perf_counter() - start_time
             log_with_context(

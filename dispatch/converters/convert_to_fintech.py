@@ -34,7 +34,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 
 logger = get_logger(__name__)
@@ -49,7 +49,7 @@ class FintechConverter(BaseEDIConverter):
     The converter uses the following parameters from parameters_dict:
         - fintech_division_id: The division ID to include in output
 
-    It uses utils.invFetcher to look up customer numbers from the database.
+    It uses InvFetcher to look up customer numbers from the database.
     """
 
     def _initialize_output(self, context: ConversionContext) -> None:
@@ -247,4 +247,4 @@ class FintechConverter(BaseEDIConverter):
         return utils.datetime_from_invtime(inv_date).strftime("%m/%d/%Y")
 
 
-edi_convert = create_edi_convert_wrapper(FintechConverter, format_name="fintech")
+edi_convert = make_edi_convert(FintechConverter)

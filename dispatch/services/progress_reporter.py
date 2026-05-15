@@ -14,6 +14,15 @@ class ProgressReporter(Protocol):
         footer: str,
     ) -> None: ...
 
+    def update_discovery_file(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        filename: str,
+    ) -> None: ...
+
 
 class UIProgressReporter:
     def __init__(self) -> None:
@@ -55,6 +64,16 @@ class UIProgressReporter:
     ) -> None:
         pass
 
+    def update_discovery_file(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        filename: str,
+    ) -> None:
+        pass
+
 
 class CLIProgressReporter:
     def __init__(self, output: TextIO | None = None) -> None:
@@ -84,6 +103,16 @@ class CLIProgressReporter:
         self._output.write("\n")
         self._output.flush()
 
+    def update_discovery_file(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        filename: str,
+    ) -> None:
+        pass
+
 
 class NullProgressReporter:
     def update(
@@ -94,6 +123,16 @@ class NullProgressReporter:
         file_num: int,
         file_total: int,
         footer: str,
+    ) -> None:
+        pass
+
+    def update_discovery_file(
+        self,
+        folder_num: int,
+        folder_total: int,
+        file_num: int,
+        file_total: int,
+        filename: str,
     ) -> None:
         pass
 

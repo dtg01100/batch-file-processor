@@ -33,7 +33,7 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test initializing state for a plugin section."""
         config = {"include_headers": True, "filter_ampersand": False}
 
-        self.state_manager.initialize_state("csv", config, True, [])
+        self.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
 
         state = self.state_manager.get_state("csv")
         self.assertIsNotNone(state)
@@ -46,8 +46,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         config = {"include_headers": True}
         new_config = {"include_headers": False}
 
-        self.state_manager.initialize_state("csv", config, True, [])
-        changed = self.state_manager.update_state("csv", new_config, True, [])
+        self.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
+        changed =         self.state_manager.update_state("csv", new_config, is_valid=True, validation_errors=[])
 
         self.assertTrue(changed)
         state = self.state_manager.get_state("csv")
@@ -58,8 +58,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test updating state when config hasn't changed."""
         config = {"include_headers": True}
 
-        self.state_manager.initialize_state("csv", config, True, [])
-        changed = self.state_manager.update_state("csv", config, True, [])
+        self.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
+        changed = self.state_manager.update_state("csv", config, is_valid=True, validation_errors=[])
 
         self.assertFalse(changed)
 
@@ -68,8 +68,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         config1 = {"include_headers": True}
         config2 = {"include_headers": False}
 
-        self.state_manager.initialize_state("csv", config1, True, [])
-        self.state_manager.update_state("csv", config2, True, [])
+        self.state_manager.initialize_state("csv", config1, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", config2, is_valid=True, validation_errors=[])
 
         result = self.state_manager.undo()
 
@@ -82,8 +82,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         config1 = {"include_headers": True}
         config2 = {"include_headers": False}
 
-        self.state_manager.initialize_state("csv", config1, True, [])
-        self.state_manager.update_state("csv", config2, True, [])
+        self.state_manager.initialize_state("csv", config1, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", config2, is_valid=True, validation_errors=[])
         self.state_manager.undo()
 
         result = self.state_manager.redo()
@@ -106,8 +106,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test marking state as saved."""
         config = {"include_headers": True}
 
-        self.state_manager.initialize_state("csv", config, True, [])
-        self.state_manager.update_state("csv", {"include_headers": False}, True, [])
+        self.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", {"include_headers": False}, is_valid=True, validation_errors=[])
 
         self.state_manager.mark_saved()
 
@@ -117,8 +117,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test resetting to saved state."""
         config = {"include_headers": True}
 
-        self.state_manager.initialize_state("csv", config, True, [])
-        self.state_manager.update_state("csv", {"include_headers": False}, True, [])
+        self.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", {"include_headers": False}, is_valid=True, validation_errors=[])
 
         self.state_manager.reset_to_saved()
 
@@ -131,8 +131,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         config1 = {"include_headers": True}
         config2 = {"field1": "value1"}
 
-        self.state_manager.initialize_state("csv", config1, True, [])
-        self.state_manager.initialize_state("scannerware", config2, True, [])
+        self.state_manager.initialize_state("csv", config1, is_valid=True, validation_errors=[])
+        self.state_manager.initialize_state("scannerware", config2, is_valid=True, validation_errors=[])
 
         configs = self.state_manager.get_all_configs()
 
@@ -142,9 +142,9 @@ class TestPluginSectionStateManager(unittest.TestCase):
 
     def test_get_invalid_sections(self):
         """Test getting sections with validation errors."""
-        self.state_manager.initialize_state("csv", {"include_headers": True}, True, [])
+        self.state_manager.initialize_state("csv", {"include_headers": True}, is_valid=True, validation_errors=[])
         self.state_manager.initialize_state(
-            "invalid", {"field": "value"}, False, ["Error 1", "Error 2"]
+            "invalid", {"field": "value"}, is_valid=False, validation_errors=["Error 1", "Error 2"]
         )
 
         invalid = self.state_manager.get_invalid_sections()
@@ -155,10 +155,10 @@ class TestPluginSectionStateManager(unittest.TestCase):
     def test_get_all_validation_errors(self):
         """Test getting all validation errors."""
         self.state_manager.initialize_state(
-            "csv", {"include_headers": True}, False, ["Error 1"]
+            "csv", {"include_headers": True}, is_valid=False, validation_errors=["Error 1"]
         )
         self.state_manager.initialize_state(
-            "invalid", {"field": "value"}, False, ["Error 2", "Error 3"]
+            "invalid", {"field": "value"}, is_valid=False, validation_errors=["Error 2", "Error 3"]
         )
 
         errors = self.state_manager.get_all_validation_errors()
@@ -172,8 +172,8 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test can_undo property."""
         self.assertFalse(self.state_manager.can_undo)
 
-        self.state_manager.initialize_state("csv", {"value": 1}, True, [])
-        self.state_manager.update_state("csv", {"value": 2}, True, [])
+        self.state_manager.initialize_state("csv", {"value": 1}, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", {"value": 2}, is_valid=True, validation_errors=[])
 
         self.assertTrue(self.state_manager.can_undo)
 
@@ -181,16 +181,16 @@ class TestPluginSectionStateManager(unittest.TestCase):
         """Test can_redo property."""
         self.assertFalse(self.state_manager.can_redo)
 
-        self.state_manager.initialize_state("csv", {"value": 1}, True, [])
-        self.state_manager.update_state("csv", {"value": 2}, True, [])
+        self.state_manager.initialize_state("csv", {"value": 1}, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", {"value": 2}, is_valid=True, validation_errors=[])
         self.state_manager.undo()
 
         self.assertTrue(self.state_manager.can_redo)
 
     def test_clear(self):
         """Test clearing all state."""
-        self.state_manager.initialize_state("csv", {"include_headers": True}, True, [])
-        self.state_manager.update_state("csv", {"include_headers": False}, True, [])
+        self.state_manager.initialize_state("csv", {"include_headers": True}, is_valid=True, validation_errors=[])
+        self.state_manager.update_state("csv", {"include_headers": False}, is_valid=True, validation_errors=[])
 
         self.state_manager.clear()
 
@@ -270,14 +270,14 @@ class TestPluginConfigurationMapper(unittest.TestCase):
         """Test that state manager is properly integrated."""
         config = {"include_headers": True}
 
-        self.mapper.state_manager.initialize_state("csv", config, True, [])
+        self.mapper.state_manager.initialize_state("csv", config, is_valid=True, validation_errors=[])
 
         # After initialization, state is saved so is_dirty should be False
         self.assertFalse(self.mapper.state_manager.is_dirty)
 
         # After update, it should be dirty
         self.mapper.state_manager.update_state(
-            "csv", {"include_headers": False}, True, []
+            "csv", {"include_headers": False}, is_valid=True, validation_errors=[]
         )
 
         self.assertTrue(self.mapper.state_manager.is_dirty)

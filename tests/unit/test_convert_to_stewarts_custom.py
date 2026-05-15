@@ -140,7 +140,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
-            mock_qr_instance.run_arbitrary_query.return_value = mock_query_runner_result
+            mock_qr_instance.run_query.return_value = mock_query_runner_result
             mock_qr_class.return_value = mock_qr_instance
 
             try:
@@ -174,7 +174,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
-            mock_qr_instance.run_arbitrary_query.return_value = mock_query_runner_result
+            mock_qr_instance.run_query.return_value = mock_query_runner_result
             mock_qr_class.return_value = mock_qr_instance
 
             try:
@@ -394,7 +394,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
 
         with patch("core.database.create_query_runner") as mock_qr_class:
             mock_qr_instance = MagicMock()
-            mock_qr_instance.run_arbitrary_query.return_value = []
+            mock_qr_instance.run_query.return_value = []
             mock_qr_class.return_value = mock_qr_instance
 
             with pytest.raises(Exception, match=r"."):

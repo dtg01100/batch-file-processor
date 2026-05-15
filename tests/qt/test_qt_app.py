@@ -849,7 +849,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
         monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
+            "interface.qt.app.utils.clear_old_files", lambda *_: None
         )
 
         (tmp_path / "logs").mkdir()
@@ -898,7 +898,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
         monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
+            "interface.qt.app.utils.clear_old_files", lambda *_: None
         )
 
         (tmp_path / "logs").mkdir()
@@ -957,7 +957,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.path.isdir", mock_isdir)
         monkeypatch.setattr("interface.qt.app.os.mkdir", mock_mkdir)
         monkeypatch.setattr(
-            "interface.qt.app.utils.do_clear_old_files", lambda *_: None
+            "interface.qt.app.utils.clear_old_files", lambda *_: None
         )
 
         app._process_directories(folders_table)

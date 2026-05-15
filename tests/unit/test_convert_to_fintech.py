@@ -132,7 +132,7 @@ class TestConvertToFintechBasicFunctionality(TestConvertToFintechFixtures):
         tmp_path,
     ):
         """Test that edi_convert returns the expected CSV filename."""
-        # Mock the invFetcher
+        # Mock the InvFetcher
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_cust_no.return_value = "12345"
         mock_inv_fetcher.return_value = mock_fetcher

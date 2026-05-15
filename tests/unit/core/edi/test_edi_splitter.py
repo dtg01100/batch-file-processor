@@ -9,7 +9,7 @@ from core.edi.edi_splitter import (
     SplitResult,
     filter_b_records_by_category,
 )
-from core.utils.utils import _col_to_excel
+from core.edi.edi_splitting_utils import _col_to_excel
 
 
 class TestColToExcel:
@@ -183,39 +183,53 @@ class TestSplitResult:
 
 
 class MockFilesystem:
-    """Mock filesystem for testing."""
+    """Mock filesystem for testing (implements FileSystemInterface protocol)."""
 
     def __init__(self):
         self.files = {}
+        self.text_files = {}
         self.directories = set()
         self.written_files = {}
         self.removed_files = []
 
-    def read_file(self, path, encoding="utf-8"):
+    def read_file(self, path: str) -> bytes:
+        return self.files.get(path, "").encode()
+
+    def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
         return self.files.get(path, "")
 
-    def write_file(self, path, content, encoding="utf-8"):
-        self.written_files[path] = content
+    def write_file(self, path: str, data: bytes) -> None:
+        self.written_files[path] = data
 
-    def write_binary(self, path, content):
-        self.written_files[path] = content
+    def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
+        self.text_files[path] = data
 
-    def file_exists(self, path):
+    def file_exists(self, path: str) -> bool:
         return path in self.files or path in self.written_files
 
-    def directory_exists(self, path):
+    def dir_exists(self, path: str) -> bool:
         return path in self.directories
 
-    def create_directory(self, path):
+    def mkdir(self, path: str) -> None:
         self.directories.add(path)
 
-    def remove_file(self, path):
-        self.removed_files.append(path)
-        if path in self.written_files:
-            del self.written_files[path]
+    def makedirs(self, path: str) -> None:
+        self.directories.add(path)
 
-    def list_files(self, path):
+    def copy_file(self, src: str, dst: str) -> None:
+        if src in self.files:
+            self.files[dst] = self.files[src]
+
+    def remove_file(self, path: str) -> None:
+        self.removed_files.append(path)
+        self.written_files.pop(path, None)
+        self.files.pop(path, None)
+
+    def list_files(self, path: str) -> list[str]:
         return []
+
+    def get_absolute_path(self, path: str) -> str:
+        return path
 
 
 class TestEDISplitter:
@@ -389,50 +403,69 @@ class TestRealFilesystem:
     """Tests for RealFilesystem implementation."""
 
     def test_real_filesystem_implements_protocol(self):
-        """Test RealFilesystem implements FilesystemProtocol."""
+        """Test RealFilesystem implements FileSystemInterface protocol."""
         fs = RealFilesystem()
 
-        # Should have all required methods
-        assert hasattr(fs, "read_file")
-        assert hasattr(fs, "write_file")
-        assert hasattr(fs, "write_binary")
-        assert hasattr(fs, "file_exists")
-        assert hasattr(fs, "directory_exists")
-        assert hasattr(fs, "create_directory")
-        assert hasattr(fs, "remove_file")
-        assert hasattr(fs, "list_files")
+        required_methods = [
+            "read_file",
+            "read_file_text",
+            "write_file",
+            "write_file_text",
+            "file_exists",
+            "dir_exists",
+            "mkdir",
+            "makedirs",
+            "copy_file",
+            "remove_file",
+            "list_files",
+            "get_absolute_path",
+        ]
+        for method in required_methods:
+            assert hasattr(fs, method), f"RealFilesystem missing required method: {method}"
 
 
 class TestEDISplitterProtocolCompliance:
     """Tests for protocol compliance."""
 
     def test_splitter_accepts_protocol_compliant_filesystem(self):
-        """Test EDISplitter accepts any FilesystemProtocol implementation."""
+        """Test EDISplitter accepts any FileSystemInterface implementation."""
 
         class CustomFilesystem:
-            def read_file(self, path, encoding="utf-8"):
+            def read_file(self, path: str) -> bytes:
+                return b""
+
+            def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
                 return ""
 
-            def write_file(self, path, content, encoding="utf-8"):
+            def write_file(self, path: str, data: bytes) -> None:
                 pass
 
-            def write_binary(self, path, content):
+            def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
                 pass
 
-            def file_exists(self, path):
+            def file_exists(self, path: str) -> bool:
                 return False
 
-            def directory_exists(self, path):
+            def dir_exists(self, path: str) -> bool:
                 return True
 
-            def create_directory(self, path):
+            def mkdir(self, path: str) -> None:
                 pass
 
-            def remove_file(self, path):
+            def makedirs(self, path: str) -> None:
                 pass
 
-            def list_files(self, path):
+            def copy_file(self, src: str, dst: str) -> None:
+                pass
+
+            def remove_file(self, path: str) -> None:
+                pass
+
+            def list_files(self, path: str) -> list[str]:
                 return []
+
+            def get_absolute_path(self, path: str) -> str:
+                return path
 
         fs = CustomFilesystem()
         splitter = EDISplitter(fs)

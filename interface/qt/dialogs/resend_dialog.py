@@ -39,7 +39,17 @@ class FileExistenceWorker(QThread):
     file_checked = pyqtSignal(dict)
     finished = pyqtSignal(int, int)
 
-    def __init__(self, files: list[dict[str, Any]], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        files: list[dict[str, Any]],
+        parent: QWidget | None = None
+    ) -> None:
+        """Initialize the worker.
+
+        Args:
+            files: List of file dictionaries to check.
+            parent: Optional parent widget.
+        """
         super().__init__(parent)
         self._files = files
         self._is_cancelled = False

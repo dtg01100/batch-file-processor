@@ -243,6 +243,52 @@ class TestReadOnlySqlPolicy:
 
         assert mock_conn.executed_queries == []
 
+    def test_assert_read_only_rejects_select_then_drop(self):
+        """SQL injection attempt: SELECT followed by DROP must be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("SELECT 1; DROP TABLE users")
+
+    def test_assert_read_only_rejects_select_then_insert(self):
+        """SQL injection attempt: SELECT followed by INSERT must be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("SELECT * FROM my_table; INSERT INTO logs (msg) VALUES ('hack')")
+
+    def test_assert_read_only_rejects_select_then_update(self):
+        """SQL injection attempt: SELECT followed by UPDATE must be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("SELECT 1; UPDATE users SET admin = 1")
+
+    def test_assert_read_only_accepts_multiple_select_statements(self):
+        """Multiple SELECT statements should be allowed."""
+        assert_read_only_sql("SELECT 1; SELECT 2; SELECT 3")
+
+    def test_assert_read_only_rejects_semicolon_in_string_literal(self):
+        """Semicolons inside string literals should not split statements."""
+        # This tests that string literal semicolons don't create new statements
+        # The 'value' contains a semicolon but it's in a string literal
+        assert_read_only_sql("SELECT * FROM my_table WHERE value = 'a;b;c'")
+
+    def test_assert_read_only_rejects_trailing_semicolon_with_mutating(self):
+        """Trailing semicolon after mutating statement should be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("DELETE FROM my_table;")
+
+    def test_assert_read_only_rejects_whitespace_before_semicolon(self):
+        """Whitespace before semicolon should not affect parsing."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("DELETE FROM my_table   ;   ")
+
+    def test_assert_read_only_rejects_empty_statement_after_semicolon(self):
+        """Empty statements after semicolons should be skipped."""
+        # This is valid SQL - empty trailing statement
+        assert_read_only_sql("SELECT 1;")
+        assert_read_only_sql("SELECT 1;   ;   ")
+
+    def test_assert_read_only_rejects_multiple_mutating_statements(self):
+        """Multiple mutating statements should all be rejected."""
+        with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
+            assert_read_only_sql("INSERT INTO a (x) VALUES (1); DELETE FROM b")
+
 
 class TestProtocolCompliance:
     """Tests for Protocol compliance."""
@@ -341,7 +387,7 @@ def test_database_connection_mixin_allows_key_only(monkeypatch):
 
 def test_crec_generator_db_connect_uses_create_query_runner_from_settings(monkeypatch):
     """Ensure CRecGenerator uses create_query_runner_from_settings."""
-    from core.utils.utils import CRecGenerator
+    from core.database.c_record_generator import CRecGenerator
 
     called = {}
 

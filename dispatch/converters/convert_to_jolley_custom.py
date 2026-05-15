@@ -42,7 +42,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 from dispatch.converters.customer_queries import (
     BASIC_CUSTOMER_FIELDS_LIST,
@@ -244,6 +244,4 @@ class JolleyCustomConverter(BaseEDIConverter):
         self._db_connector.close()
 
 
-edi_convert = create_edi_convert_wrapper(
-    JolleyCustomConverter, format_name="jolley_custom"
-)
+edi_convert = make_edi_convert(JolleyCustomConverter)

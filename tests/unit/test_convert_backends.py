@@ -564,7 +564,7 @@ class TestConvertToFintech:
         input_file.write_text(sample_edi_content)
         output_file = tmp_path / "output"
 
-        # Create a mock invFetcher instance
+        # Create a mock InvFetcher instance
         mock_inv_fetcher = MagicMock()
         mock_inv_fetcher.fetch_cust_no.return_value = "12345"
 

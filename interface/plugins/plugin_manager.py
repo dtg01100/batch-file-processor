@@ -5,6 +5,7 @@ Responsible for dynamic plugin discovery, management, and lifecycle control.
 """
 
 import importlib
+import importlib.util
 import inspect
 import os
 import pkgutil
@@ -417,7 +418,7 @@ class PluginManager:
                 # If it's a ConfigurationPlugin, also store in configuration plugins map
                 if isinstance(plugin, ConfigurationPlugin):
                     try:
-                        format_enum = plugin_class.get_format_enum()
+                        format_enum = plugin.get_format_enum()
                         self._configuration_plugins[format_enum] = plugin
                     except Exception as e:
                         logger.debug(

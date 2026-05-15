@@ -1,49 +1,18 @@
 """Utility functions for batch file processing.
 
-This module provides backward-compatible re-exports for functions that have
-been moved to more focused modules:
-
-- EDI splitting/filtering → ``core.edi.edi_splitting_utils``
-- C record generation → ``core.database.c_record_generator``
-- Quantity parsing → ``core.utils.safe_parse``
-- CSV utilities → ``core.utils.csv_utils``
-
 Legacy functions remaining here:
 
 - apply_retail_uom_transform: Apply retail UOM transformation to B records
 - apply_upc_override: Override UPC from lookup table
-
-Import from source modules in new code.
 """
 
-# Backward-compatible re-exports from focused modules
-from core.database.c_record_generator import CRecGenerator
-from core.edi.edi_splitting_utils import (
-    _col_to_excel,
-    do_split_edi,
-    filter_b_records_by_category,
-    filter_edi_file_by_category,
-)
-
-# Legacy functions that remain in this module
 from core.structured_logging import get_logger
-from core.utils.csv_utils import add_row
-from core.utils.safe_parse import qty_to_int
 
 logger = get_logger(__name__)
 
 __all__ = [
-    # Re-exports from focused modules
-    "CRecGenerator",
-    "_col_to_excel",
-    "add_row",
-    # Legacy functions
     "apply_retail_uom_transform",
     "apply_upc_override",
-    "do_split_edi",
-    "filter_b_records_by_category",
-    "filter_edi_file_by_category",
-    "qty_to_int",
 ]
 
 
@@ -64,7 +33,6 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
     """
     from decimal import Decimal
 
-    # Validate record fields can be parsed
     try:
         item_number = int(record["vendor_item"].strip())
         float(record["unit_cost"].strip())
@@ -76,13 +44,11 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         logger.warning("Cannot parse B record field: %s", e)
         return False
 
-    # Get the each-level UPC from lookup
     try:
         each_upc_string = upc_lookup[item_number][1][:11].ljust(11)
     except (KeyError, IndexError):
         each_upc_string = "           "
 
-    # Apply the transformation
     try:
         record["unit_cost"] = (
             str(
@@ -141,7 +107,6 @@ def apply_upc_override(
         if category_filter == "ALL":
             do_updateupc = True
         else:
-            # Check if item's category is in the filter list
             item_category = upc_lookup[vendor_item_int][0]
             if item_category in category_filter.split(","):
                 do_updateupc = True

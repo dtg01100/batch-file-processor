@@ -51,32 +51,70 @@ def _strip_sql_leading_comments(query: str) -> str:
         return stripped
 
 
+def _parse_sql_statements(query: str) -> list[str]:
+    """Split SQL query into individual statements by semicolon."""
+    statements = []
+    in_string = False
+    current = []
+
+    i = 0
+    while i < len(query):
+        char = query[i]
+
+        # Handle string literals (single quotes - SQL standard)
+        if char == "'" and not (i > 0 and query[i - 1] == '\\'):
+            in_string = not in_string
+        # Handle semicolon as statement separator (only outside strings)
+        elif char == ";" and not in_string:
+            if current:
+                statements.append("".join(current))
+                current = []
+            i += 1
+            continue
+
+        current.append(char)
+        i += 1
+
+    # Don't forget the last statement (no trailing semicolon)
+    if current:
+        statements.append("".join(current))
+
+    return statements
+
+
 def assert_read_only_sql(query: str) -> None:
     """Raise ValueError when SQL is not read-only.
 
     This guard prevents accidental writes against database connections.
     Only statements beginning with SELECT or WITH are allowed.
+    All semicolon-separated statements are validated.
     """
-    normalized = _strip_sql_leading_comments(query)
-    if not normalized:
+    if not query or not query.strip():
         raise ValueError("Query must not be empty")
 
-    keyword_match = re.match(r"([A-Za-z]+)", normalized)
-    first_keyword = keyword_match.group(1).upper() if keyword_match else ""
+    statements = _parse_sql_statements(query)
 
-    if first_keyword in _READ_ONLY_SQL_START:
-        return
+    for stmt in statements:
+        normalized = _strip_sql_leading_comments(stmt)
+        if not normalized:
+            continue
 
-    if first_keyword in _MUTATING_SQL_START:
+        keyword_match = re.match(r"([A-Za-z]+)", normalized)
+        first_keyword = keyword_match.group(1).upper() if keyword_match else ""
+
+        if first_keyword in _READ_ONLY_SQL_START:
+            continue
+
+        if first_keyword in _MUTATING_SQL_START:
+            raise ValueError(
+                "Mutating SQL is forbidden. "
+                f"Blocked statement starting with {first_keyword!r}."
+            )
+
         raise ValueError(
-            "Mutating SQL is forbidden. "
-            f"Blocked statement starting with {first_keyword!r}."
+            "Only read-only SELECT/WITH SQL is allowed. "
+            f"Blocked statement starting with {first_keyword or 'unknown token'!r}."
         )
-
-    raise ValueError(
-        "Only read-only SELECT/WITH SQL is allowed. "
-        f"Blocked statement starting with {first_keyword or 'unknown token'!r}."
-    )
 
 
 @runtime_checkable
@@ -285,22 +323,6 @@ class QueryRunner:
         """
         results = self.run_query(query, params)
         return results[0] if results else None
-
-    # Legacy alias for backward compatibility
-    def run_arbitrary_query(
-        self, query: str, params: tuple | None = None
-    ) -> list[dict]:
-        """Legacy alias for run_query to maintain backward compatibility.
-
-        Args:
-            query: SQL query string
-            params: Optional query parameters
-
-        Returns:
-            List of dictionaries representing query results
-
-        """
-        return self.run_query(query, params)
 
     def close(self) -> None:
         """Close the underlying connection."""

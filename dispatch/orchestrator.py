@@ -94,7 +94,7 @@ class DispatchOrchestrator:
         folder_deps = FolderProcessingDependencies(
             file_processor=self.file_processor,
             progress_reporter=self._progress_service,
-            get_upc_dictionary=lambda: self._get_upc_dictionary(self.config.settings),
+            get_upc_dictionary=self._get_upc_dictionary,
             file_system=config.file_system,
             settings=config.settings,
         )
@@ -470,6 +470,7 @@ class DispatchOrchestrator:
             split_files = self._extract_split_files(split_result)
             files_to_send = split_files if split_files else [current_file]
 
+            all_sends_succeeded = True
             for pipeline_file in files_to_send:
                 current_pipeline_file, did_convert = self._apply_conversion(
                     current_file=pipeline_file,
@@ -488,9 +489,10 @@ class DispatchOrchestrator:
                     run_log,
                 )
                 if not send_result:
+                    all_sends_succeeded = False
                     self._record_split_send_failure(result, current_pipeline_file)
 
-            result.sent = len(result.errors) == 0
+            result.sent = all_sends_succeeded
             if result.sent:
                 self._log_success_with_invoices(
                     run_log=run_log,
@@ -965,7 +967,7 @@ class DispatchOrchestrator:
             List of unprocessed or resend-marked file paths
 
         """
-        folder_id = folder.get("id") or folder.get("old_id")
+        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
         processed = processed_files.find(folder_id=folder_id)
 
         # Files that should be SKIPPED (already processed AND NOT marked for resend)
@@ -992,8 +994,8 @@ class DispatchOrchestrator:
                 progress_reporter, "update_discovery_file"
             ):
                 progress_reporter.update_discovery_file(
-                    folder_num=folder_index,
-                    folder_total=folder_total,
+                    folder_num=folder_index if folder_index is not None else 0,
+                    folder_total=folder_total if folder_total is not None else 0,
                     file_num=file_index,
                     file_total=len(files),
                     filename=os.path.basename(file_path),
@@ -1012,7 +1014,7 @@ class DispatchOrchestrator:
             file_result: Result of file processing
 
         """
-        folder_id = folder.get("id") or folder.get("old_id")
+        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
 
         # Check if it was marked for resend (match by name and folder)
         existing_resend = processed_files.find_one(

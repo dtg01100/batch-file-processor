@@ -780,7 +780,7 @@ class TestMaintenanceWorkflow:
         query_calls = []
 
         class _MockQueryRunner:
-            def run_arbitrary_query(self, query: str):
+            def run_query(self, query: str):
                 query_calls.append(query)
                 if "FROM dacdata.ohhst" in query:
                     return [

@@ -11,36 +11,10 @@ This package contains small, focused utility modules organized by functionality:
 - utils: Legacy utilities (deprecated, use specific modules above)
 """
 
-# Backward-compatible re-exports for widely-used helper functions.
-# These are transitional and should be imported directly from their
-# source modules in new code (core.edi.edi_parser, core.edi.upc_utils).
-# Re-exports from core.edi modules for backward compatibility.
-# Import directly from source modules in new code:
-#   from core.edi.edi_parser import capture_records
-#   from core.edi.edi_transformer import convert_to_price, etc.
-#   from core.edi.upc_utils import calc_check_digit, etc.
-from core.database.c_record_generator import CRecGenerator
-from core.edi.edi_parser import EDIParseError, capture_records
+import importlib
+from typing import Any
 
-# Legacy re-exports from split modules (backward compatibility).
-# Import directly from source modules in new code:
-#   from core.edi.edi_splitting_utils import do_split_edi, filter_b_records_by_category
-#   from core.database.c_record_generator import CRecGenerator
-from core.edi.edi_splitting_utils import (
-    do_split_edi,
-    filter_b_records_by_category,
-    filter_edi_file_by_category,
-)
-from core.edi.edi_transformer import (
-    convert_to_price,
-    convert_to_price_decimal,
-    dac_str_int_to_int,
-    detect_invoice_is_credit,
-)
-from core.edi.upc_utils import (
-    calc_check_digit,
-    convert_upce_to_upca,
-)
+from core.database.c_record_generator import CRecGenerator
 
 from .bool_utils import from_db_bool, normalize_bool, normalize_db_bool, to_db_bool
 from .csv_utils import add_row
@@ -60,16 +34,39 @@ from .utils import (
     apply_upc_override,
 )
 
+_EDI_REEXPORTS: dict[str, str] = {
+    "capture_records": "core.edi.edi_parser",
+    "EDIParseError": "core.edi.edi_parser",
+    "do_split_edi": "core.edi.edi_splitting_utils",
+    "filter_b_records_by_category": "core.edi.edi_splitting_utils",
+    "filter_edi_file_by_category": "core.edi.edi_splitting_utils",
+    "convert_to_price": "core.edi.edi_transformer",
+    "convert_to_price_decimal": "core.edi.edi_transformer",
+    "dac_str_int_to_int": "core.edi.edi_transformer",
+    "detect_invoice_is_credit": "core.edi.edi_transformer",
+    "calc_check_digit": "core.edi.upc_utils",
+    "convert_upce_to_upca": "core.edi.upc_utils",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _EDI_REEXPORTS:
+        mod = importlib.import_module(_EDI_REEXPORTS[name])
+        return getattr(mod, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(set(__all__))
+
+
 __all__ = [
-    # Database-backed utilities
     "CRecGenerator",
     "EDIParseError",
     "add_row",
-    # Legacy utils - functions actually defined in core/utils/utils.py
     "apply_retail_uom_transform",
     "apply_upc_override",
     "calc_check_digit",
-    # Backward-compatible re-exports from core.edi
     "capture_records",
     "clear_old_files",
     "context_timer",

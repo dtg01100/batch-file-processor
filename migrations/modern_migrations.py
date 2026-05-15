@@ -409,7 +409,6 @@ def run_modern_migrations(
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
-                        process_edi       = 1,
                         tweak_edi         = 0
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
@@ -420,7 +419,6 @@ def run_modern_migrations(
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
-                        process_edi       = 1,
                         tweak_edi         = 0
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')

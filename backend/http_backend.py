@@ -5,6 +5,7 @@ with injectable client support for testing.
 """
 
 import os
+from typing import Any
 
 from backend.backend_base import BackendBase
 from backend.http_client import create_http_client
@@ -136,16 +137,17 @@ class HTTPBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        _settings_dict: dict,
+        _settings: dict,
         filename: str,
-        **_kwargs,
+        **_kwargs: Any,
     ) -> bool:
         """Send file via HTTP POST.
 
         Args:
             process_parameters: HTTP configuration parameters
-            settings_dict: Settings dictionary
+            _settings: Settings dictionary (ignored)
             filename: File to send
+            _kwargs: Additional arguments (ignored)
 
         Returns:
             True if file was sent successfully
@@ -237,7 +239,7 @@ class HTTPBackend(BackendBase):
         """Get backend name for logging."""
         return "http"
 
-    def _get_endpoint(self, process_parameters: dict, _settings_dict: dict) -> str:
+    def _get_endpoint(self, process_parameters: dict, _settings: dict) -> str:
         """Get HTTP endpoint for logging."""
         return process_parameters.get("http_url", "")
 
@@ -252,9 +254,9 @@ class HTTPBackend(BackendBase):
     def _prepare_for_retry(
         self,
         _process_parameters: dict,
-        _settings_dict: dict,
+        _settings: dict,
         _filename: str,
-        **_kwargs,
+        **_kwargs: Any,
     ) -> None:
         """Prepare for retry by resetting state."""
         self._client = None

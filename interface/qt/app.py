@@ -168,9 +168,9 @@ class QtBatchFileSenderApp:
 
         if self._folder_manager is None:
             self._folder_manager = FolderManager(
-                database=self._database,
                 folder_repo=self._folder_repo,
                 settings_repo=self._settings_repo,
+                processed_files_repo=self._processed_files_repo,
             )
         self._reporting_service = ReportingService(
             database=self._database,

@@ -129,7 +129,7 @@ class MockFTPService(FTPServiceProtocol):
         self.connection_attempts: list[dict[str, Any]] = []
 
     def test_connection(
-        self, server: str, port: int, username: str, password: str, folder: str  # noqa: ARG002
+        self, server: str, port: int, username: str, _password: str, folder: str
     ) -> FTPConnectionResult:
         """Record connection attempt and return configured result."""
         self.connection_attempts.append(
@@ -146,10 +146,10 @@ class MockFTPService(FTPServiceProtocol):
 
     def connect(
         self,
-        server: str,  # noqa: ARG002
-        port: int,  # noqa: ARG002
-        username: str,  # noqa: ARG002
-        password: str,  # noqa: ARG002
+        _server: str,
+        _port: int,
+        _username: str,
+        _password: str,
     ) -> "MockFTPConnection":
         """Return a mock FTP connection."""
         return MockFTPConnection()

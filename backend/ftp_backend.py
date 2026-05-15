@@ -115,16 +115,17 @@ class FTPBackend(BackendBase):
     def _execute(
         self,
         process_parameters: dict,
-        _settings: dict,
+        settings: dict,
         filename: str,
-        **_kwargs: Any,
+        **kwargs: Any,
     ) -> bool:
         """Send file via FTP/FTPS.
 
         Args:
             process_parameters: FTP connection parameters
-            settings_dict: Settings dictionary
+            settings: Settings dictionary (not used in this implementation)
             filename: File to send
+            kwargs: Additional arguments (not used in this implementation)
 
         Returns:
             True if file was sent successfully
@@ -160,7 +161,9 @@ class FTPBackend(BackendBase):
         # All TLS options failed
         if last_error:
             raise last_error
-        return False
+        # If we reach here, something unexpected happened - but all TLS options
+        # should have raised exceptions. This is a safeguard.
+        raise RuntimeError("FTP backend exhausted all connection options without failure")
 
     def _send_file(
         self,
@@ -191,7 +194,7 @@ class FTPBackend(BackendBase):
         )
         client.connect(
             str(process_parameters["ftp_server"]),
-            process_parameters["ftp_port"],
+            int(process_parameters["ftp_port"]),
         )
         logger.debug("Logging in to %s", process_parameters["ftp_server"])
         client.login(

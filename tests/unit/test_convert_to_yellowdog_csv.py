@@ -119,7 +119,7 @@ class TestConvertToYellowdogCSVBasicFunctionality(TestConvertToYellowdogCSVFixtu
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",
@@ -186,7 +186,7 @@ class TestConvertToYellowdogCSVBasicFunctionality(TestConvertToYellowdogCSVFixtu
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",
@@ -257,7 +257,7 @@ class TestConvertToYellowdogCSVHeaders(TestConvertToYellowdogCSVFixtures):
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",
@@ -514,7 +514,7 @@ class TestConvertToYellowdogCSVEdgeCases(TestConvertToYellowdogCSVFixtures):
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
 
             with pytest.raises(FileNotFoundError):
                 convert_to_yellowdog_csv.edi_convert(
@@ -541,7 +541,7 @@ class TestConvertToYellowdogCSVEdgeCases(TestConvertToYellowdogCSVFixtures):
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",
@@ -612,7 +612,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",
@@ -710,7 +710,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
 
         fetcher_class, _ = mock_inv_fetcher
         with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
-            mock_utils.invFetcher = fetcher_class
+            mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
                     "record_type": "A",

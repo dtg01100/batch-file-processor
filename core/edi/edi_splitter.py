@@ -9,147 +9,71 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from core.edi.edi_parser import capture_records
-
-# Re-export for backward compatibility (test imports from this module).
 from core.edi.edi_splitting_utils import (
     _col_to_excel,
     filter_b_records_by_category,
 )
+from dispatch.interfaces import FileSystemInterface
 
 
-@runtime_checkable
-class FilesystemProtocol(Protocol):
-    """Protocol for filesystem operations.
-
-    This protocol enables testing without actual filesystem access.
-    """
-
-    def read_file(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents.
-
-        Args:
-            path: File path to read
-            encoding: File encoding (default: utf-8)
-
-        Returns:
-            File contents as string
-
-        """
-        ...
-
-    def write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
-        """Write content to file.
-
-        Args:
-            path: File path to write
-            content: Content to write
-            encoding: File encoding (default: utf-8)
-
-        """
-        ...
-
-    def write_binary(self, path: str, content: bytes) -> None:
-        """Write binary content to file.
-
-        Args:
-            path: File path to write
-            content: Binary content to write
-
-        """
-        ...
-
-    def file_exists(self, path: str) -> bool:
-        """Check if file exists.
-
-        Args:
-            path: File path to check
-
-        Returns:
-            True if file exists
-
-        """
-        ...
-
-    def directory_exists(self, path: str) -> bool:
-        """Check if directory exists.
-
-        Args:
-            path: Directory path to check
-
-        Returns:
-            True if directory exists
-
-        """
-        ...
-
-    def create_directory(self, path: str) -> None:
-        """Create directory if it doesn't exist.
-
-        Args:
-            path: Directory path to create
-
-        """
-        ...
-
-    def remove_file(self, path: str) -> None:
-        """Remove a file.
-
-        Args:
-            path: File path to remove
-
-        """
-        ...
-
-    def list_files(self, path: str) -> list[str]:
-        """List files in directory.
-
-        Args:
-            path: Directory path to list
-
-        Returns:
-            List of file names
-
-        """
-        ...
+# Filesystem operations are now handled by FileSystemInterface from dispatch.interfaces
 
 
 class RealFilesystem:
     """Real filesystem implementation using os module."""
 
-    def read_file(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents."""
+    def read_file(self, path: str) -> bytes:
+        """Read file contents as bytes."""
+        with open(path, "rb") as f:
+            return f.read()
+
+    def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
+        """Read file contents as text."""
         with open(path, encoding=encoding) as f:
             return f.read()
 
-    def write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
-        """Write content to file."""
-        with open(path, "w", encoding=encoding) as f:
-            f.write(content)
-
-    def write_binary(self, path: str, content: bytes) -> None:
-        """Write binary content to file."""
+    def write_file(self, path: str, data: bytes) -> None:
+        """Write bytes to a file."""
         with open(path, "wb") as f:
-            f.write(content)
+            f.write(data)
+
+    def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
+        """Write text to a file."""
+        with open(path, "w", encoding=encoding) as f:
+            f.write(data)
 
     def file_exists(self, path: str) -> bool:
-        """Check if file exists."""
+        """Check if a file exists."""
         return os.path.isfile(path)
 
-    def directory_exists(self, path: str) -> bool:
-        """Check if directory exists."""
+    def dir_exists(self, path: str) -> bool:
+        """Check if a directory exists."""
         return os.path.isdir(path)
 
-    def create_directory(self, path: str) -> None:
-        """Create directory if it doesn't exist."""
+    def mkdir(self, path: str) -> None:
+        """Create a directory."""
         os.makedirs(path, exist_ok=True)
+
+    def makedirs(self, path: str) -> None:
+        """Create a directory and all parent directories."""
+        os.makedirs(path, exist_ok=True)
+
+    def copy_file(self, src: str, dst: str) -> None:
+        """Copy a file."""
+        import shutil
+        shutil.copy2(src, dst)
 
     def remove_file(self, path: str) -> None:
         """Remove a file."""
         os.remove(path)
 
     def list_files(self, path: str) -> list[str]:
-        """List files in directory."""
+        """List all files in a directory."""
         return os.listdir(path)
+
+    def get_absolute_path(self, path: str) -> str:
+        """Get absolute path."""
+        return os.path.abspath(path)
 
 
 @dataclass
@@ -197,7 +121,11 @@ def _build_split_filename(
 ) -> tuple[str, str, str]:
     """Build output path, prefix, and suffix for a split invoice file."""
     prepend_letters = _col_to_excel(count)
-    file_name_suffix = ".cr" if int(line_dict["invoice_total"]) < 0 else ".inv"
+    try:
+        invoice_total = int(line_dict["invoice_total"])
+    except (ValueError, TypeError):
+        invoice_total = 0
+    file_name_suffix = ".cr" if invoice_total < 0 else ".inv"
 
     file_name_prefix = prepend_letters + "_"
 
@@ -217,7 +145,7 @@ def _build_split_filename(
 
 
 def _write_invoice_binary(
-    filesystem: FilesystemProtocol,
+    filesystem: FileSystemInterface,
     output_path: str,
     a_record: str,
     b_records: list[str],
@@ -232,7 +160,7 @@ def _write_invoice_binary(
     for c_rec in c_records:
         output_chunks.append(_ensure_crlf(c_rec).encode())
 
-    filesystem.write_binary(output_path, b"".join(output_chunks))
+    filesystem.write_file(output_path, b"".join(output_chunks))
     return 1 + len(b_records) + len(c_records)
 
 
@@ -252,7 +180,7 @@ def _ensure_crlf(line: str) -> str:
 
 
 def _finalize_current_invoice(
-    filesystem: FilesystemProtocol,
+    filesystem: FileSystemInterface,
     current_a_record: str | None,
     current_b_records: list[str],
     current_c_records: list[str],
@@ -292,7 +220,7 @@ class EDISplitter:
     with optional filtering of B records by category.
     """
 
-    def __init__(self, filesystem: FilesystemProtocol) -> None:
+    def __init__(self, filesystem: FileSystemInterface) -> None:
         """Initialize EDISplitter with filesystem.
 
         Args:
@@ -391,14 +319,18 @@ class EDISplitter:
         """
         lines = content.splitlines()
 
+        # Handle empty content
+        if not lines:
+            return SplitResult([], 0, 0)
+
         # Count A records to check max limit
         a_record_count = sum(1 for line in lines if line.startswith("A"))
         if config.max_invoices > 0 and a_record_count > config.max_invoices:
             return SplitResult([], 0, 0)
 
         # Ensure output directory exists
-        if not self.filesystem.directory_exists(config.output_directory):
-            self.filesystem.create_directory(config.output_directory)
+        if not self.filesystem.dir_exists(config.output_directory):
+            self.filesystem.makedirs(config.output_directory)
 
         output_files: list[tuple[str, str, str]] = []
         skipped_invoices = 0
@@ -487,7 +419,7 @@ class EDISplitter:
             SplitResult with output files and statistics
 
         """
-        content = self.filesystem.read_file(input_path)
+        content = self.filesystem.read_file_text(input_path)
         # Populate filename_stem from input path so split files get unique names
         # when multiple source files are split to the same output directory.
         if not config.filename_stem:

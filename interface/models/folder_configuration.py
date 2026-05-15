@@ -38,7 +38,6 @@ def _discover_format_values() -> list[tuple[str, str]]:
     import pkgutil
 
     # Mapping from internal names (from filenames) to display values
-    # (for legacy compatibility)
     DISPLAY_VALUES = {
         "scannerware": "ScannerWare",
         "scansheet_type_a": "ScanSheet_Type_A",

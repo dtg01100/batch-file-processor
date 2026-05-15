@@ -6,7 +6,7 @@ base class, eliminating ~60 lines of duplicated code while maintaining the
 exact same behavior and output format.
 
 The converter features:
-- Database lookups via invFetcher for customer name and PO number
+- Database lookups via InvFetcher for customer name and PO number
 - Batching pattern that collects B and C records per invoice
 - Reverses B and C record order before output (as per original behavior)
 - Specific CSV column layout with all values quoted
@@ -33,7 +33,7 @@ from dispatch.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     create_csv_writer,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 
 logger = get_logger(__name__)
@@ -56,7 +56,7 @@ class YellowDogConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        # Initialize invFetcher for database lookups
+        # Initialize InvFetcher for database lookups
         settings_dict = context.settings_dict
         params = context.parameters_dict or {}
         mode_raw = params.get(
@@ -297,6 +297,4 @@ class YellowDogConverter(BaseEDIConverter):
             )
 
 
-edi_convert = create_edi_convert_wrapper(
-    YellowDogConverter, format_name="yellowdog_csv"
-)
+edi_convert = make_edi_convert(YellowDogConverter)

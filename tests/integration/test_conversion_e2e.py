@@ -699,7 +699,7 @@ class TestConvertToYellowdogCSV:
     ):
         """Test that convert_to_yellowdog_csv produces a valid CSV file.
 
-        Uses real invFetcher with a test SQLite database to verify actual
+        Uses real InvFetcher with a test SQLite database to verify actual
         database query behavior without mocking.
         """
         from dispatch.converters import convert_to_yellowdog_csv
@@ -931,7 +931,7 @@ class TestConvertToScansheetTypeA:
             "core.database.query_runner.create_query_runner_from_settings"
         ) as mock_create:
             mock_qr = MagicMock()
-            mock_qr.run_arbitrary_query.return_value = [
+            mock_qr.run_query.return_value = [
                 [
                     "012345678901",
                     "123456",

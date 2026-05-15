@@ -123,7 +123,7 @@ def ensure_schema(database_connection) -> None:
             updated_at TEXT
         )
         """,
-        # administrative (deprecated duplicate of folders, kept for compatibility)
+        # administrative (duplicate of folders schema)
         """
         CREATE TABLE IF NOT EXISTS administrative (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -320,8 +320,7 @@ def ensure_schema(database_connection) -> None:
         """,
     ]
 
-    # Add normalized tables to improve separation of concerns while keeping
-    # legacy tables for backward compatibility.
+    # Add normalized tables to improve separation of concerns
     stmts += [
         """
         PRAGMA foreign_keys = ON;

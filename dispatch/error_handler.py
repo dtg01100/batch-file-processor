@@ -532,27 +532,3 @@ class ErrorHandler:
         self.fs.write_file_text(folder_log_path, content)
         return folder_log_path
 
-
-# Backward-compatible function interface
-def do(run_log, errors_log, error_message, filename, error_source, *, threaded=False):
-    """Backward-compatible error recording function.
-
-    This function provides compatibility with the existing record_error.do()
-    function signature.
-
-    Args:
-        run_log: Run log file or list
-        errors_log: Errors log StringIO or list
-        error_message: Error message string
-        filename: File being processed
-        error_source: Source module name
-        threaded: If True, use list append; if False, use write
-
-    Returns:
-        Tuple of (run_log, errors_log) for threaded mode, or None
-
-    """
-    handler = ErrorHandler()
-    return handler.record_error_to_logs(
-        run_log, errors_log, error_message, filename, error_source, threaded=threaded
-    )

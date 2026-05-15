@@ -362,25 +362,3 @@ class EDIFormatParser:
             return self.validation_rules["allowed_record_types"]
         return list(self._record_type_map.keys())
 
-
-# Convenience function for backward compatibility
-def capture_records_with_format(
-    line: str, parser: EDIFormatParser | None = None
-) -> dict[str, str] | None:
-    """Parse an EDI line using specified format parser.
-
-    This is a convenience function that maintains compatibility with
-    the original utils.capture_records() signature.
-
-    Args:
-        line: EDI record line to parse
-        parser: EDIFormatParser instance. If None, uses default format.
-
-    Returns:
-        Dictionary with parsed fields or None
-
-    """
-    if parser is None:
-        parser = EDIFormatParser.get_default_parser()
-
-    return parser.parse_line(line)

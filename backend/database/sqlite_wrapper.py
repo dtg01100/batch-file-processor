@@ -55,7 +55,7 @@ class Table:
         self._conn = conn
         self._name = name
         self._boolean_columns: set | None = None
-        self._lock = lock
+        self._lock = lock or threading.RLock()
 
     _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE: ClassVar[dict[str, set[str]]] = {
         "folders": {

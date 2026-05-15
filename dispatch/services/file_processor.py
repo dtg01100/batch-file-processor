@@ -217,25 +217,22 @@ class FileProcessor:
             ProcessingContext with initialized state
 
         """
-        # If a full ProcessingContext was passed (from DispatchOrchestrator),
-        # reuse it directly so settings and temp tracking are preserved.
+        # If a full ProcessingContext was passed, return it unchanged
         if isinstance(effective_folder, ProcessingContext):
             return effective_folder
 
-        # Otherwise treat effective_folder as the normalized folder dict (or None)
+        # Extract settings if effective_folder is a dict, otherwise use empty dict
+        settings = (
+            effective_folder.get("settings")
+            if isinstance(effective_folder, dict)
+            else {}
+        )
+
+        # Build new ProcessingContext
         return ProcessingContext(
             folder=folder,
-            effective_folder=(
-                effective_folder if effective_folder is not None else folder
-            ),
-            # If the caller supplied a dict with 'settings', use it, otherwise
-            # default to an empty dict. DispatchOrchestrator passes a full
-            # ProcessingContext which was handled above.
-            settings=(
-                effective_folder.get("settings")
-                if isinstance(effective_folder, dict)
-                else {}
-            ),
+            effective_folder=effective_folder or folder,
+            settings=settings,
             upc_dict=upc_dict,
         )
 

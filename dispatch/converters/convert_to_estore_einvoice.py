@@ -41,7 +41,7 @@ from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 
 logger = get_logger(__name__)
@@ -272,6 +272,4 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         return self.output_filename
 
 
-edi_convert = create_edi_convert_wrapper(
-    EStoreEInvoiceConverter, format_name="estore_einvoice"
-)
+edi_convert = make_edi_convert(EStoreEInvoiceConverter)

@@ -140,6 +140,36 @@ class CopyBackend(BackendBase):
         """Get copy destination for logging."""
         return process_parameters.get("copy_to_directory", "")
 
+    def _cleanup(self) -> None:
+        """Cleanup connections and resources.
+
+        Note: CopyBackend has no persistent connections to clean up.
+        This method exists to satisfy BackendBase abstract method requirements.
+
+        """
+        pass
+
+    def _prepare_for_retry(
+        self,
+        _process_parameters: dict,
+        _settings: dict,
+        _filename: str,
+        **_kwargs: Any,
+    ) -> None:
+        """Prepare for retry by resetting state.
+
+        Note: CopyBackend has no persistent state to reset. This method
+        exists to satisfy BackendBase abstract method requirements.
+
+        Args:
+            process_parameters: Backend-specific parameters (unused)
+            settings: Application settings (unused)
+            filename: File to process (unused)
+            **kwargs: Additional backend-specific arguments (unused)
+
+        """
+        pass
+
     def send(self, process_parameters: dict, settings: dict, filename: str) -> bool:
         """Send a file via copy (local file copy).
 

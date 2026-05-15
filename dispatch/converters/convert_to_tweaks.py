@@ -25,7 +25,7 @@ from core.edi.edi_tweaker import EDITweaker, TweakerConfig
 from dispatch.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
-    create_edi_convert_wrapper,
+    make_edi_convert,
 )
 from dispatch.converters.mixins import DatabaseConnectionMixin
 
@@ -126,4 +126,4 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         return context.user_data.get("output_path", context.output_filename)
 
 
-edi_convert = create_edi_convert_wrapper(TweaksConverter, format_name="tweaks")
+edi_convert = make_edi_convert(TweaksConverter)

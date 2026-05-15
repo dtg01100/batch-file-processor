@@ -206,51 +206,6 @@ class MockSplitter:
         self._result = result
 
 
-class FilesystemAdapter:
-    """Adapts FileSystemInterface to FilesystemProtocol."""
-
-    def __init__(self, fs: FileSystemInterface) -> None:
-        """Initialize adapter with file system interface.
-
-        Args:
-            fs: FileSystemInterface implementation
-
-        """
-        self._fs = fs
-
-    def read_file(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents."""
-        return self._fs.read_file_text(path, encoding)
-
-    def write_file(self, path: str, content: str, encoding: str = "utf-8") -> None:
-        """Write content to file."""
-        self._fs.write_file_text(path, content, encoding)
-
-    def write_binary(self, path: str, content: bytes) -> None:
-        """Write binary content to file."""
-        self._fs.write_file(path, content)
-
-    def file_exists(self, path: str) -> bool:
-        """Check if file exists."""
-        return self._fs.file_exists(path)
-
-    def directory_exists(self, path: str) -> bool:
-        """Check if directory exists."""
-        return self._fs.dir_exists(path)
-
-    def create_directory(self, path: str) -> None:
-        """Create directory if it doesn't exist."""
-        self._fs.makedirs(path)
-
-    def remove_file(self, path: str) -> None:
-        """Remove a file."""
-        self._fs.remove_file(path)
-
-    def list_files(self, path: str) -> list[str]:
-        """List files in directory."""
-        return self._fs.list_files(path)
-
-
 class EDISplitterStep(ErrorRecordingMixin):
     """EDI splitter step for the dispatch pipeline.
 
@@ -288,8 +243,7 @@ class EDISplitterStep(ErrorRecordingMixin):
         if splitter is not None:
             self._splitter = splitter
         elif file_system is not None:
-            adapted_fs = FilesystemAdapter(file_system)
-            self._splitter = EDISplitter(adapted_fs)
+            self._splitter = EDISplitter(file_system)
         else:
             from core.edi.edi_splitter import RealFilesystem
 

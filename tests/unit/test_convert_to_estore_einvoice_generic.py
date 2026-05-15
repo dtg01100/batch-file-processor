@@ -2,7 +2,7 @@
 
 Tests:
 - Input validation and error handling
-- invFetcher class methods (fetch_po, fetch_cust, fetch_uom_desc)
+- InvFetcher class methods (fetch_po, fetch_cust, fetch_uom_desc)
 - Shipper mode handling
 - Generic e-invoice format compliance
 - Data transformation accuracy
@@ -211,28 +211,23 @@ def test_query_runner(test_db_connection):
 
 @pytest.fixture
 def inv_fetcher_with_test_db(test_query_runner):
-    """Create an invFetcher that uses the test database.
+    """Create an InvFetcher that uses the test database.
 
     Args:
         test_query_runner: The test query runner fixture
 
     Returns:
-        invFetcher: Wrapper configured with test database
+        InvFetcher: Configured with test database
     """
     from core.edi.inv_fetcher import InvFetcher
 
-    # Create the wrapper which internally uses our test query runner
     settings = {
         "as400_username": "test_user",
         "as400_password": "test_pass",
         "as400_address": "test.address.com",
     }
 
-    # Create wrapper - it will use create_query_runner internally, so we need to patch
-    # Since we can't easily patch inside __init__, we create the wrapper and replace its _fetcher
-    fetcher = convert_to_estore_einvoice_generic.invFetcher(settings)
-    # Replace the internal _fetcher with one using our test query runner
-    fetcher._fetcher = InvFetcher(test_query_runner, settings)
+    fetcher = InvFetcher(test_query_runner, settings)
 
     return fetcher
 
@@ -362,16 +357,19 @@ class TestEstoreEinvoiceGenericFixtures:
 
 
 class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
-    """Test the invFetcher class with real database."""
+    """Test the InvFetcher class with real database."""
 
     def test_inv_fetcher_init(self):
-        """Test invFetcher class initialization."""
-        fetcher = convert_to_estore_einvoice_generic.invFetcher(
+        """Test InvFetcher class initialization."""
+        from core.edi.inv_fetcher import InvFetcher
+
+        fetcher = InvFetcher(
+            None,
             {
                 "as400_username": "test_user",
                 "as400_password": "test_pass",
                 "as400_address": "test.address.com",
-            }
+            },
         )
         assert fetcher is not None
         assert fetcher.last_invoice_number == 0
@@ -409,10 +407,10 @@ class TestInvFetcherClass(TestEstoreEinvoiceGenericFixtures):
         assert result == ""
 
     def test_fetch_cust(self, inv_fetcher_with_test_db):
-        """Test fetch_cust method returns actual customer from test database."""
+        """Test fetch_cust_name method returns actual customer from test database."""
         fetcher = inv_fetcher_with_test_db
 
-        result = fetcher.fetch_cust("0000000001")
+        result = fetcher.fetch_cust_name(1)
 
         assert result == "CUST001"
 
@@ -476,7 +474,6 @@ class TestEstoreEinvoiceGenericBasicFunctionality(TestEstoreEinvoiceGenericFixtu
 
         assert convert_to_estore_einvoice_generic is not None
         assert hasattr(convert_to_estore_einvoice_generic, "edi_convert")
-        assert hasattr(convert_to_estore_einvoice_generic, "invFetcher")
 
     def test_edi_convert_returns_csv_filename(
         self,

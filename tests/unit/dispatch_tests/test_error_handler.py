@@ -5,7 +5,7 @@ import tempfile
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
-from dispatch.error_handler import ErrorHandler, do
+from dispatch.error_handler import ErrorHandler
 from dispatch.file_system import RealFileSystem
 
 
@@ -255,15 +255,16 @@ class TestErrorHandler:
         assert "/var/log/subdir" in mock_fs.dirs
 
 
-class TestDoFunction:
-    """Tests for backward-compatible do function."""
+class TestRecordErrorToLogs:
+    """Tests for ErrorHandler.record_error_to_logs."""
 
-    def test_do_non_threaded(self):
-        """Test do function in non-threaded mode."""
+    def test_non_threaded(self):
+        """Test record_error_to_logs in non-threaded mode."""
+        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock())
         run_log = MagicMock()
         errors_log = StringIO()
 
-        do(
+        handler.record_error_to_logs(
             run_log=run_log,
             errors_log=errors_log,
             error_message="Test error",
@@ -275,12 +276,13 @@ class TestDoFunction:
         run_log.write.assert_called_once()
         assert "Test error" in errors_log.getvalue()
 
-    def test_do_threaded(self):
-        """Test do function in threaded mode."""
+    def test_threaded(self):
+        """Test record_error_to_logs in threaded mode."""
+        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock())
         run_log = []
         errors_log = []
 
-        do(
+        handler.record_error_to_logs(
             run_log=run_log,
             errors_log=errors_log,
             error_message="Test error",
