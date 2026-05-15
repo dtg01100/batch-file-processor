@@ -285,7 +285,11 @@ class ErrorHandler:
                 # Errors in error recording are silently ignored to avoid
                 # cascading failures. The original error is already logged
                 # or will be recorded via other paths.
-                pass
+                logger.debug(
+                    "Failed to dispatch error alert (non-fatal)",
+                    exc_info=True,
+                    extra={"folder_alias": (context or {}).get("folder_alias", "")},
+                )
 
     def record_error_to_logs(
         self,

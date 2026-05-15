@@ -540,7 +540,9 @@ class FolderPipelineExecutor:
                 )
         except Exception:  # non-fatal; file was processed, just failed to record in DB
             logger.warning(
-                "Failed to record processed file to database: %s", file_result.file_name
+                "Failed to record processed file to database: %s (file may be reprocessed on next run)",
+                file_result.file_name,
+                exc_info=True,
             )
 
     def _finalize_folder_result(self, result: FolderResult) -> None:

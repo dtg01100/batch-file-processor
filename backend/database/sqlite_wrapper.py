@@ -23,10 +23,13 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import sqlite3
 import threading
 from contextlib import suppress
 from typing import Any, ClassVar
+
+logger = logging.getLogger(__name__)
 
 from core.utils.bool_utils import normalize_bool, to_db_bool
 
@@ -720,7 +723,7 @@ class Database:
 
             schema.ensure_schema(self)
         except Exception:
-            pass
+            logger.debug("Schema initialization failed (tolerated for existing DBs)", exc_info=True)
 
     @property
     def raw_connection(self) -> sqlite3.Connection:
