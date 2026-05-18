@@ -136,14 +136,10 @@ class CRecGenerator:
             9-character amount string suitable for EDI output
 
         """
-        amount_builder = amount - amount * 2 if amount < 0 else amount
-
-        amount_str = f"{amount_builder:.2f}".replace(".", "").rjust(9, "0")
-
+        abs_amount = abs(amount)
+        amount_str = f"{abs_amount:.2f}".replace(".", "").rjust(9, "0")
         if amount < 0:
-            temp_list = list(amount_str)
-            temp_list[0] = "-"
-            amount_str = "".join(temp_list)
+            amount_str = f"-{amount_str}"
 
         return amount_str
 
