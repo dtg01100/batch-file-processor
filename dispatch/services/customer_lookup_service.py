@@ -50,7 +50,7 @@ class CustomerLookupService:
 
         header_fields = self._query_runner.run_query(self._sql_query, (invoice_param,))
 
-        if len(header_fields) == 0:
+        if not header_fields:
             logger.error("Cannot find order %s in AS400 history", invoice_number)
             raise CustomerLookupError(f"Cannot Find Order {invoice_number} In History.")
 

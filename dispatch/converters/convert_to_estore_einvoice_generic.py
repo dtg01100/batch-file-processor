@@ -234,7 +234,7 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
         self._leave_shipper_mode()
 
         # Clear invoice accum for new invoice
-        if len(self.invoice_accum) > 0:
+        if self.invoice_accum:
             self.invoice_index += 1
             self.invoice_accum.clear()
 

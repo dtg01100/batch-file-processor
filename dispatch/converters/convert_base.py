@@ -205,7 +205,7 @@ class BaseEDIConverter(ABC):
 
         """
         with open(context.edi_filename, encoding="utf-8") as work_file:
-            work_file_lined = [n for n in work_file.readlines()]
+            work_file_lined = work_file.readlines()
 
             for line_num, line in enumerate(work_file_lined):
                 context.line_num = line_num

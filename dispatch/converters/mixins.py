@@ -173,7 +173,7 @@ class CustomerLookupMixin:
 
         header_fields = query_object.run_query(query_sql, (invoice_param,))
 
-        if len(header_fields) == 0:
+        if not header_fields:
             logger.error(
                 "%s: Cannot find order %s in AS400 history",
                 self.__class__.__name__,

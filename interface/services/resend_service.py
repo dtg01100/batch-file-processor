@@ -4,7 +4,6 @@ This module provides toolkit-agnostic business logic for the resend interface.
 """
 
 import os
-from collections import OrderedDict
 from operator import itemgetter
 from typing import Any
 
@@ -27,7 +26,7 @@ class ResendService:
         self._db = database_connection
         self._processed_files = database_connection["processed_files"]
         self._folders = database_connection["folders"]
-        self._folder_alias_cache: OrderedDict[int, str] = OrderedDict()
+        self._folder_alias_cache: dict[int, str] = {}
 
     @staticmethod
     def _get_sent_timestamp(processed_line: dict[str, Any]) -> Any:

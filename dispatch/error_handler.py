@@ -108,7 +108,7 @@ class ErrorLogger:
             True if error log is non-empty, False otherwise.
 
         """
-        return len(self.get_errors()) > 0
+        return bool(self.get_errors())
 
     def close(self) -> None:
         """Close the folder error log StringIO buffer."""
@@ -474,7 +474,7 @@ class ErrorHandler:
             True if errors have been recorded, False otherwise
 
         """
-        return len(self.errors) > 0
+        return bool(self.errors)
 
     def get_error_count(self) -> int:
         """Get the number of recorded errors.

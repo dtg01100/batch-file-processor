@@ -125,7 +125,7 @@ def apply_upc_override(
         if category_filter == "ALL":
             do_update = True
         else:
-            category = upc_data[0] if len(upc_data) > 0 else None
+            category = upc_data[0] if upc_data else None
             if category in category_filter.split(","):
                 do_update = True
 

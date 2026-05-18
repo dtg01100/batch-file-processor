@@ -129,7 +129,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
             utils.add_row(self._csv_file, row)
 
         # Add trailer record if there are invoice totals
-        if len(self.invoice_accum) > 0:
+        if self.invoice_accum:
             trailer_row = {"Record Type": "T", "Invoice Cost": sum(self.invoice_accum)}
             utils.add_row(self._csv_file, trailer_row)
 
@@ -158,7 +158,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         self._leave_shipper_mode()
 
         # Write trailer for previous invoice if exists
-        if len(self.invoice_accum) > 0:
+        if self.invoice_accum:
             trailer_row = {
                 "Record Type": "T",
                 "Invoice Cost": sum(self.invoice_accum),

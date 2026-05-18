@@ -4,6 +4,7 @@ This module provides a pipeline step for EDI format conversion,
 using dynamic module loading for different output formats.
 """
 
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable

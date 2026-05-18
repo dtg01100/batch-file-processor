@@ -181,7 +181,7 @@ class EDIValidator:
             lines = content.splitlines()
 
             # Check first character is 'A'
-            if not lines or len(lines[0]) == 0 or lines[0][0] != "A":
+            if not lines or not lines[0] or lines[0][0] != "A":
                 logger.debug("EDI format check failed at line %d: %s", 1, file_path)
                 return False, 1
 
