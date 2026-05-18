@@ -4,12 +4,11 @@ import pytest
 
 from core.edi.edi_splitter import (
     EDISplitter,
-    RealFilesystem,
     SplitConfig,
     SplitResult,
-    filter_b_records_by_category,
 )
-from core.edi.edi_splitting_utils import _col_to_excel
+from core.edi.edi_splitting_utils import _col_to_excel, filter_b_records_by_category
+from dispatch.file_system import RealFileSystem as RealFilesystem
 
 
 class TestColToExcel:

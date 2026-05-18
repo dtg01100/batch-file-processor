@@ -186,7 +186,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
         self.row_dict_list.append(row_dict)
         self.invoice_index += 1
 
-    def process_b_record(self, record: EDIRecord, _context: ConversionContext) -> None:
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a B record (line item), handling shipper mode.
 
         Args:
@@ -268,7 +268,7 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
             context.output_file.close()
             context.output_file = None
 
-    def _get_return_value(self, _context: ConversionContext) -> str:
+    def _get_return_value(self, context: ConversionContext) -> str:
         """Get the return value - the generated filename.
 
         Args:

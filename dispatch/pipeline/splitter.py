@@ -245,9 +245,9 @@ class EDISplitterStep(ErrorRecordingMixin):
         elif file_system is not None:
             self._splitter = EDISplitter(file_system)
         else:
-            from core.edi.edi_splitter import RealFilesystem
+            from dispatch.file_system import RealFileSystem
 
-            self._splitter = EDISplitter(RealFilesystem())
+            self._splitter = EDISplitter(RealFileSystem())
 
     def split(
         self, input_path: str, output_dir: str, params: dict, upc_dict: dict

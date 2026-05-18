@@ -5,74 +5,15 @@ into individual invoice files with support for category filtering.
 """
 
 import os
+
 from dataclasses import dataclass
+from dispatch.interfaces import FileSystemInterface
 
 from core.edi.edi_parser import capture_records
 from core.edi.edi_splitting_utils import (
     _col_to_excel,
     filter_b_records_by_category,
 )
-from dispatch.interfaces import FileSystemInterface
-
-
-# Filesystem operations are now handled by FileSystemInterface from dispatch.interfaces
-
-
-class RealFilesystem:
-    """Real filesystem implementation using os module."""
-
-    def read_file(self, path: str) -> bytes:
-        """Read file contents as bytes."""
-        with open(path, "rb") as f:
-            return f.read()
-
-    def read_file_text(self, path: str, encoding: str = "utf-8") -> str:
-        """Read file contents as text."""
-        with open(path, encoding=encoding) as f:
-            return f.read()
-
-    def write_file(self, path: str, data: bytes) -> None:
-        """Write bytes to a file."""
-        with open(path, "wb") as f:
-            f.write(data)
-
-    def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
-        """Write text to a file."""
-        with open(path, "w", encoding=encoding) as f:
-            f.write(data)
-
-    def file_exists(self, path: str) -> bool:
-        """Check if a file exists."""
-        return os.path.isfile(path)
-
-    def dir_exists(self, path: str) -> bool:
-        """Check if a directory exists."""
-        return os.path.isdir(path)
-
-    def mkdir(self, path: str) -> None:
-        """Create a directory."""
-        os.makedirs(path, exist_ok=True)
-
-    def makedirs(self, path: str) -> None:
-        """Create a directory and all parent directories."""
-        os.makedirs(path, exist_ok=True)
-
-    def copy_file(self, src: str, dst: str) -> None:
-        """Copy a file."""
-        import shutil
-        shutil.copy2(src, dst)
-
-    def remove_file(self, path: str) -> None:
-        """Remove a file."""
-        os.remove(path)
-
-    def list_files(self, path: str) -> list[str]:
-        """List all files in a directory."""
-        return os.listdir(path)
-
-    def get_absolute_path(self, path: str) -> str:
-        """Get absolute path."""
-        return os.path.abspath(path)
 
 
 @dataclass
