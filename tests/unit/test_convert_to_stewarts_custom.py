@@ -9,7 +9,7 @@ Tests:
 
 Converter: convert_to_stewarts_custom.py (20871 chars)
 
-Note: This converter requires AS400 database access, so tests mock the query runner.
+Note: This converter requires AS400 database access, so tests mock the DB2SSH connection.
 """
 
 import os
@@ -26,14 +26,14 @@ class TestConvertToStewartsCustomFixtures:
     @pytest.fixture
     def sample_header_record(self):
         """Create accurate header record (33 chars)."""
-        return "A" + "VENDOR" + "0000000001" + "010125" + "0000010000"
+        return "A" + "VENDOR" + "[REDACTED]" + "010125" + "[REDACTED]"
 
     @pytest.fixture
     def sample_detail_record(self):
         """Create accurate detail record (76 chars)."""
         return (
             "B"
-            + "01234567890"
+            + "[REDACTED]0"
             + "Test Item Description    "
             + "123456"
             + "000100"
@@ -71,35 +71,35 @@ class TestConvertToStewartsCustomFixtures:
 
     @pytest.fixture
     def mock_query_runner_result(self):
-        """Return a mock query runner result set for header lookup."""
+        """Return a mock query runner result set for header lookup as list[dict]."""
         return [
-            (
-                "Salesperson",  # Salesperson Name
-                1250101,  # Invoice Date (DAC format)
-                "NET30",  # Terms Code
-                30,  # Terms Duration
-                "A",  # Customer Status
-                10001,  # Customer Number
-                "Test Customer",  # Customer Name
-                "001",  # Customer Store Number
-                "123 Main St",  # Customer Address
-                "Anytown",  # Customer Town
-                "CA",  # Customer State
-                "90210",  # Customer Zip
-                "5551234567",  # Customer Phone
-                "test@test.com",  # Customer Email
-                "",  # Customer Email 2
-                "A",  # Corporate Customer Status
-                20001,  # Corporate Customer Number
-                "Corp Customer",  # Corporate Customer Name
-                "456 Corp Ave",  # Corporate Customer Address
-                "Bigcity",  # Corporate Customer Town
-                "NY",  # Corporate Customer State
-                "10001",  # Corporate Customer Zip
-                "5559876543",  # Corporate Customer Phone
-                "corp@test.com",  # Corporate Customer Email
-                "",  # Corporate Customer Email 2
-            )
+            {
+                "Salesperson Name": "Salesperson",
+                "Invoice Date": 1250101,
+                "Terms Code": "NET30",
+                "Terms Duration": 30,
+                "Customer Status": "A",
+                "Customer Number": 10001,
+                "Customer Name": "Test Customer",
+                "Customer Store Number": "001",
+                "Customer Address": "123 Main St",
+                "Customer Town": "Anytown",
+                "Customer State": "CA",
+                "Customer Zip": "90210",
+                "Customer Phone": "[REDACTED]",
+                "Customer Email": "[REDACTED]",
+                "Customer Email 2": "",
+                "Corporate Customer Status": "A",
+                "Corporate Customer Number": 20001,
+                "Corporate Customer Name": "Corp Customer",
+                "Corporate Customer Address": "456 Corp Ave",
+                "Corporate Customer Town": "Bigcity",
+                "Corporate Customer State": "NY",
+                "Corporate Customer Zip": "10001",
+                "Corporate Customer Phone": "[REDACTED]",
+                "Corporate Customer Email": "[REDACTED]",
+                "Corporate Customer Email 2": "",
+            }
         ]
 
     @pytest.fixture
@@ -138,24 +138,21 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         output_file = str(tmp_path / "output")
 
-        with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
-            mock_qr_instance.run_query.return_value = mock_query_runner_result
-            mock_qr_class.return_value = mock_qr_instance
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value = mock_query_runner_result
+            mock_conn_class.return_value = mock_conn
 
-            try:
-                result = convert_to_stewarts_custom.edi_convert(
-                    str(input_file),
-                    output_file,
-                    default_settings,
-                    default_parameters,
-                    {},
-                )
-                assert result.endswith(".csv")
-            except Exception:
-                pytest.skip(
-                    "Converter requires additional database queries that are hard to mock"
-                )
+            result = convert_to_stewarts_custom.edi_convert(
+                str(input_file),
+                output_file,
+                default_settings,
+                default_parameters,
+                {},
+            )
+            assert result.endswith(".csv")
 
     def test_creates_csv_file(
         self,
@@ -172,57 +169,31 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         output_file = str(tmp_path / "output")
 
-        with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
-            mock_qr_instance.run_query.return_value = mock_query_runner_result
-            mock_qr_class.return_value = mock_qr_instance
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value = mock_query_runner_result
+            mock_conn_class.return_value = mock_conn
 
-            try:
-                result = convert_to_stewarts_custom.edi_convert(
-                    str(input_file),
-                    output_file,
-                    default_settings,
-                    default_parameters,
-                    {},
-                )
-                assert os.path.exists(result)
-            except Exception:
-                pytest.skip(
-                    "Converter requires additional database queries that are hard to mock"
-                )
+            result = convert_to_stewarts_custom.edi_convert(
+                str(input_file),
+                output_file,
+                default_settings,
+                default_parameters,
+                {},
+            )
+            assert os.path.exists(result)
 
 
 class TestConvertToStewartsCustomDatabaseLookup(TestConvertToStewartsCustomFixtures):
     """Test database lookup functionality in convert_to_stewarts_custom."""
 
-    def test_customer_lookup_called(
-        self,
-        complete_edi_content,
-        default_parameters,
-        default_settings,
-        mock_query_runner_result,
-        mock_uom_result,
-        tmp_path,
-    ):
-        """Test that customer lookup query is executed via unit method test."""
-        from dispatch.converters.convert_to_stewarts_custom import (
-            StewartsCustomConverter,
-        )
-
-        converter = StewartsCustomConverter()
-        try:
-            result = converter._get_customer_header_fields("0000000001")
-            assert len(result) > 0
-        except Exception:
-            pytest.skip("Database lookup requires full mock setup")
-
     def test_uom_lookup_called(
         self,
-        complete_edi_content,
         default_parameters,
         default_settings,
         mock_uom_result,
-        tmp_path,
     ):
         """Test UOM lookup via service."""
         from dispatch.services.uom_lookup_service import UOMLookupService
@@ -243,12 +214,12 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         self,
         default_parameters,
         default_settings,
-        tmp_path,
     ):
         """Test UPC generation from 11-digit input adds check digit."""
         from dispatch.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
+        # Use valid 11-digit UPC (check digit will be added to make 12)
         result = item_processor.generate_full_upc("01234567890")
         assert len(result) == 12
 
@@ -256,7 +227,6 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         self,
         default_parameters,
         default_settings,
-        tmp_path,
     ):
         """Test UPC generation from 8-digit input (UPC-E to UPC-A)."""
         from dispatch.services.item_processing import ItemProcessor
@@ -269,7 +239,6 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         self,
         default_parameters,
         default_settings,
-        tmp_path,
     ):
         """Test UPC generation from empty string returns empty string."""
         from dispatch.services.item_processing import ItemProcessor
@@ -347,14 +316,25 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
 class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
     """Test edge cases and error conditions."""
 
-    def test_empty_edi_file(self, default_parameters, default_settings, tmp_path):
+    def test_empty_edi_file(
+        self,
+        default_parameters,
+        default_settings,
+        tmp_path,
+    ):
         """Test handling of empty EDI file."""
         input_file = tmp_path / "input.edi"
         input_file.write_text("")
 
         output_file = str(tmp_path / "output")
 
-        with patch("core.database.create_query_runner"):
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value = []
+            mock_conn_class.return_value = mock_conn
+
             result = convert_to_stewarts_custom.edi_convert(
                 str(input_file),
                 output_file,
@@ -364,12 +344,17 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
             )
             assert result is not None
 
-    def test_missing_input_file(self, default_parameters, default_settings, tmp_path):
+    def test_missing_input_file(
+        self,
+        default_parameters,
+        default_settings,
+        tmp_path,
+    ):
         """Test that missing input file raises FileNotFoundError."""
         input_file = tmp_path / "does_not_exist.edi"
         output_file = str(tmp_path / "output")
 
-        with patch("core.database.create_query_runner"):
+        with patch("adapters.db2ssh.connection.DB2SSHConnection"):
             with pytest.raises(FileNotFoundError):
                 convert_to_stewarts_custom.edi_convert(
                     str(input_file),
@@ -392,10 +377,13 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
 
         output_file = str(tmp_path / "output")
 
-        with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
-            mock_qr_instance.run_query.return_value = []
-            mock_qr_class.return_value = mock_qr_instance
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            # Return empty result - customer not found
+            mock_conn.execute.return_value = []
+            mock_conn_class.return_value = mock_conn
 
             with pytest.raises(Exception, match=r"."):
                 convert_to_stewarts_custom.edi_convert(
@@ -407,7 +395,9 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
                 )
 
 
-class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixtures):
+class TestConvertToStewartsCustomOutputStructure(
+    TestConvertToStewartsCustomFixtures
+):
     """Test output CSV structure in convert_to_stewarts_custom."""
 
     def test_output_contains_invoice_details_header(
@@ -419,9 +409,30 @@ class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixt
         mock_uom_result,
         tmp_path,
     ):
-        """Test that output contains 'Invoice Details' header via unit method test."""
+        """Test that output contains 'Invoice Details' header."""
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
 
-        pytest.skip("Full conversion requires extensive database mocking")
+        output_file = str(tmp_path / "output")
+
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value = mock_query_runner_result
+            mock_conn_class.return_value = mock_conn
+
+            result = convert_to_stewarts_custom.edi_convert(
+                str(input_file),
+                output_file,
+                default_settings,
+                default_parameters,
+                {},
+            )
+
+            with open(result, "r") as f:
+                content = f.read()
+            assert "Invoice Details" in content
 
     def test_output_contains_line_item_columns(
         self,
@@ -432,6 +443,28 @@ class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixt
         mock_uom_result,
         tmp_path,
     ):
-        """Test that output contains line item column headers via unit method test."""
+        """Test that output contains line item column headers."""
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(complete_edi_content)
 
-        pytest.skip("Full conversion requires extensive database mocking")
+        output_file = str(tmp_path / "output")
+
+        with patch(
+            "adapters.db2ssh.connection.DB2SSHConnection"
+        ) as mock_conn_class:
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value = mock_query_runner_result
+            mock_conn_class.return_value = mock_conn
+
+            result = convert_to_stewarts_custom.edi_convert(
+                str(input_file),
+                output_file,
+                default_settings,
+                default_parameters,
+                {},
+            )
+
+            with open(result, "r") as f:
+                content = f.read()
+            # Check for expected column headers in the output
+            assert "Description" in content or "Qty" in content or "Item" in content
