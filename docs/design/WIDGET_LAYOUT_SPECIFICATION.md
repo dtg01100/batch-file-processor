@@ -1,278 +1,261 @@
 # Widget Layout Specification
 
-> **Note:** This document reflects the UI state at commit `9446b3de7e0eb96122a1151620de7c012898269b`. File paths refer to the structure at that time (primarily `interface.py`).
+> **Note:** This document describes the current PyQt5 UI layout as of the
+> 2026-05-18 codebase. The layout structure follows `interface/qt/`.
+> Historical Tkinter-era layout differences are documented in
+> `DESIGN_CORRECTIONS.md` §10.
 
-This document provides a comprehensive and pedantic specification of the widget layout for the Batch File Sender application. It details the visual hierarchy, layout management, and widget configuration for all major dialogs and windows.
-
-## 1. Main Application Window (`interface.py`)
-
-The main application window serves as the primary interface for user interaction. It is divided into a left-side options panel and a right-side folder list.
-
-### 1.1 Visual Hierarchy
-
-*   **Root Window** (`tkinter.Tk`)
-    *   **Options Frame** (`tkinter.ttk.Frame`) - Left Panel
-        *   `Button`: "Add Directory..."
-        *   `Button`: "Batch Add Directories..."
-        *   `Button`: "Set Defaults..."
-        *   `Button`: "Edit Settings..."
-        *   `Button`: "Process All Folders"
-        *   `Separator` (Horizontal)
-        *   `Button`: "Maintenance..."
-        *   `Button`: "Enable Resend..."
-        *   `Separator` (Horizontal)
-        *   `Button`: "Processed Files Report..."
-    *   **Users List Frame** (`tkinter.ttk.Frame`) - Right Panel
-        *   **Folder List Widget** (Dynamic Frame Structure)
-            *   *See Section 2 for details*
-        *   **Search Widget** (Dynamic Frame Structure)
-            *   *See Section 3 for details*
-
-### 1.2 Layout Management
-
-*   **Options Frame**: Packed to the left (`side=tkinter.LEFT`, `anchor="n"`, `fill=tkinter.Y`).
-    *   Buttons are packed vertically (`side=tkinter.TOP`, `fill=tkinter.X`, `pady=2`, `padx=2`).
-    *   "Process All Folders" is packed at the bottom of its group (`side=tkinter.BOTTOM`).
-    *   Separators are packed with `fill="x"`.
-*   **Users List Frame**: Packed to the right (`side=tkinter.RIGHT`, `fill=tkinter.BOTH`, `expand=tkinter.TRUE`).
-    *   **Search Widget**: Packed at the bottom (`side=tkinter.BOTTOM`, `ipady=5`).
-    *   **Folder List Widget**: Packed to the right (`side=tkinter.RIGHT`, `fill=tkinter.BOTH`, `expand=tkinter.TRUE`).
-
-### 1.3 Widget Details
-
-| Widget Type | Text / Label | Position (Pack) | Styling / Notes |
-| :--- | :--- | :--- | :--- |
-| `ttk.Button` | "Add Directory..." | Top, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Batch Add Directories..." | Top, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Set Defaults..." | Top, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Edit Settings..." | Top, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Process All Folders" | Bottom, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Maintenance..." | Top, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Enable Resend..." | Bottom, Fill X | `pady=2`, `padx=2` |
-| `ttk.Button` | "Processed Files Report..." | Top, Fill X | `pady=2`, `padx=2` |
+This document provides a comprehensive specification of the widget layout for
+the Batch File Sender application. It details the visual hierarchy, layout
+management, and widget configuration for all major dialogs and windows.
 
 ---
 
-## 2. Folder List Widget (`interface.py` - `make_users_list`)
+## 1. Main Application Window (`interface/qt/app.py`)
 
-This widget displays the list of active and inactive folders.
+The main application window is created by `QtBatchFileSenderApp`, a
+`QWidget`-based app that delegates to `interface/qt/dialogs/` for all
+user-facing popups.
+
+### 1.1 Primary Dialogs
+
+| Dialog | Location | Purpose |
+|--------|----------|---------|
+| `EditFoldersDialog` | `qt/dialogs/edit_folders_dialog.py` | Edit folder settings (also lives as sub-package) |
+| `EditSettingsDialog` | `qt/dialogs/edit_settings_dialog.py` | Global settings |
+| `MaintenanceDialog` | `qt/dialogs/maintenance_dialog.py` | Advanced maintenance operations |
+| `ResendDialog` | `qt/dialogs/resend_dialog.py` | Resend failed files |
+| `ProcessedFilesDialog` | `qt/dialogs/processed_files_dialog.py` | View/export processed file reports |
+| `DatabaseImportDialog` | `qt/dialogs/database_import_dialog.py` | Import database from legacy format |
+
+### 1.2 Primary Widgets
+
+| Widget | Location | Purpose |
+|--------|----------|---------|
+| `FolderListWidget` | `qt/widgets/folder_list_widget.py` | Scrolled list of folder rows with edit/send/delete actions |
+| `SearchWidget` | `qt/widgets/search_widget.py` | Filter/search the folder list |
+| `ButtonPanel` | `qt/widgets/folder_list_widget.py` | Row action buttons (edit, send, delete) |
+
+### 1.3 Architecture
+
+The main window follows a **three-layer signal pattern** documented in
+`interface/AGENTS.md`:
+
+```
+Widget-level (ButtonPanel, FolderListWidget)
+       │  emit signals  │
+       ▼
+Window-level (MainWindow: re-emits via .connect(signal.emit))
+       │
+       ▼
+Controller (ApplicationController: connects signals to operations)
+```
+
+---
+
+## 2. Folder List Widget (`interface/qt/widgets/folder_list_widget.py`)
+
+Displays the active/inactive folder rows with per-row action buttons.
 
 ### 2.1 Visual Hierarchy
 
-*   **Main Frame** (`users_list_frame`)
-    *   **Scrollable Lists Frame** (`tkinter.ttk.Frame`)
-        *   **Inactive List Container** (`tkinter.ttk.Frame`)
-            *   `Label`: "Inactive Folders"
-            *   `Separator` (Horizontal)
-            *   **Inactive Scrolled Frame** (`VerticalScrolledFrame`)
-                *   *List of Inactive Folder Rows*
-        *   **Active List Container** (`tkinter.ttk.Frame`)
-            *   `Label`: "Active Folders"
-            *   `Separator` (Horizontal)
-            *   **Active Scrolled Frame** (`VerticalScrolledFrame`)
-                *   *List of Active Folder Rows*
-    *   **Separator** (Horizontal)
+*   **FolderListWidget** (`QWidget`/`QListWidget`)
+    *   **Inactive Section**
+        *   `QLabel`: "Inactive Folders"
+        *   **Container** (`QWidget`/`QVBoxLayout`)
+            *   Per-folder row with **ButtonPanel**
+    *   **Active Section**
+        *   `QLabel`: "Active Folders"
+        *   **Container** (`QWidget`/`QVBoxLayout`)
+            *   Per-folder row with **ButtonPanel**
 
-### 2.2 Layout Management
+### 2.2 Layout
 
-*   **Scrollable Lists Frame**: Packed at the bottom (`side=tkinter.BOTTOM`, `expand=tkinter.TRUE`, `fill=tkinter.Y`).
-    *   **Inactive List Container**: Packed to the left (`side=tkinter.LEFT`, `expand=tkinter.TRUE`, `fill=tkinter.Y`).
-    *   **Active List Container**: Packed to the right (`side=tkinter.RIGHT`, `expand=tkinter.TRUE`, `fill=tkinter.Y`).
-*   **Scrolled Frames**: Packed with `fill=tkinter.BOTH`, `expand=tkinter.TRUE`, `anchor=tkinter.E`, `padx=3`, `pady=3`.
-
-### 2.3 Widget Details (Folder Rows)
-
-**Active Folder Row:**
-*   `Button` ("<-"): Grid `column=0`, `row=0`.
-*   `Button` ("Edit: [Alias]..."): Grid `column=1`, `row=0`, `sticky=E+W`.
-*   `Button` ("Send"): Grid `column=2`, `row=0`, `padx=(0, 10)`.
-
-**Inactive Folder Row:**
-*   `Button` ("Edit: [Alias]..."): Grid `column=0`, `row=0`, `sticky=E+W`, `padx=(10, 0)`.
-*   `Button` ("Delete"): Grid `column=1`, `row=0`, `sticky=E`, `padx=(0, 10)`.
+Both sections use `QVBoxLayout` inside `QWidget` containers. The outer
+`FolderListWidget` uses a `QVBoxLayout` to stack the inactive and active
+sections.
 
 ---
 
-## 3. Search Widget (`interface.py` - `make_users_list`)
+## 3. Search Widget (`interface/qt/widgets/search_widget.py`)
 
 A reusable widget for filtering the folder list.
 
 ### 3.1 Visual Hierarchy
 
-*   **Main Frame** (`search_frame`)
-    *   `Entry`: Search input field.
-    *   `Button`: "Update Filter".
+*   **SearchWidget** (`QWidget`)
+    *   `QLineEdit` — search input
+    *   `QPushButton` — "Filter" / "Clear Filter"
 
-### 3.2 Layout Management
+### 3.2 Layout
 
-*   **Entry**: Packed to the left (`side=tkinter.LEFT`).
-*   **Button**: Packed to the right (`side=tkinter.RIGHT`).
+Uses `QHBoxLayout`. `QLineEdit` expands (stretch 1), `QPushButton` is fixed
+width on the right.
 
 ---
 
-## 4. Edit Settings Dialog (`interface.py` - `EditSettingsDialog`)
+## 4. Edit Settings Dialog (`interface/qt/dialogs/edit_settings_dialog.py`)
 
 A modal dialog for configuring application-wide settings.
 
 ### 4.1 Visual Hierarchy
 
-*   **Dialog Body**
-    *   **AS400 Connection Frame** (`tkinter.ttk.Frame`)
-        *   `Label`: "ODBC Driver:"
-        *   `OptionMenu`: Driver Selection
-        *   `Label`: "AS400 Address:"
-        *   `Entry`: Address Input
-        *   `Label`: "AS400 Username:"
-        *   `Entry`: Username Input
-        *   `Label`: "AS400 Password:"
-        *   `Entry`: Password Input
-    *   **Email Options Frame** (`tkinter.ttk.Frame`)
-        *   `Label`: "Email Address:"
-        *   `Entry`: Email Input
-        *   `Label`: "Email Username:"
-        *   `Entry`: Username Input
-        *   `Label`: "Email Password:"
-        *   `Entry`: Password Input
-        *   `Label`: "Email SMTP Server:"
-        *   `Entry`: Server Input
-        *   `Label`: "Email SMTP Port"
-        *   `Entry`: Port Input
-    *   **Report Sending Options Frame** (`tkinter.ttk.Frame`)
-        *   `Label`: "Email Destination:"
-        *   `Entry`: Destination Input
-    *   **Interval Backups Frame** (`tkinter.ttk.Frame`)
-        *   `Checkbutton`: "Enable interval backup"
-        *   `Label`: "Backup interval: "
-        *   `Spinbox`: Interval Input
-    *   **Global Checkbuttons**
-        *   `Checkbutton`: "Enable Email"
-        *   `Checkbutton`: "Enable Report Sending"
-        *   `Checkbutton`: "Report EDI Validator Warnings"
-        *   `Checkbutton`: "Enable Report Printing Fallback:"
+*   **EditSettingsDialog** (`QDialog`)
+    *   **Email Options Group** (`QGroupBox`)
+        *   `QCheckBox`: "Enable Email"
+        *   `QLineEdit`: Email address
+        *   `QLineEdit`: Username
+        *   `QLineEdit`: Password
+        *   `QLineEdit`: SMTP server
+        *   `QSpinBox`: SMTP port
+    *   **Interval Backups Group** (`QGroupBox`)
+        *   `QCheckBox`: "Enable interval backup"
+        *   `QSpinBox`: Backup interval
+    *   **Report Options Group** (`QGroupBox`)
+        *   `QLineEdit`: Report email destination
+        *   `QCheckBox`: "Enable Report Sending"
+        *   `QCheckBox`: "Report EDI Validator Warnings"
+        *   `QCheckBox`: "Enable Report Printing Fallback"
     *   **Buttons**
-        *   `Button`: "Select Log Folder..."
+        *   `QPushButton`: "Select Log Folder…"
+        *   `QDialogButtonBox`: OK / Cancel
 
-### 4.2 Layout Management
+### 4.2 Layout
 
-The dialog uses a **Grid** layout manager.
-
-*   **AS400 Frame**: `row=0`, `column=0`, `columnspan=2`, `sticky=W+E`.
-    *   Labels are `sticky=E`.
-    *   Entries are in `column=1`.
-*   **Enable Email Checkbutton**: `row=1`, `columnspan=3`, `sticky=W`.
-*   **Email Options Frame**: `row=2`, `columnspan=3`.
-    *   Labels are `sticky=E`.
-    *   Entries are in `column=1`.
-*   **Enable Report Sending Checkbutton**: `row=3`, `column=0`, `sticky=W`.
-*   **Select Log Folder Button**: `row=3`, `column=1`, `sticky=E`, `rowspan=2`.
-*   **Report EDI Validator Warnings Checkbutton**: `row=4`, `column=0`, `sticky=W`.
-*   **Report Sending Options Frame**: `row=5`, `columnspan=3`.
-*   **Enable Report Printing Fallback Checkbutton**: `row=8`, `column=1`, `sticky=W`.
-*   **Interval Backups Frame**: `row=9`, `column=0`, `columnspan=3`, `sticky=W+E`.
-
-### 4.3 Widget Details
-
-| Widget Type | Text / Label | Grid Position | Notes |
-| :--- | :--- | :--- | :--- |
-| `ttk.Checkbutton` | "Enable Email" | Row 1, Colspan 3 | Controls Email Frame state |
-| `ttk.Checkbutton` | "Enable Report Sending" | Row 3, Col 0 | Controls Report Frame state |
-| `ttk.Entry` | (Various) | Column 1 | Width=40 |
-| `ttk.Spinbox` | (Backup Interval) | Row 0, Col 2 (Inner) | Width=4, Justify=RIGHT |
+Uses `QFormLayout` for field groups; `QVBoxLayout` at the dialog level.  
+Form fields use `addRow(QLabel, QWidget)` pairs.
 
 ---
 
-## 5. Maintenance Dialog (`interface.py` - `maintenance_functions_popup`)
+## 5. Maintenance Dialog (`interface/qt/dialogs/maintenance_dialog.py`)
 
-A popup window for advanced maintenance operations.
+A dialog for advanced maintenance operations.
 
 ### 5.1 Visual Hierarchy
 
-*   **Popup Window** (`tkinter.Toplevel`)
-    *   **Button Frame** (`tkinter.ttk.Frame`)
-        *   `Button`: "Move all to active (Skips Settings Validation)"
-        *   `Button`: "Move all to inactive"
-        *   `Button`: "Clear all resend flags"
-        *   `Button`: "Clear queued emails"
-        *   `Button`: "Mark all in active as processed"
-        *   `Button`: "Remove all inactive configurations"
-        *   `Button`: "Clear sent file records"
-        *   `Button`: "Import old configurations..."
-    *   **Warning Label** (`tkinter.ttk.Label`)
+*   **MaintenanceDialog** (`QDialog`)
+    *   **Button Layout** (`QVBoxLayout`)
+        *   `QPushButton`: "Move all to active (Skips Settings Validation)"
+        *   `QPushButton`: "Move all to inactive"
+        *   `QPushButton`: "Clear all resend flags"
+        *   `QPushButton`: "Clear queued emails"
+        *   `QPushButton`: "Mark all in active as processed"
+        *   `QPushButton`: "Remove all inactive configurations"
+        *   `QPushButton`: "Clear sent file records"
+        *   `QPushButton`: "Import old configurations…"
+    *   **Warning Label** (`QLabel`)
 
-### 5.2 Layout Management
+### 5.2 Layout
 
-*   **Button Frame**: Packed to the left (`side=tkinter.LEFT`).
-    *   All buttons are packed vertically (`side=tkinter.TOP`, `fill=tkinter.X`, `padx=2`, `pady=2`).
-*   **Warning Label**: Packed to the right (`side=tkinter.RIGHT`, `padx=20`).
+Uses `QVBoxLayout`. Buttons are stacked vertically; warning label is at the
+bottom.
 
 ---
 
-## 6. Processed Files Dialog (`interface.py` - `processed_files_popup`)
+## 6. Processed Files Dialog (`interface/qt/dialogs/processed_files_dialog.py`)
 
 A dialog for viewing and exporting processed file reports.
 
 ### 6.1 Visual Hierarchy
 
-*   **Popup Window** (`tkinter.Toplevel`)
-    *   **Body Frame** (`tkinter.ttk.Frame`)
-        *   **List Container** (`tkinter.ttk.Frame`)
-            *   **List Frame** (`VerticalScrolledFrame`)
-                *   *List of Radiobuttons (Folder Aliases)*
-        *   **Actions Frame** (`tkinter.ttk.Frame`)
-            *   `Label`: "Select a Folder."
-            *   `Button`: "Choose output Folder" (Dynamic)
-            *   `Button`: "Export Processed Report" (Dynamic)
-    *   **Separator** (Horizontal)
-    *   **Close Frame** (`tkinter.ttk.Frame`)
-        *   `Button`: "Close"
+*   **ProcessedFilesDialog** (`QDialog`)
+    *   **Browser List** (`QListWidget`)
+        *   Folder alias items (selectable)
+    *   **Action Panel**
+        *   `QLabel`: "Select a Folder."
+        *   `QPushButton`: "Choose Output Folder" (dynamic, enabled on selection)
+        *   `QPushButton`: "Export Processed Report"
+    *   **Close Button**
 
-### 6.2 Layout Management
+### 6.2 Layout
 
-*   **List Container**: Packed to the left (`side=tkinter.LEFT`).
-*   **Actions Frame**: Packed to the right (`side=tkinter.RIGHT`, `anchor=tkinter.N`, `padx=5`).
-*   **Close Frame**: Packed at the bottom.
-*   **Radiobuttons**: Packed inside the scrolled frame (`anchor="w"`, `fill="x"`).
+Uses `QHBoxLayout` for the list + action panel split; `QVBoxLayout` for
+the action panel buttons.
 
 ---
 
-## 7. Edit Folders Dialog (`interface.py` - `EditDialog`)
+## 7. Edit Folders Dialog (`interface/qt/dialogs/edit_folders_dialog.py`)
 
-A complex dialog for editing individual folder settings.
+A complex dialog for editing individual folder settings.  
+Highly dynamic — options change based on the selected "Convert To" format.
 
-*Note: This dialog is highly dynamic based on the selected "Convert To" format.*
+### 7.1 Visual Hierarchy
 
-### 7.1 Visual Hierarchy (High Level)
+*   **EditFoldersDialog** (`QDialog`)
+    *   **Header** (`QWidget`)
+        *   `QCheckBox`: "Active"
+    *   **Other Configs** (`QGroupBox`)
+        *   `QListWidget`: List of other folders (for copying config)
+        *   `QPushButton`: "Copy Config"
+    *   **Folder Settings** (`QGroupBox`)
+        *   Path, Alias, Backend selection checkboxes
+    *   **Backend Settings** (`QGroupBox`)
+        *   Copy, FTP, and Email backend configuration
+    *   **EDI Settings** (`QGroupBox`)
+        *   `QCheckBox`: "Process EDI"
+        *   `QCheckBox`: "Split EDI"
+        *   `tweak_edi` (`QCheckBox`): "Enable EDI Tweaks"
+        *   Convert-to format selector
+        *   **Convert Options** — dynamically shown/hidden based on format
+    *   **Buttons**
+        *   `QPushButton`: "Save"
+        *   `QPushButton`: "Cancel"
 
-*   **Header Frame** (`tkinter.ttk.Frame`)
-    *   `Checkbutton`: "Active"
-*   **Body Frame** (`tkinter.ttk.Frame`)
-    *   **Others Frame** (`tkinter.ttk.Frame`)
-        *   `Listbox`: List of other folders (for copying config)
-        *   `Button`: "Copy Config"
-    *   **Folder Frame** (`tkinter.ttk.Frame`)
-        *   *Folder Path, Alias, Backend Selection*
-    *   **Preferences Frame** (`tkinter.ttk.Frame`)
-        *   *Copy, FTP, and Email Backend Settings*
-    *   **EDI Frame** (`tkinter.ttk.Frame`)
-        *   *EDI Conversion Settings*
-        *   **Convert Options Frame** (`tkinter.ttk.Frame`)
-            *   *Dynamic options based on format*
+### 7.2 Layout
 
-### 7.2 Layout Management
+Uses `QVBoxLayout` at the dialog level; `QFormLayout` within `QGroupBox`
+containers. Dynamic plugin panels are stacked below the format selector and
+shown/hidden with `setVisible()` based on the selected converter format.
 
-*   **Header Frame**: Packed at the top (`fill=tkinter.X`).
-*   **Body Frame**: Packed below header.
-    *   **Others Frame**: Packed to the left (`side=tkinter.LEFT`, `fill=tkinter.Y`).
-    *   **Folder Frame**: Packed to the left (`side=tkinter.LEFT`, `anchor="n"`).
-    *   **Preferences Frame**: Packed to the left (`side=tkinter.LEFT`, `anchor="n"`).
-    *   **EDI Frame**: Packed to the left (`side=tkinter.LEFT`, `anchor="n"`).
-*   **Grid Layout** is used within the frames.
-*   **Dynamic Visibility**: Widgets in the `Convert Options Frame` are shown/hidden using `grid()` and `grid_forget()` based on the `convert_formats_var`.
+---
 
-### 7.3 Key Widget Groups
+## 8. Resend Dialog (`interface/qt/dialogs/resend_dialog.py`)
 
-*   **Backends**: Checkbuttons for Copy, FTP, Email.
-*   **FTP Settings**: Server, Port, Folder, Username, Password.
-*   **Email Settings**: Recipient, Subject.
-*   **Convert To**: OptionMenu for selecting format (CSV, ScannerWare, etc.).
+A dialog for resending previously-failed files.
+
+*   **ResendDialog** (`QDialog`)
+    *   **File browser** (`QListWidget`) showing failed file records
+    *   **Action buttons** (`QPushButton`): "Resend Selected", "Resend All"
+    *   **Close button**
+
+---
+
+## PyQt5 Widget Mapping (v1.1 — replaces Tkinter-era layout)
+
+| Tkinter (legacy) | PyQt5 (current) | Notes |
+|---|---|---|
+| `tkinter.Tk` | `QApplication` + `QWidget` | Top-level app object |
+| `tkinter.ttk.Frame` | `QWidget` / `QFrame` | Container widget |
+| `tkinter.Button` | `QPushButton` | Push button |
+| `tkinter.ttk.Button` | `QPushButton` | Push button |
+| `tkinter.Label` | `QLabel` | Text label |
+| `tkinter.ttk.Label` | `QLabel` | Text label |
+| `tkinter.Entry` | `QLineEdit` | Single-line text input |
+| `tkinter.BooleanVar` | `QCheckBox.isChecked()` | Boolean state |
+| `tkinter.StringVar` | `QLineEdit.text()` | String state |
+| `tkinter.ttk.Combobox` | `QComboBox` | Dropdown selector |
+| `tkinter.ttk.Checkbutton` | `QCheckBox` | Checkbox |
+| `tkinter.ttk.Spinbox` | `QSpinBox` | Numeric spinners |
+| `tkinter.Toplevel` | `QDialog` | Modal popup |
+| `tkinter.ScrolledText` | `QTextEdit` (read-only) | Text display |
+| `tkinter.Listbox` | `QListWidget` | Scrollable item list |
+| tkinter `pack()` / `grid()` | `QVBoxLayout`, `QHBoxLayout`, `QFormLayout`, `QGridLayout` | Qt layout managers |
+
+---
+
+## 9. Backend Codes (Error Dialog — UI Decoupling Design Reference)
+
+*See `interface/qt/actions/error_home_action.py` and
+`interface/qt/dialogs/edit_settings.py` — the backend systems (`email_backend`,
+`COPY_DESTINATION`, `ftp_backend`) are handled at the `SendManager` layer
+(`dispatch/send_manager.py`) and are NOT referenced directly from the dialog
+widgets themselves.*
+
+---
+
+
+
+
+
+
 

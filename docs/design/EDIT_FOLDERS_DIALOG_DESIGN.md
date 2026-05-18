@@ -20,7 +20,7 @@ The dialog is structured around several collaborating components:
 
 | Component | Class | Responsibility |
 | :--- | :--- | :--- |
-| **UI Controller** | [`EditFoldersDialog`](interface/ui/dialogs/edit_folders_dialog.py:37) | Manages the Tkinter window, widget lifecycle, and user interactions. |
+| **UI Controller** | [`EditFoldersDialog`](interface/qt/dialogs/edit_folders_dialog.py:37) | Manages the PyQt5 dialog, widget lifecycle, and user interactions. |
 | **Data Model** | [`FolderConfiguration`](interface/models/folder_configuration.py:222) | A structured dataclass representing the complete configuration state. |
 | **Validator** | [`FolderSettingsValidator`](interface/validation/folder_settings_validator.py:55) | Contains all business logic for validating configuration rules. |
 | **Extractor** | [`FolderDataExtractor`](interface/operations/folder_data_extractor.py) | Responsible for pulling raw values from UI widgets and populating the Data Model. |

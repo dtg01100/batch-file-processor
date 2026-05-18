@@ -26,7 +26,7 @@
 
 ## 1. Executive Summary
 
-The Batch File Processor is a Python-based desktop application designed to automate the processing, conversion, and distribution of EDI (Electronic Data Interchange) files. The system provides a Tkinter-based graphical user interface for configuration management and supports multiple output formats and delivery mechanisms.
+The Batch File Processor is a Python-based desktop application designed to automate the processing, conversion, and distribution of EDI (Electronic Data Interchange) files. The system provides a PyQt5-based graphical user interface for configuration management and supports multiple output formats and delivery mechanisms.
 
 ### Key Capabilities
 
@@ -156,7 +156,7 @@ Components receive their dependencies through constructor injection, enabling:
 - **Flexibility**: Different implementations can be swapped without code changes
 - **Configuration**: Behavior can be customized through dependency configuration
 
-**Example** from [`EditFoldersDialog`](interface/ui/dialogs/edit_folders_dialog.py:37):
+**Example** from [`EditFoldersDialog`](interface/qt/dialogs/edit_folders_dialog.py):
 
 ```python
 def __init__(
@@ -192,10 +192,10 @@ Each module and class has a single, well-defined purpose:
 ```mermaid
 graph TB
     subgraph Interface Layer
-        App[BatchFileSenderApp]
-        Dialogs[UI Dialogs]
-        Widgets[UI Widgets]
-        Services[UI Services]
+        App[QtBatchFileSenderApp]
+        Dialogs[Qt Dialogs]
+        Widgets[Qt Widgets]
+        Services[Qt Services]
         DBObj[DatabaseObj]
     end
     
@@ -270,11 +270,11 @@ The Interface Layer provides the graphical user interface and handles user inter
 
 | Component | File | Description |
 |-----------|------|-------------|
-| BatchFileSenderApp | [`app.py`](interface/app.py) | Main application class |
-| EditFoldersDialog | [`edit_folders_dialog.py`](interface/ui/dialogs/edit_folders_dialog.py) | Folder configuration dialog |
-| EditSettingsDialog | [`edit_settings_dialog.py`](interface/ui/dialogs/edit_settings_dialog.py) | Settings configuration dialog |
-| MaintenanceDialog | [`maintenance_dialog.py`](interface/ui/dialogs/maintenance_dialog.py) | Maintenance functions dialog |
-| DatabaseObj | [`database_obj.py`](interface/database/database_obj.py) | Database access object |
+| QtBatchFileSenderApp | [`app.py`](interface/qt/app.py) | Main application window |
+| EditFoldersDialog | [`edit_folders_dialog.py`](interface/qt/dialogs/edit_folders_dialog.py) | Folder configuration dialog |
+| EditSettingsDialog | [`edit_settings_dialog.py`](interface/qt/dialogs/edit_settings_dialog.py) | Settings configuration dialog |
+| MaintenanceDialog | [`maintenance_dialog.py`](interface/qt/dialogs/maintenance_dialog.py) | Maintenance functions dialog |
+| DatabaseObj | [`database_obj.py`](backend/database/database_obj.py) | Database access object |
 | FolderManager | [`folder_manager.py`](interface/operations/folder_manager.py) | Folder operations manager |
 
 #### 4.2.2 Dispatch Layer
@@ -291,7 +291,6 @@ The Dispatch Layer orchestrates the processing workflow. It coordinates validati
 | ValidatorStep | [`pipeline/validator.py`](dispatch/pipeline/validator.py) | EDI validation step |
 | SplitterStep | [`pipeline/splitter.py`](dispatch/pipeline/splitter.py) | File splitting step |
 | ConverterStep | [`pipeline/converter.py`](dispatch/pipeline/converter.py) | Format conversion step |
-| TweakerStep | [`pipeline/tweaker.py`](dispatch/pipeline/tweaker.py) | Post-conversion tweaks |
 | SendManager | [`send_manager.py`](dispatch/send_manager.py) | Backend dispatch manager |
 | ErrorHandler | [`error_handler.py`](dispatch/error_handler.py) | Error recording and handling |
 | FileProcessor | [`services/file_processor.py`](dispatch/services/file_processor.py) | File-level processing |
@@ -356,67 +355,43 @@ Converter modules are standalone scripts that transform EDI files into specific 
 
 ### 5.1 Interface Layer
 
-#### 5.1.1 BatchFileSenderApp
+#### 5.1.1 QtBatchFileSenderApp
 
-**File**: [`interface/app.py`](interface/app.py)
+**File**: [`interface/qt/app.py`](interface/qt/app.py)
 
-The main application class that encapsulates all application state and logic.
+The main application window (QApplication setup and window creation).
 
 **Responsibilities**:
-- Application initialization and configuration
-- UI setup and management
-- Event coordination
-- Lifecycle methods (setup, run, cleanup)
-- Dependency injection for testability
+- QApplication setup and event loop
+- UI theme initialization
+- Service initialization via `bootstrap.py`
+- MainWindow instantiation
+- Global exception handling
 
 **Key Attributes**:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `_appname` | str | Application name |
-| `_version` | str | Version string |
-| `_database_version` | str | Database schema version |
-| `_root` | tkinter.Tk | Tkinter root window |
-| `_database_obj` | DatabaseObj | Database access object |
-
-**Key Methods**:
-
-| Method | Description |
-|--------|-------------|
-| `initialize()` | Initialize application components |
-| `run()` | Start the main event loop |
-| `shutdown()` | Clean up resources on exit |
-| `process_folders()` | Trigger batch processing |
-| `edit_folders()` | Open folder configuration dialog |
-| `edit_settings()` | Open settings configuration dialog |
+| `app` | QApplication | Qt application instance |
+| `_theme` | Theme | Application theming |
+| `_window` | QMainWindow | Main application window |
 
 #### 5.1.2 DatabaseObj
 
-**File**: [`interface/database/database_obj.py`](interface/database/database_obj.py)
+**File**: [`backend/database/database_obj.py`](backend/database/database_obj.py)
 
-Manages database connections and table access for the application.
+Main database access class providing `Table` instances via attribute access.
 
 **Responsibilities**:
-- Database connection management
-- Table access abstraction
-- Automatic schema migration
-- Settings retrieval and caching
-
-**Tables Managed**:
-
-| Table | Purpose |
-|-------|---------|
-| `folders_table` | Folder configurations |
-| `emails_table` | Emails to send |
-| `emails_table_batch` | Batch email operations |
-| `sent_emails_removal_queue` | Queue for sent email removal |
-| `oversight_and_defaults` | Administrative settings |
+- SQLite connection management
+- Table access via `Table` wrapper (folders, settings, processed_files, email_queue)
+- Foreign key enforcement (`PRAGMA foreign_keys = ON`)
 | `processed_files` | Processed file tracking |
 | `settings` | Application settings |
 
 #### 5.1.3 EditFoldersDialog
 
-**File**: [`interface/ui/dialogs/edit_folders_dialog.py`](interface/ui/dialogs/edit_folders_dialog.py)
+**File**: [`edit_folders_dialog.py`](interface/qt/dialogs/edit_folders_dialog.py)
 
 Dialog for configuring folder settings with dependency injection support.
 
@@ -429,12 +404,11 @@ Dialog for configuring folder settings with dependency injection support.
 
 #### 5.1.4 UI Services
 
-**Location**: [`interface/services/`](interface/services/)
+**Location**: [`interface/qt/services/`](interface/qt/services/)
 
 | Service | File | Purpose |
 |---------|------|---------|
-| FTPService | [`ftp_service.py`](interface/services/ftp_service.py) | FTP connection testing |
-| ReportingService | [`reporting_service.py`](interface/services/reporting_service.py) | Report generation |
+| QtServices | [`qt_services.py`](interface/qt/services/qt_services.py) | Qt service layer |
 
 ### 5.2 Dispatch Layer
 
@@ -481,15 +455,15 @@ The pipeline architecture provides modular, composable processing steps.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         PROCESSING PIPELINE                          │
-├─────────────┬─────────────┬─────────────┬─────────────┬─────────────┤
-│  Validator  │   Splitter  │  Converter  │   Tweaker   │    Sender   │
-│    Step     │    Step     │    Step     │    Step     │             │
-├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-│ Validate    │ Split multi │ Convert EDI │ Apply post- │ Send to     │
-│ EDI format  │ invoice     │ to output   │ conversion  │ configured  │
-│ and content │ files       │ format      │ tweaks      │ backends    │
-└─────────────┴─────────────┴─────────────┴─────────────┴─────────────┘
+│                     PROCESSING PIPELINE                              │
+├─────────────┬─────────────┬─────────────┬───────────────────────────┤
+│  Validator  │   Splitter  │  Converter  │        Sender             │
+│    Step     │    Step     │    Step     │                           │
+├─────────────┼─────────────┼─────────────┼───────────────────────────┤
+│ Validate    │ Split multi │ Convert EDI │ Send to                   │
+│ EDI format  │ invoice     │ to target   │ configured                │
+│ and content │ files       │ format      │ backends                  │
+└─────────────┴─────────────┴─────────────┴───────────────────────────┘
 ```
 
 **ValidatorStep** ([`validator.py`](dispatch/pipeline/validator.py)):
@@ -504,12 +478,9 @@ The pipeline architecture provides modular, composable processing steps.
 
 **ConverterStep** ([`converter.py`](dispatch/pipeline/converter.py)):
 - Converts EDI to target format
-- Supports 10 output formats
+- Supports 10+ output formats
 - Dynamic module loading
-
-**TweakerStep** ([`tweaker.py`](dispatch/pipeline/tweaker.py)):
-- Post-conversion modifications
-- Format-specific adjustments
+- The `"tweaks"` format applies EDI field modifications via `EDITweaker`
 
 #### 5.2.3 SendManager
 
@@ -521,9 +492,10 @@ Manages dispatch of processed files to configured backends.
 
 | Backend | Module | Protocol |
 |---------|--------|----------|
-| FTP/FTPS | [`ftp_backend.py`](ftp_backend.py) | FTPClientProtocol |
-| SMTP Email | [`email_backend.py`](email_backend.py) | SMTPClientProtocol |
-| File Copy | [`copy_backend.py`](copy_backend.py) | FileOperationsProtocol |
+| FTP/FTPS | [`ftp_backend.py`](backend/ftp_backend.py) | FTPClientProtocol |
+| SMTP Email | [`email_backend.py`](backend/email_backend.py) | SMTPClientProtocol |
+| File Copy | [`copy_backend.py`](backend/copy_backend.py) | FileOperationsProtocol |
+| HTTP | [`http_backend.py`](backend/http_backend.py) | HTTPClientProtocol |
 
 #### 5.2.4 FileProcessor Service
 
@@ -710,7 +682,7 @@ def edi_convert(
 ```mermaid
 sequenceDiagram
     participant User
-    participant App as BatchFileSenderApp
+    participant App as QtBatchFileSenderApp
     participant Orch as DispatchOrchestrator
     participant Pipeline as Processing Pipeline
     participant Backends as Send Backends
@@ -727,8 +699,7 @@ sequenceDiagram
         loop For each file
             Pipeline->>Pipeline: Validate EDI
             Pipeline->>Pipeline: Split invoices
-            Pipeline->>Pipeline: Convert format
-            Pipeline->>Pipeline: Apply tweaks
+            Pipeline->>Pipeline: Convert/EDI-process
             Pipeline->>Backends: Send to backends
             Backends-->>Pipeline: Send result
             Pipeline->>DB: Record processed file
@@ -828,10 +799,9 @@ sequenceDiagram
 
 | Category | Technology | Version | Purpose |
 |----------|------------|---------|---------|
-| Language | Python | 3.10+ | Primary development language |
-| GUI Framework | Tkinter | stdlib | Desktop user interface |
+| Language | Python | 3.11 maximum | Primary development language |
+| GUI Framework | PyQt5 | 5.15 maximum | Desktop user interface |
 | Database | SQLite | 3.x | Configuration storage |
-| ORM | Dataset | 1.6.2 | Database abstraction |
 
 ### 7.2 Key Dependencies
 
@@ -839,7 +809,7 @@ sequenceDiagram
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `appdirs` | 1.4.4 | Platform-specific directories |
+| `PyQt5` | 5.15.x | GUI framework |
 | `Pillow` | 10.3.0 | Image processing for icons |
 
 #### 7.2.2 Data Processing
@@ -855,9 +825,7 @@ sequenceDiagram
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `dataset` | 1.6.2 | SQL abstraction layer |
-| `SQLAlchemy` | 1.4.49 | Database toolkit |
-| `alembic` | 1.7.7 | Database migrations |
+| `sqlite3` | stdlib | SQLite connection via stdlib |
 
 #### 7.2.4 Networking
 
@@ -1130,14 +1098,13 @@ graph TB
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| [`interface/app.py`](interface/app.py) | ~1000 | Main application class |
-| [`interface/interfaces.py`](interface/interfaces.py) | ~300 | UI protocols |
-| [`interface/database/database_obj.py`](interface/database/database_obj.py) | ~350 | Database access |
-| [`interface/ui/dialogs/edit_folders_dialog.py`](interface/ui/dialogs/edit_folders_dialog.py) | ~1800 | Folder configuration |
-| [`interface/ui/dialogs/edit_settings_dialog.py`](interface/ui/dialogs/edit_settings_dialog.py) | ~600 | Settings configuration |
-| [`interface/ui/dialogs/maintenance_dialog.py`](interface/ui/dialogs/maintenance_dialog.py) | ~500 | Maintenance functions |
-| [`interface/services/ftp_service.py`](interface/services/ftp_service.py) | ~120 | FTP testing service |
-| [`interface/services/reporting_service.py`](interface/services/reporting_service.py) | ~400 | Report generation |
+| [`interface/qt/app.py`](interface/qt/app.py) | ~200 | Main application window |
+| [`interface/interfaces.py`](interface/interfaces.py) | ~150 | UI abstraction protocols (Tkinter & Qt) |
+| [`interface/operations/folder_manager.py`](interface/operations/folder_manager.py) | ~300 | Folder CRUD operations |
+| [`interface/qt/dialogs/edit_folders_dialog.py`](interface/qt/dialogs/edit_folders_dialog.py) | ~900 | Folder configuration dialog |
+| [`interface/qt/dialogs/edit_settings_dialog.py`](interface/qt/dialogs/edit_settings_dialog.py) | ~500 | Settings configuration dialog |
+| [`interface/qt/dialogs/maintenance_dialog.py`](interface/qt/dialogs/maintenance_dialog.py) | ~350 | Maintenance functions dialog |
+| [`interface/qt/services/qt_services.py`](interface/qt/services/qt_services.py) | ~80 | Qt service layer |
 
 #### 11.2.2 Dispatch Layer Files
 
@@ -1148,10 +1115,9 @@ graph TB
 | [`dispatch/pipeline/validator.py`](dispatch/pipeline/validator.py) | ~250 | Validation step |
 | [`dispatch/pipeline/splitter.py`](dispatch/pipeline/splitter.py) | ~400 | Splitting step |
 | [`dispatch/pipeline/converter.py`](dispatch/pipeline/converter.py) | ~300 | Conversion step |
-| [`dispatch/pipeline/tweaker.py`](dispatch/pipeline/tweaker.py) | ~250 | Tweaking step |
-| [`dispatch/send_manager.py`](dispatch/send_manager.py) | ~200 | Backend dispatch |
+| [`dispatch/send_manager.py`](dispatch/send_manager.py) | ~350 | Backend dispatch |
 | [`dispatch/error_handler.py`](dispatch/error_handler.py) | ~250 | Error handling |
-| [`dispatch/services/file_processor.py`](dispatch/services/file_processor.py) | ~400 | File processing |
+| [`dispatch/services/file_processor.py`](dispatch/services/file_processor.py) | ~800 | File-level processing |
 
 #### 11.2.3 Backend Layer Files
 
@@ -1177,8 +1143,7 @@ graph TB
 ### 11.3 References
 
 - [Python typing.Protocol Documentation](https://docs.python.org/3/library/typing.html#typing.Protocol)
-- [Tkinter Documentation](https://docs.python.org/3/library/tkinter.html)
-- [Dataset Library](https://dataset.readthedocs.io/)
+- [PyQt5 Documentation](https://www.riverbankcomputing.com/static/Docs/PyQt5/)
 - [EDI Standards](https://www.x12.org/)
 - [PyInstaller Documentation](https://pyinstaller.org/)
 
@@ -1187,6 +1152,7 @@ graph TB
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | February 2026 | Architecture Team | Initial document |
+| 1.1 | 2026-05-18 | Maintainer | Corrected file paths to match PyQt5 codebase (was Tkinter); updated Python constraint to 3.11 maximum; corrected GUI Framework to PyQt5 5.15; updated backend list to include HTTP; fixed `interface/app.py` → `interface/qt/app.py`; fixed `interface/ui/dialogs/` → `interface/qt/dialogs/`; fixed `interface/database/database_obj.py` → `backend/database/database_obj.py`; replaced legacy Dataset/SQLAlchemy/alembic database entries with native sqlite3; updated file reference table |
 
 ---
 

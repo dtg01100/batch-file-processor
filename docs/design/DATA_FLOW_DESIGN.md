@@ -16,14 +16,13 @@ graph LR
     B -->|File Path| C{File Processor}
     C -->|Validate| D[Validator Step]
     C -->|Split| E[Splitter Step]
-    C -->|Tweak| F[Tweaker Step]
-    C -->|Convert| G[Converter Step]
-    C -->|Send| H[Send Manager]
-    H -->|Copy| I[Local Destination]
-    H -->|FTP| J[FTP Server]
-    H -->|Email| K[Email Recipient]
-    C -->|Error| L[Error Handler]
-    B -->|State Update| M[Database]
+    C -->|Convert| F[Converter Step]
+    C -->|Send| G[Send Manager]
+    G -->|Copy| H[Local Destination]
+    G -->|FTP| I[FTP Server]
+    G -->|Email| J[Email Recipient]
+    C -->|Error| K[Error Handler]
+    B -->|State Update| L[Database]
 ```
 
 ## 2. Data Sources
@@ -58,11 +57,18 @@ The processing pipeline is managed by the `FileProcessor` class in `dispatch/ser
     *   **Credit/Invoice Filtering**: Files can be filtered to include only invoices or only credit memos.
 *   **Output**: The splitter generates a list of temporary file paths for the split files. If splitting is disabled, the original file path is passed to the next stage.
 
-### 3.3. Tweaking
+### 3.3. EDI Tweaks (Converter Format)
 
-*   **Logic**: The `EDITweakerStep` (`dispatch/pipeline/tweaker.py`) applies custom modifications to the EDI content.
-*   **Mechanism**: It uses the `edi_tweaks` module to perform specific text replacements or data manipulations based on the folder configuration.
-*   **Output**: A new temporary file with the tweaked content.
+> **Note:** EDI tweaking is implemented as a **converter format** (`dispatch/converters/convert_to_tweaks.py`)
+> via the standard `ConverterStep` pipeline step. It is **not** a standalone `PipelineStep` subclass.
+
+*   **Module**: `dispatch/converters/convert_to_tweaks.py` — exposed as format name `"tweaks"`
+*   **Logic**: When `convert_to_format = "tweaks"`, the `ConverterStep` dynamically loads this module.
+    It delegates all field-level modifications to `core.edi.edi_tweaker.EDITweaker`.
+*   **Mechanism**: A-record padding, invoice date offset, UPC override/check digit calculation,
+    retail UOM conversion, C-record generation for split prepaid sales tax.
+*   **Output**: A new temporary file with the tweaked content, or the original file if
+    `process_edi = False` and `convert_to_format` is empty.
 
 ### 3.4. Conversion
 
