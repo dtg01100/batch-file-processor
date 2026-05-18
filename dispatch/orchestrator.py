@@ -967,41 +967,28 @@ class DispatchOrchestrator:
             List of unprocessed or resend-marked file paths
 
         """
-        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
-        processed = processed_files.find(folder_id=folder_id)
+        from dispatch.services.file_filter import filter_pending_files
 
-        # Files that should be SKIPPED (already processed AND NOT marked for resend)
-        skipped_checksums = {
-            f.get("file_checksum") for f in processed if not f.get("resend_flag")
-        }
+        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
+
+        if folder_id is None:
+            logger.warning("No folder_id available, returning all files")
+            return files
 
         logger.debug(
-            "Filtering %d files, %d already processed (skip %d checksums)",
+            "Filtering %d files for folder_id=%d via SQL",
             len(files),
-            len(processed),
-            len(skipped_checksums),
+            folder_id,
         )
 
-        from core.utils.file_utils import calculate_file_checksum
-
-        # Calculate checksums one at a time to enable per-file progress reporting
-        file_checksums: dict[str, str] = {}
-        for file_index, file_path in enumerate(files, start=1):
-            file_checksums[file_path] = calculate_file_checksum(file_path)
-
-            # Report per-file progress if reporter supports it
-            if progress_reporter and hasattr(
-                progress_reporter, "update_discovery_file"
-            ):
-                progress_reporter.update_discovery_file(
-                    folder_num=folder_index if folder_index is not None else 0,
-                    folder_total=folder_total if folder_total is not None else 0,
-                    file_num=file_index,
-                    file_total=len(files),
-                    filename=os.path.basename(file_path),
-                )
-
-        return [f for f in files if file_checksums[f] not in skipped_checksums]
+        return filter_pending_files(
+            processed_files,
+            folder_id,
+            files,
+            progress_reporter=progress_reporter,
+            folder_index=folder_index,
+            folder_total=folder_total,
+        )
 
     def _record_processed_file(
         self, processed_files: DatabaseInterface, folder: dict, file_result: FileResult
@@ -1026,6 +1013,7 @@ class DispatchOrchestrator:
         sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
 
         invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
+        file_mtime = self._get_file_mtime(file_result.file_name)
 
         if existing_resend:
             # Clear resend flag for this specific record
@@ -1037,6 +1025,7 @@ class DispatchOrchestrator:
                     "sent_to": sent_to_str,
                     "status": "processed",
                     "invoice_numbers": invoice_numbers,
+                    "file_mtime": file_mtime,
                 },
                 ["id"],
             )
@@ -1053,6 +1042,56 @@ class DispatchOrchestrator:
                     "sent_to": sent_to_str,
                     "status": "processed",
                     "invoice_numbers": invoice_numbers,
+                    "file_mtime": file_mtime,
+                }
+            )
+
+    @staticmethod
+    def _get_file_mtime(file_path: str) -> float | None:
+        """Get the modification time of a file, or None if unavailable."""
+        try:
+            return os.path.getmtime(file_path)
+        except OSError:
+            return None
+
+        # Construct sent_to string for the database
+        enabled_backends = self._detect_enabled_backends(folder)
+        sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
+
+        invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
+
+        from dispatch.services.file_filter import record_file_mtime
+
+        file_mtime = record_file_mtime(file_result.file_name)
+
+        if existing_resend:
+            # Clear resend flag for this specific record
+            processed_files.update(
+                {
+                    "id": existing_resend["id"],
+                    "resend_flag": 0,
+                    "processed_at": datetime.datetime.now().isoformat(),
+                    "sent_to": sent_to_str,
+                    "status": "processed",
+                    "invoice_numbers": invoice_numbers,
+                    "file_mtime": file_mtime,
+                },
+                ["id"],
+            )
+        else:
+            # Insert new record
+            processed_files.insert(
+                {
+                    "file_name": file_result.file_name,
+                    "folder_id": folder_id,
+                    "folder_alias": folder.get("alias", ""),
+                    "file_checksum": file_result.checksum,
+                    "processed_at": datetime.datetime.now().isoformat(),
+                    "resend_flag": 0,
+                    "sent_to": sent_to_str,
+                    "status": "processed",
+                    "invoice_numbers": invoice_numbers,
+                    "file_mtime": file_mtime,
                 }
             )
 

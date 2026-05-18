@@ -224,48 +224,26 @@ class FolderDiscoveryService:
             Filtered list of unprocessed file paths.
 
         """
+        from dispatch.services.file_filter import filter_pending_files
+
         folder_id = folder.get("id") or folder.get("old_id")
-        processed = processed_files.find(folder_id=folder_id)
-
-        # Files that should be SKIPPED (already processed AND NOT marked for resend)
-        skipped_checksums = {
-            f.get("file_checksum") for f in processed if not f.get("resend_flag")
-        }
+        if folder_id is None:
+            return files
 
         logger.debug(
-            "Filtering %d files, %d already processed (skip %d checksums)",
+            "Filtering %d files for folder_id=%d via SQL",
             len(files),
-            len(processed),
-            len(skipped_checksums),
+            folder_id,
         )
 
-        from core.utils.file_utils import calculate_file_checksum
-
-        # Calculate checksums one at a time to enable per-file progress reporting
-        file_checksums: dict[str, str] = {}
-        for idx, file_path in enumerate(files):
-            file_checksums[file_path] = calculate_file_checksum(file_path)
-
-            if progress_reporter and hasattr(
-                progress_reporter, "update_discovery_file"
-            ):
-                progress_reporter.update_discovery_file(
-                    folder_num=folder_index if folder_index is not None else 0,
-                    folder_total=folder_total if folder_total is not None else 0,
-                    file_num=idx + 1,
-                    file_total=len(files),
-                    filename=os.path.basename(file_path),
-                )
-
-        pending_files = [f for f in files if file_checksums[f] not in skipped_checksums]
-
-        logger.debug(
-            "Filtered files: %d total -> %d pending",
-            len(files),
-            len(pending_files),
+        return filter_pending_files(
+            processed_files,
+            folder_id,
+            files,
+            progress_reporter=progress_reporter,
+            folder_index=folder_index,
+            folder_total=folder_total,
         )
-
-        return pending_files
 
     def _log_message(self, run_log: RunLog | None, message: str) -> None:
         """Write a message to the run log if available."""

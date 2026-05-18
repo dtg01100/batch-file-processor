@@ -37,7 +37,6 @@ from core.structured_logging import (
     log_with_context,
     set_correlation_id,
 )
-from core.utils.file_utils import calculate_file_checksum
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
 from dispatch.results import FolderResult
 from dispatch.services.file_processor import FileProcessor
@@ -349,23 +348,12 @@ class FolderPipelineExecutor:
             return files
 
         folder_id = folder.get("id")
-        processed = processed_files.find(folder_id=folder_id)
+        if folder_id is None:
+            return files
 
-        # Files that should be SKIPPED (already processed AND NOT marked for resend)
-        skipped_checksums = {
-            f.get("file_checksum") for f in processed if not f.get("resend_flag")
-        }
+        from dispatch.services.file_filter import filter_pending_files
 
-        filtered = []
-        for file_path in files:
-            checksum = self._calculate_file_checksum(file_path)
-            if checksum not in skipped_checksums:
-                filtered.append(file_path)
-
-        return filtered
-
-    def _calculate_file_checksum(self, file_path: str) -> str:
-        return calculate_file_checksum(file_path)
+        return filter_pending_files(processed_files, folder_id, files)
 
     def _process_folder_files(
         self,
@@ -512,6 +500,8 @@ class FolderPipelineExecutor:
                 enabled_backends.append("HTTP")
             sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
 
+            file_mtime = self._get_file_mtime(file_result.file_name)
+
             if existing_resend:
                 # Clear resend flag for this specific record
                 processed_files.update(
@@ -521,6 +511,7 @@ class FolderPipelineExecutor:
                         "processed_at": datetime.datetime.now().isoformat(),
                         "sent_to": sent_to_str,
                         "status": "processed",
+                        "file_mtime": file_mtime,
                     },
                     ["id"],
                 )
@@ -536,6 +527,7 @@ class FolderPipelineExecutor:
                         "resend_flag": 0,
                         "sent_to": sent_to_str,
                         "status": "processed",
+                        "file_mtime": file_mtime,
                     }
                 )
         except Exception:  # non-fatal; file was processed, just failed to record in DB
@@ -544,6 +536,14 @@ class FolderPipelineExecutor:
                 file_result.file_name,
                 exc_info=True,
             )
+
+    @staticmethod
+    def _get_file_mtime(file_path: str) -> float | None:
+        """Get the modification time of a file, or None if unavailable."""
+        try:
+            return os.path.getmtime(file_path)
+        except OSError:
+            return None
 
     def _finalize_folder_result(self, result: FolderResult) -> None:
         """Finalize folder result and notify progress reporter.

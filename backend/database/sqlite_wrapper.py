@@ -60,6 +60,11 @@ class Table:
         self._boolean_columns: set | None = None
         self._lock = lock or threading.RLock()
 
+    @property
+    def raw_connection(self) -> sqlite3.Connection:
+        """Get the underlying sqlite3.Connection for this table."""
+        return self._conn
+
     _EXPLICIT_BOOLEAN_COLUMNS_BY_TABLE: ClassVar[dict[str, set[str]]] = {
         "folders": {
             "folder_is_active",

@@ -287,7 +287,8 @@ def ensure_schema(database_connection) -> None:
             error_message TEXT,
             convert_format TEXT,
             sent_to TEXT,
-            invoice_numbers TEXT
+            invoice_numbers TEXT,
+            file_mtime REAL
         )
         """,
         # emails_to_send (queue for emails to be sent)
@@ -502,6 +503,46 @@ def ensure_schema(database_connection) -> None:
     except Exception:  # idempotent migration; column may already exist on legacy DBs
         logger.info(
             "Processed_files invoice_numbers column"
+            " migration skipped (may already exist)"
+        )
+
+    try:
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            _execute_sqlite_statement(
+                raw_conn,
+                "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL",
+            )
+        else:
+            database_connection.query(
+                "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL"
+            )
+
+        logger.info("Migration: added file_mtime column to processed_files table")
+    except Exception:
+        logger.info(
+            "Processed_files file_mtime column"
+            " migration skipped (may already exist)"
+        )
+
+    try:
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            _execute_sqlite_statement(
+                raw_conn,
+                "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
+                "ON processed_files(folder_id, resend_flag, file_checksum)",
+            )
+        else:
+            database_connection.query(
+                "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
+                "ON processed_files(folder_id, resend_flag, file_checksum)"
+            )
+
+        logger.info(
+            "Migration: added idx_processed_files_checksum_resend index"
+        )
+    except Exception:
+        logger.info(
+            "idx_processed_files_checksum_resend index"
             " migration skipped (may already exist)"
         )
 
