@@ -4,6 +4,7 @@ This module defines Protocol classes for the main dependencies in the dispatch
 system, enabling loose coupling and testability through dependency injection.
 """
 
+import sqlite3
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -12,7 +13,14 @@ class DatabaseInterface(Protocol):
     """Protocol for database operations.
 
     Implementations should provide CRUD operations for database records.
+    The ``raw_connection`` property provides direct access to the underlying
+    sqlite3.Connection for SQL queries that bypass the dataset-style API.
     """
+
+    @property
+    def raw_connection(self) -> sqlite3.Connection:
+        """Get the underlying sqlite3.Connection for direct SQL access."""
+        ...
 
     def find(self, **kwargs) -> list[dict]:
         """Find records matching the given criteria.

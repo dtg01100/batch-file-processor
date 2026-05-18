@@ -475,6 +475,8 @@ class FolderPipelineExecutor:
     ) -> None:
         """Record a processed file in the database.
 
+        Uses raw SQL for all operations — no dataset API.
+
         Args:
             processed_files: Database table for tracking
             folder: Folder configuration
@@ -483,12 +485,6 @@ class FolderPipelineExecutor:
         try:
             folder_id = folder.get("id")
 
-            # Check if it was marked for resend (match by name and folder)
-            existing_resend = processed_files.find_one(
-                file_name=file_result.file_name, folder_id=folder_id, resend_flag=1
-            )
-
-            # Detect enabled backends for sent_to field
             enabled_backends = []
             if folder.get("process_backend_copy"):
                 enabled_backends.append("Copy")
@@ -501,35 +497,43 @@ class FolderPipelineExecutor:
             sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
 
             file_mtime = self._get_file_mtime(file_result.file_name)
+            now = datetime.datetime.now().isoformat()
 
-            if existing_resend:
-                # Clear resend flag for this specific record
-                processed_files.update(
-                    {
-                        "id": existing_resend["id"],
-                        "resend_flag": 0,
-                        "processed_at": datetime.datetime.now().isoformat(),
-                        "sent_to": sent_to_str,
-                        "status": "processed",
-                        "file_mtime": file_mtime,
-                    },
-                    ["id"],
+            conn = processed_files.raw_connection
+            cursor = conn.execute(
+                "SELECT id FROM processed_files "
+                "WHERE file_name = ? AND folder_id = ? AND resend_flag = 1",
+                (file_result.file_name, folder_id),
+            )
+            existing = cursor.fetchone()
+
+            if existing:
+                conn.execute(
+                    "UPDATE processed_files SET "
+                    "resend_flag = 0, processed_at = ?, sent_to = ?, "
+                    "status = ?, file_mtime = ? "
+                    "WHERE id = ?",
+                    (now, sent_to_str, "processed", file_mtime, existing[0]),
                 )
             else:
-                # Insert new record
-                processed_files.insert(
-                    {
-                        "file_name": file_result.file_name,
-                        "folder_id": folder_id,
-                        "folder_alias": folder.get("alias", ""),
-                        "file_checksum": file_result.checksum,
-                        "processed_at": datetime.datetime.now().isoformat(),
-                        "resend_flag": 0,
-                        "sent_to": sent_to_str,
-                        "status": "processed",
-                        "file_mtime": file_mtime,
-                    }
+                conn.execute(
+                    "INSERT INTO processed_files "
+                    "(file_name, folder_id, folder_alias, file_checksum, "
+                    "processed_at, resend_flag, sent_to, status, file_mtime) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        file_result.file_name,
+                        folder_id,
+                        folder.get("alias", ""),
+                        file_result.checksum,
+                        now,
+                        0,
+                        sent_to_str,
+                        "processed",
+                        file_mtime,
+                    ),
                 )
+            conn.commit()
         except Exception:  # non-fatal; file was processed, just failed to record in DB
             logger.warning(
                 "Failed to record processed file to database: %s (file may be reprocessed on next run)",

@@ -995,6 +995,8 @@ class DispatchOrchestrator:
     ) -> None:
         """Record a successfully processed file in the database.
 
+        Uses raw SQL for all operations — no dataset API.
+
         Args:
             processed_files: Database interface for processed files
             folder: Folder configuration
@@ -1003,48 +1005,51 @@ class DispatchOrchestrator:
         """
         folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
 
-        # Check if it was marked for resend (match by name and folder)
-        existing_resend = processed_files.find_one(
-            file_name=file_result.file_name, folder_id=folder_id, resend_flag=1
-        )
-
-        # Construct sent_to string for the database
-        enabled_backends = self._detect_enabled_backends(folder)
-        sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
-
+        sent_to_str = ", ".join(self._detect_enabled_backends(folder)) or "N/A"
         invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
         file_mtime = self._get_file_mtime(file_result.file_name)
 
-        if existing_resend:
+        conn = processed_files.raw_connection
+        now = datetime.datetime.now().isoformat()
+
+        # Check if it was marked for resend (match by name and folder)
+        cursor = conn.execute(
+            "SELECT id FROM processed_files "
+            "WHERE file_name = ? AND folder_id = ? AND resend_flag = 1",
+            (file_result.file_name, folder_id),
+        )
+        existing = cursor.fetchone()
+
+        if existing:
             # Clear resend flag for this specific record
-            processed_files.update(
-                {
-                    "id": existing_resend["id"],
-                    "resend_flag": 0,
-                    "processed_at": datetime.datetime.now().isoformat(),
-                    "sent_to": sent_to_str,
-                    "status": "processed",
-                    "invoice_numbers": invoice_numbers,
-                    "file_mtime": file_mtime,
-                },
-                ["id"],
+            conn.execute(
+                "UPDATE processed_files SET "
+                "resend_flag = 0, processed_at = ?, sent_to = ?, "
+                "status = ?, invoice_numbers = ?, file_mtime = ? "
+                "WHERE id = ?",
+                (now, sent_to_str, "processed", invoice_numbers, file_mtime, existing[0]),
             )
         else:
             # Insert new record
-            processed_files.insert(
-                {
-                    "file_name": file_result.file_name,
-                    "folder_id": folder_id,
-                    "folder_alias": folder.get("alias", ""),
-                    "file_checksum": file_result.checksum,
-                    "processed_at": datetime.datetime.now().isoformat(),
-                    "resend_flag": 0,
-                    "sent_to": sent_to_str,
-                    "status": "processed",
-                    "invoice_numbers": invoice_numbers,
-                    "file_mtime": file_mtime,
-                }
+            conn.execute(
+                "INSERT INTO processed_files "
+                "(file_name, folder_id, folder_alias, file_checksum, "
+                "processed_at, resend_flag, sent_to, status, invoice_numbers, file_mtime) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    file_result.file_name,
+                    folder_id,
+                    folder.get("alias", ""),
+                    file_result.checksum,
+                    now,
+                    0,
+                    sent_to_str,
+                    "processed",
+                    invoice_numbers,
+                    file_mtime,
+                ),
             )
+        conn.commit()
 
     @staticmethod
     def _get_file_mtime(file_path: str) -> float | None:
@@ -1053,47 +1058,6 @@ class DispatchOrchestrator:
             return os.path.getmtime(file_path)
         except OSError:
             return None
-
-        # Construct sent_to string for the database
-        enabled_backends = self._detect_enabled_backends(folder)
-        sent_to_str = ", ".join(enabled_backends) if enabled_backends else "N/A"
-
-        invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
-
-        from dispatch.services.file_filter import record_file_mtime
-
-        file_mtime = record_file_mtime(file_result.file_name)
-
-        if existing_resend:
-            # Clear resend flag for this specific record
-            processed_files.update(
-                {
-                    "id": existing_resend["id"],
-                    "resend_flag": 0,
-                    "processed_at": datetime.datetime.now().isoformat(),
-                    "sent_to": sent_to_str,
-                    "status": "processed",
-                    "invoice_numbers": invoice_numbers,
-                    "file_mtime": file_mtime,
-                },
-                ["id"],
-            )
-        else:
-            # Insert new record
-            processed_files.insert(
-                {
-                    "file_name": file_result.file_name,
-                    "folder_id": folder_id,
-                    "folder_alias": folder.get("alias", ""),
-                    "file_checksum": file_result.checksum,
-                    "processed_at": datetime.datetime.now().isoformat(),
-                    "resend_flag": 0,
-                    "sent_to": sent_to_str,
-                    "status": "processed",
-                    "invoice_numbers": invoice_numbers,
-                    "file_mtime": file_mtime,
-                }
-            )
 
     def _extract_invoice_numbers(self, file_path: str) -> str:
         """Extract invoice numbers from EDI A-records in a file."""

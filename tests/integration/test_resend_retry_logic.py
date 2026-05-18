@@ -10,6 +10,7 @@ import errno
 import ftplib
 import os
 import smtplib
+import sqlite3
 import sys
 from unittest.mock import patch
 
@@ -68,38 +69,99 @@ def temporary_test_file(tmp_path):
 
 
 class InMemoryProcessedFiles:
-    """Minimal in-memory replacement for the processed_files DB table."""
+    """SQLite-backed in-memory replacement for the processed_files DB table.
+
+    Supports both the legacy dataset-style API (find, insert, update) and
+    raw SQL via ``raw_connection`` for testing the SQL migration path.
+    """
 
     def __init__(self):
-        self.records = []
+        self._conn = sqlite3.connect(":memory:")
+        self._conn.row_factory = sqlite3.Row
+        self._conn.execute(
+            """
+            CREATE TABLE processed_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_name TEXT,
+                folder_id INTEGER,
+                folder_alias TEXT,
+                file_checksum TEXT,
+                resend_flag INTEGER DEFAULT 0,
+                status TEXT,
+                sent_to TEXT,
+                invoice_numbers TEXT,
+                file_mtime REAL,
+                processed_at TEXT
+            )
+            """
+        )
+        self._conn.commit()
         self._next_id = 1
 
+    @property
+    def raw_connection(self):
+        return self._conn
+
+    @property
+    def records(self):
+        """Return all records as list of dicts (for test assertions)."""
+        cur = self._conn.execute("SELECT * FROM processed_files")
+        return [dict(r) for r in cur.fetchall()]
+
     def find(self, folder_id=None, **kwargs):
-        result = list(self.records)
+        sql = "SELECT * FROM processed_files"
+        conditions = []
+        params = []
         if folder_id is not None:
-            result = [r for r in result if r.get("folder_id") == folder_id]
+            conditions.append("folder_id = ?")
+            params.append(folder_id)
         for k, v in kwargs.items():
-            result = [r for r in result if r.get(k) == v]
-        return result
+            conditions.append(f"{k} = ?")
+            params.append(v)
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        cur = self._conn.execute(sql, params)
+        return [dict(r) for r in cur.fetchall()]
 
     def find_one(self, **kwargs):
-        for r in self.records:
-            if all(r.get(k) == v for k, v in kwargs.items()):
-                return r
-        return None
+        sql = "SELECT * FROM processed_files"
+        conditions = []
+        params = []
+        for k, v in kwargs.items():
+            conditions.append(f"{k} = ?")
+            params.append(v)
+        if conditions:
+            sql += " WHERE " + " AND ".join(conditions)
+        sql += " LIMIT 1"
+        cur = self._conn.execute(sql, params)
+        row = cur.fetchone()
+        return dict(row) if row else None
 
     def insert(self, record):
         record = dict(record)
-        record["id"] = self._next_id
-        self._next_id += 1
-        self.records.append(record)
-        return record["id"]
+        record.pop("id", None)
+        cols = ", ".join(record.keys())
+        placeholders = ", ".join("?" for _ in record)
+        cur = self._conn.execute(
+            f"INSERT INTO processed_files ({cols}) VALUES ({placeholders})",
+            tuple(record.values()),
+        )
+        self._conn.commit()
+        return cur.lastrowid
 
     def update(self, record, keys):
-        for r in self.records:
-            if all(r.get(k) == record.get(k) for k in keys):
-                r.update(record)
-                return
+        record = dict(record)
+        set_cols = [k for k in record if k not in keys]
+        if not set_cols:
+            return
+        set_clause = ", ".join(f"{k} = ?" for k in set_cols)
+        where_clause = " AND ".join(f"{k} = ?" for k in keys)
+        values = [record[k] for k in set_cols] + [record[k] for k in keys]
+        self._conn.execute(
+            f"UPDATE processed_files SET {set_clause} WHERE {where_clause}",
+            values,
+        )
+        self._conn.commit()
 
     def count(self, **kwargs):
         return len(self.find(**kwargs))
