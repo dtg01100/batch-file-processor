@@ -751,56 +751,52 @@ class TestConvertFormatConfiguration:
     """Test suite for format configuration validation."""
 
     def test_supported_formats(self):
-        """Test that all supported formats are defined."""
-        supported_formats = [
+        """Test that all supported formats are registered."""
+        from dispatch.converters.registry import get_format_names
+
+        # Core formats that should always be importable
+        core_formats = [
+            "csv",
             "fintech",
+            "scannerware",
             "simplified_csv",
+            "jolley_custom",
             "stewarts_custom",
             "yellowdog_csv",
             "estore_einvoice",
             "estore_einvoice_generic",
-            "csv",
-            "scannerware",
-            "scansheet_type_a",
-            "jolley_custom",
         ]
 
-        # Verify all formats have corresponding modules
-        for format_name in supported_formats:
-            module_name = f"convert_to_{format_name}"
-            try:
-                __import__(
-                    f"dispatch.converters.{module_name}",
-                    fromlist=["dispatch.converters"],
-                )
-            except ImportError:
-                pytest.fail(f"Missing module for format: {format_name}")
+        format_names = get_format_names()
+        for format_name in core_formats:
+            assert format_name in format_names, f"Format '{format_name}' should be registered"
+
+        # Note: scansheet_type_a requires optional dependency (barcode/pkg_resources)
+        # and may not be available on all systems - excluded from core test
 
     def test_format_to_module_mapping(self):
-        """Test that format names map to correct modules."""
+        """Test that format names map to correct module paths."""
+        from dispatch.converters.registry import get_module_name
+
+        # Verify module paths for core formats
         format_mapping = {
-            "fintech": "convert_to_fintech",
-            "simplified_csv": "convert_to_simplified_csv",
-            "stewarts_custom": "convert_to_stewarts_custom",
-            "yellowdog_csv": "convert_to_yellowdog_csv",
-            "estore_einvoice": "convert_to_estore_einvoice",
-            "estore_einvoice_generic": "convert_to_estore_einvoice_generic",
-            "csv": "convert_to_csv",
-            "scannerware": "convert_to_scannerware",
-            "scansheet_type_a": "convert_to_scansheet_type_a",
-            "jolley_custom": "convert_to_jolley_custom",
+            "fintech": "dispatch.converters.convert_to_fintech",
+            "simplified_csv": "dispatch.converters.convert_to_simplified_csv",
+            "stewarts_custom": "dispatch.converters.convert_to_stewarts_custom",
+            "yellowdog_csv": "dispatch.converters.convert_to_yellowdog_csv",
+            "estore_einvoice": "dispatch.converters.convert_to_estore_einvoice",
+            "estore_einvoice_generic": "dispatch.converters.convert_to_estore_einvoice_generic",
+            "csv": "dispatch.converters.convert_to_csv",
+            "scannerware": "dispatch.converters.convert_to_scannerware",
+            "jolley_custom": "dispatch.converters.convert_to_jolley_custom",
         }
 
-        for format_name, module_name in format_mapping.items():
-            try:
-                __import__(
-                    f"dispatch.converters.{module_name}",
-                    fromlist=["dispatch.converters"],
-                )
-            except ImportError:
-                pytest.fail(
-                    f"Format '{format_name}' does not map to module '{module_name}'"
-                )
+        for format_name, expected_module in format_mapping.items():
+            actual_module = get_module_name(format_name)
+            assert actual_module == expected_module, (
+                f"Format '{format_name}' should map to '{expected_module}', "
+                f"got '{actual_module}'"
+            )
 
 
 class TestEDIEdgeCases:

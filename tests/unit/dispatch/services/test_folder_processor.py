@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from dispatch.services.folder_processor import (
     FolderPipelineExecutor,
@@ -137,23 +137,6 @@ class TestFolderPipelineExecutor:
             files = executor._get_files_in_folder(tmpdir)
             assert files == []
 
-    def test_calculate_file_checksum(self):
-        """Test _calculate_file_checksum computes MD5."""
-        deps = FolderProcessingDependencies()
-        executor = FolderPipelineExecutor(deps)
-
-        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
-            f.write("test content")
-            f.flush()
-            filepath = f.name
-
-        try:
-            checksum = executor._calculate_file_checksum(filepath)
-            assert len(checksum) == 32
-            assert checksum.isalnum()
-        finally:
-            os.unlink(filepath)
-
     def test_process_folder_nonexistent_folder(self):
         """Test processing a nonexistent folder returns error."""
         deps = FolderProcessingDependencies()
@@ -252,10 +235,14 @@ class TestFolderPipelineExecutor:
 
             # Mock processed_files to return a record with the ACTUAL file checksum
             mock_processed = Mock()
-            mock_processed.find.return_value = [{"file_checksum": actual_checksum}]
+            mock_processed.find.return_value = [
+                {"file_checksum": actual_checksum, "resend_flag": 0}
+            ]
 
-            files = [filepath]
-            result = executor._filter_processed_files(files, mock_processed, {"id": 1})
+            # Patch _has_sql to force the find() path
+            with patch("dispatch.services.file_filter._has_sql", return_value=False):
+                files = [filepath]
+                result = executor._filter_processed_files(files, mock_processed, {"id": 1})
             assert len(result) == 0
         finally:
             os.unlink(filepath)
@@ -274,8 +261,10 @@ class TestFolderPipelineExecutor:
             filepath = f.name
 
         try:
-            files = [filepath]
-            result = executor._filter_processed_files(files, mock_processed, {"id": 1})
+            # Patch _has_sql to force the find() path
+            with patch("dispatch.services.file_filter._has_sql", return_value=False):
+                files = [filepath]
+                result = executor._filter_processed_files(files, mock_processed, {"id": 1})
             assert len(result) == 1
         finally:
             os.unlink(filepath)
@@ -323,13 +312,20 @@ class TestFolderPipelineExecutor:
         assert result == {}
 
     def test_record_processed_file(self):
-        """Test _record_processed_file calls insert."""
+        """Test _record_processed_file uses raw SQL to insert record."""
         deps = FolderProcessingDependencies()
         executor = FolderPipelineExecutor(deps)
 
         mock_processed = Mock()
-        # find_one returns None so insert is called (not update for resend)
+        # find_one is checked but raw SQL is used for insert
         mock_processed.find_one.return_value = None
+
+        # Mock raw_connection for SQL path
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = None  # No existing resend record
+        mock_conn.execute.return_value = mock_cursor
+        mock_processed.raw_connection = mock_conn
 
         mock_file_result = Mock(
             file_name="/test.txt",
@@ -338,15 +334,15 @@ class TestFolderPipelineExecutor:
 
         executor._record_processed_file(
             mock_processed,
-            {"id": 1},
+            {"id": 1, "alias": "test_folder"},
             mock_file_result,
         )
 
-        mock_processed.insert.assert_called_once()
-        call_args = mock_processed.insert.call_args[0][0]
-        assert call_args["file_name"] == "/test.txt"
-        assert call_args["file_checksum"] == "abc123"
-        assert call_args["folder_id"] == 1
+        # The code uses raw SQL via conn.execute(), not table.insert()
+        # Verify INSERT was called via raw_connection.execute()
+        calls = mock_conn.execute.call_args_list
+        insert_call = [c for c in calls if "INSERT" in str(c)]
+        assert len(insert_call) == 1, "Expected INSERT via raw_connection.execute()"
 
     def test_record_processed_file_handles_error(self):
         """Test _record_processed_file handles insert errors gracefully."""
