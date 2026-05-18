@@ -87,9 +87,9 @@ def convert_upce_to_upca(upce_value: str) -> str:
         mfrnum = d1 + d2 + d3 + d4 + d5
         itemnum = d6.zfill(5)
 
-    newmsg = "0" + mfrnum + itemnum
+    newmsg = f"0{mfrnum}{itemnum}"
     check_digit = calc_check_digit(newmsg)
-    return newmsg + str(check_digit)
+    return f"{newmsg}{check_digit}"
 
 
 def validate_upc(upc: str) -> bool:

@@ -96,11 +96,12 @@ class CRecGenerator:
 
         def _write_line(typestr: str, amount: int, wprocfile) -> None:
             descstr = typestr.ljust(25, " ")
-            amount_builder = amount - amount * 2 if amount < 0 else amount
-
-            amountstr = str(amount_builder).replace(".", "").rjust(9, "0")
-            if amount < 0:
-                amountstr = "-" + amountstr[1:]
+            # Use abs() + sign tracking instead of manual slice
+            is_negative = amount < 0
+            abs_amount = abs(amount)
+            amountstr = str(abs_amount).replace(".", "").rjust(9, "0")
+            if is_negative:
+                amountstr = f"-{amountstr}"
             linebuilder = f"CTAB{descstr}{amountstr}\n"
             wprocfile(linebuilder)
 

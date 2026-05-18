@@ -36,9 +36,9 @@ CONVERTER_METADATA = {
 
 
 
+import io
 import math
 import os
-import tempfile
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -248,56 +248,54 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         """Generate and insert barcodes for each item in the workbook."""
         assert self.output_worksheet is not None, "Workbook must be initialized"
         assert self.output_spreadsheet is not None, "Workbook must be initialized"
-        logger.debug("creating temp directory")
-        with tempfile.TemporaryDirectory() as tempdir:
-            logger.debug("temp directory created as: %s", tempdir)
-            save_counter = 0
-            barcodes_generated = 0
-            barcodes_skipped = 0
-            for count, _ in enumerate(self.output_worksheet.iter_rows(), start=1):
-                try:
-                    if count not in self.invoice_rows:
-                        upc_barcode_string = str(
-                            self.output_worksheet["B" + str(count)].value
-                        )
-                        upc_barcode_string = self._interpret_barcode_string(
-                            upc_barcode_string
-                        )
-                        generated_barcode_path, width, height = self._generate_barcode(
-                            upc_barcode_string, tempdir
-                        )
-                        self.output_worksheet.column_dimensions["A"].width = math.ceil(
-                            float(width) * 0.15
-                        )
-                        self.output_worksheet.row_dimensions[count].height = math.ceil(
-                            float(height) * 0.75
-                        )
-                        img = OpenPyXlImage(generated_barcode_path)
-                        self.output_worksheet.add_image(img, anchor="A" + str(count))
-                        save_counter += 1
-                        barcodes_generated += 1
-                except ValueError as barcode_error:
-                    barcodes_skipped += 1
-                    logger.debug("Skipping barcode generation: %s", barcode_error)
-                except Exception as barcode_error:
-                    barcodes_skipped += 1
-                    logger.warning("Barcode error: %s", barcode_error)
-                if save_counter >= BARCODE_BATCH_SAVE_INTERVAL:
-                    logger.debug(
-                        "saving intermediate workbook to free file handles"
-                        " (batch of 100)"
+        save_counter = 0
+        barcodes_generated = 0
+        barcodes_skipped = 0
+        for count, _ in enumerate(self.output_worksheet.iter_rows(), start=1):
+            try:
+                if count not in self.invoice_rows:
+                    upc_barcode_string = str(
+                        self.output_worksheet["B" + str(count)].value
                     )
-                    self.output_spreadsheet.save(self.output_spreadsheet_name)
-                    logger.debug("intermediate save successful")
-                    save_counter = 1
-            logger.debug("saving workbook to file")
-            self.output_spreadsheet.save(self.output_spreadsheet_name)
-            logger.debug("workbook saved successfully")
-            logger.debug(
-                "Barcode generation completed: %d generated, %d skipped",
-                barcodes_generated,
-                barcodes_skipped,
-            )
+                    upc_barcode_string = self._interpret_barcode_string(
+                        upc_barcode_string
+                    )
+                    barcode_buffer, width, height = self._generate_barcode(
+                        upc_barcode_string
+                    )
+                    self.output_worksheet.column_dimensions["A"].width = math.ceil(
+                        float(width) * 0.15
+                    )
+                    self.output_worksheet.row_dimensions[count].height = math.ceil(
+                        float(height) * 0.75
+                    )
+                    barcode_buffer.seek(0)
+                    img = OpenPyXlImage(barcode_buffer)
+                    self.output_worksheet.add_image(img, anchor="A" + str(count))
+                    save_counter += 1
+                    barcodes_generated += 1
+            except ValueError as barcode_error:
+                barcodes_skipped += 1
+                logger.debug("Skipping barcode generation: %s", barcode_error)
+            except Exception as barcode_error:
+                barcodes_skipped += 1
+                logger.warning("Barcode error: %s", barcode_error)
+            if save_counter >= BARCODE_BATCH_SAVE_INTERVAL:
+                logger.debug(
+                    "saving intermediate workbook to free file handles"
+                    " (batch of 100)"
+                )
+                self.output_spreadsheet.save(self.output_spreadsheet_name)
+                logger.debug("intermediate save successful")
+                save_counter = 1
+        logger.debug("saving workbook to file")
+        self.output_spreadsheet.save(self.output_spreadsheet_name)
+        logger.debug("workbook saved successfully")
+        logger.debug(
+            "Barcode generation completed: %d generated, %d skipped",
+            barcodes_generated,
+            barcodes_skipped,
+        )
 
     def _finalize_output(self, context: ConversionContext) -> None:
         """Finalize output by closing database connection.
@@ -316,16 +314,15 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 pass
 
     def _generate_barcode(
-        self, input_string: str, tempdir: str
-    ) -> tuple[str, int, int]:
+        self, input_string: str
+    ) -> tuple[io.BytesIO, int, int]:
         """Generate a barcode image for the given UPC string.
 
         Args:
             input_string: The 12-digit UPC string
-            tempdir: Temporary directory for image files
 
         Returns:
-            Tuple of (image_path, width, height)
+            Tuple of (BytesIO buffer with PNG image, width, height)
 
         """
         ean = barcode.get_barcode_class("UPCA")
@@ -336,21 +333,16 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             "font_size": 6,
             "quiet_zone": 2,
         }
-        with tempfile.NamedTemporaryFile(
-            dir=tempdir, suffix=".png", delete=False
-        ) as initial_temp_file:
-            ean(input_string, writer=ImageWriter()).write(
-                initial_temp_file, options=options
-            )
-            filename = initial_temp_file.name
-        barcode_image = pil_Image.open(str(filename))
+        buffer = io.BytesIO()
+        ean(input_string, writer=ImageWriter()).write(buffer, options=options)
+        buffer.seek(0)
+        barcode_image = pil_Image.open(buffer)
         img_save = pil_ImageOps.expand(barcode_image, border=0, fill="white")
         width, height = img_save.size
-        with tempfile.NamedTemporaryFile(
-            dir=tempdir, suffix=".png", delete=False
-        ) as final_barcode_path:
-            img_save.save(final_barcode_path.name)
-        return final_barcode_path.name, width, height
+        final_buffer = io.BytesIO()
+        img_save.save(final_buffer, format="PNG")
+        final_buffer.seek(0)
+        return final_buffer, width, height
 
     def _interpret_barcode_string(self, upc_barcode_string: str) -> str:
         """Interpret and validate a barcode string.

@@ -12,31 +12,28 @@ def dac_str_int_to_int(dacstr: str) -> int:
     return safe_int(dacstr)
 
 
+def _extract_dollars(value: str) -> str:
+    """Extract dollar portion from a price string, stripping leading zeros."""
+    dollars = value[:-2].lstrip("0")
+    return dollars if dollars else "0"
+
+
 def convert_to_price(value):
-    return (
-        (value[:-2].lstrip("0") if value[:-2].lstrip("0") != "" else "0")
-        + "."
-        + value[-2:]
-    )
+    return f"{_extract_dollars(value)}.{value[-2:]}"
 
 
 def convert_to_price_decimal(value):
     if len(value) < PRICE_DECIMAL_PLACES:
         return 0
-    retprice = (
-        (value[:-2].lstrip("0") if value[:-2].lstrip("0") != "" else "0")
-        + "."
-        + value[-2:]
-    )
     try:
-        return Decimal(retprice)
+        return Decimal(f"{_extract_dollars(value)}.{value[-2:]}")
     except (InvalidOperation, ValueError) as e:
         log_with_context(
             logger,
             logging.WARNING,
             "Price conversion failed",
             operation="convert_to_price_decimal",
-            context={"input_value": value, "parsed_value": retprice, "error": str(e)},
+            context={"input_value": value, "error": str(e)},
         )
         return 0
 

@@ -33,7 +33,7 @@ def safe_int(value: str | int | float | None, default: int = 0) -> int:
         try:
             # Handle negative numbers
             if stripped.startswith("-"):
-                return -int(stripped[1:].strip())
+                return -int(stripped[1:])
             return int(stripped)
         except ValueError:
             return default

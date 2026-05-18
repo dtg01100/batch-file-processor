@@ -41,9 +41,10 @@ def prettify_dates(date_string: str, offset: int = 0, adj_offset: int = 0) -> st
     """
     try:
         stripped_date_value = str(date_string).strip()
-        calculated_date_string = (
-            str(int(stripped_date_value[0]) + 19) + stripped_date_value[1:]
-        )
+        # Century prefix: digit 0 -> 19, digit 1 -> 20, etc.
+        century_prefix = 19 + int(stripped_date_value[0])
+        # Format as YYYYMMDD by prepending century to the MMDDYY portion
+        calculated_date_string = f"{century_prefix}{stripped_date_value[1:]}"
         parsed_date_string = parser.isoparse(calculated_date_string).date()
         corrected_date_string = parsed_date_string + timedelta(
             days=int(offset) + adj_offset
