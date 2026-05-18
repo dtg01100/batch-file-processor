@@ -92,13 +92,9 @@ def _write_invoice_binary(
     c_records: list[str],
 ) -> int:
     """Write one invoice to binary output and return line count written."""
-    output_chunks: list[bytes] = []
-    output_chunks.append(_ensure_crlf(a_record).encode())
-
-    for b_rec in b_records:
-        output_chunks.append(_ensure_crlf(b_rec).encode())
-    for c_rec in c_records:
-        output_chunks.append(_ensure_crlf(c_rec).encode())
+    output_chunks = [_ensure_crlf(a_record).encode()]
+    output_chunks.extend(_ensure_crlf(rec).encode() for rec in b_records)
+    output_chunks.extend(_ensure_crlf(rec).encode() for rec in c_records)
 
     filesystem.write_file(output_path, b"".join(output_chunks))
     return 1 + len(b_records) + len(c_records)

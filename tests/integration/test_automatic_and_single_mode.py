@@ -19,6 +19,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.conftest import MockFactories
+
 from core.utils.bool_utils import normalize_bool
 
 # Add the project root to the Python path
@@ -135,7 +137,7 @@ class TestSingleFolderModeIntegration:
 
     def test_single_folder_creates_session_table(self):
         """Single folder mode should use session_database for single table."""
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
         mock_session_db = {"single_table": MagicMock()}
         mock_db.session_database = mock_session_db
 

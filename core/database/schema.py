@@ -457,94 +457,37 @@ def ensure_schema(database_connection) -> None:
     # Ensure newer columns exist on legacy DBs. Adding columns with ALTER
     # is safe if they already exist because we catch errors.
     # Handle ALTER statements separately for compatibility and best-effort behavior.
-    if hasattr(type(database_connection), "raw_connection"):
+    if hasattr(database_connection, "raw_connection"):
         raw_conn = database_connection.raw_connection
     else:
         raw_conn = getattr(database_connection, "_conn", None)
 
-    try:
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            _execute_sqlite_statement(
-                raw_conn,
-                "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
-            )
-            _execute_sqlite_statement(
-                raw_conn,
-                'UPDATE "folders" SET "plugin_configurations" = "{}" '
-                'WHERE "plugin_configurations" IS NULL',
-            )
-        else:
-            database_connection.query(
-                "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT"
-            )
-            database_connection.query(
-                'UPDATE "folders" SET "plugin_configurations" = "{}" '
-                'WHERE "plugin_configurations" IS NULL'
-            )
+    def _safe_alter(raw_conn, sql, log_msg):
+        try:
+            if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+                _execute_sqlite_statement(raw_conn, sql)
+            else:
+                database_connection.query(sql)
+            logger.info(log_msg)
+        except Exception:
+            logger.info(f"{log_msg} skipped (may already exist)")
 
-        logger.info("Migration: added plugin_configurations column to folders table")
-    except Exception:  # idempotent migration; column may already exist on legacy DBs
-        logger.info(
-            "Folders plugin_configurations column migration skipped (may already exist)"
-        )
+    _safe_alter(raw_conn,
+        "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
+        "Migration: added plugin_configurations column to folders table")
 
-    try:
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            _execute_sqlite_statement(
-                raw_conn,
-                "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT",
-            )
-        else:
-            database_connection.query(
-                "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT"
-            )
+    _safe_alter(raw_conn,
+        "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT",
+        "Migration: added invoice_numbers column to processed_files table")
 
-        logger.info("Migration: added invoice_numbers column to processed_files table")
-    except Exception:  # idempotent migration; column may already exist on legacy DBs
-        logger.info(
-            "Processed_files invoice_numbers column"
-            " migration skipped (may already exist)"
-        )
+    _safe_alter(raw_conn,
+        "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL",
+        "Migration: added file_mtime column to processed_files table")
 
-    try:
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            _execute_sqlite_statement(
-                raw_conn,
-                "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL",
-            )
-        else:
-            database_connection.query(
-                "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL"
-            )
-
-        logger.info("Migration: added file_mtime column to processed_files table")
-    except Exception:
-        logger.info(
-            "Processed_files file_mtime column"
-            " migration skipped (may already exist)"
-        )
-
-    try:
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            _execute_sqlite_statement(
-                raw_conn,
-                "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
-                "ON processed_files(folder_id, resend_flag, file_checksum)",
-            )
-        else:
-            database_connection.query(
-                "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
-                "ON processed_files(folder_id, resend_flag, file_checksum)"
-            )
-
-        logger.info(
-            "Migration: added idx_processed_files_checksum_resend index"
-        )
-    except Exception:
-        logger.info(
-            "idx_processed_files_checksum_resend index"
-            " migration skipped (may already exist)"
-        )
+    _safe_alter(raw_conn,
+        "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
+        "ON processed_files(folder_id, resend_flag, file_checksum)",
+        "Migration: added idx_processed_files_checksum_resend index")
 
     logger.info("Database schema initialization complete")
 
@@ -593,7 +536,7 @@ def _apply_statement_to_connection(
     sqlite3.Connection objects stored in _conn. Logs failures but attempts
     several strategies for best-effort idempotent behavior.
     """
-    if hasattr(type(database_connection), "raw_connection"):
+    if hasattr(database_connection, "raw_connection"):
         raw_conn = database_connection.raw_connection
     else:
         raw_conn = getattr(database_connection, "_conn", None)

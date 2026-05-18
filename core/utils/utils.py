@@ -31,44 +31,9 @@ def apply_retail_uom_transform(record: dict, upc_lookup: dict) -> bool:
         True if transformation was applied, False otherwise.
 
     """
-    from decimal import Decimal
+    from core.edi.retail_uom import apply_retail_uom_transform as _apply
 
-    try:
-        item_number = int(record["vendor_item"].strip())
-        float(record["unit_cost"].strip())
-        test_unit_multiplier = int(record["unit_multiplier"].strip())
-        if test_unit_multiplier == 0:
-            raise ValueError("unit_multiplier cannot be zero")
-        int(record["qty_of_units"].strip())
-    except (ValueError, KeyError, TypeError) as e:
-        logger.warning("Cannot parse B record field: %s", e)
-        return False
-
-    try:
-        each_upc_string = upc_lookup[item_number][1][:11].ljust(11)
-    except (KeyError, IndexError):
-        each_upc_string = "           "
-
-    try:
-        record["unit_cost"] = (
-            str(
-                Decimal(
-                    (Decimal(record["unit_cost"].strip()) / 100)
-                    / Decimal(record["unit_multiplier"].strip())
-                ).quantize(Decimal(".01"))
-            )
-            .replace(".", "")[-6:]
-            .rjust(6, "0")
-        )
-        record["qty_of_units"] = str(
-            int(record["unit_multiplier"].strip()) * int(record["qty_of_units"].strip())
-        ).rjust(5, "0")
-        record["upc_number"] = each_upc_string
-        record["unit_multiplier"] = "000001"
-        return True
-    except Exception as error:
-        logger.debug("error applying retail UOM transform: %s", error)
-        return False
+    return _apply(record, upc_lookup)
 
 
 def apply_upc_override(

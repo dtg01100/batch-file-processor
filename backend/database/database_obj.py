@@ -46,6 +46,10 @@ class DatabaseConnectionProtocol(Protocol):
         """Execute raw SQL and return results as dictionaries."""
         ...
 
+    def get_oversight_or_default(self) -> dict[str, Any]:
+        """Get oversight settings or defaults."""
+        ...
+
 
 @runtime_checkable
 class TableProtocol(Protocol):

@@ -4,17 +4,21 @@ import contextlib
 import os
 import shutil
 import sys
+import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
+pytest_plugins = ["conftest_magicmock_plugin"]
 
 from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseConnectionProtocol
 from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
 from dispatch.pipeline.interfaces import PipelineStep
 from dispatch.send_manager import SendManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
+from interface.services.resend_service import ResendService
 from migrations import folders_database_migrator
+from adapters.db2ssh.connection import DB2SSHConnection
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -324,4 +328,20 @@ class MockFactories:
     @staticmethod
     def converter_step() -> MagicMock:
         return MagicMock(spec=PipelineStep)
+
+    @staticmethod
+    def database_obj() -> MagicMock:
+        return MagicMock(spec=DatabaseConnectionProtocol)
+
+    @staticmethod
+    def folder_manager() -> MagicMock:
+        return MagicMock()
+
+    @staticmethod
+    def db2ssh_connection() -> MagicMock:
+        return MagicMock(spec=DB2SSHConnection)
+
+    @staticmethod
+    def resend_service() -> MagicMock:
+        return MagicMock(spec=ResendService)  # FolderManager has no protocol, use bare mock with attrs if needed
 

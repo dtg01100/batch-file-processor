@@ -589,48 +589,14 @@ class EDITweaker:
             Modified fields dictionary
 
         """
-        try:
-            item_number = int(fields["vendor_item"].strip())
-            float(fields["unit_cost"].strip())
-            unit_multiplier = int(fields["unit_multiplier"].strip())
-            if unit_multiplier == 0:
-                raise ValueError
-            int(fields["qty_of_units"].strip())
-        except Exception as e:
+        from core.edi.retail_uom import apply_retail_uom_transform as _apply
+
+        default_padding = self.config.upc_padding_pattern[:11]
+        success = _apply(fields, upc_dict, default_padding)
+        if not success:
             logger.debug(
-                "Skipping retail UOM transform for fields due to validation error: %s",
-                e,
+                "Skipping retail UOM transform for fields due to validation error",
             )
-            return fields
-
-        try:
-            each_upc_string = upc_dict[item_number][1][:11].ljust(11)
-        except (KeyError, IndexError):
-            each_upc_string = self.config.upc_padding_pattern[:11]
-
-        try:
-            fields["unit_cost"] = (
-                str(
-                    Decimal(
-                        (Decimal(fields["unit_cost"].strip()) / 100)
-                        / Decimal(fields["unit_multiplier"].strip())
-                    ).quantize(Decimal(".01"))
-                )
-                .replace(".", "")[-6:]
-                .rjust(6, "0")
-            )
-            fields["qty_of_units"] = str(
-                int(fields["unit_multiplier"].strip())
-                * int(fields["qty_of_units"].strip())
-            ).rjust(5, "0")
-            fields["upc_number"] = each_upc_string
-            fields["unit_multiplier"] = "000001"
-        except Exception as e:
-            logger.debug(
-                "Error during retail UOM transformation, fields unchanged: %s",
-                e,
-            )
-
         return fields
 
     def _apply_upc_calc(self, fields: dict) -> dict:

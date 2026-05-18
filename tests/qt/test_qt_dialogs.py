@@ -11,6 +11,8 @@ pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
 from unittest.mock import MagicMock
 from interface.services.smtp_service import SMTPServiceProtocol
+from interface.ports import UIServiceProtocol
+from tests.conftest import MockFactories
 
 import pytest
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt
@@ -673,7 +675,7 @@ class TestMaintenanceDialog:
     def test_open_dialog_shows_warning_first(self, mock_maintenance_functions):
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
-        mock_ui = MagicMock()
+        mock_ui = MagicMock(spec=UIServiceProtocol)
         mock_ui.ask_ok_cancel.return_value = False
         result = MaintenanceDialog.open_dialog(
             parent=None,
@@ -706,7 +708,7 @@ class TestProcessedFilesDialog:
     def test_get_folder_tuples_returns_sorted(self, qtbot):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        mock_database_obj = MagicMock()
+        mock_database_obj = MockFactories.database_obj()
         mock_database_obj.get_oversight_or_default.return_value = {}
         # _get_folder_tuples now uses a single JOIN query via database_obj.query()
         mock_database_obj.query.return_value = [
@@ -725,7 +727,7 @@ class TestProcessedFilesDialog:
     def test_get_folder_tuples_skips_missing_folders(self, qtbot):
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        mock_database_obj = MagicMock()
+        mock_database_obj = MockFactories.database_obj()
         mock_database_obj.get_oversight_or_default.return_value = {}
         # The JOIN query inherently excludes folder_id 999 (no matching folder row)
         mock_database_obj.query.return_value = [
@@ -1095,12 +1097,12 @@ class TestResendDialog:
     def test_construction(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
         # Mock ResendService to avoid database operations
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = False
-        mock_service.get_folders_with_files.return_value = []
+        mock_service.get_all_files_for_resend.return_value = []
         mock_service.count_files_for_folder.return_value = 0
         mock_service.get_files_for_folder.return_value = []
 
@@ -1118,9 +1120,9 @@ class TestResendDialog:
     def test_spinbox_initially_disabled(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -1137,9 +1139,9 @@ class TestResendDialog:
     def test_bulk_action_bar_initially_present(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -1160,9 +1162,9 @@ class TestResendDialog:
     def test_date_range_filter_applies_to_service_calls(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -1191,9 +1193,9 @@ class TestResendDialog:
     def test_folder_selection_enables_spinbox(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = [
             {
@@ -1219,9 +1221,9 @@ class TestResendDialog:
     def test_multi_row_selection(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = [
             {
@@ -1272,9 +1274,9 @@ class TestResendDialog:
     def test_checkbox_toggle_stays_consistent(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = [
             {
@@ -1313,8 +1315,8 @@ class TestResendDialog:
     def test_date_range_filters_search(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
-        mock_service = MagicMock()
+        mock_db = MockFactories.database_obj()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_total_file_count.return_value = 2
         mock_service.get_all_files_for_resend.return_value = [
@@ -1360,9 +1362,9 @@ class TestResendDialog:
     def test_folder_selection_updates_max(self, qtbot, monkeypatch):
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -1381,9 +1383,9 @@ class TestResendDialog:
         from interface.qt.dialogs.resend_dialog import ResendDialog
         from tests.qt.contrast_utils import assert_contrast_ratio
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
 
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -1407,9 +1409,9 @@ class TestResendDialog:
         MagicMock()
 
         # Mock ResendService to avoid database operations
-        mock_service = MagicMock()
+        mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True
-        mock_service.get_folders_with_files.return_value = []
+        mock_service.get_all_files_for_resend.return_value = []
         mock_service.count_files_for_folder.return_value = 0
         mock_service.get_files_for_folder.return_value = []
 

@@ -210,7 +210,7 @@ def _check_appdirs() -> tuple[int, int]:
         import appdirs as _appdirs
 
         test_dir = _appdirs.user_data_dir("TestApp")
-        if isinstance(test_dir, str) and len(test_dir) > 0:
+        if test_dir:
             passed += 1
             print(f"  ✓ appdirs.user_data_dir('TestApp') = {test_dir}")
         else:

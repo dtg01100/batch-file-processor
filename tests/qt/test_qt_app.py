@@ -12,6 +12,8 @@ from unittest.mock import MagicMock
 from core.constants import CURRENT_DATABASE_VERSION
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 
+from tests.conftest import MockFactories
+
 
 @pytest.mark.qt
 class TestQtBatchFileSenderApp:
@@ -49,14 +51,14 @@ class TestQtBatchFileSenderApp:
     def test_database_injected(self):
         from interface.qt.app import QtBatchFileSenderApp
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
         app = QtBatchFileSenderApp(database_obj=mock_db)
         assert app._database is mock_db
 
     def test_shutdown_closes_database(self):
         from interface.qt.app import QtBatchFileSenderApp
 
-        mock_db = MagicMock()
+        mock_db = MockFactories.database_obj()
         app = QtBatchFileSenderApp(database_obj=mock_db)
         app.shutdown()
         mock_db.close.assert_called_once()
@@ -71,12 +73,12 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._database.folders_table.count.return_value = 0
         app._database.processed_files.count.return_value = 0
-        app._process_folder_button = MagicMock()
-        app._processed_files_button = MagicMock()
-        app._allow_resend_button = MagicMock()
+        app._process_folder_button = MockFactories.database_obj()
+        app._processed_files_button = MockFactories.database_obj()
+        app._allow_resend_button = MockFactories.database_obj()
         app._set_main_button_states()
         app._process_folder_button.setEnabled.assert_called_with(False)
 
@@ -84,12 +86,12 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._database.folders_table.count.side_effect = lambda **kw: 5 if not kw else 3
         app._database.processed_files.count.return_value = 10
-        app._process_folder_button = MagicMock()
-        app._processed_files_button = MagicMock()
-        app._allow_resend_button = MagicMock()
+        app._process_folder_button = MockFactories.database_obj()
+        app._processed_files_button = MockFactories.database_obj()
+        app._allow_resend_button = MockFactories.database_obj()
         app._set_main_button_states()
         app._process_folder_button.setEnabled.assert_called_with(True)
         app._processed_files_button.setEnabled.assert_called_with(True)
@@ -99,8 +101,8 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
         app._disable_folder(42)
         app._folder_manager.disable_folder.assert_called_once_with(42)
         app._refresh_users_list.assert_called_once()
@@ -109,7 +111,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._refresh_users_list = MagicMock()
+        app._refresh_users_list = MockFactories.database_obj()
         app._set_folders_filter("test")
         assert app._folder_filter == "test"
         app._refresh_users_list.assert_called_once()
@@ -120,9 +122,9 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_yes_no.return_value = True
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
         app._delete_folder_entry_wrapper(42, "test")
         app._folder_manager.delete_folder_with_related.assert_called_once_with(42)
 
@@ -132,7 +134,7 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_yes_no.return_value = False
-        app._folder_manager = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
         app._delete_folder_entry_wrapper(42, "test")
         app._folder_manager.delete_folder_with_related.assert_not_called()
 
@@ -140,7 +142,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         row1 = {"id": 1, "process_backend_email": True}
         row2 = {"id": 2, "process_backend_email": True}
         app._database.folders_table.find.return_value = [row1, row2]
@@ -153,7 +155,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         changes = {"id": 1, "enable_reporting": True}
         app._update_reporting(changes)
         app._database.oversight_and_defaults.update.assert_called_once_with(
@@ -168,11 +170,11 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._process_directories = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._process_directories = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = [{"folder_name": "/missing/path"}]
         folders_table.count.return_value = 1
 
@@ -194,9 +196,9 @@ class TestQtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._process_directories = MagicMock()
+        app._process_directories = MockFactories.database_obj()
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
         folders_table.count.return_value = 0
 
@@ -211,14 +213,14 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._process_directories = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._process_directories = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = [{"folder_name": "/existing/path"}]
         folders_table.count.return_value = 1
 
@@ -236,7 +238,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         row1 = {"id": 1, "folder_is_active": "True"}
         row2 = {"id": 2, "folder_is_active": "True"}
         app._database.folders_table.find.return_value = [row1, row2]
@@ -251,9 +253,9 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
 
         app._automatic_process_directories(folders_table)
 
@@ -329,17 +331,17 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
-        app._folder_manager = MagicMock()
-        app._folder_manager.delete_folder_with_related = MagicMock()
+        app._database = MockFactories.database_obj()
+        app._folder_manager = MockFactories.database_obj()
+        app._folder_manager.delete_folder_with_related = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "41"
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
-        maintenance_instance = MagicMock()
+        maintenance_instance = MockFactories.database_obj()
 
         class _FakeMaintenanceFunctions:
             def __init__(self, **kwargs):
@@ -389,9 +391,9 @@ class TestQtBatchFileSenderApp:
 
         app = QtBatchFileSenderApp()
         app._args = argparse.Namespace(automatic=False)
-        app._window = MagicMock()
+        app._window = MockFactories.database_obj()
 
-        exec_mock = MagicMock()
+        exec_mock = MockFactories.database_obj()
         monkeypatch.setattr("interface.qt.app.QApplication.exec", exec_mock)
 
         app.run()
@@ -403,7 +405,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._database.folders_table.find_one.return_value = None
         app._ui_service = MagicMock(spec=UIServiceProtocol)
 
@@ -417,13 +419,13 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._graphical_process_directories = MagicMock()
+        app._graphical_process_directories = MockFactories.database_obj()
 
-        single_table = MagicMock()
-        session_database = MagicMock()
+        single_table = MockFactories.database_obj()
+        session_database = MockFactories.database_obj()
         session_database.__getitem__.return_value = single_table
         app._database.session_database = session_database
         app._database.folders_table.find_one.return_value = None
@@ -442,13 +444,13 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._graphical_process_directories = MagicMock()
+        app._graphical_process_directories = MockFactories.database_obj()
 
-        single_table = MagicMock()
-        session_database = MagicMock()
+        single_table = MockFactories.database_obj()
+        session_database = MockFactories.database_obj()
         session_database.__getitem__.return_value = single_table
 
         # Mock the PRAGMA table_info query to return column info for filtering
@@ -487,10 +489,10 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
         app._database.get_oversight_or_default.return_value = {
             "batch_add_folder_prior": ""
         }
@@ -510,11 +512,11 @@ class TestQtBatchFileSenderApp:
         (root / "folder2").mkdir()
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
 
         app._database.get_oversight_or_default.return_value = {
             "batch_add_folder_prior": ""
@@ -537,11 +539,11 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._open_edit_folders_dialog = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._open_edit_folders_dialog = MockFactories.database_obj()
 
         app._database.get_oversight_or_default.return_value = {
             "single_add_folder_prior": ""
@@ -566,9 +568,9 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
 
         app._automatic_process_directories(folders_table)
 
@@ -580,12 +582,12 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
         app._run_coordinator.automatic_process_directories.side_effect = RuntimeError(
             "coordinator error"
         )
 
-        folders_table = MagicMock()
+        folders_table = MockFactories.database_obj()
 
         with pytest.raises(RuntimeError, match="coordinator error"):
             app._automatic_process_directories(folders_table)
@@ -594,12 +596,12 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._mark_active_as_processed_wrapper = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._mark_active_as_processed_wrapper = MockFactories.database_obj()
 
         selected = "/tmp/new-folder"
         app._database.get_oversight_or_default.return_value = {
@@ -622,12 +624,12 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
-        app._window = MagicMock()
+        app._database = MockFactories.database_obj()
+        app._window = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
 
-        processed_exec = MagicMock()
-        resend_exec = MagicMock()
+        processed_exec = MockFactories.database_obj()
+        resend_exec = MockFactories.database_obj()
 
         class _FakeProcessedFilesDialog:
             def __init__(self, **kwargs):
@@ -720,7 +722,7 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._parse_arguments = MagicMock()
+        app._parse_arguments = MockFactories.database_obj()
         app._args = argparse.Namespace(self_test=True, automatic=False)
         app._run_self_test = MagicMock(return_value=1)
 
@@ -738,24 +740,24 @@ class TestQtBatchFileSenderApp:
     def test_initialize_automatic_path_skips_qt_window(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.folders_table = MagicMock()
+        db = MockFactories.database_obj()
+        db.folders_table = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {
             "logs_directory": "/tmp",
             "enable_reporting": False,
         }
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._parse_arguments = MagicMock()
+        app._parse_arguments = MockFactories.database_obj()
         app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=True)
-        app._automatic_process_directories = MagicMock()
+        app._automatic_process_directories = MockFactories.database_obj()
 
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MagicMock())
+        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MagicMock()
+            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
         )
         monkeypatch.setattr(app, "_setup_config_directories", lambda: None)
 
@@ -778,26 +780,26 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        db = MagicMock()
-        db.folders_table = MagicMock()
+        db = MockFactories.database_obj()
+        db.folders_table = MockFactories.database_obj()
         db.folders_table.find.return_value = []
         db.folders_table.count.return_value = 0
         app._database = db
 
-        layout = MagicMock()
-        right_panel = MagicMock()
+        layout = MockFactories.database_obj()
+        right_panel = MockFactories.database_obj()
         right_panel.layout.return_value = layout
         app._right_panel_widget = right_panel
 
-        old_folder_list = MagicMock()
+        old_folder_list = MockFactories.database_obj()
         app._folder_list_widget = old_folder_list
-        app._search_widget = MagicMock()
+        app._search_widget = MockFactories.database_obj()
         layout.indexOf.return_value = 1
 
-        app._set_main_button_states = MagicMock()
+        app._set_main_button_states = MockFactories.database_obj()
 
         # Patch FolderListWidget so it doesn't require a real QWidget parent
-        mock_new_list = MagicMock()
+        mock_new_list = MockFactories.database_obj()
         monkeypatch.setattr(
             "interface.qt.widgets.folder_list_widget.FolderListWidget",
             lambda **kwargs: mock_new_list,
@@ -818,7 +820,7 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": True,
@@ -829,8 +831,8 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
@@ -867,7 +869,7 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -878,8 +880,8 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
@@ -914,7 +916,7 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -925,8 +927,8 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
@@ -971,7 +973,7 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -982,8 +984,8 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
@@ -1018,7 +1020,7 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -1029,8 +1031,8 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
@@ -1040,7 +1042,7 @@ class TestQtBatchFileSenderApp:
         app._errors_directory = str(tmp_path / "errors")
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._args = argparse.Namespace(automatic=True)
-        app._log_critical_error = MagicMock()
+        app._log_critical_error = MockFactories.database_obj()
 
         def mock_mkdir(path):
             raise OSError("Permission denied")
@@ -1065,8 +1067,8 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.database_connection = MagicMock()
+        db = MockFactories.database_obj()
+        db.database_connection = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -1077,14 +1079,14 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        db.processed_files = MagicMock()
-        db.emails_table = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
+        db.emails_table = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
 
         app._process_directories(folders_table)
 
@@ -1095,8 +1097,8 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.database_connection = MagicMock()
+        db = MockFactories.database_obj()
+        db.database_connection = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -1107,14 +1109,14 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        db.processed_files = MagicMock()
-        db.emails_table = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
+        db.emails_table = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
 
         app._process_directories(folders_table)
 
@@ -1125,8 +1127,8 @@ class TestQtBatchFileSenderApp:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.database_connection = MagicMock()
+        db = MockFactories.database_obj()
+        db.database_connection = MockFactories.database_obj()
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -1137,14 +1139,14 @@ class TestQtBatchFileSenderApp:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": False,
         }
-        db.settings = MagicMock()
-        db.processed_files = MagicMock()
-        db.emails_table = MagicMock()
-        folders_table = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
+        db.emails_table = MockFactories.database_obj()
+        folders_table = MockFactories.database_obj()
         folders_table.find.return_value = []
 
         app = QtBatchFileSenderApp(database_obj=db)
-        app._run_coordinator = MagicMock()
+        app._run_coordinator = MockFactories.database_obj()
         app._run_coordinator.process_directories.side_effect = RuntimeError("Boom")
 
         with pytest.raises(RuntimeError, match="Boom"):
@@ -1155,7 +1157,7 @@ class TestQtBatchFileSenderApp:
 
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.folders_table.count.return_value = 0
         db.processed_files.count.return_value = 0
 
@@ -1163,11 +1165,11 @@ class TestQtBatchFileSenderApp:
         app._window = QMainWindow()
         app._database = db
         app._folder_filter = ""
-        app._send_single = MagicMock()
-        app._edit_folder_selector = MagicMock()
-        app._disable_folder = MagicMock()
-        app._delete_folder_entry_wrapper = MagicMock()
-        app._set_folders_filter = MagicMock()
+        app._send_single = MockFactories.database_obj()
+        app._edit_folder_selector = MockFactories.database_obj()
+        app._disable_folder = MockFactories.database_obj()
+        app._delete_folder_entry_wrapper = MockFactories.database_obj()
+        app._set_folders_filter = MockFactories.database_obj()
 
         app._build_main_window()
 
@@ -1180,12 +1182,12 @@ class TestQtBatchFileSenderApp:
     def test_set_defaults_popup_opens_edit_folders_with_template(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {"id": 1}
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._open_edit_folders_dialog = MagicMock()
+        app._open_edit_folders_dialog = MockFactories.database_obj()
 
         app._set_defaults_popup()
 
@@ -1198,7 +1200,7 @@ class TestQtBatchFileSenderApp:
     def test_on_folder_edit_applied_updates_database(self):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
 
@@ -1309,17 +1311,17 @@ class TestQtBatchFileSenderApp:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._parse_arguments = MagicMock()
+        app._parse_arguments = MockFactories.database_obj()
         app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=True)
         app._database_path = "/tmp/test.db"
         app._config_folder = "/tmp/config"
-        app._setup_config_directories = MagicMock()
-        app._build_main_window = MagicMock()
-        app._set_main_button_states = MagicMock()
-        app._configure_window = MagicMock()
+        app._setup_config_directories = MockFactories.database_obj()
+        app._build_main_window = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
+        app._configure_window = MockFactories.database_obj()
 
-        mock_db = MagicMock()
-        mock_db.folders_table = MagicMock()
+        mock_db = MockFactories.database_obj()
+        mock_db.folders_table = MockFactories.database_obj()
         mock_db.folders_table.count.return_value = 0
         mock_db.get_oversight_or_default.return_value = {"logs_directory": "/tmp"}
 
@@ -1327,9 +1329,9 @@ class TestQtBatchFileSenderApp:
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
         monkeypatch.setattr("interface.qt.app.DatabaseObj", lambda *a, **kw: mock_db)
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MagicMock())
+        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MagicMock()
+            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
         )
 
         app.initialize()
@@ -1342,25 +1344,25 @@ class TestQtBatchFileSenderApp:
         """Test initialize uses injected database object."""
         from interface.qt.app import QtBatchFileSenderApp
 
-        mock_db = MagicMock()
-        mock_db.folders_table = MagicMock()
+        mock_db = MockFactories.database_obj()
+        mock_db.folders_table = MockFactories.database_obj()
         mock_db.folders_table.count.return_value = 0
         mock_db.get_oversight_or_default.return_value = {"logs_directory": "/tmp"}
 
         app = QtBatchFileSenderApp(database_obj=mock_db)
-        app._parse_arguments = MagicMock()
+        app._parse_arguments = MockFactories.database_obj()
         app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=True)
-        app._setup_config_directories = MagicMock()
-        app._build_main_window = MagicMock()
-        app._set_main_button_states = MagicMock()
-        app._configure_window = MagicMock()
+        app._setup_config_directories = MockFactories.database_obj()
+        app._build_main_window = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
+        app._configure_window = MockFactories.database_obj()
 
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MagicMock())
+        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MagicMock()
+            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
         )
 
         app.initialize()
@@ -1374,25 +1376,25 @@ class TestQtBatchFileSenderApp:
         """Test initialize creates UI and progress services."""
         from interface.qt.app import QtBatchFileSenderApp
 
-        mock_db = MagicMock()
-        mock_db.folders_table = MagicMock()
+        mock_db = MockFactories.database_obj()
+        mock_db.folders_table = MockFactories.database_obj()
         mock_db.folders_table.count.return_value = 0
         mock_db.get_oversight_or_default.return_value = {"logs_directory": "/tmp"}
 
         app = QtBatchFileSenderApp(database_obj=mock_db)
-        app._parse_arguments = MagicMock()
+        app._parse_arguments = MockFactories.database_obj()
         app._args = argparse.Namespace(self_test=False, gui_test=False, automatic=True)
-        app._setup_config_directories = MagicMock()
-        app._build_main_window = MagicMock()
-        app._set_main_button_states = MagicMock()
-        app._configure_window = MagicMock()
+        app._setup_config_directories = MockFactories.database_obj()
+        app._build_main_window = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
+        app._configure_window = MockFactories.database_obj()
 
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MagicMock())
+        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MagicMock()
+            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
         )
 
         app.initialize()
@@ -1404,22 +1406,22 @@ class TestQtBatchFileSenderApp:
         """Test _show_edit_settings_dialog opens the settings dialog."""
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {"id": 1}
         db.get_settings_or_default.return_value = {"id": 1}
-        db.settings = MagicMock()
-        db.oversight_and_defaults = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.oversight_and_defaults = MockFactories.database_obj()
         db.folders_table.count.return_value = 0
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._update_reporting = MagicMock()
-        app._disable_all_email_backends = MagicMock()
-        app._disable_folders_without_backends = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._update_reporting = MockFactories.database_obj()
+        app._disable_all_email_backends = MockFactories.database_obj()
+        app._disable_folders_without_backends = MockFactories.database_obj()
 
-        dialog_exec = MagicMock()
+        dialog_exec = MockFactories.database_obj()
         mock_dialog_class = MagicMock(return_value=MagicMock(exec=dialog_exec))
 
         monkeypatch.setattr(
@@ -1436,19 +1438,19 @@ class TestQtBatchFileSenderApp:
         """Test _show_maintenance_dialog_wrapper creates maintenance dialog."""
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.folders_table = MagicMock()
-        db.processed_files = MagicMock()
+        db = MockFactories.database_obj()
+        db.folders_table = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
+        app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "42"
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._ui_service = MagicMock(spec=UIServiceProtocol)
 
@@ -1532,12 +1534,12 @@ class TestQtAppInteractionWorkflows:
     def test_open_edit_dialog_apply_success_persists_and_refreshes(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
         class _FakeEditFoldersDialog:
             def __init__(self, parent, folder_config, on_apply_success=None, **kwargs):
@@ -1568,12 +1570,12 @@ class TestQtAppInteractionWorkflows:
     def test_open_edit_dialog_cancel_does_not_refresh(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
         class _FakeEditFoldersDialog:
             def __init__(self, *args, **kwargs):
@@ -1597,13 +1599,13 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._database.folders_table.find_one.return_value = {
             "id": 12,
             "folder_name": "/tmp/f",
         }
-        app._open_edit_folders_dialog = MagicMock()
+        app._open_edit_folders_dialog = MockFactories.database_obj()
 
         app._edit_folder_selector(12)
 
@@ -1615,11 +1617,11 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._open_edit_folders_dialog = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._open_edit_folders_dialog = MockFactories.database_obj()
 
         app._database.get_oversight_or_default.return_value = {
             "single_add_folder_prior": ""
@@ -1642,12 +1644,12 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._mark_active_as_processed_wrapper = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._mark_active_as_processed_wrapper = MockFactories.database_obj()
 
         selected = "/tmp/new-folder"
         app._database.get_oversight_or_default.return_value = {
@@ -1678,11 +1680,11 @@ class TestQtAppInteractionWorkflows:
         (root / "new2").mkdir()
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
 
         app._database.get_oversight_or_default.return_value = {
             "batch_add_folder_prior": ""
@@ -1702,9 +1704,9 @@ class TestQtAppInteractionWorkflows:
 
         app = QtBatchFileSenderApp()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
         app._ui_service.ask_yes_no.return_value = True
 
@@ -1718,8 +1720,8 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._window = MagicMock()
-        app._database = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
 
         captured = {}
@@ -1749,11 +1751,11 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._window = MagicMock()
-        app._database = MagicMock()
-        app._database.database_connection = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._database = MockFactories.database_obj()
+        app._database.database_connection = MockFactories.database_obj()
 
-        exec_called = MagicMock()
+        exec_called = MockFactories.database_obj()
 
         class _FakeResendDialog:
             def __init__(self, parent=None, database_connection=None):
@@ -1776,20 +1778,20 @@ class TestQtAppInteractionWorkflows:
     def test_show_edit_settings_dialog_callback_wiring(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {"id": 1}
         db.get_settings_or_default.return_value = {"id": 2}
-        db.settings = MagicMock()
-        db.oversight_and_defaults = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.oversight_and_defaults = MockFactories.database_obj()
         db.folders_table.count.return_value = 3
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._update_reporting = MagicMock()
-        app._disable_all_email_backends = MagicMock()
-        app._disable_folders_without_backends = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._update_reporting = MockFactories.database_obj()
+        app._disable_all_email_backends = MockFactories.database_obj()
+        app._disable_folders_without_backends = MockFactories.database_obj()
 
         captured_kwargs = {}
 
@@ -1825,19 +1827,19 @@ class TestQtAppInteractionWorkflows:
     def test_show_maintenance_dialog_wrapper_callback_wiring(self, monkeypatch):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.folders_table = MagicMock()
-        db.processed_files = MagicMock()
+        db = MockFactories.database_obj()
+        db.folders_table = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
+        app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "42"
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._ui_service.ask_ok_cancel.return_value = True
@@ -1850,7 +1852,7 @@ class TestQtAppInteractionWorkflows:
             def __init__(self, **kwargs):
                 captured.update(kwargs)
 
-        open_dialog_called = MagicMock()
+        open_dialog_called = MockFactories.database_obj()
 
         monkeypatch.setattr(
             "interface.operations.maintenance_functions.MaintenanceFunctions",
@@ -1877,14 +1879,14 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
-        app._folder_manager = MagicMock()
+        app._database = MockFactories.database_obj()
+        app._folder_manager = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "41"
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
 
         captured = {}
 
@@ -1909,12 +1911,12 @@ class TestQtAppInteractionWorkflows:
     def test_set_defaults_popup_populates_advanced_defaults(self):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {"id": 1}
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._open_edit_folders_dialog = MagicMock()
+        app._open_edit_folders_dialog = MockFactories.database_obj()
 
         app._set_defaults_popup()
 
@@ -1930,19 +1932,19 @@ class TestQtAppInteractionWorkflows:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
+        db = MockFactories.database_obj()
         db.get_oversight_or_default.return_value = {"id": 1}
         db.get_settings_or_default.return_value = {"id": 2}
-        db.settings = MagicMock()
-        db.oversight_and_defaults = MagicMock()
+        db.settings = MockFactories.database_obj()
+        db.oversight_and_defaults = MockFactories.database_obj()
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._update_reporting = MagicMock()
-        app._disable_all_email_backends = MagicMock()
-        app._disable_folders_without_backends = MagicMock()
+        app._window = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._update_reporting = MockFactories.database_obj()
+        app._disable_all_email_backends = MockFactories.database_obj()
+        app._disable_folders_without_backends = MockFactories.database_obj()
 
         captured_kwargs = {}
 
@@ -1977,19 +1979,19 @@ class TestQtAppInteractionWorkflows:
     ):
         from interface.qt.app import QtBatchFileSenderApp
 
-        db = MagicMock()
-        db.folders_table = MagicMock()
-        db.processed_files = MagicMock()
+        db = MockFactories.database_obj()
+        db.folders_table = MockFactories.database_obj()
+        db.processed_files = MockFactories.database_obj()
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database = db
-        app._window = MagicMock()
+        app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
         app._database_version = "42"
-        app._folder_manager = MagicMock()
-        app._refresh_users_list = MagicMock()
-        app._set_main_button_states = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
+        app._refresh_users_list = MockFactories.database_obj()
+        app._set_main_button_states = MockFactories.database_obj()
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._ui_service = MagicMock(spec=UIServiceProtocol)
 
@@ -2035,10 +2037,10 @@ class TestQtAppInteractionWorkflows:
         from interface.qt.app import QtBatchFileSenderApp
 
         app = QtBatchFileSenderApp()
-        app._database = MagicMock()
+        app._database = MockFactories.database_obj()
         app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
-        app._folder_manager = MagicMock()
+        app._folder_manager = MockFactories.database_obj()
 
         app._database.get_oversight_or_default.return_value = {
             "single_add_folder_prior": ""

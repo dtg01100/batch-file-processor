@@ -24,6 +24,10 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from core.structured_logging import get_logger
+
+logger = get_logger(__name__)
+
 
 def _has_sql(table: Any) -> bool:
     """Return True if the table supports raw SQL execution."""
@@ -180,6 +184,7 @@ def _get_latest_mtimes(table: Any, folder_id: int) -> dict[str, float]:
             cursor = table.execute(sql, (folder_id,))
         return {row[0]: float(row[1]) for row in cursor}
     except Exception:
+        logger.debug("Failed to fetch file mtime map from database")
         return {}
 
 

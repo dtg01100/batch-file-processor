@@ -130,24 +130,23 @@ class ResendService:
             List of dicts with keys: file_name, resend_flag, id, sent_date_time
 
         """
+        seen_filenames = set()
         file_list = []
-        file_name_list = []
         processed_lines = list(
             self._processed_files.find(folder_id=folder_id, order_by="-processed_at")
         )
         for processed_line in processed_lines[:limit]:
-            if processed_line["file_name"] not in file_name_list and os.path.exists(
-                processed_line["file_name"]
-            ):
+            fname = processed_line["file_name"]
+            if fname not in seen_filenames and os.path.exists(fname):
+                seen_filenames.add(fname)
                 file_list.append(
                     {
-                        "file_name": processed_line["file_name"],
+                        "file_name": fname,
                         "resend_flag": processed_line["resend_flag"],
                         "id": processed_line["id"],
                         "sent_date_time": self._get_sent_timestamp(processed_line),
                     }
                 )
-                file_name_list.append(processed_line["file_name"])
         return file_list
 
     def count_files_for_folder(self, folder_id: int) -> int:

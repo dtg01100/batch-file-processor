@@ -3,6 +3,8 @@
 **Version:** 1.2 | **Last Updated:** 2026-05-18
 **Purpose:** Development guide for contributors and maintainers
 
+> **Development Philosophy:** There is no time limit. It is more important to do things correctly than to do them quickly. Take the time to understand the codebase, follow patterns, and ensure changes are robust and maintainable.
+
 ---
 
 ## Table of Contents

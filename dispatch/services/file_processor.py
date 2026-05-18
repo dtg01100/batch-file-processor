@@ -404,12 +404,9 @@ class FileProcessor:
             return True, current_file
 
         # Respect folder-level validation settings
-        should_validate = (
-            normalize_bool(context.effective_folder.get("process_edi", False))
-            or normalize_bool(context.effective_folder.get("split_edi", False))
-            or normalize_bool(
-                context.effective_folder.get("force_edi_validation", False)
-            )
+        should_validate = any(
+            normalize_bool(context.effective_folder.get(key, False))
+            for key in ("process_edi", "split_edi", "force_edi_validation")
         )
         if not should_validate:
             return True, current_file

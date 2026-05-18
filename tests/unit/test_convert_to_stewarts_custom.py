@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests.conftest import MockFactories
 from dispatch.converters import convert_to_stewarts_custom
 
 
@@ -141,7 +142,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
 
@@ -172,7 +173,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
 
@@ -198,7 +199,7 @@ class TestConvertToStewartsCustomDatabaseLookup(TestConvertToStewartsCustomFixtu
         """Test UOM lookup via service."""
         from dispatch.services.uom_lookup_service import UOMLookupService
 
-        uom_service = UOMLookupService(MagicMock())
+        uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
             {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
@@ -289,7 +290,7 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         """Test UOM lookup with matching item and packsize."""
         from dispatch.services.uom_lookup_service import UOMLookupService
 
-        uom_service = UOMLookupService(MagicMock())
+        uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"},
             {"itemno": 123456, "uom_mult": 1, "uom_code": "EA"},
@@ -305,7 +306,7 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         """Test UOM lookup with no matching item returns '?'."""
         from dispatch.services.uom_lookup_service import UOMLookupService
 
-        uom_service = UOMLookupService(MagicMock())
+        uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [
             {"itemno": 123456, "uom_mult": 6, "uom_code": "CS"}
         ]
@@ -331,7 +332,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = []
             mock_conn_class.return_value = mock_conn
 
@@ -380,7 +381,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             # Return empty result - customer not found
             mock_conn.execute.return_value = []
             mock_conn_class.return_value = mock_conn
@@ -418,7 +419,7 @@ class TestConvertToStewartsCustomOutputStructure(
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
 
@@ -452,7 +453,7 @@ class TestConvertToStewartsCustomOutputStructure(
         with patch(
             "adapters.db2ssh.connection.DB2SSHConnection"
         ) as mock_conn_class:
-            mock_conn = MagicMock()
+            mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
 
