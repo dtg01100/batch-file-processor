@@ -25,6 +25,15 @@ Backward Compatibility:
     parameters_dict, upc_lut)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "csv",
+    "display_name": "CSV",
+    "description": "Convert EDI to standard CSV format",
+    "module_name": "dispatch.converters.convert_to_csv",
+}
+
+
+
 import csv
 
 from core import utils

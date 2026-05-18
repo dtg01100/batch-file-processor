@@ -41,6 +41,15 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "estore_einvoice_generic",
+    "display_name": "eStore_eInvoice_Generic",
+    "description": "Convert EDI to EStore E-Invoice Generic CSV format",
+    "module_name": "dispatch.converters.convert_to_estore_einvoice_generic",
+}
+
+
+
 import csv
 import os
 from datetime import datetime

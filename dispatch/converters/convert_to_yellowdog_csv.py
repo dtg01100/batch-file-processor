@@ -21,6 +21,15 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "yellowdog_csv",
+    "display_name": "yellowdog_csv",
+    "description": "Convert EDI to YellowDog CSV format",
+    "module_name": "dispatch.converters.convert_to_yellowdog_csv",
+}
+
+
+
 import csv
 from datetime import datetime
 

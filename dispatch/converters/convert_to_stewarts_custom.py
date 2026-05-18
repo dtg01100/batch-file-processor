@@ -26,6 +26,15 @@ Backward Compatibility:
     parameters_dict, upc_dict)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "stewarts_custom",
+    "display_name": "stewarts_custom",
+    "description": "Convert EDI to Stewarts Custom CSV format",
+    "module_name": "dispatch.converters.convert_to_stewarts_custom",
+}
+
+
+
 import csv
 from typing import Any
 

@@ -23,6 +23,15 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "scannerware",
+    "display_name": "ScannerWare",
+    "description": "Convert EDI to ScannerWare fixed-width format",
+    "module_name": "dispatch.converters.convert_to_scannerware",
+}
+
+
+
 from datetime import datetime, timedelta
 
 from core.constants import EMPTY_DATE_MMDDYY

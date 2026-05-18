@@ -27,6 +27,15 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "scansheet_type_a",
+    "display_name": "ScanSheet_Type_A",
+    "description": "Convert EDI to ScanSheet Type A Excel format",
+    "module_name": "dispatch.converters.convert_to_scansheet_type_a",
+}
+
+
+
 import math
 import os
 import tempfile

@@ -21,6 +21,15 @@ Backward Compatibility:
     settings_dict, parameters_dict, upc_lut)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "tweaks",
+    "display_name": "tweaks",
+    "description": "Apply EDI tweaks to EDI file",
+    "module_name": "dispatch.converters.convert_to_tweaks",
+}
+
+
+
 from typing import TextIO, cast
 
 from core.edi.edi_tweaker import EDITweaker, TweakerConfig

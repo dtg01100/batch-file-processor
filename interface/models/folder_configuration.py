@@ -29,33 +29,16 @@ class BackendType(Enum):
 
 
 def _discover_format_values() -> list[tuple[str, str]]:
-    """Auto-discover convert formats from converters package.
+    """Auto-discover convert formats from dispatch.converters.registry.
 
-    Returns tuples of (internal_name, displayValue).
-    displayValue may differ from internalName for formats with specific casing.
+    Returns tuples of (internal_name, display_name).
+    Pulls from the central converter registry - the single source of truth.
     """
-    import os
-    import pkgutil
-
-    # Mapping from internal names (from filenames) to display values
-    DISPLAY_VALUES = {
-        "scannerware": "ScannerWare",
-        "scansheet_type_a": "ScanSheet_Type_A",
-        "jolley_custom": "jolley_custom",
-        "estore_einvoice": "eStore_eInvoice",
-        "estore_einvoice_generic": "eStore_eInvoice_Generic",
-    }
+    from dispatch.converters.registry import get_all_converters
 
     values = [("do_nothing", "do_nothing")]
-    converter_path = os.path.join("dispatch", "converters")
-    if not os.path.isdir(converter_path):
-        return values
-
-    for _, module_name, is_pkg in pkgutil.iter_modules([converter_path]):
-        if module_name.startswith("convert_to_") and not is_pkg:
-            format_name = module_name.replace("convert_to_", "")
-            display_value = DISPLAY_VALUES.get(format_name, format_name)
-            values.append((format_name, display_value))
+    for converter in get_all_converters():
+        values.append((converter.format_name, converter.display_name))
     return values
 
 

@@ -23,6 +23,15 @@ Backward Compatibility:
     parameters_dict, upc_lut)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "fintech",
+    "display_name": "Fintech",
+    "description": "Convert EDI to Fintech CSV format",
+    "module_name": "dispatch.converters.convert_to_fintech",
+}
+
+
+
 import csv
 
 from core import utils

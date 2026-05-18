@@ -4,8 +4,6 @@ This module provides a pipeline step for EDI format conversion,
 using dynamic module loading for different output formats.
 """
 
-import os
-import pkgutil
 import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -29,16 +27,10 @@ logger = get_logger(__name__)
 
 
 def _discover_supported_formats() -> list[str]:
-    """Auto-discover supported conversion formats by scanning converters package."""
-    formats: list[str] = []
-    converter_path = os.path.join(os.path.dirname(__file__), "..", "converters")
-    if not os.path.isdir(converter_path):
-        return formats
-    for _, module_name, is_pkg in pkgutil.iter_modules([converter_path]):
-        if module_name.startswith("convert_to_") and not is_pkg:
-            format_name = module_name.replace("convert_to_", "")
-            formats.append(format_name)
-    return sorted(formats)
+    """Auto-discover supported conversion formats from central registry."""
+    from dispatch.converters.registry import get_format_names
+
+    return get_format_names()
 
 
 SUPPORTED_FORMATS = _discover_supported_formats()

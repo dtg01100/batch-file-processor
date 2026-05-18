@@ -18,6 +18,15 @@ Backward Compatibility:
     parameters_dict, upc_lookup)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "simplified_csv",
+    "display_name": "Simplified CSV",
+    "description": "Convert EDI to simplified CSV format",
+    "module_name": "dispatch.converters.convert_to_simplified_csv",
+}
+
+
+
 import csv
 
 from core import utils

@@ -32,6 +32,15 @@ Backward Compatibility:
     parameters_dict, upc_dict)
 """
 
+CONVERTER_METADATA = {
+    "format_name": "jolley_custom",
+    "display_name": "jolley_custom",
+    "description": "Convert EDI to Jolley Custom CSV format",
+    "module_name": "dispatch.converters.convert_to_jolley_custom",
+}
+
+
+
 import csv
 from typing import Any
 
