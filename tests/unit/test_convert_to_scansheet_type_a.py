@@ -2,6 +2,13 @@
 
 import pytest
 
+# Skip entire module if barcode or pkg_resources not available
+pytest.importorskip("barcode")
+try:
+    import pkg_resources  # noqa: F401
+except ImportError:
+    pytest.skip("pkg_resources not available", allow_module_level=True)
+
 from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
 
 
