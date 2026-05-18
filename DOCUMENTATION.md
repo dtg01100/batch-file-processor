@@ -81,7 +81,7 @@ The **Batch File Processor** (also known as "Batch File Sender") is a Python-bas
 
 ### Key Features
 
-- **GUI Interface**: Tkinter-based desktop application for configuration management
+- **GUI Interface**: PyQt5-based desktop application for configuration management
 - **Multi-threading**: Parallel file processing using ThreadPoolExecutor and ProcessPoolExecutor
 - **Database Storage**: SQLite database for configuration and processed file tracking
 - **AS400 Integration**: SSH/db2ssh connectivity for fetching additional invoice/customer data
@@ -90,43 +90,32 @@ The **Batch File Processor** (also known as "Batch File Sender") is a Python-bas
 
 ---
 
-## Architecture
+## Architecture Overview
 
-```mermaid
-flowchart TD
-    subgraph Input
-        A[Monitored Folders]
-    end
-    
-    subgraph Processing
-        B[dispatch.py - Core Processor]
-        C[EDI Validation]
-        D[Format Conversion]
-        E[EDI Tweaks]
-    end
-    
-    subgraph Backends
-        F[FTP Backend]
-        G[Email Backend]
-        H[Copy Backend]
-    end
-    
-    subgraph Output
-        I[FTP Servers]
-        J[Email Recipients]
-        K[Local Directories]
-    end
-    
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    E --> G
-    E --> H
-    F --> I
-    G --> J
-    H --> K
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER (PyQt5 GUI)                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    interface/qt/app.py (QtBatchFileSenderApp)                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     DispatchOrchestrator (dispatch/)                         │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │ FolderProcessor │  │  FileProcessor  │  │      SendManager            │  │
+│  │  (per-folder)   │  │   (per-file)    │  │      (backends)             │  │
+│  └────────┬────────┘  └────────┬────────┘  └──────────────┬──────────────┘  │
+│           │                    │                          │                 │
+│           ▼                    ▼                          ▼                 │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                      Pipeline Steps                                  │  │
+│  │  Validator → Splitter → Converter → Tweaker → Sender                │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow
@@ -153,14 +142,14 @@ The primary GUI application providing:
 - **Settings Configuration**: Global settings for email, AS400 connection, etc.
 
 **Key Classes:**
-- [`DatabaseObj`](backend/database/database_obj.py) line 83 - Database connection wrapper with table accessors
+- `DatabaseObj` - Database connection wrapper with table accessors
 
 **Key Functions:**
-- [`add_folder()`](interface/operations/folder_manager.py) line 151 - Add new folder with default settings
-- [`batch_add_folders()`](interface/operations/folder_manager.py) line 491 - Bulk add multiple directories
-- [`_send_single()`](interface/qt/app.py) line 412 - Process a single folder
+- `add_folder()` - Add new folder with default settings
+- `batch_add_folders()` - Bulk add multiple directories
+- `_send_single()` - Process a single folder
 
-### dispatch.py
+### dispatch/orchestrator.py
 
 The core processing engine containing:
 
@@ -169,9 +158,9 @@ The core processing engine containing:
 - **Backend Dispatch**: Routes files to appropriate backend modules
 
 **Key Functions:**
-- [`process()`](dispatch/orchestrator.py) line 1683 - Main processing loop for all active folders
-- [`generate_file_hash()`](dispatch/hash_utils.py) line 42 - Calculate MD5 checksum with retry logic
-- [`generate_match_lists()`](dispatch/hash_utils.py) line 16 - Build lookup structures for processed files
+- `DispatchOrchestrator.process()` - Main processing loop for all active folders
+- `generate_file_hash()` - Calculate MD5 checksum with retry logic
+- `generate_match_lists()` - Build lookup structures for processed files
 
 ---
 

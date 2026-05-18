@@ -12,7 +12,7 @@ docs/
 ├── architecture/      # Architecture and design documents
 ├── api/              # API specifications
 ├── design/           # Detailed design specifications
-└── archive/          # Historical documents and session summaries
+└── skills/           # Agent skills and tooling
 ```
 
 ## Quick Navigation
@@ -46,9 +46,6 @@ Located in `docs/` root and `design/` subdirectory:
 - [Database Design](DATABASE_DESIGN.md)
 - [API Summary](API_SUMMARY.md)
 
-### Archive
-The `archive/` directory contains historical documents, session summaries, implementation reports, and other ephemeral files. These are kept for reference but may be outdated.
-
 ## Documentation Guidelines
 
 ### When Creating Documentation
@@ -68,7 +65,7 @@ The `archive/` directory contains historical documents, session summaries, imple
 - Format specifications
 - Testing guides
 
-**Ephemeral (archive or session-only)**:
+**Ephemeral (session-only)**:
 - Session summaries
 - Implementation plans
 - Debug session notes

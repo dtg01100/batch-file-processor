@@ -1,6 +1,6 @@
 # Batch File Processor — Technical Reference
 
-**Version:** 1.1 | **Last Updated:** 2026-05-15
+**Version:** 1.2 | **Last Updated:** 2026-05-18
 **Purpose:** Development guide for contributors and maintainers
 
 ---
@@ -78,17 +78,16 @@
 | **interface/models/** | Data models (dataclasses) | `folder_configuration.py` |
 | **interface/operations/** | Business logic | `folder_operations.py`, `processing.py`, `maintenance.py` |
 | **interface/database/** | Database access | `database_manager.py`, `Table` wrapper |
-| **dispatch/** | Core file processing | `orchestrator.py`, `send_manager.py`, `edi_validator.py` |
+| **dispatch/** | Core file processing | `orchestrator.py`, `send_manager.py`, `edi_validator.py`, `results.py` |
 | **dispatch/services/** | Processing services | `file_processor.py`, `folder_processor.py` |
 | **dispatch/pipeline/** | Pipeline steps | `validator.py`, `splitter.py`, `converter.py` |
-| **dispatch/converters/** | 12 format converters | `convert_to_csv.py`, `convert_to_scannerware.py`, etc. |
+| **dispatch/converters/** | 17 format converters | `convert_to_csv.py`, `convert_to_scannerware.py`, etc. |
 | **backend/** | Output backends | `email_backend.py`, `ftp_backend.py`, `copy_backend.py`, `http_backend.py` |
 | **core/** | Shared utilities | `structured_logging.py`, `constants.py`, `exceptions.py` |
 | **core/edi/** | EDI parsing | `edi_parser.py`, `edi_splitter.py`, `edi_tweaker.py` |
 | **core/database/** | Database layer | SQLite adapter and repositories |
 | **adapters/** | Database adapters | `adapters/sqlite/` (current), `adapters/db2ssh/` (future) |
-| **tests/** | Test suite (~4757 tests) | `unit/`, `integration/`, `qt/`, `convert_backends/` |
-| **archive/** | Deprecated code | Legacy `dispatch_process.py`, `edi_tweaks.py` (read-only) |
+| **tests/** | Test suite | `unit/`, `integration/`, `qt/`, `convert_backends/` |
 
 ---
 
@@ -263,16 +262,15 @@ logger.error("Backend failed", extra={"backend": "ftp", "retry": 2})
 
 ## Legacy & Compatibility
 
-### Archive Directory (`archive/`)
+### Removed/Migrated Components
 
-Contains deprecated code kept for reference and potential rollback. **Do not import from here for new development.**
+The following components have been removed or migrated. References to them in old code should be updated:
 
-| Archived File | Superseded By | Migration Notes |
-|--------------|--------------|-----------------|
-| `dispatch_process.py` | `dispatch.orchestrator.DispatchOrchestrator` | Use instance-based API |
-| `mtc_edi_validator.py` | `dispatch.edi_validator.EDIValidator` | Use class-based validator |
-| `edi_tweaks.py` | `dispatch.pipeline.tweaker.EDITweakerStep` | Use pipeline step |
-| `_dispatch_legacy.py` | `dispatch/orchestrator.py` | Refactored with DI |
+| Former File/Component | Replacement | Migration Notes |
+|----------------------|-------------|-----------------|
+| `dispatch.pipeline.tweaker.EDITweakerStep` | Use `convert_to_format='tweaks'` in converter | Tweak logic moved to `dispatch/converters/convert_to_tweaks.py` |
+| Legacy `dispatch_process.py` | `dispatch.orchestrator.DispatchOrchestrator` | Use instance-based API |
+| Legacy `mtc_edi_validator.py` | `dispatch.edi_validator.EDIValidator` | Use class-based validator |
 
 ### Feature Flags (`dispatch/feature_flags.py`)
 
@@ -369,7 +367,7 @@ pytest tests/unit/interface/qt/ -n auto
 
 | Pattern | Why Wrong | Correct Approach |
 |---------|-----------|------------------|
-| Import from `dispatch` root | Unclear source, breaks encapsulation | Import from `dispatch.module` explicitly |
+| Import from `dispatch` root (single item) | Unclear source, breaks encapsulation | Import from `dispatch.module` explicitly; multiple items is OK |
 | Business logic in UI widgets | Couples UI to logic, hard to test | Put logic in `interface/operations/` |
 | Direct DB queries from widgets | Breaks MVC, tight coupling | Use controller → operations → DB manager |
 | Qt tests with `-n auto` | Segfaults with pytest-xdist | Use `-n0` for Qt tests |
