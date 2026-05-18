@@ -379,7 +379,31 @@ class ErrorHandler:
         """
         assert self.db is not None
         try:
-            self.db.insert(error_record)
+            raw_conn = getattr(self.db, "raw_connection", None)
+            if raw_conn is not None:
+                columns = [
+                    "timestamp",
+                    "folder",
+                    "filename",
+                    "error_message",
+                    "error_type",
+                    "error_source",
+                ]
+                placeholders = ", ".join("?" for _ in columns)
+                col_names = ", ".join(f'"{c}"' for c in columns)
+                sql = f"INSERT INTO dispatch_errors ({col_names}) VALUES ({placeholders})"
+                params = (
+                    error_record.get("timestamp", time.ctime()),
+                    error_record.get("folder", ""),
+                    error_record.get("filename", ""),
+                    error_record.get("error_message", ""),
+                    error_record.get("error_type", ""),
+                    error_record.get("error_source", ""),
+                )
+                raw_conn.execute(sql, params)
+                raw_conn.commit()
+            else:
+                self.db.insert(error_record)
         except Exception as e:
             error_msg = f"Failed to persist error to database: {e}\n"
             if self.error_log:
