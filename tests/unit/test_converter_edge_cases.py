@@ -642,9 +642,6 @@ class TestConverterEmptyFileHandling:
         default_parameters_dict,
     ):
         """convert_to_scansheet_type_a with empty input completes without crash."""
-        # Skip if scansheet_type_a module can't be imported (missing barcode/pkg_resources)
-        pytest.importorskip("barcode")
-        pytest.importorskip("pkg_resources")
         from dispatch.converters import convert_to_scansheet_type_a
 
         with patch("core.database.create_query_runner") as mock_qr_class:
