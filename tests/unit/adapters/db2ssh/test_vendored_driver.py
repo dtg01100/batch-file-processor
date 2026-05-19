@@ -2,7 +2,7 @@
 Unit tests for vendored db2ssh driver internals.
 """
 
-import inspect
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -210,14 +210,63 @@ class TestQmarkToPositional:
 
 
 class TestRunQuery:
-    def test_ensures_trailing_semicolon(self):
-        source = inspect.getsource(_run_query)
-        assert 'if not sql.endswith(";")' in source
+    """Tests for _run_query SQL execution behavior."""
 
-    def test_uses_t_flag_for_multiline_sql(self):
-        source = inspect.getsource(_run_query)
-        assert " -t" in source
+    def _make_mock_ssh(self, exit_status=0):
+        """Create a mock SSH client for testing _run_query."""
+        mock_stdout = MagicMock()
+        mock_stdout.read.return_value = b""
+        mock_stdout.channel = MagicMock()
+        mock_stdout.channel.recv_exit_status.return_value = exit_status
 
-    def test_uses_temp_file_pattern(self):
-        source = inspect.getsource(_run_query)
-        assert "/tmp/" in source
+        mock_stdin = MagicMock()
+        mock_stderr = MagicMock()
+        mock_stderr.channel = mock_stdout.channel
+
+        cleanup_stdout = MagicMock()
+        cleanup_stdout.read.return_value = b""
+        cleanup_stdout.channel = MagicMock()
+
+        mock_ssh = MagicMock()
+        mock_ssh.exec_command.side_effect = [
+            (mock_stdin, mock_stdout, mock_stderr),
+            (None, mock_stdout, mock_stderr),
+            (None, cleanup_stdout, MagicMock()),
+        ]
+        return mock_ssh, mock_stdin
+
+    def test_appends_semicolon_to_sql(self):
+        mock_ssh, mock_stdin = self._make_mock_ssh()
+
+        _run_query(mock_ssh, "SELECT 1 FROM DUAL")
+
+        written_sql = mock_stdin.write.call_args[0][0]
+        assert written_sql.endswith(";"), "SQL should end with semicolon for db2 -t flag"
+
+    def test_does_not_duplicate_semicolon(self):
+        mock_ssh, mock_stdin = self._make_mock_ssh()
+
+        _run_query(mock_ssh, "SELECT 1;")
+
+        written_sql = mock_stdin.write.call_args[0][0]
+        count = written_sql.count(";")
+        assert count == 1, f"Expected exactly one semicolon, found {count}"
+
+    def test_uses_db2_command_with_t_flag(self):
+        mock_ssh, _ = self._make_mock_ssh()
+
+        _run_query(mock_ssh, "SELECT 1")
+
+        assert len(mock_ssh.exec_command.call_args_list) >= 2
+        db2_cmd = mock_ssh.exec_command.call_args_list[1][0][0]
+        assert "db2 -f" in db2_cmd
+        assert "-t" in db2_cmd
+
+    def test_uses_temp_file_for_sql(self):
+        mock_ssh, _ = self._make_mock_ssh()
+
+        _run_query(mock_ssh, "SELECT 1")
+
+        first_cmd = mock_ssh.exec_command.call_args_list[0][0][0]
+        assert first_cmd.startswith("cat > /tmp/.db2ssh_")
+        assert first_cmd.endswith(".sql")
