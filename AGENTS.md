@@ -88,7 +88,7 @@
 | **core/** | Shared utilities | `structured_logging.py`, `constants.py`, `exceptions.py` |
 | **core/edi/** | EDI parsing | `edi_parser.py`, `edi_splitter.py`, `edi_tweaker.py` |
 | **core/database/** | Database layer | SQLite adapter and repositories |
-| **adapters/** | Database adapters | `adapters/sqlite/` (current), `adapters/db2ssh/` (future) |
+| **adapters/** | Database adapters | `adapters/sqlite/` (current), `adapters/db2ssh/` (production) |
 | **tests/** | Test suite | `unit/`, `integration/`, `qt/`, `convert_backends/` |
 
 ---

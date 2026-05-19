@@ -250,7 +250,7 @@ This document maps all modules to their responsibilities and dependencies. **Upd
 | SqliteProcessedFilesRepository | `sqlite/repositories/sqlite_processed_files_repo.py` | Processed files |
 | SqliteEmailQueueRepository | `sqlite/repositories/sqlite_email_queue_repo.py` | Email queue |
 
-### 6.2 DB2 SSH Adapter (Future)
+### 6.2 DB2 SSH Adapter
 
 | Component | Location | Responsibility |
 |-----------|----------|-----------------|
