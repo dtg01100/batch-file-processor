@@ -6,6 +6,7 @@ db2ssh library to the DatabaseConnectionProtocol interface used by
 QueryRunner in core.database.
 """
 
+import threading
 import time
 import uuid
 from dataclasses import dataclass
@@ -56,16 +57,22 @@ class DB2SSHConnection:
         self._connection: Any = None
         self._connection_id = uuid.uuid4().hex[:8]
         self._logger = get_logger(__name__)
+        self._lock = threading.Lock()
 
     def _ensure_connection(self) -> Any:
         """Establish the SSH connection if not already connected.
+
+        Uses double-checked locking for thread safety. Returns the
+        existing connection if already established.
 
         Returns:
             The underlying db2ssh connection object.
 
         """
         if self._connection is None:
-            self._connect()
+            with self._lock:
+                if self._connection is None:
+                    self._connect()
         return self._connection
 
     def _connect(self) -> Any:
@@ -200,3 +207,11 @@ class DB2SSHConnection:
             )
             self._connection.close()
             self._connection = None
+
+    def __enter__(self):
+        """Enter context manager, returning self."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context manager, closing the connection."""
+        self.close()

@@ -14,6 +14,7 @@ from core.database.query_runner import (
     QueryRunner,
     SQLiteConnection,
     create_query_runner,
+    create_query_runner_from_settings,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "QueryRunner",
     "SQLiteConnection",
     "create_query_runner",
+    "create_query_runner_from_settings",
 ]
