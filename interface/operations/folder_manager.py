@@ -101,7 +101,7 @@ class FolderManager:
         template_settings["alias"] = folder_name
 
         self._folder_repo.insert(template_settings)
-        return template_settings
+        return self._folder_repo.find_by_path(folder_path)
 
     def _alias_exists(self, alias: str) -> bool:
         return bool(self._folder_repo.find_by_alias(alias))

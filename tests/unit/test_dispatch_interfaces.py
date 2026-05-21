@@ -45,6 +45,11 @@ class TestDatabaseInterface:
         """A complete implementation should pass isinstance check."""
 
         class CompleteDatabase:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -98,6 +103,11 @@ class TestDatabaseInterface:
         """Missing find_one() method should fail isinstance check."""
 
         class MissingFindOne:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -123,6 +133,11 @@ class TestDatabaseInterface:
         """Missing insert() method should fail isinstance check."""
 
         class MissingInsert:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -148,6 +163,11 @@ class TestDatabaseInterface:
         """Missing count() method should fail isinstance check."""
 
         class MissingCount:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -173,6 +193,11 @@ class TestDatabaseInterface:
         """Test that method return types are correctly specified."""
 
         class MockDatabase:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return [{"id": 1, "name": "test"}]
 
@@ -1284,6 +1309,11 @@ class TestProtocolIntegration:
         """Test that a class can implement multiple protocols."""
 
         class ComprehensiveHandler:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             """Implements all protocols for testing."""
 
             def find(self, **kwargs) -> list[dict]:
@@ -1446,6 +1476,11 @@ class TestProtocolEdgeCases:
         """A class with only some methods should not satisfy the protocol."""
 
         class PartialDB:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -1459,6 +1494,11 @@ class TestProtocolEdgeCases:
         # existence AND that the return type annotation matches the Protocol
         # This is more strict than just checking method existence
         class WrongReturnTypes:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs):  # No type annotation
                 return "not a list"
 
@@ -1527,6 +1567,11 @@ class TestProtocolEdgeCases:
         """Test that None return values are handled correctly."""
 
         class NoneReturningDB:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -1558,6 +1603,11 @@ class TestProtocolEdgeCases:
         """Test that exceptions in implementation methods are not caught by protocol."""
 
         class ExceptionThrowingDB:
+            @property
+            def raw_connection(self):
+                return None
+            def all(self) -> list[dict]:
+                return []
             def find(self, **kwargs) -> list[dict]:
                 raise RuntimeError("Database error")
 

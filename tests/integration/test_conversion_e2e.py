@@ -21,6 +21,8 @@ import csv
 import os
 from unittest.mock import MagicMock, patch
 
+from core.edi.c_rec_generator import QueryRunnerProtocol
+
 import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
@@ -853,7 +855,7 @@ class TestConvertToStewartsCustom:
 
         # Mock create_query_runner in core.database where DatabaseConnectionMixin now resolves it
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunnerProtocol)
             # First call is for header_fields, second call is for uom_lookup_list
             # QueryRunner.run_query returns list[dict]
             mock_qr_instance.run_query.side_effect = [
@@ -930,18 +932,18 @@ class TestConvertToScansheetTypeA:
         with patch(
             "core.database.query_runner.create_query_runner_from_settings"
         ) as mock_create:
-            mock_qr = MagicMock()
+            mock_qr = MagicMock(spec=QueryRunnerProtocol)
             mock_qr.run_query.return_value = [
-                [
-                    "012345678901",
-                    "123456",
-                    "Test Item",
-                    "12",
-                    "EA",
-                    "10",
-                    "1.00",
-                    "1.99",
-                ]
+                {
+                    "UPC": "012345678901",
+                    "Item": "123456",
+                    "Description": "Test Item",
+                    "Pack": "12",
+                    "U/M": "EA",
+                    "Qty": "10",
+                    "Price": "1.00",
+                    "Retail": "1.99",
+                }
             ]
             mock_create.return_value = mock_qr
 
@@ -981,7 +983,7 @@ class TestConvertToJolleyCustom:
 
         # Mock create_query_runner in core.database where DatabaseConnectionMixin now resolves it
         with patch("core.database.create_query_runner") as mock_qr_class:
-            mock_qr_instance = MagicMock()
+            mock_qr_instance = MagicMock(spec=QueryRunnerProtocol)
             # First call is for header_fields, second call is for uom_lookup_list
             # QueryRunner.run_query returns list[dict]
             mock_qr_instance.run_query.side_effect = [

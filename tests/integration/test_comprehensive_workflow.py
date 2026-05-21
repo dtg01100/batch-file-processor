@@ -25,6 +25,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from dispatch.interfaces import RunLog
+
 import pytest
 
 # Add project root to path
@@ -38,6 +40,7 @@ from core.database.schema import ensure_schema
 from dispatch.hash_utils import generate_file_hash
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from interface.operations.folder_manager import FolderManager
+from adapters.sqlite.repositories import SqliteFolderRepository
 
 # =============================================================================
 # FIXTURES
@@ -138,7 +141,7 @@ def workspace(tmp_path):
 @pytest.fixture
 def folder_manager(workspace):
     """Create a FolderManager instance."""
-    return FolderManager(workspace["db"])
+    return FolderManager(SqliteFolderRepository(workspace["db"]))
 
 
 @pytest.fixture
@@ -250,7 +253,7 @@ def run_dispatch(orchestrator, folder, db):
         FolderResult from processing
     """
     # Create a mock run log
-    run_log = MagicMock()
+    run_log = MagicMock(spec=RunLog)
     run_log.messages = []
 
     def log_message(msg):
@@ -797,7 +800,7 @@ class TestFullIntegrationWorkflow:
         5. Run again with changed settings
         """
         # Step 1: Create folder with initial settings
-        folder_manager = FolderManager(workspace["db"])
+        folder_manager = FolderManager(SqliteFolderRepository(workspace["db"]))
         folder_path = str(workspace["input_folder"])
 
         folder_manager.add_folder(folder_path)
@@ -887,7 +890,7 @@ class TestFullIntegrationWorkflow:
     ):
         """Test workflow with EDI tweaking (ampersand filter, date offset)."""
         # Create folder with tweaking enabled
-        folder_manager = FolderManager(workspace["db"])
+        folder_manager = FolderManager(SqliteFolderRepository(workspace["db"]))
         folder_path = str(workspace["input_folder"])
 
         folder_manager.add_folder(folder_path)
@@ -947,7 +950,7 @@ class TestEdgeCasesAndErrorHandling:
 
     def test_nonexistent_folder_path(self, workspace):
         """Test adding a folder with non-existent path."""
-        folder_manager = FolderManager(workspace["db"])
+        folder_manager = FolderManager(SqliteFolderRepository(workspace["db"]))
 
         # This should still work (path validation happens elsewhere)
         folder = folder_manager.add_folder("/nonexistent/path/folder")
@@ -960,7 +963,7 @@ class TestEdgeCasesAndErrorHandling:
 
     def test_folder_without_required_settings(self, workspace):
         """Test folder with minimal settings uses defaults from oversight table."""
-        folder_manager = FolderManager(workspace["db"])
+        folder_manager = FolderManager(SqliteFolderRepository(workspace["db"]))
 
         # Add folder - should use defaults
         folder = folder_manager.add_folder(str(workspace["input_folder"]))
@@ -975,7 +978,7 @@ class TestEdgeCasesAndErrorHandling:
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""
-        folder_manager = FolderManager(workspace["db"])
+        folder_manager = FolderManager(SqliteFolderRepository(workspace["db"]))
 
         # Add multiple folders
         folder_manager.add_folder(str(workspace["workspace"] / "folder1"))
@@ -1083,7 +1086,7 @@ C00000003000030000
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        results = [orchestrator.process_folder(f, MagicMock()) for f in all_folders]
+        results = [orchestrator.process_folder(f, MagicMock(spec=RunLog)) for f in all_folders]
 
         assert all(r.success for r in results)
         assert sum(r.files_processed for r in results) == 5
@@ -1155,7 +1158,7 @@ class TestEdgeCases:
 
         config = DispatchConfig(backends={"copy": NoopBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
-        result = orchestrator.process_folder(folder_config, MagicMock())
+        result = orchestrator.process_folder(folder_config, MagicMock(spec=RunLog))
 
         assert result.success is True
         assert result.files_processed == 0
@@ -1176,7 +1179,7 @@ class TestEdgeCases:
 
         config = DispatchConfig(backends={"copy": NoopBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
-        result = orchestrator.process_folder(fc, MagicMock())
+        result = orchestrator.process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is False
         assert len(result.errors) > 0
@@ -1198,7 +1201,7 @@ class TestEdgeCases:
 
         config = DispatchConfig(backends={}, settings={})
         orchestrator = DispatchOrchestrator(config)
-        result = orchestrator.process_folder(folder_config, MagicMock())
+        result = orchestrator.process_folder(folder_config, MagicMock(spec=RunLog))
 
         # Each file fails because no backend is enabled
         assert result.success is False
