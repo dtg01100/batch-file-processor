@@ -17,6 +17,9 @@ Key design decisions
    first checks whether the on-disk mtime matches the stored value.
    If it matches the content is guaranteed unchanged and we skip the
    expensive checksum calculation entirely.
+4. **mtime + resend interaction** — if a file's mtime matches but its
+   checksum is NOT in the skipped set (meaning at least one record has
+   resend_flag=1), the file is NOT skipped — it will be processed.
 """
 
 from __future__ import annotations
@@ -109,10 +112,10 @@ def filter_pending_files(
     single pass:
 
     1. If the file's current mtime matches the most recently stored mtime
-       for that file path, the file is skipped without calculating a
-       checksum.
-    2. Otherwise the checksum is calculated and compared against the
-       skipped-checksum set.
+       AND its checksum is in the skipped set, skip without calculating.
+    2. If the file's mtime matches but checksum is NOT in skipped, process
+       (resend_flag=1 means this checksum should be reprocessed).
+    3. Otherwise calculate checksum and compare against skipped set.
 
     Per-file progress reporting is preserved for callers that need it.
 
@@ -132,17 +135,28 @@ def filter_pending_files(
 
     pending: list[str] = []
     for file_index, file_path in enumerate(candidate_files, start=1):
-        if _skip_by_mtime(file_path, mtime_map):
-            if progress_reporter and hasattr(progress_reporter, "update_discovery_file"):
-                progress_reporter.update_discovery_file(
-                    folder_num=folder_index if folder_index is not None else 0,
-                    folder_total=folder_total if folder_total is not None else 0,
-                    file_num=file_index,
-                    file_total=len(candidate_files),
-                    filename=os.path.basename(file_path),
-                )
-            continue
+        mtime_matches = _skip_by_mtime(file_path, mtime_map)
 
+        if mtime_matches:
+            # mtime matches - check if checksum is in skipped before skipping
+            from core.utils.file_utils import calculate_file_checksum
+
+            checksum = calculate_file_checksum(file_path)
+            if checksum in skipped:
+                # checksum is in skipped (all records have resend_flag=0) - skip
+                if progress_reporter and hasattr(
+                    progress_reporter, "update_discovery_file"
+                ):
+                    progress_reporter.update_discovery_file(
+                        folder_num=folder_index if folder_index is not None else 0,
+                        folder_total=folder_total if folder_total is not None else 0,
+                        file_num=file_index,
+                        file_total=len(candidate_files),
+                        filename=os.path.basename(file_path),
+                    )
+                continue
+
+        # Either mtime doesn't match, or checksum not in skipped (resend case)
         from core.utils.file_utils import calculate_file_checksum
 
         checksum = calculate_file_checksum(file_path)
