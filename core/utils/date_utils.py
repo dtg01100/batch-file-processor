@@ -19,7 +19,16 @@ def datetime_from_dactime(dac_time: int) -> datetime:
 
 
 def datetime_from_invtime(invtime: str) -> datetime:
-    return datetime.strptime(invtime, "%m%d%y")
+    from core.constants import EDI_DATE_FORMAT
+
+    return datetime.strptime(invtime, EDI_DATE_FORMAT)
+
+
+def parse_edi_date(date_str: str) -> datetime:
+    """Parse an EDI date string using the standard mmddyy format."""
+    from core.constants import EDI_DATE_FORMAT
+
+    return datetime.strptime(date_str, EDI_DATE_FORMAT)
 
 
 def dactime_from_invtime(inv_no: str):

@@ -5,15 +5,15 @@ into individual invoice files with support for category filtering.
 """
 
 import os
-
 from dataclasses import dataclass
-from dispatch.interfaces import FileSystemInterface
 
 from core.edi.edi_parser import capture_records
 from core.edi.edi_splitting_utils import (
     _col_to_excel,
     filter_b_records_by_category,
 )
+from core.utils.date_utils import parse_edi_date
+from dispatch.interfaces import FileSystemInterface
 
 
 @dataclass
@@ -72,7 +72,7 @@ def _build_split_filename(
     if config.prepend_date:
         from datetime import datetime
 
-        datetime_from_arec = datetime.strptime(line_dict["invoice_date"], "%m%d%y")
+        datetime_from_arec = parse_edi_date(line_dict["invoice_date"])
         inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
         file_name_prefix = inv_date + "_" + file_name_prefix
 

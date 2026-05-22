@@ -20,6 +20,8 @@ MIN_DATE = datetime(1900, 1, 1)
 MAX_DATE = datetime(9999, 12, 31)
 
 # EDI field sentinel values
+# EDI date format (mmddyy)
+EDI_DATE_FORMAT = "%m%d%y"
 EMPTY_DATE_MMDDYY = "000000"
 EMPTY_PARENT_ITEM = "000000"
 

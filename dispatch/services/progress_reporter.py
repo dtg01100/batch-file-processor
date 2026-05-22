@@ -99,9 +99,6 @@ class CLIProgressReporter:
         self._output.write("\r" + progress_line)
         self._output.flush()
 
-    def finish(self) -> None:
-        self._output.write("\n")
-        self._output.flush()
 
     def update_discovery_file(
         self,

@@ -31,11 +31,11 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from decimal import Decimal
 from typing import Any, Protocol, TextIO, runtime_checkable
 
 from core.constants import (
     EDI_B_RECORD_STANDARD_LENGTH,
+    EDI_DATE_FORMAT,
     EMPTY_DATE_MMDDYY,
     GTIN13_LENGTH,
     UPC_A_LENGTH,
@@ -49,6 +49,7 @@ from core.structured_logging import (
     get_logger,
     get_or_create_correlation_id,
 )
+from core.utils.date_utils import parse_edi_date
 
 logger = get_logger(__name__)
 
@@ -339,7 +340,7 @@ class EDITweaker:
         for attempt in range(max_retries):
             try:
                 return open(filepath, "w", encoding="utf-8", newline="\r\n")
-            except Exception as error:
+            except OSError as error:
                 if attempt + 1 < max_retries:
                     sleep_time = (attempt + 1) * (attempt + 1)
                     time.sleep(sleep_time)
@@ -438,18 +439,18 @@ class EDITweaker:
         if self.config.invoice_date_offset != 0:
             invoice_date_string = fields["invoice_date"]
             if invoice_date_string != EMPTY_DATE_MMDDYY:
-                invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
+                invoice_date = parse_edi_date(invoice_date_string)
                 offset_invoice_date = invoice_date + timedelta(
                     days=self.config.invoice_date_offset
                 )
                 fields["invoice_date"] = datetime.strftime(
-                    offset_invoice_date, "%m%d%y"
+                    offset_invoice_date, EDI_DATE_FORMAT
                 )
 
         if self.config.invoice_date_custom_format:
             invoice_date_string = fields["invoice_date"]
             try:
-                invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
+                invoice_date = parse_edi_date(invoice_date_string)
                 fields["invoice_date"] = datetime.strftime(
                     invoice_date, self.config.invoice_date_custom_format_string
                 )

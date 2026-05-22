@@ -281,17 +281,6 @@ class TestCLIProgressReporter:
         assert "Processing" in content
         assert "Folder 1 of 3" in content
 
-    def test_finish_writes_newline(self):
-        """Test that finish writes a newline."""
-        output = StringIO()
-        reporter = CLIProgressReporter(output)
-
-        reporter.finish()
-
-        output.seek(0)
-        content = output.read()
-
-        assert content == "\n"
 
     def test_default_output_is_stdout(self):
         """Test that default output is sys.stdout."""

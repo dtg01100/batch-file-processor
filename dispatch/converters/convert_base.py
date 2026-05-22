@@ -35,7 +35,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, IO, TextIO
+from typing import IO, Any, TextIO
 
 from core import utils
 from core.structured_logging import (
@@ -490,6 +490,53 @@ def normalize_parameter(
 
 
 
+# =============================================================================
+# Logging Helpers for make_edi_convert
+# =============================================================================
+
+
+def _log_conversion_start(
+    edi_process: str, output_filename: str, format_name: str
+) -> dict[str, str]:
+    """Build context dict for conversion start log."""
+    return {
+        "input_file": os.path.basename(edi_process),
+        "output_file": os.path.basename(output_filename),
+        "format": format_name,
+    }
+
+
+def _log_conversion_success(
+    result: str, context: dict[str, str], duration_ms: float, format_name: str
+) -> None:
+    """Log successful conversion."""
+    context["output_file"] = os.path.basename(result)
+    context["duration_ms"] = round(duration_ms * 1000, 2)
+    log_with_context(
+        logger,
+        logging.INFO,
+        f"{format_name} conversion completed",
+        operation="edi_convert",
+        context=context,
+    )
+
+
+def _log_conversion_error(
+    e: Exception, context: dict[str, str], duration_ms: float, format_name: str
+) -> None:
+    """Log failed conversion."""
+    context["duration_ms"] = round(duration_ms * 1000, 2)
+    context["error"] = str(e)
+    log_with_context(
+        logger,
+        logging.ERROR,
+        f"{format_name} conversion failed: {e}",
+        operation="edi_convert",
+        context=context,
+    )
+
+
+
 def make_edi_convert(converter_class):
     """Create module-level ``edi_convert`` function with operational logging.
 
@@ -505,16 +552,13 @@ def make_edi_convert(converter_class):
         correlation_id = get_or_create_correlation_id()
         start_time = time.perf_counter()
 
+        context = _log_conversion_start(edi_process, output_filename, format_name)
         log_with_context(
             logger,
             logging.INFO,
             f"Starting {format_name} conversion",
             operation="edi_convert",
-            context={
-                "input_file": os.path.basename(edi_process),
-                "output_file": os.path.basename(output_filename),
-                "format": format_name,
-            },
+            context=context,
         )
         log_file_operation(
             logger,
@@ -535,18 +579,7 @@ def make_edi_convert(converter_class):
             )
 
             duration_ms = time.perf_counter() - start_time
-            log_with_context(
-                logger,
-                logging.INFO,
-                f"{format_name} conversion completed",
-                operation="edi_convert",
-                context={
-                    "input_file": os.path.basename(edi_process),
-                    "output_file": os.path.basename(result),
-                    "format": format_name,
-                    "duration_ms": round(duration_ms * 1000, 2),
-                },
-            )
+            _log_conversion_success(result, context, duration_ms, format_name)
             log_file_operation(
                 logger,
                 "write",
@@ -561,18 +594,7 @@ def make_edi_convert(converter_class):
 
         except Exception as e:
             duration_ms = time.perf_counter() - start_time
-            log_with_context(
-                logger,
-                logging.ERROR,
-                f"{format_name} conversion failed: {e}",
-                operation="edi_convert",
-                context={
-                    "input_file": os.path.basename(edi_process),
-                    "format": format_name,
-                    "duration_ms": round(duration_ms * 1000, 2),
-                    "error": str(e),
-                },
-            )
+            _log_conversion_error(e, context, duration_ms, format_name)
             raise
 
     return edi_convert

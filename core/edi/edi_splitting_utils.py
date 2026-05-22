@@ -10,6 +10,7 @@ from datetime import datetime
 from core.edi.edi_parser import capture_records
 from core.exceptions import DataIntegrityError
 from core.structured_logging import get_logger
+from core.utils.date_utils import parse_edi_date
 
 MAX_A_RECORD_COUNT = 700
 
@@ -79,7 +80,7 @@ def _build_split_file_metadata(
 
     file_name_prefix = prepend_letters + "_"
     if prepend_date_files:
-        datetime_from_arec = datetime.strptime(line_dict["invoice_date"], "%m%d%y")
+        datetime_from_arec = parse_edi_date(line_dict["invoice_date"])
         inv_date = datetime.strftime(datetime_from_arec, "%d %b, %Y")
         file_name_prefix = inv_date + "_" + file_name_prefix
 
