@@ -73,7 +73,7 @@ import uuid
 from collections.abc import Callable, MutableMapping
 from contextvars import ContextVar
 from dataclasses import asdict, is_dataclass
-from datetime import timezone, date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
@@ -1029,7 +1029,7 @@ class StructuredLogger:
 
         """
         return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "logger": module,
             "mod": module,
             "function": function,
@@ -1592,7 +1592,7 @@ class JSONFormatter(logging.Formatter):
 
 def _build_base_record(record: logging.LogRecord) -> dict[str, Any]:
     return {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+        "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
         "level": record.levelname,
         "logger": record.name,
         "message": record.getMessage(),
