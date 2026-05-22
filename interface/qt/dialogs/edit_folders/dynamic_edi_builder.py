@@ -346,7 +346,9 @@ class DynamicEDIBuilder:
                     keys_to_remove.append(key)
                 break
 
-    def _on_edi_check_toggled(self, checked: bool) -> None:  # noqa: FBT001 — Qt slot, signature dictated by toggled(bool)
+    def _on_edi_check_toggled(
+        self, checked: bool
+    ) -> None:  # noqa: FBT001 — Qt slot, signature dictated by toggled(bool)
         """Handle Convert EDI checkbox toggle."""
         if self._edi_option_processing:
             return
@@ -686,12 +688,24 @@ class DynamicEDIBuilder:
         self.fields["upc_var_check"].setChecked(
             normalize_bool(cfg.get("calculate_upc_check_digit", False))
         )
-        self.fields["a_rec_var_check"].setChecked(normalize_bool(cfg.get("include_a_records", False)))  # noqa: E501
-        self.fields["c_rec_var_check"].setChecked(normalize_bool(cfg.get("include_c_records", False)))  # noqa: E501
-        self.fields["headers_check"].setChecked(normalize_bool(cfg.get("include_headers", False)))  # noqa: E501
-        self.fields["ampersand_check"].setChecked(normalize_bool(cfg.get("filter_ampersand", False)))  # noqa: E501
-        self.fields["pad_arec_check"].setChecked(normalize_bool(cfg.get("pad_a_records", False)))  # noqa: E501
-        self.fields["a_record_padding_field"].setText(str(cfg.get("a_record_padding", "")))  # noqa: E501
+        self.fields["a_rec_var_check"].setChecked(
+            normalize_bool(cfg.get("include_a_records", False))
+        )  # noqa: E501
+        self.fields["c_rec_var_check"].setChecked(
+            normalize_bool(cfg.get("include_c_records", False))
+        )  # noqa: E501
+        self.fields["headers_check"].setChecked(
+            normalize_bool(cfg.get("include_headers", False))
+        )  # noqa: E501
+        self.fields["ampersand_check"].setChecked(
+            normalize_bool(cfg.get("filter_ampersand", False))
+        )  # noqa: E501
+        self.fields["pad_arec_check"].setChecked(
+            normalize_bool(cfg.get("pad_a_records", False))
+        )  # noqa: E501
+        self.fields["a_record_padding_field"].setText(
+            str(cfg.get("a_record_padding", ""))
+        )  # noqa: E501
 
         pad_len = str(
             cfg.get("a_record_padding_length")
@@ -725,8 +739,12 @@ class DynamicEDIBuilder:
                 else 11
             )
         )
-        self.fields["upc_padding_pattern_entry"].setText(str(cfg.get("upc_padding_pattern", "           ")))  # noqa: E501
-        self.fields["edi_each_uom_tweak"].setChecked(normalize_bool(cfg.get("retail_uom", False)))  # noqa: E501
+        self.fields["upc_padding_pattern_entry"].setText(
+            str(cfg.get("upc_padding_pattern", "           "))
+        )  # noqa: E501
+        self.fields["edi_each_uom_tweak"].setChecked(
+            normalize_bool(cfg.get("retail_uom", False))
+        )  # noqa: E501
         self.fields["split_sales_tax_prepaid_var"].setChecked(
             normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
         )
@@ -736,7 +754,9 @@ class DynamicEDIBuilder:
         self.fields["include_item_description"].setChecked(
             normalize_bool(cfg.get("include_item_description", False))
         )
-        self.fields["simple_csv_column_sorter"].setText(str(cfg.get("simple_csv_sort_order", "")))  # noqa: E501
+        self.fields["simple_csv_column_sorter"].setText(
+            str(cfg.get("simple_csv_sort_order", ""))
+        )  # noqa: E501
 
     def _build_scannerware_sub(self) -> None:
         wrapper, layout = self._make_wrapper_widget()

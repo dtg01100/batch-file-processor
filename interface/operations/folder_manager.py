@@ -73,7 +73,9 @@ class FolderManager:
         self._settings_repo = settings_repo
         self._processed_files_repo = processed_files_repo
 
-    def add_folder(self, folder_path: str, template_data: dict | None = None) -> dict[str, Any]:
+    def add_folder(
+        self, folder_path: str, template_data: dict | None = None
+    ) -> dict[str, Any]:
         """Add a folder to the database using template defaults.
 
         Args:

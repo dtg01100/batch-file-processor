@@ -224,16 +224,19 @@ class EDIValidator:
         # Validate B records
         if first_char == "B":
             if (
-            len(line) != EDI_B_RECORD_STANDARD_LENGTH
-            and len(line) != EDI_B_RECORD_NO_PRICING_LENGTH
-        ):
+                len(line) != EDI_B_RECORD_STANDARD_LENGTH
+                and len(line) != EDI_B_RECORD_NO_PRICING_LENGTH
+            ):
                 logger.debug(
                     "EDI format check failed at line %d: %s", line_num, file_path
                 )
                 return False, line_num
 
             # Check for missing pricing in 70-char lines
-            if len(line) == EDI_B_RECORD_NO_PRICING_LENGTH and line[51:67] != "                ":  # noqa: E501
+            if (
+                len(line) == EDI_B_RECORD_NO_PRICING_LENGTH
+                and line[51:67] != "                "
+            ):  # noqa: E501
                 logger.debug(
                     "EDI format check failed at line %d: %s", line_num, file_path
                 )
@@ -329,6 +332,3 @@ class EDIValidator:
         self.errors = StringIO()
         self.has_errors = False
         self.has_minor_errors = False
-
-
-

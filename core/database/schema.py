@@ -472,22 +472,30 @@ def ensure_schema(database_connection) -> None:
         except Exception:
             logger.info(f"{log_msg} skipped (may already exist)")
 
-    _safe_alter(raw_conn,
+    _safe_alter(
+        raw_conn,
         "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
-        "Migration: added plugin_configurations column to folders table")
+        "Migration: added plugin_configurations column to folders table",
+    )
 
-    _safe_alter(raw_conn,
+    _safe_alter(
+        raw_conn,
         "ALTER TABLE 'processed_files' ADD COLUMN 'invoice_numbers' TEXT",
-        "Migration: added invoice_numbers column to processed_files table")
+        "Migration: added invoice_numbers column to processed_files table",
+    )
 
-    _safe_alter(raw_conn,
+    _safe_alter(
+        raw_conn,
         "ALTER TABLE 'processed_files' ADD COLUMN 'file_mtime' REAL",
-        "Migration: added file_mtime column to processed_files table")
+        "Migration: added file_mtime column to processed_files table",
+    )
 
-    _safe_alter(raw_conn,
+    _safe_alter(
+        raw_conn,
         "CREATE INDEX IF NOT EXISTS idx_processed_files_checksum_resend "
         "ON processed_files(folder_id, resend_flag, file_checksum)",
-        "Migration: added idx_processed_files_checksum_resend index")
+        "Migration: added idx_processed_files_checksum_resend index",
+    )
 
     logger.info("Database schema initialization complete")
 

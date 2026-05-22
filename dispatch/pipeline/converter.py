@@ -473,8 +473,10 @@ class EDIConverterStep(ErrorRecordingMixin):
             )
             errors = [error_msg]
             self._record_error(
-                input_path, error_msg,
-                source="EDIConverterStep", error_source="EDIConverter",
+                input_path,
+                error_msg,
+                source="EDIConverterStep",
+                error_source="EDIConverter",
             )
             return True, ConverterResult(
                 output_path=input_path,
@@ -520,8 +522,10 @@ class EDIConverterStep(ErrorRecordingMixin):
                 )
                 errors = [error_msg]
                 self._record_error(
-                    input_path, error_msg,
-                    source="EDIConverterStep", error_source="EDIConverter",
+                    input_path,
+                    error_msg,
+                    source="EDIConverterStep",
+                    error_source="EDIConverter",
                 )
                 return True, ConverterResult(
                     output_path=input_path,
@@ -753,8 +757,10 @@ class EDIConverterStep(ErrorRecordingMixin):
         # Record via error handler (non-fatal if recording itself fails)
         try:
             self._record_error(
-                input_path, error_msg,
-                source="EDIConverterStep", error_source="EDIConverter",
+                input_path,
+                error_msg,
+                source="EDIConverterStep",
+                error_source="EDIConverter",
             )
         except Exception:  # best-effort error recording; original error already handled
             logger.warning(

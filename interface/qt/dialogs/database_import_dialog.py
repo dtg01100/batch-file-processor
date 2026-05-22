@@ -184,7 +184,9 @@ class DatabaseImportDialog(BaseDialog):
         self._progress_bar.setRange(0, maximum)
         self._progress_bar.setValue(value)
 
-    def _on_finished(self, success: bool, _message: str) -> None:  # noqa: FBT001 — Qt slot, signature dictated by pyqtSignal(bool, str)
+    def _on_finished(
+        self, success: bool, _message: str
+    ) -> None:  # noqa: FBT001 — Qt slot, signature dictated by pyqtSignal(bool, str)
         """Handle import completion."""
         self._progress_bar.setRange(0, 1)
         self._progress_bar.setValue(1 if success else 0)
@@ -319,7 +321,9 @@ class ImportThread(QThread):
             if not self._check_version_compatibility(
                 new_db_version, new_db_version_dict
             ):
-                self.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
+                self.finished.emit(
+                    False, "Import cancelled by user"
+                )  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
                 return
 
             # Run the migration
@@ -327,7 +331,9 @@ class ImportThread(QThread):
                 self, self._new_db_path, self._original_db_path
             )
 
-            self.finished.emit(True, "Import completed successfully")  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
+            self.finished.emit(
+                True, "Import completed successfully"
+            )  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
 
         except FileNotFoundError as e:
             self.error.emit(f"Database file not found: {e}")
@@ -439,7 +445,9 @@ class DbMigrationJob:
             if not isinstance(folder, dict):
                 continue
             if thread._is_cancelled:  # Cooperative cancellation check
-                thread.finished.emit(False, "Import cancelled by user")  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
+                thread.finished.emit(
+                    False, "Import cancelled by user"
+                )  # noqa: FBT003 — pyqtSignal(bool, str) requires positional
                 return
             self._migrate_folder(folder, target_folders, original_db)
             thread.progress.emit(

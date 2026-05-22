@@ -10,8 +10,11 @@ class TestPipelineStepProtocol:
 
     def test_pipeline_step_can_be_checked(self):
         """Test that PipelineStep protocol can be used with isinstance."""
+
         class ValidStep:
-            def execute(self, input_path: str, context: dict) -> tuple[bool, str, list[str]]:
+            def execute(
+                self, input_path: str, context: dict
+            ) -> tuple[bool, str, list[str]]:
                 return True, input_path, []
 
         step = ValidStep()

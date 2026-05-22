@@ -89,7 +89,10 @@ class TestBasicFolderOperations:
     def test_add_folder_basic(self, workspace):
         """Test adding a folder with default template."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         result = folder_manager.add_folder(folder_path)
@@ -107,7 +110,10 @@ class TestBasicFolderOperations:
     def test_add_folder_with_custom_template(self, workspace):
         """Test adding a folder with custom template data."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Get existing oversight defaults and modify them
         custom_template = db.get_oversight_or_default()
@@ -123,7 +129,10 @@ class TestBasicFolderOperations:
     def test_get_folder_by_id(self, workspace):
         """Test retrieving folder by ID."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -141,7 +150,10 @@ class TestBasicFolderOperations:
     def test_get_folder_by_name(self, workspace):
         """Test retrieving folder by path/name."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -153,7 +165,10 @@ class TestBasicFolderOperations:
     def test_get_folder_by_alias(self, workspace):
         """Test retrieving folder by alias."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -165,7 +180,10 @@ class TestBasicFolderOperations:
     def test_update_folder(self, workspace):
         """Test updating folder configuration."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -191,7 +209,10 @@ class TestBasicFolderOperations:
     def test_update_folder_by_name(self, workspace):
         """Test updating folder by name instead of ID."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -214,7 +235,10 @@ class TestBasicFolderOperations:
     def test_delete_folder(self, workspace):
         """Test deleting a folder."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -237,7 +261,10 @@ class TestFolderExistenceChecking:
     def test_check_folder_exists_true(self, workspace):
         """Test checking existing folder."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -250,7 +277,10 @@ class TestFolderExistenceChecking:
     def test_check_folder_exists_false(self, workspace):
         """Test checking non-existent folder."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.check_folder_exists("/nonexistent/path")
         assert result["truefalse"] is False
@@ -259,7 +289,10 @@ class TestFolderExistenceChecking:
     def test_check_folder_exists_with_trailing_slash(self, workspace):
         """Test path normalization with trailing slashes."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -272,7 +305,10 @@ class TestFolderExistenceChecking:
     def test_check_folder_exists_normalized_paths(self, workspace):
         """Test that different path formats match correctly."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -290,7 +326,10 @@ class TestEnableDisableOperations:
     def test_disable_folder(self, workspace):
         """Test disabling an active folder."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_path = str(workspace["dirs"]["folder1"])
         folder_manager.add_folder(folder_path)
@@ -309,7 +348,10 @@ class TestEnableDisableOperations:
     def test_enable_folder(self, workspace):
         """Test enabling an inactive folder."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folder with inactive template
         custom_template = {
@@ -337,7 +379,10 @@ class TestEnableDisableOperations:
     def test_disable_nonexistent_folder(self, workspace):
         """Test disabling non-existent folder returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.disable_folder(99999)
         assert result is False
@@ -345,7 +390,10 @@ class TestEnableDisableOperations:
     def test_enable_nonexistent_folder(self, workspace):
         """Test enabling non-existent folder returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.enable_folder(99999)
         assert result is False
@@ -357,7 +405,10 @@ class TestUniqueAliasGeneration:
     def test_unique_alias_on_duplicate(self, workspace):
         """Test that duplicate folder names get unique aliases."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Create first folder
         folder_path1 = str(workspace["dirs"]["folder1"])
@@ -388,7 +439,10 @@ class TestUniqueAliasGeneration:
     def test_multiple_duplicate_aliases(self, workspace):
         """Test multiple folders with same base name get incrementing aliases."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         base_name = "duplicate"
         folders = []
@@ -413,7 +467,10 @@ class TestFolderRetrieval:
     def test_get_active_folders(self, workspace):
         """Test retrieving only active folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folders
         folder_manager.add_folder(str(workspace["dirs"]["folder1"]))
@@ -440,15 +497,22 @@ class TestFolderRetrieval:
     def test_get_inactive_folders(self, workspace):
         """Test retrieving only inactive folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add active folder
         # Add active folder
         active_template = {"folder_is_active": True}
-        folder_manager.add_folder(str(workspace["dirs"]["folder1"]), template_data=active_template)
+        folder_manager.add_folder(
+            str(workspace["dirs"]["folder1"]), template_data=active_template
+        )
         # Add active folder
         active_template = {"folder_is_active": True}
-        folder_manager.add_folder(str(workspace["dirs"]["folder1"]), template_data=active_template)
+        folder_manager.add_folder(
+            str(workspace["dirs"]["folder1"]), template_data=active_template
+        )
         # Add inactive folders
         inactive_template = {"id": 1, "folder_is_active": "False"}
         folder_manager.add_folder(
@@ -468,7 +532,10 @@ class TestFolderRetrieval:
     def test_get_all_folders(self, workspace):
         """Test retrieving all folders regardless of status."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add mixed folders
         folder_manager.add_folder(str(workspace["dirs"]["folder1"]))
@@ -485,7 +552,10 @@ class TestFolderRetrieval:
     def test_get_all_folders_ordered(self, workspace):
         """Test retrieving folders with ordering."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folders in non-alphabetical order
         folder_manager.add_folder(str(workspace["dirs"]["folder3"]))
@@ -502,7 +572,10 @@ class TestFolderRetrieval:
     def test_count_folders_all(self, workspace):
         """Test counting all folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         folder_manager.add_folder(str(workspace["dirs"]["folder1"]))
         folder_manager.add_folder(str(workspace["dirs"]["folder2"]))
@@ -514,7 +587,10 @@ class TestFolderRetrieval:
     def test_count_folders_active_only(self, workspace):
         """Test counting only active folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folders and enable 2 of them
         folder_manager.add_folder(str(workspace["dirs"]["folder1"]))
@@ -542,7 +618,10 @@ class TestBatchOperations:
     def test_batch_add_folders_basic(self, workspace):
         """Test batch adding multiple folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         parent_path = str(workspace["dirs"]["batch_parent"])
 
@@ -558,7 +637,10 @@ class TestBatchOperations:
     def test_batch_add_folders_skip_existing(self, workspace):
         """Test batch add skips existing folders."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         parent_path = str(workspace["dirs"]["batch_parent"])
 
@@ -579,7 +661,10 @@ class TestBatchOperations:
     def test_batch_add_folders_no_skip(self, workspace):
         """Test batch add with skip_existing=False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         parent_path = str(workspace["dirs"]["batch_parent"])
 
@@ -597,7 +682,10 @@ class TestBatchOperations:
     def test_batch_add_invalid_path(self, workspace):
         """Test batch add with invalid parent path."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.batch_add_folders("/nonexistent/path")
 
@@ -612,7 +700,10 @@ class TestDeleteWithRelated:
     def test_delete_folder_with_related_data(self, workspace):
         """Test deleting folder and all related records."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folder
         folder_path = str(workspace["dirs"]["folder1"])
@@ -663,7 +754,10 @@ class TestDeleteWithRelated:
     def test_delete_folder_basic_vs_with_related(self, workspace):
         """Test that basic delete doesn't remove related data."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Add folder
         folder_path = str(workspace["dirs"]["folder1"])
@@ -700,7 +794,10 @@ class TestEdgeCases:
     def test_update_folder_without_id(self, workspace):
         """Test that updating without ID returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.update_folder({"folder_is_active": "False"})
         assert result is False
@@ -708,7 +805,10 @@ class TestEdgeCases:
     def test_update_folder_nonexistent(self, workspace):
         """Test updating non-existent folder returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.update_folder(
             {"id": 99999, "folder_is_active": "False"}
@@ -718,7 +818,10 @@ class TestEdgeCases:
     def test_update_folder_by_name_without_name(self, workspace):
         """Test that updating by name without folder_name returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.update_folder_by_name({"folder_is_active": "False"})
         assert result is False
@@ -726,7 +829,10 @@ class TestEdgeCases:
     def test_update_folder_by_name_nonexistent(self, workspace):
         """Test updating non-existent folder by name returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.update_folder_by_name(
             {"folder_name": "/nonexistent/path", "folder_is_active": "False"}
@@ -736,7 +842,10 @@ class TestEdgeCases:
     def test_get_folder_by_id_nonexistent(self, workspace):
         """Test getting non-existent folder by ID returns None."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.get_folder_by_id(99999)
         assert result is None
@@ -744,7 +853,10 @@ class TestEdgeCases:
     def test_get_folder_by_name_nonexistent(self, workspace):
         """Test getting non-existent folder by name returns None."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.get_folder_by_name("/nonexistent/path")
         assert result is None
@@ -752,7 +864,10 @@ class TestEdgeCases:
     def test_get_folder_by_alias_nonexistent(self, workspace):
         """Test getting non-existent folder by alias returns None."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.get_folder_by_alias("nonexistent_alias")
         assert result is None
@@ -760,7 +875,10 @@ class TestEdgeCases:
     def test_delete_nonexistent_folder(self, workspace):
         """Test deleting non-existent folder returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.delete_folder(99999)
         assert result is False
@@ -768,7 +886,10 @@ class TestEdgeCases:
     def test_delete_with_related_nonexistent(self, workspace):
         """Test deleting non-existent folder with related returns False."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         result = folder_manager.delete_folder_with_related(99999)
         assert result is False
@@ -780,7 +901,10 @@ class TestDefaultsInheritance:
     def test_folders_inherit_template_settings(self, workspace):
         """Test that new folders get all template settings."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Update oversight_and_defaults with specific values
         defaults = db.get_oversight_or_default()
@@ -800,7 +924,10 @@ class TestDefaultsInheritance:
     def test_skip_list_fields_not_inherited(self, workspace):
         """Test that SKIP_LIST fields are not copied from template."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Set values in oversight_and_defaults that should not be inherited
         defaults = db.get_oversight_or_default()
@@ -824,7 +951,10 @@ class TestDefaultsInheritance:
     def test_custom_template_overrides_database(self, workspace):
         """Test that custom template data overrides database defaults."""
         db = workspace["db"]
-        folder_manager = FolderManager(SqliteFolderRepository(db), processed_files_repo=SqliteProcessedFilesRepository(db))
+        folder_manager = FolderManager(
+            SqliteFolderRepository(db),
+            processed_files_repo=SqliteProcessedFilesRepository(db),
+        )
 
         # Use custom template with specific values
         custom_template = {

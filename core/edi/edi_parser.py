@@ -91,7 +91,8 @@ def _parse_a_record(line: str) -> dict | None:
 
         logging.getLogger(__name__).debug(
             "A record line too short: expected >=%d chars, got %d",
-            EDI_A_RECORD_MIN_LENGTH, len(line),
+            EDI_A_RECORD_MIN_LENGTH,
+            len(line),
         )
         return None
     return {
@@ -111,7 +112,8 @@ def _parse_b_record(line: str) -> dict | None:
 
         logging.getLogger(__name__).debug(
             "B record line too short: expected >=%d chars, got %d",
-            EDI_B_RECORD_MIN_LENGTH, len(line),
+            EDI_B_RECORD_MIN_LENGTH,
+            len(line),
         )
         return None
     return {
@@ -125,9 +127,11 @@ def _parse_b_record(line: str) -> dict | None:
         "qty_of_units": line[57:62],
         "suggested_retail_price": line[62:67],
         "price_multi_pack": line[67:70],
-        "parent_item_number": line[70:EDI_B_RECORD_STANDARD_LENGTH]
-        if len(line) >= EDI_B_RECORD_STANDARD_LENGTH
-        else "",
+        "parent_item_number": (
+            line[70:EDI_B_RECORD_STANDARD_LENGTH]
+            if len(line) >= EDI_B_RECORD_STANDARD_LENGTH
+            else ""
+        ),
     }
 
 
@@ -139,7 +143,8 @@ def _parse_c_record(line: str) -> dict | None:
 
         logging.getLogger(__name__).debug(
             "C record line too short: expected >=%d chars, got %d",
-            EDI_C_RECORD_MIN_LENGTH, len(line),
+            EDI_C_RECORD_MIN_LENGTH,
+            len(line),
         )
         return None
     return {

@@ -391,7 +391,9 @@ class ErrorHandler:
                 ]
                 placeholders = ", ".join("?" for _ in columns)
                 col_names = ", ".join(f'"{c}"' for c in columns)
-                sql = f"INSERT INTO dispatch_errors ({col_names}) VALUES ({placeholders})"
+                sql = (
+                    f"INSERT INTO dispatch_errors ({col_names}) VALUES ({placeholders})"
+                )
                 params = (
                     error_record.get("timestamp", time.ctime()),
                     error_record.get("folder", ""),
@@ -559,4 +561,3 @@ class ErrorHandler:
         content = self.report_generator.generate_processing_report(errors, version)
         self.fs.write_file_text(folder_log_path, content)
         return folder_log_path
-

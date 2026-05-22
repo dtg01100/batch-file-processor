@@ -540,9 +540,7 @@ class FolderListWidget(QWidget):
             # then match by folder ID to avoid collisions between duplicate aliases.
             keyed = {str(fid): alias for fid, alias in self._folder_aliases.items()}
             fuzzy_matches = list(
-                thefuzz.process.extractWithoutOrder(
-                    filter_text, keyed, score_cutoff=80
-                )
+                thefuzz.process.extractWithoutOrder(filter_text, keyed, score_cutoff=80)
             )
             visible_ids = {int(m[2]) for m in fuzzy_matches}
 
@@ -570,7 +568,9 @@ class FolderListWidget(QWidget):
         selector so compact padding is applied without fragile string replacement.
         """
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setProperty("compact", True)  # noqa: FBT003 — Qt API requires positional bool
+        btn.setProperty(
+            "compact", True
+        )  # noqa: FBT003 — Qt API requires positional bool
         base_stylesheet = Theme.get_button_stylesheet(variant)
         # Append a compact-padding override using the Qt property selector
         compact_override = f"""

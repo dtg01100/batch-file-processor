@@ -1,6 +1,5 @@
 """Tests for dispatch.converters.registry module."""
 
-
 from dispatch.converters.registry import (
     ConverterMetadata,
     format_exists,

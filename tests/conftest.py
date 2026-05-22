@@ -377,4 +377,3 @@ class MockFactories:
         mock.find_one.return_value = None
         mock.count.return_value = 0
         return mock
-

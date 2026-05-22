@@ -139,9 +139,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
@@ -170,9 +168,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
@@ -329,9 +325,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = []
             mock_conn_class.return_value = mock_conn
@@ -378,9 +372,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             # Return empty result - customer not found
             mock_conn.execute.return_value = []
@@ -396,9 +388,7 @@ class TestConvertToStewartsCustomEdgeCases(TestConvertToStewartsCustomFixtures):
                 )
 
 
-class TestConvertToStewartsCustomOutputStructure(
-    TestConvertToStewartsCustomFixtures
-):
+class TestConvertToStewartsCustomOutputStructure(TestConvertToStewartsCustomFixtures):
     """Test output CSV structure in convert_to_stewarts_custom."""
 
     def test_output_contains_invoice_details_header(
@@ -416,9 +406,7 @@ class TestConvertToStewartsCustomOutputStructure(
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn
@@ -450,9 +438,7 @@ class TestConvertToStewartsCustomOutputStructure(
 
         output_file = str(tmp_path / "output")
 
-        with patch(
-            "adapters.db2ssh.connection.DB2SSHConnection"
-        ) as mock_conn_class:
+        with patch("adapters.db2ssh.connection.DB2SSHConnection") as mock_conn_class:
             mock_conn = MockFactories.db2ssh_connection()
             mock_conn.execute.return_value = mock_query_runner_result
             mock_conn_class.return_value = mock_conn

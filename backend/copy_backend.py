@@ -187,4 +187,3 @@ class CopyBackend(BackendBase):
             return self.execute(process_parameters, settings, filename)
         finally:
             self._cleanup()
-

@@ -341,7 +341,9 @@ class BaseEDIConverter(ABC):
         """
         context.arec_header = record.fields
 
-    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:  # noqa: B027
+    def process_c_record(
+        self, record: EDIRecord, context: ConversionContext
+    ) -> None:  # noqa: B027
         """Process a C record (charge/tax record).
 
         Default implementation does nothing. Subclasses should override
@@ -488,8 +490,6 @@ def normalize_parameter(
     return value
 
 
-
-
 # =============================================================================
 # Logging Helpers for make_edi_convert
 # =============================================================================
@@ -534,7 +534,6 @@ def _log_conversion_error(
         operation="edi_convert",
         context=context,
     )
-
 
 
 def make_edi_convert(converter_class):

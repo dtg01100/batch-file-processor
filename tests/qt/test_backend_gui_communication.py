@@ -183,9 +183,7 @@ class TestProcessingCallbackCommunication:
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.clear_old_files", lambda *_: None
-        )
+        monkeypatch.setattr("interface.qt.app.utils.clear_old_files", lambda *_: None)
         monkeypatch.setattr("dispatch.DispatchConfig", FakeDispatchConfig)
         monkeypatch.setattr("dispatch.DispatchOrchestrator", FakeDispatchOrchestrator)
 

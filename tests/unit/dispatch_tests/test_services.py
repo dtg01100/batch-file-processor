@@ -281,7 +281,6 @@ class TestCLIProgressReporter:
         assert "Processing" in content
         assert "Folder 1 of 3" in content
 
-
     def test_default_output_is_stdout(self):
         """Test that default output is sys.stdout."""
         reporter = CLIProgressReporter()

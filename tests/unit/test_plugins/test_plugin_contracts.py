@@ -281,9 +281,6 @@ def test_plugin_config_round_trip_contract(
     plugin.deactivate()
 
 
-
-
-
 def test_sync_tweaks_plugin_to_flat_columns_overwrites_defaults():
     """sync_tweaks_plugin_to_flat_columns writes plugin_configurations["tweaks"] back
     to the flat DB columns so the orchestrator always reads up-to-date values.

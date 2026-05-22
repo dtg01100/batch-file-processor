@@ -182,7 +182,9 @@ class TestEditFoldersDialogErrorHandling:
         """Test handling of validation errors."""
         mock_ftp_service = MagicMock(spec=FTPServiceProtocol)
         mock_validator = MagicMock()
-        mock_validator.validate_extracted_fields.side_effect = Exception("Validation error")
+        mock_validator.validate_extracted_fields.side_effect = Exception(
+            "Validation error"
+        )
 
         dialog = _make_dialog(
             qtbot, ftp_service=mock_ftp_service, validator=mock_validator

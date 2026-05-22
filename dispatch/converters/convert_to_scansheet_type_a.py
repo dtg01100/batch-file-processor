@@ -35,7 +35,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 import io
 import math
 import os
@@ -119,10 +118,15 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
         self._initialize_workbook(output_filename)
         self._populate_workbook(invoice_list)
         self._process_barcodes()
-        self._finalize_output(ConversionContext(
-            edi_filename="", output_filename="", settings_dict={},
-            parameters_dict={}, upc_lut={}
-        ))
+        self._finalize_output(
+            ConversionContext(
+                edi_filename="",
+                output_filename="",
+                settings_dict={},
+                parameters_dict={},
+                upc_lut={},
+            )
+        )
         return self.output_spreadsheet_name
 
     def _extract_invoices_from_edi(self, edi_process: str) -> list[str]:
@@ -209,7 +213,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
             for row in result:
                 trow = [""]
                 for entry in row.values():
-                    if hasattr(entry, 'strip'):
+                    if hasattr(entry, "strip"):
                         trow.append(entry.strip())
                     else:
                         trow.append(entry)
@@ -313,9 +317,7 @@ class ScanSheetTypeAConverter(BaseEDIConverter):
                 # Ignore if connection was already closed or was None
                 pass
 
-    def _generate_barcode(
-        self, input_string: str
-    ) -> tuple[io.BytesIO, int, int]:
+    def _generate_barcode(self, input_string: str) -> tuple[io.BytesIO, int, int]:
         """Generate a barcode image for the given UPC string.
 
         Args:

@@ -63,7 +63,6 @@ def build_output_filename(
     return _INVALID_FILENAME_CHARS_RE.sub("", rename_file)
 
 
-
 def build_error_log_filename(
     alias: str, errors_folder: str, folder_name: str, timestamp: str | None = None
 ) -> str:
@@ -91,7 +90,6 @@ def build_error_log_filename(
 
     # Build full path
     return os.path.join(errors_folder, os.path.basename(folder_name), log_name)
-
 
 
 def get_file_extension(filename: str) -> str:

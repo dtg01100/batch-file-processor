@@ -272,6 +272,8 @@ class TestQueryRunnerProtocol:
         mock_runner = MagicMock(spec=QueryRunnerProtocol)
 
         assert isinstance(mock_runner, QueryRunnerProtocol)
+
+
 class TestCRecordFormat:
     """Tests for C record output format compliance."""
 

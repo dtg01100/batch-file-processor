@@ -456,8 +456,10 @@ class EDISplitterStep(ErrorRecordingMixin):
             error_msg = f"No valid invoices after filtering: {e}"
             errors.append(error_msg)
             self._record_error(
-                input_path, error_msg,
-                source="EDISplitterStep", error_source="EDISplitter",
+                input_path,
+                error_msg,
+                source="EDISplitterStep",
+                error_source="EDISplitter",
             )
             return SplitterResult(
                 files=[(input_path, "", "")],
@@ -537,9 +539,11 @@ class EDISplitterStep(ErrorRecordingMixin):
                 error_msg = f"Category filtering failed: {e}"
                 errors.append(error_msg)
                 self._record_error(
-                input_path, error_msg,
-                source="EDISplitterStep", error_source="EDISplitter",
-            )
+                    input_path,
+                    error_msg,
+                    source="EDISplitterStep",
+                    error_source="EDISplitter",
+                )
 
         return SplitterResult(
             files=[(output_path, "", "")],

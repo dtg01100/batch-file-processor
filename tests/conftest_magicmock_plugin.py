@@ -29,11 +29,17 @@ class MagicMockVisitor(ast.NodeVisitor):
         for target in node.targets:
             if isinstance(target, ast.Name) and target.id in DB_MOCK_NAMES:
                 if isinstance(node.value, ast.Call):
-                    if isinstance(node.value.func, ast.Name) and node.value.func.id == "MagicMock":
+                    if (
+                        isinstance(node.value.func, ast.Name)
+                        and node.value.func.id == "MagicMock"
+                    ):
                         has_spec = any(kw.arg == "spec" for kw in node.value.keywords)
                         if not has_spec:
                             self.violations.append(
-                                (node.lineno, f"MagicMock() without spec= for '{target.id}'")
+                                (
+                                    node.lineno,
+                                    f"MagicMock() without spec= for '{target.id}'",
+                                )
                             )
         self.generic_visit(node)
 
@@ -67,11 +73,13 @@ def _check_bare_magicmock(request: Any) -> None:
 
     if violations:
         lines = [f"  Line {lineno}: {msg}" for lineno, msg in violations]
-        msg = "\n".join([
-            f"Bare MagicMock() used for database mock in {os.path.relpath(filepath)}:",
-            *lines,
-            "",
-            "Use MagicMock(spec=DatabaseConnectionProtocol) for mock_db/mock_database_obj.",
-            "See: tests/AGENTS.md - MOCKING CONVENTIONS",
-        ])
+        msg = "\n".join(
+            [
+                f"Bare MagicMock() used for database mock in {os.path.relpath(filepath)}:",
+                *lines,
+                "",
+                "Use MagicMock(spec=DatabaseConnectionProtocol) for mock_db/mock_database_obj.",
+                "See: tests/AGENTS.md - MOCKING CONVENTIONS",
+            ]
+        )
         pytest.fail(msg)

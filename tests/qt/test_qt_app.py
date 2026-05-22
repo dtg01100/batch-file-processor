@@ -754,9 +754,12 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
+            "interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj()
+        )
+        monkeypatch.setattr(
+            "interface.qt.app.ReportingService",
+            lambda **_: MockFactories.database_obj(),
         )
         monkeypatch.setattr(app, "_setup_config_directories", lambda: None)
 
@@ -851,9 +854,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.clear_old_files", lambda *_: None
-        )
+        monkeypatch.setattr("interface.qt.app.utils.clear_old_files", lambda *_: None)
 
         (tmp_path / "logs").mkdir()
 
@@ -900,9 +901,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.getcwd", lambda: str(tmp_path))
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.clear_old_files", lambda *_: None
-        )
+        monkeypatch.setattr("interface.qt.app.utils.clear_old_files", lambda *_: None)
 
         (tmp_path / "logs").mkdir()
 
@@ -959,9 +958,7 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr("interface.qt.app.os.chdir", lambda _: None)
         monkeypatch.setattr("interface.qt.app.os.path.isdir", mock_isdir)
         monkeypatch.setattr("interface.qt.app.os.mkdir", mock_mkdir)
-        monkeypatch.setattr(
-            "interface.qt.app.utils.clear_old_files", lambda *_: None
-        )
+        monkeypatch.setattr("interface.qt.app.utils.clear_old_files", lambda *_: None)
 
         app._process_directories(folders_table)
 
@@ -1328,9 +1325,12 @@ class TestQtBatchFileSenderApp:
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
         monkeypatch.setattr("interface.qt.app.DatabaseObj", lambda *a, **kw: mock_db)
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
+            "interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj()
+        )
+        monkeypatch.setattr(
+            "interface.qt.app.ReportingService",
+            lambda **_: MockFactories.database_obj(),
         )
 
         app.initialize()
@@ -1359,9 +1359,12 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
+            "interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj()
+        )
+        monkeypatch.setattr(
+            "interface.qt.app.ReportingService",
+            lambda **_: MockFactories.database_obj(),
         )
 
         app.initialize()
@@ -1391,9 +1394,12 @@ class TestQtBatchFileSenderApp:
         monkeypatch.setattr(
             "interface.qt.app.multiprocessing.freeze_support", lambda: None
         )
-        monkeypatch.setattr("interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj())
         monkeypatch.setattr(
-            "interface.qt.app.ReportingService", lambda **_: MockFactories.database_obj()
+            "interface.qt.app.FolderManager", lambda **_: MockFactories.database_obj()
+        )
+        monkeypatch.setattr(
+            "interface.qt.app.ReportingService",
+            lambda **_: MockFactories.database_obj(),
         )
 
         app.initialize()

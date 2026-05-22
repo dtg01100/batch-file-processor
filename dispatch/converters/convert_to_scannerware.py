@@ -31,7 +31,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 from datetime import datetime, timedelta
 
 from core.constants import EMPTY_DATE_MMDDYY
@@ -84,7 +83,9 @@ class ScannerWareConverter(BaseEDIConverter):
         # Store output path for later use
         context.user_data["output_path"] = output_path
 
-        context.output_file = open(output_path, "wb")  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
+        context.output_file = open(
+            output_path, "wb"
+        )  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
@@ -198,6 +199,3 @@ class ScannerWareConverter(BaseEDIConverter):
 
 
 edi_convert = make_edi_convert(ScannerWareConverter)
-
-
-

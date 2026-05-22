@@ -38,12 +38,12 @@ EDI_B_RECORD_STANDARD_LENGTH = 76
 EDI_B_RECORD_NO_PRICING_LENGTH = 70
 
 # UPC/GTIN standard lengths
-UPCE_SHORT_LENGTH = 6     # UPC-E middle digits (no check digit)
-UPCE_7_DIGIT_LENGTH = 7   # UPC-E with 7 digits
-UPCE_LENGTH = 8           # Full UPC-E
+UPCE_SHORT_LENGTH = 6  # UPC-E middle digits (no check digit)
+UPCE_7_DIGIT_LENGTH = 7  # UPC-E with 7 digits
+UPCE_LENGTH = 8  # Full UPC-E
 UPC_A_NO_CHECK_LENGTH = 11  # UPC-A without check digit
-UPC_A_LENGTH = 12         # Full UPC-A with check digit
-GTIN13_LENGTH = 13        # GTIN-13 (EAN-13)
+UPC_A_LENGTH = 12  # Full UPC-A with check digit
+GTIN13_LENGTH = 13  # GTIN-13 (EAN-13)
 
 # Price decimal places
 PRICE_DECIMAL_PLACES = 2

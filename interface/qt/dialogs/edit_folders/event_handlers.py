@@ -168,7 +168,9 @@ class EventHandlers:
         widget = self.fields.get(field_key)
         return bool(widget and widget.isChecked())
 
-    def _set_widgets_enabled(self, field_keys: list[str], enabled: bool) -> None:  # noqa: FBT001
+    def _set_widgets_enabled(
+        self, field_keys: list[str], enabled: bool
+    ) -> None:  # noqa: FBT001
         """Enable or disable a list of widgets by field key."""
         for key in field_keys:
             widget = self.fields.get(key)
@@ -187,29 +189,46 @@ class EventHandlers:
         self._set_widgets_enabled(["copy_dest_btn"], copy_on)
 
         ftp_on = is_active and self._get_check_state("process_backend_ftp_check")
-        self._set_widgets_enabled([
-            "ftp_server_field", "ftp_port_field", "ftp_folder_field",
-            "ftp_username_field", "ftp_password_field",
-        ], ftp_on)
+        self._set_widgets_enabled(
+            [
+                "ftp_server_field",
+                "ftp_port_field",
+                "ftp_folder_field",
+                "ftp_username_field",
+                "ftp_password_field",
+            ],
+            ftp_on,
+        )
 
         email_self_on = self._get_check_state("process_backend_email_check")
         email_on = is_active and email_self_on and email_globally_enabled
-        self._set_widgets_enabled([
-            "email_recipient_field", "email_sender_subject_field",
-        ], email_on)
+        self._set_widgets_enabled(
+            [
+                "email_recipient_field",
+                "email_sender_subject_field",
+            ],
+            email_on,
+        )
 
         any_backend = (
             self._get_check_state("process_backend_copy_check")
             or self._get_check_state("process_backend_ftp_check")
             or self._get_check_state("process_backend_email_check")
         )
-        self._set_widgets_enabled([
-            "split_edi", "force_edi_check_var",
-            "split_edi_send_invoices", "split_edi_send_credits",
-            "prepend_file_dates", "rename_file_field",
-            "split_edi_filter_categories_entry", "split_edi_filter_mode",
-            "edi_options_check",
-        ], is_active and any_backend)
+        self._set_widgets_enabled(
+            [
+                "split_edi",
+                "force_edi_check_var",
+                "split_edi_send_invoices",
+                "split_edi_send_credits",
+                "prepend_file_dates",
+                "rename_file_field",
+                "split_edi_filter_categories_entry",
+                "split_edi_filter_mode",
+                "edi_options_check",
+            ],
+            is_active and any_backend,
+        )
 
     def copy_config_from_other(self) -> None:
         """Copy configuration from another selected folder."""

@@ -424,7 +424,6 @@ class TestMockSplitter:
         assert result.files == [("/output/test.inv", "A_", ".inv")]
 
 
-
 class TestEDISplitterStep:
     """Tests for EDISplitterStep class."""
 

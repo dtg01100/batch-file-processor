@@ -242,7 +242,9 @@ class TestFolderPipelineExecutor:
             # Patch _has_sql to force the find() path
             with patch("dispatch.services.file_filter._has_sql", return_value=False):
                 files = [filepath]
-                result = executor._filter_processed_files(files, mock_processed, {"id": 1})
+                result = executor._filter_processed_files(
+                    files, mock_processed, {"id": 1}
+                )
             assert len(result) == 0
         finally:
             os.unlink(filepath)
@@ -264,7 +266,9 @@ class TestFolderPipelineExecutor:
             # Patch _has_sql to force the find() path
             with patch("dispatch.services.file_filter._has_sql", return_value=False):
                 files = [filepath]
-                result = executor._filter_processed_files(files, mock_processed, {"id": 1})
+                result = executor._filter_processed_files(
+                    files, mock_processed, {"id": 1}
+                )
             assert len(result) == 1
         finally:
             os.unlink(filepath)

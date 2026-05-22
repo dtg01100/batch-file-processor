@@ -196,7 +196,9 @@ class EditFoldersDialog(BaseDialog):
         try:
             edi_check.setChecked(want_convert)
         finally:
-            edi_check.blockSignals(False)  # noqa: FBT003 — Qt API requires positional bool
+            edi_check.blockSignals(
+                False
+            )  # noqa: FBT003 — Qt API requires positional bool
 
         self.dynamic_edi_builder._clear_dynamic_edi()
         if want_convert:
@@ -291,7 +293,11 @@ class EditFoldersDialog(BaseDialog):
         widgets = []
         for key in ordered_keys:
             widget = self._fields.get(key)
-            if widget is not None and hasattr(widget, "isVisible") and widget.isVisible():
+            if (
+                widget is not None
+                and hasattr(widget, "isVisible")
+                and widget.isVisible()
+            ):
                 widgets.append(widget)
 
         for idx in range(len(widgets) - 1):

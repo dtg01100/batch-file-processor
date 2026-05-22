@@ -174,7 +174,10 @@ class UILayoutBuilder:
         self._add_dynamic_edi_container(edi_column)
 
         # Now wire the dynamic container into the builder
-        if self.dynamic_edi_container is not None and self.dynamic_edi_layout is not None:
+        if (
+            self.dynamic_edi_container is not None
+            and self.dynamic_edi_layout is not None
+        ):
             self.dynamic_edi_builder.dynamic_container = self.dynamic_edi_container
             self.dynamic_edi_builder.dynamic_layout = self.dynamic_edi_layout
 
@@ -188,7 +191,11 @@ class UILayoutBuilder:
 
         # Add button box
         button_box = QDialogButtonBox(
-            cast("QDialogButtonBox.StandardButtons", QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+            cast(
+                "QDialogButtonBox.StandardButtons",
+                QDialogButtonBox.StandardButton.Ok
+                | QDialogButtonBox.StandardButton.Cancel,
+            )
         )
         if self.on_ok:
             button_box.accepted.connect(self.on_ok)

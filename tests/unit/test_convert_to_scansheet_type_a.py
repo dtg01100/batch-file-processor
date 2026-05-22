@@ -10,12 +10,13 @@ from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConver
 class TestScanSheetBarcodeParsing:
     """Validate barcode parsing against real-world UPC formatting."""
 
+
 class TestScanSheetBarcodeGeneration:
     """Validate barcode generation produces correct, decodable barcodes."""
 
     def _try_decode_barcode(self, buffer: _io.BytesIO) -> str | None:
         """Attempt to decode a barcode image from a BytesIO buffer.
-        
+
         Returns the decoded data as string, or None if decoding fails.
         pyzbar is required for this - if not available, returns None.
         """
@@ -45,9 +46,9 @@ class TestScanSheetBarcodeGeneration:
 
         # UPC-A is encoded as EAN-13 (12 digits → 13 digits with leading zero)
         expected_ean13 = "0" + upc
-        assert decoded == expected_ean13, (
-            f"Barcode decoded to {decoded}, expected EAN-13 format {expected_ean13}"
-        )
+        assert (
+            decoded == expected_ean13
+        ), f"Barcode decoded to {decoded}, expected EAN-13 format {expected_ean13}"
 
     def test_barcode_decodes_for_different_upcs(self):
         """Verify multiple different UPCs generate correct barcodes."""
@@ -72,9 +73,9 @@ class TestScanSheetBarcodeGeneration:
             pytest.skip("pyzbar not available for barcode decoding")
 
         expected = ["0" + upc for upc in test_upcs]
-        assert decoded_upcs == expected, (
-            f"Decoded UPCs {decoded_upcs} don't match expected {expected}"
-        )
+        assert (
+            decoded_upcs == expected
+        ), f"Decoded UPCs {decoded_upcs} don't match expected {expected}"
 
     def test_barcode_contains_visual_content(self):
         """Verify barcode image is not blank - contains bars and spaces."""
@@ -97,9 +98,10 @@ class TestScanSheetBarcodeGeneration:
         variance_ratio = different_pixels / len(pixels)
 
         # Lower threshold - barcodes have white space around them (quiet zones)
-        assert variance_ratio > 0.15, (
-            f"Barcode appears blank - only {variance_ratio:.1%} of pixels vary"
-        )
+        assert (
+            variance_ratio > 0.15
+        ), f"Barcode appears blank - only {variance_ratio:.1%} of pixels vary"
+
     def test_interpret_barcode_string_strips_non_digits(self):
         converter = ScanSheetTypeAConverter()
 

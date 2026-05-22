@@ -163,7 +163,9 @@ class FTPBackend(BackendBase):
             raise last_error
         # If we reach here, something unexpected happened - but all TLS options
         # should have raised exceptions. This is a safeguard.
-        raise RuntimeError("FTP backend exhausted all connection options without failure")
+        raise RuntimeError(
+            "FTP backend exhausted all connection options without failure"
+        )
 
     def _send_file(
         self,

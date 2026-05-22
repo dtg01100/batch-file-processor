@@ -251,9 +251,7 @@ class LengthValidator(Validator):
         elif length < self.min_length or length > self.max_length:
             return ValidationResult(
                 success=False,
-                errors=[
-                    self.message.format(min=self.min_length, max=self.max_length)
-                ],
+                errors=[self.message.format(min=self.min_length, max=self.max_length)],
             )
 
         return ValidationResult(success=True)

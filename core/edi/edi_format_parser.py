@@ -370,4 +370,3 @@ class EDIFormatParser:
         if "allowed_record_types" in self.validation_rules:
             return self.validation_rules["allowed_record_types"]  # type: ignore[no-any-return]
         return list(self._record_type_map.keys())
-

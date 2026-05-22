@@ -346,9 +346,7 @@ class TestFolderManager:
             "folder_name": "/path",
         }
 
-        result = manager.update_folder_by_name(
-            {"folder_name": "/path", "alias": "new"}
-        )
+        result = manager.update_folder_by_name({"folder_name": "/path", "alias": "new"})
 
         assert result is True
 

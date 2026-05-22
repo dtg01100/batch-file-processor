@@ -71,7 +71,9 @@ class SearchWidget(QWidget):
         # Suppress textChanged signal during programmatic clear
         self._entry.blockSignals(True)  # noqa: FBT003 — Qt API requires positional bool
         self._entry.clear()
-        self._entry.blockSignals(False)  # noqa: FBT003 — Qt API requires positional bool
+        self._entry.blockSignals(
+            False
+        )  # noqa: FBT003 — Qt API requires positional bool
         self._pending_filter = ""
         self._filter_value = ""
         self._escape_shortcut.setEnabled(False)

@@ -30,7 +30,11 @@ class TestDatabaseConnector:
             assert connector.is_initialized is True
             assert connector.query_runner is mock_query_runner
             mock_create.assert_called_once_with(
-                {"as400_username": "user", "as400_password": "pass", "as400_address": "host"},
+                {
+                    "as400_username": "user",
+                    "as400_password": "pass",
+                    "as400_address": "host",
+                },
                 database="QGPL",
             )
 

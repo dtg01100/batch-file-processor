@@ -293,7 +293,9 @@ class QtProgressService(QObject):
         overlay.setObjectName("qt_progress_overlay")
         overlay.setAutoFillBackground(True)
         # Ensure stylesheet background gets painted even with global QFrame styles.
-        overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)  # noqa: FBT003 — Qt API requires positional bool
+        overlay.setAttribute(
+            Qt.WidgetAttribute.WA_StyledBackground, True
+        )  # noqa: FBT003 — Qt API requires positional bool
         overlay.setStyleSheet(
             f"QFrame#qt_progress_overlay "
             f"{{ background-color: {Theme.OVERLAY_BACKGROUND}; }}"

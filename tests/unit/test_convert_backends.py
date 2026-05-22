@@ -39,6 +39,7 @@ def _default_edi_content() -> str:
         "\n"
     )
 
+
 # =============================================================================
 # EDI FORMAT SPECIFICATIONS
 # =============================================================================
@@ -771,7 +772,9 @@ class TestConvertFormatConfiguration:
 
         format_names = get_format_names()
         for format_name in core_formats:
-            assert format_name in format_names, f"Format '{format_name}' should be registered"
+            assert (
+                format_name in format_names
+            ), f"Format '{format_name}' should be registered"
 
         # Note: scansheet_type_a requires optional dependency (barcode/pkg_resources)
         # and may not be available on all systems - excluded from core test

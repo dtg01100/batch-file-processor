@@ -43,8 +43,7 @@ class SQLTable:
 
     def __init__(self):
         self._conn = sqlite3.connect(":memory:")
-        self._conn.execute(
-            """
+        self._conn.execute("""
             CREATE TABLE processed_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_name TEXT,
@@ -53,8 +52,7 @@ class SQLTable:
                 resend_flag INTEGER,
                 file_mtime REAL
             )
-            """
-        )
+            """)
         self._conn.commit()
 
     @property
@@ -105,14 +103,24 @@ class TestGetSkippedChecksumsSQL:
     def test_single_record_no_resend(self):
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         assert get_skipped_checksums(table, 1) == {"abc"}
 
     def test_single_record_with_resend(self):
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 1}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 1,
+            }
         )
         assert get_skipped_checksums(table, 1) == set()
 
@@ -121,10 +129,20 @@ class TestGetSkippedChecksumsSQL:
         must NOT be in the skipped set (fixes the legacy bug)."""
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 1}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 1,
+            }
         )
         # Because one record has resend_flag=1, "abc" must NOT be skipped
         assert get_skipped_checksums(table, 1) == set()
@@ -132,34 +150,57 @@ class TestGetSkippedChecksumsSQL:
     def test_multiple_records_all_no_resend(self):
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         assert get_skipped_checksums(table, 1) == {"abc"}
 
     def test_null_resend_flag_treated_as_no_resend(self):
         table = SQLTable()
-        table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc"}
-        )
+        table.insert({"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc"})
         assert get_skipped_checksums(table, 1) == {"abc"}
 
     def test_null_checksum_ignored(self):
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": None, "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": None,
+                "resend_flag": 0,
+            }
         )
         assert get_skipped_checksums(table, 1) == set()
 
     def test_different_folders_isolated(self):
         table = SQLTable()
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         table.insert(
-            {"file_name": "/f.txt", "folder_id": 2, "file_checksum": "abc", "resend_flag": 1}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 2,
+                "file_checksum": "abc",
+                "resend_flag": 1,
+            }
         )
         # folder 1: no resend, so abc is skipped
         assert get_skipped_checksums(table, 1) == {"abc"}
@@ -180,24 +221,44 @@ class TestGetSkippedChecksumsFindFallback:
     def test_single_record_no_resend(self):
         table = InMemoryTable()
         table.records.append(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         assert get_skipped_checksums(table, 1) == {"abc"}
 
     def test_single_record_with_resend(self):
         table = InMemoryTable()
         table.records.append(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 1}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 1,
+            }
         )
         assert get_skipped_checksums(table, 1) == set()
 
     def test_multiple_records_any_resend_allows_checksum(self):
         table = InMemoryTable()
         table.records.append(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 0}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 0,
+            }
         )
         table.records.append(
-            {"file_name": "/f.txt", "folder_id": 1, "file_checksum": "abc", "resend_flag": 1}
+            {
+                "file_name": "/f.txt",
+                "folder_id": 1,
+                "file_checksum": "abc",
+                "resend_flag": 1,
+            }
         )
         assert get_skipped_checksums(table, 1) == set()
 

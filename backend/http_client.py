@@ -51,7 +51,10 @@ class RealHTTPClient:
 
         """
         self.timeout: float | tuple[float, float] = (
-            (connect_timeout if connect_timeout is not None else 30.0, read_timeout if read_timeout is not None else 30.0)
+            (
+                connect_timeout if connect_timeout is not None else 30.0,
+                read_timeout if read_timeout is not None else 30.0,
+            )
             if connect_timeout is not None or read_timeout is not None
             else timeout
         )

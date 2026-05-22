@@ -730,7 +730,8 @@ class Database:
         except Exception:
             logger.debug(
                 "Schema initialization failed (tolerated for existing DBs)",
-                exc_info=True)
+                exc_info=True,
+            )
 
     @property
     def raw_connection(self) -> sqlite3.Connection:
@@ -832,7 +833,6 @@ class Database:
                 with contextlib.suppress(sqlite3.Error):
                     self._conn.commit()
                 return []
-
 
     def get_oversight_or_default(self) -> dict[str, Any]:
         """Get oversight settings or defaults.

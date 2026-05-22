@@ -40,7 +40,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 import csv
 from typing import Any
 

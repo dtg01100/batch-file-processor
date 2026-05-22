@@ -251,7 +251,9 @@ class TestReadOnlySqlPolicy:
     def test_assert_read_only_rejects_select_then_insert(self):
         """SQL injection attempt: SELECT followed by INSERT must be rejected."""
         with pytest.raises(ValueError, match="Mutating SQL is forbidden"):
-            assert_read_only_sql("SELECT * FROM my_table; INSERT INTO logs (msg) VALUES ('hack')")
+            assert_read_only_sql(
+                "SELECT * FROM my_table; INSERT INTO logs (msg) VALUES ('hack')"
+            )
 
     def test_assert_read_only_rejects_select_then_update(self):
         """SQL injection attempt: SELECT followed by UPDATE must be rejected."""

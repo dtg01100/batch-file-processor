@@ -253,9 +253,15 @@ class TestErrorIsolation:
         good_cfg = DispatchConfig(backends={"copy": good_be}, settings={})
         bad_cfg = DispatchConfig(backends={"copy": bad_be}, settings={})
 
-        r0 = DispatchOrchestrator(good_cfg).process_folder(fcs[0], MagicMock(spec=RunLog))
-        r1 = DispatchOrchestrator(bad_cfg).process_folder(fcs[1], MagicMock(spec=RunLog))
-        r2 = DispatchOrchestrator(good_cfg).process_folder(fcs[2], MagicMock(spec=RunLog))
+        r0 = DispatchOrchestrator(good_cfg).process_folder(
+            fcs[0], MagicMock(spec=RunLog)
+        )
+        r1 = DispatchOrchestrator(bad_cfg).process_folder(
+            fcs[1], MagicMock(spec=RunLog)
+        )
+        r2 = DispatchOrchestrator(good_cfg).process_folder(
+            fcs[2], MagicMock(spec=RunLog)
+        )
 
         assert r0.success is True
         assert r1.success is False

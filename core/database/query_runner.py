@@ -63,7 +63,7 @@ def _parse_sql_statements(query: str) -> list[str]:
         char = query[i]
 
         # Handle string literals (single quotes - SQL standard)
-        if char == "'" and not (i > 0 and query[i - 1] == '\\'):
+        if char == "'" and not (i > 0 and query[i - 1] == "\\"):
             in_string = not in_string
         # Handle semicolon as statement separator (only outside strings)
         elif char == ";" and not in_string:

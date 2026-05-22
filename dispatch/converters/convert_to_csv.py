@@ -33,7 +33,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 import csv
 
 from core import utils

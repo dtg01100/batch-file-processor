@@ -7,6 +7,7 @@ from typing import Any
 _RE_NON_ALPHANUMERIC = re.compile(r"[^a-z0-9_]")
 _RE_MULTIPLE_UNDERSCORES = re.compile(r"_+")
 
+
 def normalize_convert_to_format(value: Any) -> str:
     """Normalize convert_to_format into a predictable module-friendly token.
 

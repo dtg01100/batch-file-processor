@@ -572,8 +572,14 @@ class EDITweaker:
             vendor_item = int(fields["vendor_item"].strip())
             category_filter = self.config.override_upc_category_filter.strip()
 
-            if category_filter in ("", "ALL") or upc_dict[vendor_item][0] in category_filter.split(","):  # noqa: E501
-                fields["upc_number"] = upc_dict[vendor_item][self.config.override_upc_level]  # noqa: E501
+            if category_filter in ("", "ALL") or upc_dict[vendor_item][
+                0
+            ] in category_filter.split(
+                ","
+            ):  # noqa: E501
+                fields["upc_number"] = upc_dict[vendor_item][
+                    self.config.override_upc_level
+                ]  # noqa: E501
         except (KeyError, TypeError):
             fields["upc_number"] = ""
 
@@ -631,7 +637,10 @@ class EDITweaker:
             elif upc_len == self.config.upc_target_length:
                 # Already the desired length — no change required
                 pass
-            elif upc_len == UPC_A_LENGTH and self.config.upc_target_length == GTIN13_LENGTH:  # noqa: E501
+            elif (
+                upc_len == UPC_A_LENGTH
+                and self.config.upc_target_length == GTIN13_LENGTH
+            ):  # noqa: E501
                 fields["upc_number"] = str(proposed_upc).rjust(
                     self.config.upc_target_length,
                     (

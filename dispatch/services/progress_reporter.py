@@ -99,7 +99,6 @@ class CLIProgressReporter:
         self._output.write("\r" + progress_line)
         self._output.flush()
 
-
     def update_discovery_file(
         self,
         folder_num: int,

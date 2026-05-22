@@ -76,7 +76,9 @@ class TestPrintRunLog:
         # The do function reads from the file handle
         content = sample_file_handle.read()
         assert "Batch File Processor" in content
-        assert sample_file_handle.read() == ""  # Second read returns empty after exhaustion
+        assert (
+            sample_file_handle.read() == ""
+        )  # Second read returns empty after exhaustion
 
     def test_windows_line_endings_in_output(self, sample_log_content):
         """Test that output uses Windows line endings (\\r\\n)."""

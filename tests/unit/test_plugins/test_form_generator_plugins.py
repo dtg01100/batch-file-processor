@@ -135,7 +135,9 @@ class TestFormGeneratorForPlugins(unittest.TestCase):
 class TestPluginUIRendering(unittest.TestCase):
     """Tests for plugin UI widget creation and rendering."""
 
-    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch(
+        "interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder"
+    )
     def test_create_widget_method(self, mock_builder):
         """Test that create_widget method works correctly."""
         # Create mock widget builder
@@ -150,7 +152,9 @@ class TestPluginUIRendering(unittest.TestCase):
         self.assertIsNotNone(widget)
         mock_builder_instance.build_configuration_panel.assert_called_once()
 
-    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch(
+        "interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder"
+    )
     def test_create_widget_with_parent(self, mock_builder):
         """Test creating widget with parent widget."""
         """Test creating widget with parent widget."""
@@ -171,7 +175,9 @@ class TestPluginUIRendering(unittest.TestCase):
         call_args = mock_builder_instance.build_configuration_panel.call_args
         self.assertEqual(call_args[0][2], parent)
 
-    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch(
+        "interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder"
+    )
     def test_create_widget_with_config(self, mock_builder):
         """Test creating widget with existing configuration."""
         # Create mock widget builder

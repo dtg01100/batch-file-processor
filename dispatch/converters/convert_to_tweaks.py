@@ -29,7 +29,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 from typing import TextIO, cast
 
 from core.edi.edi_tweaker import EDITweaker, TweakerConfig
@@ -70,7 +69,9 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         if config.force_txt_file_ext:
             output_path += ".txt"
 
-        context.output_file = open(output_path, "w", encoding="utf-8", newline="\r\n")  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
+        context.output_file = open(
+            output_path, "w", encoding="utf-8", newline="\r\n"
+        )  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
         context.user_data["output_path"] = output_path
 
     def process_a_record(self, record, context: ConversionContext) -> None:
@@ -86,9 +87,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         output_file = context.output_file
         assert output_file is not None, "output_file not initialized"
         text_output = cast(TextIO, output_file)
-        transformed = tweaker._process_a_record(
-            record.fields, text_output
-        )
+        transformed = tweaker._process_a_record(record.fields, text_output)
         text_output.write(transformed)
 
     def process_b_record(self, record, context: ConversionContext) -> None:
@@ -122,9 +121,7 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         output_file = context.output_file
         assert output_file is not None, "output_file not initialized"
         text_output = cast(TextIO, output_file)
-        transformed = tweaker._process_c_record(
-            record.fields, text_output
-        )
+        transformed = tweaker._process_c_record(record.fields, text_output)
         if transformed:
             text_output.write(transformed)
 

@@ -420,7 +420,9 @@ class TestRealFilesystem:
             "get_absolute_path",
         ]
         for method in required_methods:
-            assert hasattr(fs, method), f"RealFilesystem missing required method: {method}"
+            assert hasattr(
+                fs, method
+            ), f"RealFilesystem missing required method: {method}"
 
 
 class TestEDISplitterProtocolCompliance:
@@ -439,7 +441,9 @@ class TestEDISplitterProtocolCompliance:
             def write_file(self, path: str, data: bytes) -> None:
                 pass
 
-            def write_file_text(self, path: str, data: str, encoding: str = "utf-8") -> None:
+            def write_file_text(
+                self, path: str, data: str, encoding: str = "utf-8"
+            ) -> None:
                 pass
 
             def file_exists(self, path: str) -> bool:

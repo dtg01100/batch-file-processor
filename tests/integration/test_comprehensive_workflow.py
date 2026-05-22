@@ -268,7 +268,6 @@ def run_dispatch(orchestrator, folder, db):
     return orchestrator.process_folder(folder, run_log, processed_files)
 
 
-
 def verify_file_in_folder(folder_path: Path, filename_pattern: str = "*") -> list[Path]:
     """Verify files exist in a folder.
 
@@ -1086,7 +1085,9 @@ C00000003000030000
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        results = [orchestrator.process_folder(f, MagicMock(spec=RunLog)) for f in all_folders]
+        results = [
+            orchestrator.process_folder(f, MagicMock(spec=RunLog)) for f in all_folders
+        ]
 
         assert all(r.success for r in results)
         assert sum(r.files_processed for r in results) == 5

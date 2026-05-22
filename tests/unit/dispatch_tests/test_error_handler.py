@@ -261,7 +261,9 @@ class TestRecordErrorToLogs:
 
     def test_non_threaded(self):
         """Test record_error_to_logs in non-threaded mode."""
-        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface))
+        handler = ErrorHandler(
+            errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface)
+        )
         run_log = MagicMock(spec=RunLog)
         errors_log = StringIO()
 
@@ -279,7 +281,9 @@ class TestRecordErrorToLogs:
 
     def test_threaded(self):
         """Test record_error_to_logs in threaded mode."""
-        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface))
+        handler = ErrorHandler(
+            errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface)
+        )
         run_log = []
         errors_log = []
 

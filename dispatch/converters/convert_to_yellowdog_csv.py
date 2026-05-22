@@ -29,7 +29,6 @@ CONVERTER_METADATA = {
 }
 
 
-
 import csv
 from datetime import datetime
 
@@ -216,9 +215,9 @@ class YellowDogConverter(BaseEDIConverter):
 
         """
         csv_writer = context.csv_writer
-        assert csv_writer is not None, (
-            "csv_writer must be initialized in _initialize_output"
-        )
+        assert (
+            csv_writer is not None
+        ), "csv_writer must be initialized in _initialize_output"
 
         # Reverse record order (original behavior)
         self.brec_lines.reverse()
@@ -230,7 +229,9 @@ class YellowDogConverter(BaseEDIConverter):
                 utils.datetime_from_invtime(self.arec_line["invoice_date"]), "%Y%m%d"
             )
         except (ValueError, KeyError):
-            logger.debug("Failed to parse invoice date: %s", self.arec_line.get("invoice_date"))
+            logger.debug(
+                "Failed to parse invoice date: %s", self.arec_line.get("invoice_date")
+            )
             invoice_date = "N/A"
 
         # Get invoice total
@@ -239,7 +240,9 @@ class YellowDogConverter(BaseEDIConverter):
                 str(utils.dac_str_int_to_int(self.arec_line["invoice_total"]))
             )
         except (KeyError, ValueError):
-            logger.debug("Failed to get invoice total: %s", self.arec_line.get("invoice_total"))
+            logger.debug(
+                "Failed to get invoice total: %s", self.arec_line.get("invoice_total")
+            )
             invoice_total = "0.00"
 
         # Get invoice number for lookups

@@ -969,7 +969,9 @@ class DispatchOrchestrator:
         """
         from dispatch.services.file_filter import filter_pending_files
 
-        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
+        folder_id = (
+            folder.get("id") if folder.get("id") is not None else folder.get("old_id")
+        )
 
         if folder_id is None:
             logger.warning("No folder_id available, returning all files")
@@ -1003,7 +1005,9 @@ class DispatchOrchestrator:
             file_result: Result of file processing
 
         """
-        folder_id = folder.get("id") if folder.get("id") is not None else folder.get("old_id")
+        folder_id = (
+            folder.get("id") if folder.get("id") is not None else folder.get("old_id")
+        )
 
         sent_to_str = ", ".join(self._detect_enabled_backends(folder)) or "N/A"
         invoice_numbers = self._extract_invoice_numbers(file_result.file_name)
@@ -1027,7 +1031,14 @@ class DispatchOrchestrator:
                 "resend_flag = 0, processed_at = ?, sent_to = ?, "
                 "status = ?, invoice_numbers = ?, file_mtime = ? "
                 "WHERE id = ?",
-                (now, sent_to_str, "processed", invoice_numbers, file_mtime, existing[0]),
+                (
+                    now,
+                    sent_to_str,
+                    "processed",
+                    invoice_numbers,
+                    file_mtime,
+                    existing[0],
+                ),
             )
         else:
             # Insert new record

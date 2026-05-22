@@ -48,8 +48,10 @@ class TestDatabaseInterface:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -106,8 +108,10 @@ class TestDatabaseInterface:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -136,8 +140,10 @@ class TestDatabaseInterface:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -166,8 +172,10 @@ class TestDatabaseInterface:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -196,8 +204,10 @@ class TestDatabaseInterface:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return [{"id": 1, "name": "test"}]
 
@@ -1312,8 +1322,10 @@ class TestProtocolIntegration:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             """Implements all protocols for testing."""
 
             def find(self, **kwargs) -> list[dict]:
@@ -1479,8 +1491,10 @@ class TestProtocolEdgeCases:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -1497,8 +1511,10 @@ class TestProtocolEdgeCases:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs):  # No type annotation
                 return "not a list"
 
@@ -1570,8 +1586,10 @@ class TestProtocolEdgeCases:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 return []
 
@@ -1606,8 +1624,10 @@ class TestProtocolEdgeCases:
             @property
             def raw_connection(self):
                 return None
+
             def all(self) -> list[dict]:
                 return []
+
             def find(self, **kwargs) -> list[dict]:
                 raise RuntimeError("Database error")
 

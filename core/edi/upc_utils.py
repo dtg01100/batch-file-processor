@@ -7,7 +7,6 @@ Reference:
     Author: greg p (GPL3)
 """
 
-
 from core.constants import (
     UPC_A_LENGTH,
     UPCE_7_DIGIT_LENGTH,

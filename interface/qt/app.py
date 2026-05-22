@@ -206,9 +206,7 @@ class QtBatchFileSenderApp:
             assert db is not None
             QTimer.singleShot(
                 500,
-                lambda: self._graphical_process_directories(
-                    db.folders_table
-                ),
+                lambda: self._graphical_process_directories(db.folders_table),
             )
         QApplication.exec()
         return 0

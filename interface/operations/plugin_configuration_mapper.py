@@ -609,7 +609,9 @@ class PluginConfigurationMapper:
             for i in range(w.count()):
                 item = w.item(i)
                 if item is not None:
-                    item.setSelected(item.data(0) in v if hasattr(v, "__contains__") else False)
+                    item.setSelected(
+                        item.data(0) in v if hasattr(v, "__contains__") else False
+                    )
 
         _WIDGET_VALUE_SETTERS = {
             QLineEdit: lambda w, v: w.setText(str(v)),

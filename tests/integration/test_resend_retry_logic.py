@@ -78,8 +78,7 @@ class InMemoryProcessedFiles:
     def __init__(self):
         self._conn = sqlite3.connect(":memory:")
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute(
-            """
+        self._conn.execute("""
             CREATE TABLE processed_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 file_name TEXT,
@@ -93,8 +92,7 @@ class InMemoryProcessedFiles:
                 file_mtime REAL,
                 processed_at TEXT
             )
-            """
-        )
+            """)
         self._conn.commit()
         self._next_id = 1
 

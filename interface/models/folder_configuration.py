@@ -48,8 +48,7 @@ class _ConvertFormatMeta(type):
     _discovered: list[str]
     _display_values: dict[str, str]
 
-    def _ensure_discovered(cls) -> None:
-        ...
+    def _ensure_discovered(cls) -> None: ...
 
     def __iter__(cls):
         cls._ensure_discovered()
