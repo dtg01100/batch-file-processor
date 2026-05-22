@@ -341,9 +341,7 @@ class BaseEDIConverter(ABC):
         """
         context.arec_header = record.fields
 
-    def process_c_record(
-        self, record: EDIRecord, context: ConversionContext
-    ) -> None:  # noqa: B027
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process a C record (charge/tax record).
 
         Default implementation does nothing. Subclasses should override
@@ -372,7 +370,7 @@ class BaseEDIConverter(ABC):
             context.output_file.close()
             context.output_file = None
 
-    def _handle_unknown_record(  # noqa: B027
+    def _handle_unknown_record(
         self, record: EDIRecord, context: ConversionContext
     ) -> None:
         """Handle unknown record types.

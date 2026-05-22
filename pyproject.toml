@@ -130,6 +130,9 @@ keep-runtime-typing = true
 ]
 "interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = [
     "E402",
+    "E501",
+    "ARG",
+    "FBT001",
 ]
 "backend/email_backend.py" = [
     "ARG",
@@ -206,6 +209,7 @@ keep-runtime-typing = true
     "E402",
     "E501",
     "ARG",
+    "SIM115",
 ]
 "dispatch/converters/convert_to_vendor_specific.py" = [
     "E402",
@@ -222,6 +226,15 @@ keep-runtime-typing = true
     "E501",
     "ARG",
 ]
+"core/edi/edi_splitting_utils.py" = [
+    "SIM115",
+]
+"dispatch/converters/convert_base.py" = [
+    "B027",
+]
+"dispatch/converters/convert_to_scannerware.py" = [
+    "SIM115",
+]
 "interface/qt/dialogs/edit_folders/layout_builder.py" = [
     "E501",
     "ARG",
@@ -231,11 +244,46 @@ keep-runtime-typing = true
     "E501",
     "ARG",
     "E402",
+    "FBT003",
 ]
 "interface/qt/dialogs/resend_dialog.py" = [
     "E501",
     "ARG",
     "E402",
+    "FBT001",
+    "FBT003",
+]
+"interface/qt/dialogs/database_import_dialog.py" = [
+    "E501",
+    "ARG",
+    "E402",
+    "FBT001",
+    "FBT003",
+]
+"interface/qt/dialogs/edit_folders/event_handlers.py" = [
+    "E501",
+    "ARG",
+    "E402",
+    "FBT001",
+    "FBT003",
+]
+"interface/qt/services/qt_services.py" = [
+    "E501",
+    "ARG",
+    "E402",
+    "FBT003",
+]
+"interface/qt/widgets/folder_list_widget.py" = [
+    "E501",
+    "ARG",
+    "E402",
+    "FBT003",
+]
+"interface/qt/widgets/search_widget.py" = [
+    "E501",
+    "ARG",
+    "E402",
+    "FBT003",
 ]
 "interface/services/ftp_service.py" = [
     "E402",

@@ -227,9 +227,7 @@ def _write_split_edi_files(
                     (output_file_path, file_name_prefix, file_name_suffix)
                 )
 
-                current_file = open(
-                    output_file_path, "wb"
-                )  # noqa: SIM115 — lifecycle spans loop iterations, closed in finally
+                current_file = open(output_file_path, "wb")
 
             if current_file is None:
                 raise ValueError(

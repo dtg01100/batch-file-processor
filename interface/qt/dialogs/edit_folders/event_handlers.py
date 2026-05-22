@@ -168,9 +168,7 @@ class EventHandlers:
         widget = self.fields.get(field_key)
         return bool(widget and widget.isChecked())
 
-    def _set_widgets_enabled(
-        self, field_keys: list[str], enabled: bool
-    ) -> None:  # noqa: FBT001
+    def _set_widgets_enabled(self, field_keys: list[str], enabled: bool) -> None:
         """Enable or disable a list of widgets by field key."""
         for key in field_keys:
             widget = self.fields.get(key)

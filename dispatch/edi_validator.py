@@ -236,7 +236,7 @@ class EDIValidator:
             if (
                 len(line) == EDI_B_RECORD_NO_PRICING_LENGTH
                 and line[51:67] != "                "
-            ):  # noqa: E501
+            ):
                 logger.debug(
                     "EDI format check failed at line %d: %s", line_num, file_path
                 )

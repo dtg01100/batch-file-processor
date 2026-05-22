@@ -83,9 +83,7 @@ class ScannerWareConverter(BaseEDIConverter):
         # Store output path for later use
         context.user_data["output_path"] = output_path
 
-        context.output_file = open(
-            output_path, "wb"
-        )  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
+        context.output_file = open(output_path, "wb")
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
         """Process an A record (header) with padding and date offset.
