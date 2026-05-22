@@ -235,6 +235,12 @@ keep-runtime-typing = true
 "dispatch/converters/convert_to_scannerware.py" = [
     "SIM115",
 ]
+"core/structured_logging.py" = [
+    "UP017",
+]
+"dispatch/observability/audit_logger.py" = [
+    "UP017",
+]
 "interface/qt/dialogs/edit_folders/layout_builder.py" = [
     "E501",
     "ARG",
