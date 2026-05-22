@@ -18,7 +18,6 @@ from interface.plugins.config_schemas import (
     FieldDefinition,
     FieldType,
 )
-from interface.plugins.interfaces import IConfigurablePlugin
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.ui_abstraction import WidgetBase
 from interface.plugins.validation_framework import ValidationResult

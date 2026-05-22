@@ -109,8 +109,8 @@ class InMemoryCursor:
             folder_id = self._params[1] if len(self._params) > 1 else None
 
             for record in self._records:
-                if file_name and record.get("file_name") == file_name:
-                    if folder_id is None or record.get("folder_id") == folder_id:
+                if file_name and record.get("file_name") == file_name \
+                    and (folder_id is None or record.get("folder_id") == folder_id):
                         self._results.append((record.get("id"),))
         # For INSERT/UPDATE, just store the result
         self._result_index = 0
