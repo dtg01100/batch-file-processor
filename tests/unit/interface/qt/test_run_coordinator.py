@@ -9,8 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from backend.database import DatabaseObj, TableProtocol
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
+from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.run_coordinator import QtRunCoordinator
+from interface.services.reporting_service import ReportingService
 
 
 class _FakeValidationStep:
@@ -69,7 +72,7 @@ def test_process_directories_writes_validation_report_when_enabled(
     logs_dir = tmp_path / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    app = MagicMock()
+    app = MagicMock(spec=QtBatchFileSenderApp)
     app._os_module = os
     app._database_path = str(tmp_path / "folders.db")
     app._version = "1.0"
@@ -79,7 +82,7 @@ def test_process_directories_writes_validation_report_when_enabled(
     app._check_logs_directory = MagicMock(return_value=True)
     app._progress_service = MagicMock(spec=ProgressServiceProtocol)
     app._ui_service = MagicMock(spec=UIServiceProtocol)
-    app._reporting_service = MagicMock()
+    app._reporting_service = MagicMock(spec=ReportingService)
 
     app._utils_module = SimpleNamespace(
         clear_old_files=lambda *_: None,
@@ -90,10 +93,10 @@ def test_process_directories_writes_validation_report_when_enabled(
         ),
     )
 
-    app._database = MagicMock()
-    app._database.settings = MagicMock()
-    app._database.processed_files = MagicMock()
-    app._database.emails_table = MagicMock()
+    app._database = MagicMock(spec=DatabaseObj)
+    app._database.settings = MagicMock(spec=TableProtocol)
+    app._database.processed_files = MagicMock(spec=TableProtocol)
+    app._database.emails_table = MagicMock(spec=TableProtocol)
     app._database.get_settings_or_default.return_value = {
         "id": 1,
         "enable_interval_backups": False,
@@ -107,7 +110,7 @@ def test_process_directories_writes_validation_report_when_enabled(
         "enable_reporting": True,
     }
 
-    folders_table = MagicMock()
+    folders_table = MagicMock(spec=TableProtocol)
     folders_table.count.return_value = 1
     folders_table.find.return_value = [
         {"id": 1, "alias": "A", "folder_name": str(tmp_path)}

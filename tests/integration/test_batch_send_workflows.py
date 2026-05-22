@@ -26,6 +26,112 @@ pytestmark = [pytest.mark.integration, pytest.mark.dispatch]
 # ---------------------------------------------------------------------------
 
 
+class InMemoryConnection:
+    """Mock SQLite connection for testing raw_connection access.
+
+    Supports execute() and commit() methods used by folder_processor._record_processed_file().
+    """
+
+    def __init__(self, records_store: list):
+        self._records = records_store
+
+    def execute(self, sql: str, params: tuple = ()) -> "InMemoryCursor":
+        """Execute SQL and return a cursor. Mutates records for INSERT/UPDATE."""
+        sql_upper = sql.strip().upper()
+        if sql_upper.startswith("INSERT"):
+            # INSERT: add new record to records list with all field values
+            new_record = {
+                "id": len(self._records) + 1,
+                "file_name": params[0] if len(params) > 0 else None,
+                "folder_id": params[1] if len(params) > 1 else None,
+                "folder_alias": params[2] if len(params) > 2 else None,
+                "file_checksum": params[3] if len(params) > 3 else None,
+                "processed_at": params[4] if len(params) > 4 else None,
+                "resend_flag": params[5] if len(params) > 5 else 0,
+                "sent_to": params[6] if len(params) > 6 else None,
+                "status": params[7] if len(params) > 7 else None,
+                "file_mtime": params[8] if len(params) > 8 else None,
+            }
+            self._records.append(new_record)
+        # Return cursor for SELECT queries
+        return InMemoryCursor(self._records, sql, params)
+
+    def commit(self):
+        """No-op commit for testing."""
+        pass
+
+
+class InMemoryCursor:
+    """Mock SQLite cursor for testing."""
+
+    def __init__(self, records_store: list, sql: str, params: tuple):
+        self._records = records_store
+        self._sql = sql
+        self._params = params
+        self._results = []
+        self._result_index = 0
+        self._execute_sql()
+
+    def _execute_sql(self):
+        """Execute the SQL and store results."""
+        sql_upper = self._sql.strip().upper()
+
+        if "EXCEPT" in sql_upper:
+            # Complex query with EXCEPT - parse both parts
+            # Format: SELECT DISTINCT file_checksum FROM processed_files
+            #         WHERE folder_id = ? AND file_checksum IS NOT NULL
+            #         EXCEPT
+            #         SELECT DISTINCT file_checksum FROM processed_files
+            #         WHERE folder_id = ? AND resend_flag = 1
+
+            # Get folder_id from params (first param for both SELECTs)
+            folder_id = self._params[0] if self._params else None
+
+            # Get all checksums for this folder
+            all_checksums = set()
+            resend_checksums = set()
+
+            for record in self._records:
+                if record.get("folder_id") == folder_id:
+                    checksum = record.get("file_checksum")
+                    if checksum:
+                        all_checksums.add(checksum)
+                        if record.get("resend_flag") == 1:
+                            resend_checksums.add(checksum)
+
+            # EXCEPT: return checksums that are not in resend set
+            skipped_checksums = all_checksums - resend_checksums
+            self._results = [(c,) for c in skipped_checksums]
+
+        elif sql_upper.startswith("SELECT"):
+            # Simple SELECT query - find matching records by file_name and folder_id
+            file_name = self._params[0] if len(self._params) > 0 else None
+            folder_id = self._params[1] if len(self._params) > 1 else None
+
+            for record in self._records:
+                if file_name and record.get("file_name") == file_name:
+                    if folder_id is None or record.get("folder_id") == folder_id:
+                        self._results.append((record.get("id"),))
+        # For INSERT/UPDATE, just store the result
+        self._result_index = 0
+
+    def __iter__(self):
+        """Support iteration over results."""
+        return iter(self._results)
+
+    def fetchone(self) -> tuple | None:
+        """Return the next row from the result set."""
+        if self._result_index < len(self._results):
+            result = self._results[self._result_index]
+            self._result_index += 1
+            return result
+        return None
+
+    def fetchall(self) -> list:
+        """Return all rows from the result set."""
+        return self._results
+
+
 class InMemoryProcessedFiles:
     """Simple in-memory implementation of the DatabaseInterface for processed files.
 
@@ -76,6 +182,15 @@ class InMemoryProcessedFiles:
 
     def query(self, sql: str) -> Any:
         return []
+
+    @property
+    def raw_connection(self):
+        """Return a mock connection that supports basic SQL operations.
+
+        This is a simplified mock for testing - it stores records in memory
+        and supports the SELECT/INSERT/UPDATE operations used by folder_processor.
+        """
+        return InMemoryConnection(self.records)
 
 
 # ---------------------------------------------------------------------------

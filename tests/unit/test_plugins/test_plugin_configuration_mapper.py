@@ -18,6 +18,8 @@ from interface.plugins.config_schemas import (
     FieldDefinition,
     FieldType,
 )
+from interface.plugins.interfaces import IConfigurablePlugin
+from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.ui_abstraction import WidgetBase
 from interface.plugins.validation_framework import ValidationResult
 
@@ -425,7 +427,8 @@ class BrokenWidget(WidgetBase):
 
 
 def _build_test_plugin(field_name="test_field", default="fallback"):
-    plugin = MagicMock()
+    from interface.plugins.configuration_plugin import ConfigurationPlugin
+    plugin = MagicMock(spec=ConfigurationPlugin)
     plugin.get_format_name.return_value = "csv"
     plugin.get_configuration_schema.return_value = ConfigurationSchema(
         [
@@ -445,7 +448,7 @@ def test_extract_plugin_configurations_uses_defaults_when_not_strict(monkeypatch
     """Non-strict mode should keep legacy defaulting on widget access failures."""
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
     plugin = _build_test_plugin()
-    plugin_manager = MagicMock()
+    plugin_manager = MagicMock(spec=PluginManager)
     plugin_manager.get_configuration_plugins.return_value = [plugin]
     mapper = PluginConfigurationMapper(plugin_manager=plugin_manager)
 
@@ -461,7 +464,7 @@ def test_extract_plugin_configurations_raise_in_strict_mode(monkeypatch):
     """Strict testing mode should surface widget read failures."""
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
     plugin = _build_test_plugin()
-    plugin_manager = MagicMock()
+    plugin_manager = MagicMock(spec=PluginManager)
     plugin_manager.get_configuration_plugins.return_value = [plugin]
     mapper = PluginConfigurationMapper(plugin_manager=plugin_manager)
 
@@ -475,7 +478,7 @@ def test_get_qt_widget_value_returns_empty_dict_when_not_strict(monkeypatch, qap
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
     widget = QTextEdit()
     widget.setPlainText("{not-json")
-    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock(spec=PluginManager))
 
     assert mapper._get_qt_widget_value(widget, "json_field") == {}
 
@@ -486,7 +489,7 @@ def test_get_qt_widget_value_raises_on_invalid_json_in_strict_mode(monkeypatch, 
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
     widget = QTextEdit()
     widget.setPlainText("{not-json")
-    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock(spec=PluginManager))
 
     with pytest.raises(
         ValueError, match="Invalid JSON in QTextEdit for field 'json_field'"
@@ -499,7 +502,7 @@ def test_get_qt_widget_value_returns_empty_string_for_unsupported_widget_when_no
 ):
     """Non-strict mode should keep legacy fallback for unknown widgets."""
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
-    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock(spec=PluginManager))
 
     assert mapper._get_qt_widget_value(object(), "unknown_field") == ""
 
@@ -509,7 +512,7 @@ def test_get_qt_widget_value_raises_for_unsupported_widget_in_strict_mode(
 ):
     """Strict testing mode should surface unsupported widget types."""
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
-    mapper = PluginConfigurationMapper(plugin_manager=MagicMock())
+    mapper = PluginConfigurationMapper(plugin_manager=MagicMock(spec=PluginManager))
 
     with pytest.raises(
         TypeError,

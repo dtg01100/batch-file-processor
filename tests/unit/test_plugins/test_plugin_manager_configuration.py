@@ -132,8 +132,8 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
     def test_create_configuration_widget(self):
         """Test creating configuration widget for a specific format."""
         # Create mock plugin
-        mock_plugin = MagicMock()
-        mock_plugin.create_widget.return_value = MagicMock()
+        mock_plugin = MagicMock(spec=CSVConfigurationPlugin)
+        mock_plugin.create_widget.return_value = MagicMock(spec=object)
 
         self.manager._configuration_plugins[ConvertFormat.CSV] = mock_plugin
 
@@ -146,7 +146,7 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
     def test_validate_configuration(self):
         """Test validating configuration for a specific format."""
         # Create mock plugin
-        mock_plugin = MagicMock()
+        mock_plugin = MagicMock(spec=CSVConfigurationPlugin)
         mock_plugin.validate_config.return_value = MagicMock(success=True)
 
         self.manager._configuration_plugins[ConvertFormat.CSV] = mock_plugin
@@ -163,8 +163,8 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
     def test_create_configuration(self):
         """Test creating configuration instance for a specific format."""
         # Create mock plugin
-        mock_plugin = MagicMock()
-        mock_plugin.create_config.return_value = MagicMock()
+        mock_plugin = MagicMock(spec=CSVConfigurationPlugin)
+        mock_plugin.create_config.return_value = MagicMock(spec=object)
 
         self.manager._configuration_plugins[ConvertFormat.CSV] = mock_plugin
 
@@ -178,14 +178,14 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
     def test_serialize_configuration(self):
         """Test serializing configuration instance."""
         # Create mock plugin
-        mock_plugin = MagicMock()
+        mock_plugin = MagicMock(spec=CSVConfigurationPlugin)
         mock_plugin.serialize_config.return_value = {"key": "value"}
 
         self.manager._configuration_plugins[ConvertFormat.CSV] = mock_plugin
 
         with patch.object(self.manager, "_initialized", False):
             with patch.object(self.manager, "initialize_plugins"):
-                config = MagicMock()
+                config = MagicMock(spec=object)
                 result = self.manager.serialize_configuration(ConvertFormat.CSV, config)
                 self.assertIsNotNone(result)
                 self.assertEqual(result["key"], "value")
@@ -194,8 +194,8 @@ class TestPluginManagerConfigurationPlugins(unittest.TestCase):
     def test_deserialize_configuration(self):
         """Test deserializing configuration data."""
         # Create mock plugin
-        mock_plugin = MagicMock()
-        mock_plugin.deserialize_config.return_value = MagicMock()
+        mock_plugin = MagicMock(spec=CSVConfigurationPlugin)
+        mock_plugin.deserialize_config.return_value = MagicMock(spec=object)
 
         self.manager._configuration_plugins[ConvertFormat.CSV] = mock_plugin
 

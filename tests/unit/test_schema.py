@@ -35,6 +35,7 @@ from unittest.mock import MagicMock
 
 import core.database.schema as schema
 from backend.database import sqlite_wrapper
+from backend.database.database_obj import DatabaseConnectionProtocol
 
 
 class TestSchemaCreation:
@@ -533,7 +534,7 @@ class TestSchemaErrorHandling:
     @pytest.fixture
     def mock_database(self):
         """Create a mock database connection."""
-        return MagicMock()
+        return MagicMock(spec=DatabaseConnectionProtocol)
 
     def test_handles_query_error_gracefully(self, mock_database):
         """Test that ensure_schema handles query errors gracefully."""
@@ -549,7 +550,7 @@ class TestSchemaErrorHandling:
         mock_database.query.side_effect = Exception("Query error")
 
         # Provide a raw connection
-        mock_conn = MagicMock()
+        mock_conn = MagicMock(spec=object)
         mock_database._conn = mock_conn
 
         # Should use raw connection
@@ -562,7 +563,7 @@ class TestSchemaErrorHandling:
         """Test that ensure_schema handles all errors silently."""
         # Make both query and raw connection fail
         mock_database.query.side_effect = Exception("Query error")
-        mock_database._conn = MagicMock()
+        mock_database._conn = MagicMock(spec=object)
         mock_database._conn.execute.side_effect = Exception("Raw connection error")
 
         # Should not raise exception

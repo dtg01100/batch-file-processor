@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from adapters.db2ssh import Connection as VendoredConnection
+from adapters.db2ssh import Cursor as VendoredCursor
 from adapters.db2ssh.connection import (
     DB2SSHConnection,
     DB2SSHConnectionConfig,
@@ -47,7 +49,7 @@ class TestDB2SSHConnectionConnect:
     @patch("adapters.db2ssh.connection.log_database_call")
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_connect_success(self, mock_db2ssh_connect, mock_log):
-        mock_conn = MagicMock()
+        mock_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_connect.return_value = mock_conn
 
         config = DB2SSHConnectionConfig(host="myhost", user="myuser")
@@ -85,7 +87,7 @@ class TestDB2SSHConnectionConnect:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_connect_lazy_ensure_connection(self, mock_db2ssh_connect):
-        mock_conn = MagicMock()
+        mock_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_connect.return_value = mock_conn
 
         config = DB2SSHConnectionConfig(host="myhost", user="myuser")
@@ -101,7 +103,7 @@ class TestDB2SSHConnectionConnect:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_ensure_connection_reuses_existing(self, mock_db2ssh_connect):
-        mock_conn = MagicMock()
+        mock_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_connect.return_value = mock_conn
 
         config = DB2SSHConnectionConfig(host="myhost", user="myuser")
@@ -117,11 +119,11 @@ class TestDB2SSHConnectionConnect:
 class TestDB2SSHConnectionExecute:
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_execute_with_params(self, mock_db2ssh_connect):
-        mock_cursor = MagicMock()
+        mock_cursor = MagicMock(spec=VendoredCursor)
         mock_cursor.description = [("NAME",), ("AGE",)]
         mock_cursor.fetchall.return_value = [("Alice", 30), ("Bob", 25)]
 
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_conn.cursor.return_value = mock_cursor
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
@@ -140,11 +142,11 @@ class TestDB2SSHConnectionExecute:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_execute_without_params(self, mock_db2ssh_connect):
-        mock_cursor = MagicMock()
+        mock_cursor = MagicMock(spec=VendoredCursor)
         mock_cursor.description = [("NAME",)]
         mock_cursor.fetchall.return_value = [("Charlie",)]
 
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_conn.cursor.return_value = mock_cursor
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
@@ -158,10 +160,10 @@ class TestDB2SSHConnectionExecute:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_execute_returns_empty_for_non_select(self, mock_db2ssh_connect):
-        mock_cursor = MagicMock()
+        mock_cursor = MagicMock(spec=VendoredCursor)
         mock_cursor.description = None
 
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_conn.cursor.return_value = mock_cursor
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
@@ -175,10 +177,10 @@ class TestDB2SSHConnectionExecute:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_execute_raises_on_error(self, mock_db2ssh_connect):
-        mock_cursor = MagicMock()
+        mock_cursor = MagicMock(spec=VendoredCursor)
         mock_cursor.execute.side_effect = RuntimeError("Query failed")
 
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_conn.cursor.return_value = mock_cursor
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
@@ -192,11 +194,11 @@ class TestDB2SSHConnectionExecute:
 
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_execute_closes_cursor(self, mock_db2ssh_connect):
-        mock_cursor = MagicMock()
+        mock_cursor = MagicMock(spec=VendoredCursor)
         mock_cursor.description = [("NAME",)]
         mock_cursor.fetchall.return_value = [("Alice",)]
 
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_conn.cursor.return_value = mock_cursor
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
@@ -211,7 +213,7 @@ class TestDB2SSHConnectionExecute:
 class TestDB2SSHConnectionClose:
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_close_closes_connection(self, mock_db2ssh_connect):
-        mock_db2ssh_conn = MagicMock()
+        mock_db2ssh_conn = MagicMock(spec=VendoredConnection)
         mock_db2ssh_connect.return_value = mock_db2ssh_conn
 
         config = DB2SSHConnectionConfig(host="myhost", user="myuser")
@@ -235,7 +237,7 @@ class TestDB2SSHConnectionClose:
 class TestDB2SSHConnectionProtocol:
     @patch("adapters.db2ssh.connection.db2ssh_connect")
     def test_implements_database_connection_protocol(self, mock_db2ssh_connect):
-        mock_db2ssh_connect.return_value = MagicMock()
+        mock_db2ssh_connect.return_value = MagicMock(spec=VendoredConnection)
 
         config = DB2SSHConnectionConfig(host="myhost", user="myuser")
         connection = DB2SSHConnection(config)

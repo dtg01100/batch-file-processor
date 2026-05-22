@@ -6,7 +6,6 @@ in dispatch.error_handler instead.
 """
 
 import time
-from io import StringIO
 from typing import Any
 
 

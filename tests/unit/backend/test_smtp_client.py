@@ -2,7 +2,7 @@
 
 import logging
 from email.message import EmailMessage
-from smtplib import SMTPAuthenticationError
+from smtplib import SMTP, SMTPAuthenticationError
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,7 +18,7 @@ class TestRealSMTPClient:
     def mock_smtplib(self):
         """Mock smtplib module."""
         with patch("backend.smtp_client.smtplib") as mock:
-            mock_smtp = MagicMock()
+            mock_smtp = MagicMock(spec=SMTP)
             mock.SMTP.return_value = mock_smtp
             yield mock
 

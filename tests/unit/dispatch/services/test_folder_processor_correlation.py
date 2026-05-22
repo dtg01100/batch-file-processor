@@ -1,21 +1,26 @@
 # tests/unit/dispatch/services/test_folder_processor_correlation.py
 from unittest.mock import MagicMock, patch
 
-from dispatch.services.folder_processor import FolderPipelineExecutor
+from dispatch.results import FolderResult
+from dispatch.services.folder_processor import (
+    FolderPipelineExecutor,
+    FolderProcessingDependencies,
+    FolderProcessingRequest,
+)
 
 
 class TestFolderProcessorCorrelation:
     def test_has_set_audit_logger_method(self):
-        deps = MagicMock()
+        deps = MagicMock(spec=FolderProcessingDependencies)
         executor = FolderPipelineExecutor(deps)
         audit_logger = MagicMock()
         executor.set_audit_logger(audit_logger)
         assert executor._audit_logger is audit_logger
 
     def test_stores_correlation_id_after_process_folder(self):
-        deps = MagicMock()
+        deps = MagicMock(spec=FolderProcessingDependencies)
         executor = FolderPipelineExecutor(deps)
-        mock_result = MagicMock()
+        mock_result = MagicMock(spec=FolderResult)
         mock_result.files_processed = 0
         mock_result.files_failed = 0
         mock_result.errors = []
@@ -28,6 +33,7 @@ class TestFolderProcessorCorrelation:
                     with patch.object(executor, "_finalize_folder_result"):
                         executor.process_folder(
                             MagicMock(
+                                spec=FolderProcessingRequest,
                                 folder={
                                     "folder_name": "/test",
                                     "alias": "Test",
@@ -41,7 +47,7 @@ class TestFolderProcessorCorrelation:
         assert len(executor._correlation_id) > 0
 
     def test_sets_correlation_id_in_context_var(self):
-        deps = MagicMock()
+        deps = MagicMock(spec=FolderProcessingDependencies)
         executor = FolderPipelineExecutor(deps)
         from core.structured_logging import get_correlation_id
 
@@ -53,6 +59,7 @@ class TestFolderProcessorCorrelation:
                     with patch.object(executor, "_finalize_folder_result"):
                         executor.process_folder(
                             MagicMock(
+                                spec=FolderProcessingRequest,
                                 folder={
                                     "folder_name": "/test",
                                     "alias": "Test",

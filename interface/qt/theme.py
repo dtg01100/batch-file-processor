@@ -13,8 +13,6 @@ import re
 import sys
 from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication
-
 
 class Theme:
     # Material Design 3 Color Palette

@@ -19,6 +19,8 @@ def _extract_dollars(value: str) -> str:
 
 
 def convert_to_price(value):
+    if not value:
+        return "0.00"
     return f"{_extract_dollars(value)}.{value[-2:]}"
 
 

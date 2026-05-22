@@ -27,8 +27,8 @@ from __future__ import annotations
 
 import os
 import pkgutil
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
 # Registry storage - populated on first access
 _CONVERTER_REGISTRY: dict[str, dict[str, Any]] = {}
@@ -209,7 +209,7 @@ def get_display_name(format_name: str) -> str:
 
     fmt_data = _CONVERTER_REGISTRY.get(format_name)
     if fmt_data:
-        return fmt_data["display_name"]
+        return cast(str, fmt_data["display_name"])
     return format_name
 
 
@@ -227,7 +227,7 @@ def get_module_name(format_name: str) -> str | None:
 
     fmt_data = _CONVERTER_REGISTRY.get(format_name)
     if fmt_data:
-        return fmt_data["module_name"]
+        return cast(str, fmt_data["module_name"])
     return None
 
 

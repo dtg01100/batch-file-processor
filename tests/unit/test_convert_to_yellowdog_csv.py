@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from core.edi.inv_fetcher import InvFetcher
 from dispatch.converters import convert_to_yellowdog_csv
 
 
@@ -85,7 +86,7 @@ class TestConvertToYellowdogCSVFixtures:
     @pytest.fixture
     def mock_inv_fetcher(self):
         """Return a mock InvFetcher instance."""
-        fetcher_instance = MagicMock()
+        fetcher_instance = MagicMock(spec=InvFetcher)
         fetcher_instance.fetch_cust_name.return_value = "Test Customer"
         fetcher_instance.fetch_po.return_value = "PO-001"
         fetcher_instance.fetch_uom_desc.return_value = "CS"

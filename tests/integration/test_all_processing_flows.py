@@ -27,9 +27,10 @@ import pytest
 
 from backend.database import sqlite_wrapper
 from core.database.schema import ensure_schema
-from core.edi.edi_splitter import filter_edi_file_by_category
+from core.edi.edi_splitting_utils import filter_edi_file_by_category
 from dispatch.error_handler import ErrorHandler
 from dispatch.hash_utils import generate_file_hash
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.processed_files_tracker import ProcessedFilesTracker
 
@@ -501,7 +502,7 @@ class TestErrorRecordingFlow:
             settings={"test": "value"},
         )
         orchestrator = DispatchOrchestrator(config)
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # First attempt - should fail
         result1 = orchestrator.process_folder(folder_config, run_log)
@@ -668,7 +669,7 @@ class TestCombinedFlows:
             database=db, backends={"copy": failing_backend}, settings={"test": "value"}
         )
         orchestrator = DispatchOrchestrator(config)
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Attempt 1: Fail
         result1 = orchestrator.process_folder(folder_config, run_log)
@@ -726,7 +727,7 @@ class TestCombinedFlows:
             database=db, backends={"copy": backend}, settings={"test": "value"}
         )
         orchestrator = DispatchOrchestrator(config)
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder_config, run_log)
         assert result.files_processed >= 2, "Should process files"

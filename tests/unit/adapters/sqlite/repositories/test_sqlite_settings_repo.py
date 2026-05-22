@@ -5,11 +5,12 @@ Unit tests for SqliteSettingsRepository.
 from unittest.mock import MagicMock
 
 from adapters.sqlite.repositories import SqliteSettingsRepository
+from backend.database.database_obj import DatabaseObj
 from core.ports.repositories import ISettingsRepository
 
 
 def _make_db():
-    return MagicMock()
+    return MagicMock(spec=DatabaseObj)
 
 
 class TestISettingsRepositoryConformance:

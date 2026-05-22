@@ -8,6 +8,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+from interface.services.smtp_service import SMTPServiceProtocol
+
 # Add the project root to the path
 sys.path.insert(
     0,
@@ -23,7 +25,7 @@ def _make_dialog(qtbot, settings_data=None, **kwargs):
     """Helper to create an EditSettingsDialog with a mock SMTP service."""
     if settings_data is None:
         settings_data = {}
-    mock_smtp = MagicMock()
+    mock_smtp = MagicMock(spec=SMTPServiceProtocol)
     mock_smtp.test_connection.return_value = (True, None)
     dialog = EditSettingsDialog(
         None,

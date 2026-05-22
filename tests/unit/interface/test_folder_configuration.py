@@ -32,6 +32,7 @@ from interface.models.folder_configuration import (
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
 )
+from interface.plugins.plugin_manager import PluginManager
 
 
 class TestFTPConfiguration:
@@ -944,7 +945,7 @@ class TestPluginConfigurationValidation:
         mock_validation.errors = []
         mock_plugin.validate_config.return_value = mock_validation
 
-        mock_pm_instance = MagicMock()
+        mock_pm_instance = MagicMock(spec=PluginManager)
         mock_pm_instance.get_configuration_plugin_by_format_name.return_value = (
             mock_plugin
         )
@@ -966,7 +967,7 @@ class TestPluginConfigurationValidation:
         mock_validation.errors = ["Invalid configuration"]
         mock_plugin.validate_config.return_value = mock_validation
 
-        mock_pm_instance = MagicMock()
+        mock_pm_instance = MagicMock(spec=PluginManager)
         mock_pm_instance.get_configuration_plugin_by_format_name.return_value = (
             mock_plugin
         )
@@ -982,7 +983,7 @@ class TestPluginConfigurationValidation:
     @patch("interface.plugins.plugin_manager.PluginManager")
     def test_validate_plugin_configurations_no_plugin(self, mock_plugin_manager):
         """Test validation when no plugin found for format."""
-        mock_pm_instance = MagicMock()
+        mock_pm_instance = MagicMock(spec=PluginManager)
         mock_pm_instance.get_configuration_plugin_by_format_name.return_value = None
         mock_plugin_manager.return_value = mock_pm_instance
 
@@ -1020,27 +1021,28 @@ class TestEnums:
         assert BackendType.EMAIL.value == "email"
 
     def test_convert_format_enum(self):
-        """Test ConvertFormat enum values."""
-        assert ConvertFormat.CSV.value == "csv"
+        """Test ConvertFormat enum values use display names."""
+        assert ConvertFormat.CSV.value == "CSV"  # display name, not internal format
         assert ConvertFormat.SCANNERWARE.value == "ScannerWare"
-        assert ConvertFormat.FINTECH.value == "fintech"
+        assert ConvertFormat.FINTECH.value == "Fintech"  # display name
         assert ConvertFormat.DO_NOTHING.value == "do_nothing"
 
     def test_convert_format_enum_completeness(self):
         """Test that all expected convert formats are in enum."""
         expected_formats = [
-            "csv",
-            "ScannerWare",
+            "do_nothing",
+            "CSV",
+            "Fintech",
             "ScanSheet_Type_A",
-            "jolley_custom",
+            "ScannerWare",
+            "Simplified CSV",
             "eStore_eInvoice",
             "eStore_eInvoice_Generic",
-            "fintech",
+            "jolley_custom",
             "stewarts_custom",
+            "tweaks",
             "yellowdog_csv",
-            "simplified_csv",
-            "do_nothing",
         ]
         actual_formats = [fmt.value for fmt in ConvertFormat]
         for fmt in expected_formats:
-            assert fmt in actual_formats
+            assert fmt in actual_formats, f"{fmt} not in {actual_formats}"

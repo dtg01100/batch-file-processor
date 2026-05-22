@@ -2,12 +2,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from core.database import QueryRunner
 from dispatch.services.customer_lookup_service import CustomerLookupService
 
 
 class TestCustomerLookupService:
     def test_lookup_found(self):
-        mock_query_runner = MagicMock()
+        mock_query_runner = MagicMock(spec=QueryRunner)
         mock_query_runner.run_query.return_value = [
             {"Customer Number": "123", "Customer Name": "Acme Corp"}
         ]
@@ -18,14 +19,14 @@ class TestCustomerLookupService:
     def test_lookup_not_found_raises(self):
         from core.exceptions import CustomerLookupError
 
-        mock_query_runner = MagicMock()
+        mock_query_runner = MagicMock(spec=QueryRunner)
         mock_query_runner.run_query.return_value = []
         service = CustomerLookupService(mock_query_runner, "SELECT ...")
         with pytest.raises(CustomerLookupError):
             service.lookup("INV001")
 
     def test_build_header_dict_strip_spaces(self):
-        mock_query_runner = MagicMock()
+        mock_query_runner = MagicMock(spec=QueryRunner)
         service = CustomerLookupService(mock_query_runner, "SELECT ...")
         raw = {"Customer Number": "123"}
         result = service._build_header_dict(raw, [])

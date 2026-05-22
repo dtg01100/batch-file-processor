@@ -5,7 +5,7 @@ for folder configurations, separating business logic from UI code.
 """
 
 import os
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from core.ports.repositories import (
     IFolderRepository,
@@ -73,7 +73,7 @@ class FolderManager:
         self._settings_repo = settings_repo
         self._processed_files_repo = processed_files_repo
 
-    def add_folder(self, folder_path: str, template_data: dict | None = None) -> dict:
+    def add_folder(self, folder_path: str, template_data: dict | None = None) -> dict[str, Any]:
         """Add a folder to the database using template defaults.
 
         Args:
@@ -101,7 +101,7 @@ class FolderManager:
         template_settings["alias"] = folder_name
 
         self._folder_repo.insert(template_settings)
-        return self._folder_repo.find_by_path(folder_path)
+        return self._folder_repo.find_by_path(folder_path)  # type: ignore[return-value]
 
     def _alias_exists(self, alias: str) -> bool:
         return bool(self._folder_repo.find_by_alias(alias))

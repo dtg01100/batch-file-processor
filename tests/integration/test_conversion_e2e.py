@@ -21,9 +21,9 @@ import csv
 import os
 from unittest.mock import MagicMock, patch
 
-from core.edi.c_rec_generator import QueryRunnerProtocol
-
 import pytest
+
+from core.edi.c_rec_generator import QueryRunnerProtocol
 
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.conversion]
 

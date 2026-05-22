@@ -29,9 +29,9 @@ import threading
 from contextlib import suppress
 from typing import Any, ClassVar
 
-logger = logging.getLogger(__name__)
-
 from core.utils.bool_utils import normalize_bool, to_db_bool
+
+logger = logging.getLogger(__name__)
 
 # Thread-local storage for database connections
 _thread_local = threading.local()
@@ -728,7 +728,9 @@ class Database:
 
             schema.ensure_schema(self)
         except Exception:
-            logger.debug("Schema initialization failed (tolerated for existing DBs)", exc_info=True)
+            logger.debug(
+                "Schema initialization failed (tolerated for existing DBs)",
+                exc_info=True)
 
     @property
     def raw_connection(self) -> sqlite3.Connection:
@@ -830,6 +832,15 @@ class Database:
                 with contextlib.suppress(sqlite3.Error):
                     self._conn.commit()
                 return []
+
+
+    def get_oversight_or_default(self) -> dict[str, Any]:
+        """Get oversight settings or defaults.
+
+        Returns:
+            Dictionary with oversight settings or empty dict as default.
+        """
+        return {}
 
     @classmethod
     def connect(cls, path: str) -> Database:

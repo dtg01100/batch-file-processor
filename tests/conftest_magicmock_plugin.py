@@ -15,7 +15,6 @@ from typing import Any
 
 import pytest
 
-
 DB_MOCK_NAMES = {"mock_db", "mock_database_obj"}
 
 

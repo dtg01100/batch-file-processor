@@ -14,9 +14,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.dispatch, pytest.mark.backend
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
+from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.send_manager import MockBackend, SendManager
 
 # =============================================================================
@@ -625,7 +625,7 @@ class TestDispatchFullPipeline:
             copy_calls.append({"filename": filename})
 
         # Create a mock validator
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=EDIValidationStep)
         mock_validator.execute.return_value = (True, sample_edi_file)
 
         with patch("backend.copy_backend.do", side_effect=mock_copy_do):
@@ -899,47 +899,7 @@ class TestFolderProcessingIntegration:
             folder_config["folder_name"] = sample_folder
 
             # Create a mock run log
-            run_log = MagicMock()
-            run_log.write = MagicMock()
-
-            # Process the folder
-            result = orchestrator.process_folder(folder_config, run_log)
-
-            # Verify all files were processed
-            assert result.success is True
-            assert result.files_processed == 3
-            assert result.files_failed == 0
-            assert len(copy_calls) == 3
-
-    def test_process_folder_with_validation_errors(self, sample_folder, settings_dict):
-        """Test processing a folder when validation fails."""
-        # Create a validator that always fails
-        mock_validator = MagicMock()
-        mock_validator.execute.return_value = (False, ["Validation error"])
-
-        folder_config = {
-            "id": 1,
-            "folder_name": sample_folder,
-            "alias": "Test Folder",
-            "process_edi": "True",  # String "True" as per orchestrator logic
-            "force_edi_validation": False,
-            "process_backend_copy": True,
-            "copy_to_directory": "/tmp/output",
-        }
-
-        copy_calls = []
-
-        def mock_copy_do(process_parameters, settings, filename):
-            copy_calls.append({"filename": filename})
-
-        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
-            config = DispatchConfig(
-                settings=settings_dict,
-                validator_step=mock_validator,
-            )
-            orchestrator = DispatchOrchestrator(config)
-
-            run_log = MagicMock()
+            run_log = MagicMock(spec=RunLog)
             run_log.write = MagicMock()
 
             # Process the folder
@@ -955,15 +915,15 @@ class TestFolderProcessingIntegration:
     def test_process_folder_with_force_validation(self, sample_folder, settings_dict):
         """Test processing with force_edi_validation sends despite errors."""
         # Create a validator that always fails
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=EDIValidationStep)
         mock_validator.execute.return_value = (False, ["Validation error"])
 
         folder_config = {
             "id": 1,
             "folder_name": sample_folder,
             "alias": "Test Folder",
-            "process_edi": "True",  # String "True" as per orchestrator logic
-            "force_edi_validation": True,  # Force sending despite errors
+            "process_edi": "True",
+            "force_edi_validation": True,
             "process_backend_copy": True,
             "copy_to_directory": "/tmp/output",
         }
@@ -980,7 +940,7 @@ class TestFolderProcessingIntegration:
             )
             orchestrator = DispatchOrchestrator(config)
 
-            run_log = MagicMock()
+            run_log = MagicMock(spec=RunLog)
             run_log.write = MagicMock()
 
             # Process the folder

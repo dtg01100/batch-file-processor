@@ -5,10 +5,12 @@ import logging
 from unittest.mock import MagicMock
 
 from dispatch.error_handler import ErrorHandler
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import (
     DispatchOrchestrator,
     FileResult,
 )
+from dispatch.pipeline.interfaces import PipelineStep
 from dispatch.pipeline.validator import EDIValidationStep
 from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import MockBackend
@@ -187,7 +189,7 @@ class TestDispatchOrchestrator:
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/notexists", "alias": "Test"}
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -202,7 +204,7 @@ class TestDispatchOrchestrator:
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/input", "alias": "Test"}
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -235,7 +237,7 @@ class TestDispatchOrchestrator:
             "alias": "Test",
             "process_backend_copy": True,
         }
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process files
         with caplog.at_level(logging.DEBUG, logger="dispatch.orchestrator"):
@@ -283,7 +285,7 @@ class TestDispatchOrchestrator:
         """Test file processing with validation."""
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"AHEADER\nCFOOTER\n"})
 
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=PipelineStep)
         mock_validator.execute.return_value = (True, "/data/input/file.edi", [])
 
         mock_backend = MockBackend(should_succeed=True)
@@ -308,7 +310,7 @@ class TestDispatchOrchestrator:
         """Test file processing with validation failure."""
         mock_fs = MockFileSystem(files={"/data/input/file.edi": b"invalid content"})
 
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=PipelineStep)
         mock_validator.execute.return_value = (False, ["Invalid EDI"])
 
         config = DispatchConfig(file_system=mock_fs, validator_step=mock_validator)
@@ -412,7 +414,7 @@ class TestOrchestratorHelperMethods:
         orchestrator = DispatchOrchestrator(config)
 
         # Test with file-like object
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         orchestrator._log_message(run_log, "Test message")
 
         run_log.write.assert_called_once()
@@ -457,7 +459,7 @@ class TestOrchestratorIntegration:
             "alias": "TestFolder",
             "process_backend_copy": True,
         }
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -516,7 +518,7 @@ class TestOrchestratorIntegration:
             },
         ]
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         for folder in folders:
             result = orchestrator.process_folder(folder, run_log)
@@ -533,7 +535,7 @@ class TestOrchestratorEdgeCases:
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/input folder", "alias": "Test"}
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -545,7 +547,7 @@ class TestOrchestratorEdgeCases:
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "", "alias": "Empty"}
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -558,7 +560,7 @@ class TestOrchestratorEdgeCases:
         orchestrator = DispatchOrchestrator(config)
 
         folder = {"folder_name": "/data/input"}
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         result = orchestrator.process_folder(folder, run_log)
 
@@ -595,7 +597,7 @@ class TestOrchestratorEdgeCases:
             "alias": "Test",
             "process_backend_copy": True,
         }
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         for _ in range(3):
             result = orchestrator.process_folder(folder, run_log)

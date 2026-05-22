@@ -4,6 +4,7 @@ Unit tests for vendored db2ssh driver internals.
 
 from unittest.mock import MagicMock
 
+import paramiko
 import pytest
 
 from adapters.db2ssh import (
@@ -214,24 +215,31 @@ class TestRunQuery:
 
     def _make_mock_ssh(self, exit_status=0):
         """Create a mock SSH client for testing _run_query."""
-        mock_stdout = MagicMock()
+        mock_channel = MagicMock(spec=paramiko.Channel)
+        mock_channel.recv_exit_status.return_value = exit_status
+
+        mock_stdout = MagicMock(spec=paramiko.ChannelFile)
         mock_stdout.read.return_value = b""
-        mock_stdout.channel = MagicMock()
-        mock_stdout.channel.recv_exit_status.return_value = exit_status
+        mock_stdout.channel = mock_channel
 
-        mock_stdin = MagicMock()
-        mock_stderr = MagicMock()
-        mock_stderr.channel = mock_stdout.channel
+        mock_stdin = MagicMock(spec=paramiko.ChannelStdinFile)
+        mock_stderr = MagicMock(spec=paramiko.ChannelStderrFile)
+        mock_stderr.channel = mock_channel
 
-        cleanup_stdout = MagicMock()
+        cleanup_channel = MagicMock(spec=paramiko.Channel)
+        cleanup_stdout = MagicMock(spec=paramiko.ChannelFile)
         cleanup_stdout.read.return_value = b""
-        cleanup_stdout.channel = MagicMock()
+        cleanup_stdout.channel = cleanup_channel
 
-        mock_ssh = MagicMock()
+        mock_ssh = MagicMock(spec=paramiko.SSHClient)
+
+        cleanup_stderr = MagicMock(spec=paramiko.ChannelStderrFile)
+        cleanup_stderr.channel = cleanup_channel
+
         mock_ssh.exec_command.side_effect = [
             (mock_stdin, mock_stdout, mock_stderr),
             (None, mock_stdout, mock_stderr),
-            (None, cleanup_stdout, MagicMock()),
+            (None, cleanup_stdout, cleanup_stderr),
         ]
         return mock_ssh, mock_stdin
 

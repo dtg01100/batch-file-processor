@@ -307,7 +307,7 @@ class FormGenerator(ABC):
         for section in self._plugin_sections:
             if hasattr(section, "get_values"):
                 section_id = getattr(section, "section_id", "unknown")
-                values[section_id] = getattr(section, "get_values")()
+                values[section_id] = section.get_values()
         return values
 
     def set_plugin_section_values(self, configs: dict[str, dict[str, Any]]) -> None:
@@ -322,7 +322,7 @@ class FormGenerator(ABC):
             section_id = getattr(section, "section_id", None)
             if section_id and section_id in configs:
                 if hasattr(section, "set_values"):
-                    getattr(section, "set_values")(configs[section_id])
+                    section.set_values(configs[section_id])
 
     def validate_plugin_sections(self) -> ValidationResult:
         """
@@ -433,7 +433,7 @@ class QtFormGenerator(FormGenerator):
                 )
 
                 if section_widget:
-                    setattr(section_widget, "section_id", section_id)
+                    section_widget.section_id = section_id  # type: ignore[attr-defined]
                     self._plugin_sections.append(section_widget)  # type: ignore[arg-type]
                     native_widget = section_widget.render(config)
                     section_layout.addWidget(native_widget)

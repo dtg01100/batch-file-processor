@@ -21,6 +21,7 @@ from unittest import mock
 
 import pytest
 
+from adapters.sqlite.repositories import SqliteFolderRepository
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
@@ -144,7 +145,7 @@ def test_full_real_world_workflow(workspace):
     9. Verify the file is processed and copied to output_2.
     """
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     # 1. Add a dummy folder
     input_path = str(workspace["input"])
@@ -249,7 +250,7 @@ def test_full_real_world_workflow(workspace):
 def test_tweaking_scenario(workspace):
     """Test EDI tweaking (e.g., UPC check digit calculation)."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -335,7 +336,7 @@ def test_csv_conversion_with_options(workspace):
     from dispatch.pipeline.converter import EDIConverterStep
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -401,7 +402,7 @@ def test_all_conversion_formats(workspace):
     from dispatch.pipeline.converter import SUPPORTED_FORMATS, EDIConverterStep
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     # Test each format
     for fmt in SUPPORTED_FORMATS:
@@ -474,7 +475,7 @@ def test_simplified_csv_with_options(workspace):
     from dispatch.pipeline.converter import EDIConverterStep
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -543,7 +544,7 @@ def test_email_backend(workspace):
     from unittest.mock import Mock
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -614,7 +615,7 @@ def test_ftp_backend(workspace):
     from unittest import mock
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -679,7 +680,7 @@ def test_conversion_with_tweaking(workspace):
     from dispatch.pipeline.converter import EDIConverterStep
 
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -758,7 +759,7 @@ def test_conversion_with_tweaking(workspace):
 def test_csv_option_individual(workspace, option, value, expected_behavior):
     """Test each CSV conversion option individually to verify correct behavior."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -869,7 +870,7 @@ def test_csv_option_individual(workspace, option, value, expected_behavior):
 def test_simplified_csv_option_individual(workspace, option, value):
     """Test simplified CSV options individually."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -936,7 +937,7 @@ def test_simplified_csv_option_individual(workspace, option, value):
 def test_tweaking_option_individual(workspace, tweak_option, value):
     """Test each EDI tweaking option individually."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -1049,7 +1050,7 @@ def test_tweaking_option_individual(workspace, tweak_option, value):
 def test_option_combinations(workspace, combo_name, config_overrides, description):
     """Test common combinations of options that represent real-world usage patterns."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -1141,7 +1142,7 @@ def test_option_combinations(workspace, combo_name, config_overrides, descriptio
 def test_all_formats_with_options(workspace, format_name, options):
     """Test all conversion formats with various option combinations."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)
@@ -1223,7 +1224,7 @@ def test_all_formats_with_options(workspace, format_name, options):
 def test_backends_with_csv_options(workspace, backend_type, backend_config):
     """Test all backends with various CSV option combinations."""
     db = workspace["db"]
-    folder_manager = FolderManager(db)
+    folder_manager = FolderManager(SqliteFolderRepository(db))
 
     input_path = str(workspace["input"])
     folder_manager.add_folder(input_path)

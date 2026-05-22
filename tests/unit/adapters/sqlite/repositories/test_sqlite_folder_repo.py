@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from adapters.sqlite.repositories import SqliteFolderRepository
+from backend.database.database_obj import DatabaseObj, TableProtocol
 from core.ports.repositories import IFolderRepository
 
 # ---------------------------------------------------------------------------
@@ -23,8 +24,8 @@ def _make_db(folders=None):
     Args:
         folders: Optional list of folder dicts returned by all() / find().
     """
-    db = MagicMock()
-    table = MagicMock()
+    db = MagicMock(spec=DatabaseObj)
+    table = MagicMock(spec=TableProtocol)
     db.folders_table = table
 
     if folders is not None:

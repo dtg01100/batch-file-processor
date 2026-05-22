@@ -1,6 +1,7 @@
 """SMTP Service tests for connection validation and error formatting."""
 
 import errno
+import smtplib
 from unittest.mock import MagicMock, patch
 
 from interface.services.smtp_service import SMTPService
@@ -14,7 +15,7 @@ class TestSMTPService:
         service = SMTPService()
 
         with patch("smtplib.SMTP") as smtp_cls:
-            smtp_instance = MagicMock()
+            smtp_instance = MagicMock(spec=smtplib.SMTP)
             smtp_cls.return_value = smtp_instance
 
             success, error = service.test_connection(

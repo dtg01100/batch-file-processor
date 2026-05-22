@@ -10,17 +10,13 @@ Covers:
 from __future__ import annotations
 
 import sqlite3
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from dispatch.services.file_filter import (
     filter_pending_files,
     get_skipped_checksums,
     record_file_mtime,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -254,6 +250,7 @@ class TestMtimePreFilter:
         table = SQLTable()
         f1 = _touch(tmp_path / "a.txt", "hello")
         import os
+
         from core.utils.file_utils import calculate_file_checksum
 
         cs = calculate_file_checksum(f1)
@@ -274,7 +271,6 @@ class TestMtimePreFilter:
     def test_mtime_mismatch_falls_back_to_checksum(self, tmp_path: Path):
         table = SQLTable()
         f1 = _touch(tmp_path / "a.txt", "hello")
-        import os
         from core.utils.file_utils import calculate_file_checksum
 
         cs = calculate_file_checksum(f1)
@@ -295,7 +291,6 @@ class TestMtimePreFilter:
     def test_mtime_mismatch_with_different_content(self, tmp_path: Path):
         table = SQLTable()
         f1 = _touch(tmp_path / "a.txt", "original")
-        import os
         from core.utils.file_utils import calculate_file_checksum
 
         old_cs = calculate_file_checksum(f1)

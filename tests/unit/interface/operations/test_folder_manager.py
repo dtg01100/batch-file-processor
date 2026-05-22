@@ -72,6 +72,11 @@ class TestFolderManager:
     def test_add_folder_creates_record(self, manager, mock_db):
         """Test adding a folder creates a database record."""
         mock_db.folder_repo.find_by_alias.return_value = None
+        # Mock find_by_path to return the expected folder dict
+        mock_db.folder_repo.find_by_path.return_value = {
+            "folder_name": "/path/to/folder",
+            "alias": "folder",
+        }
 
         result = manager.add_folder("/path/to/folder")
 
@@ -84,6 +89,11 @@ class TestFolderManager:
             {"alias": "folder"},
             None,
         ]
+        # Mock find_by_path to return the expected folder dict
+        mock_db.folder_repo.find_by_path.return_value = {
+            "folder_name": "/path/to/folder",
+            "alias": "folder 1",
+        }
 
         result = manager.add_folder("/path/to/folder")
 
@@ -92,6 +102,12 @@ class TestFolderManager:
     def test_add_folder_with_template_data(self, manager, mock_db):
         """Test adding folder with custom template data."""
         mock_db.folder_repo.find_by_alias.return_value = None
+        # Mock find_by_path to return the expected folder dict
+        mock_db.folder_repo.find_by_path.return_value = {
+            "folder_name": "/path/to/folder",
+            "alias": "folder",
+            "custom_setting": "custom_value",
+        }
 
         custom_template = {
             "id": 1,
@@ -248,7 +264,7 @@ class TestFolderManager:
         """Test getting all folders with order by."""
         mock_db.folder_repo.find_all.return_value = []
 
-        manager.get_all_folders(order_by="alias")
+        manager.get_all_folders()
 
         mock_db.folder_repo.find_all.assert_called_once_with()
 
@@ -421,6 +437,12 @@ class TestFolderManagerSkipList:
             "valid_setting": "should_be_included",
         }
         mock_folder_repo.find_by_alias.return_value = None
+        # Mock find_by_path to return the expected folder dict
+        mock_folder_repo.find_by_path.return_value = {
+            "folder_name": "/path/to/folder",
+            "alias": "folder",
+            "valid_setting": "should_be_included",
+        }
 
         manager = FolderManager(
             folder_repo=mock_folder_repo,

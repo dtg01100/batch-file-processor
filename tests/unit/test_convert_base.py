@@ -12,6 +12,7 @@ Tests:
 
 import csv
 from abc import ABC
+from typing import IO, TextIO
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -219,8 +220,8 @@ class MockConverter(BaseEDIConverter):
     def _initialize_output(self, context):
         """Initialize test output."""
         self.initialize_called = True
-        context.output_file = MagicMock()
-        context.csv_writer = MagicMock()
+        context.output_file = MagicMock(spec=IO)
+        context.csv_writer = MagicMock(spec=object)
         context.user_data["initialized"] = True
 
     def process_a_record(self, record, context):
@@ -418,14 +419,14 @@ class TestUtilityFunctions:
 
     def test_create_csv_writer_default(self):
         """Test create_csv_writer with default parameters."""
-        mock_file = MagicMock()
+        mock_file = MagicMock(spec=TextIO)
         writer = create_csv_writer(mock_file)
 
         assert writer is not None
 
     def test_create_csv_writer_custom_dialect(self):
         """Test create_csv_writer with custom dialect."""
-        mock_file = MagicMock()
+        mock_file = MagicMock(spec=TextIO)
         writer = create_csv_writer(
             mock_file, dialect="unix", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
         )
@@ -508,7 +509,7 @@ class TestEdgeCases(TestFixtures):
         # Create a converter that doesn't override process_a_record
         class MinimalConverter(BaseEDIConverter):
             def _initialize_output(self, context):
-                context.output_file = MagicMock()
+                context.output_file = MagicMock(spec=IO)
 
             def process_b_record(self, record, context):
                 pass

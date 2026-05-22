@@ -8,13 +8,15 @@ from unittest.mock import MagicMock
 
 from PyQt5.QtWidgets import QMessageBox
 
+from backend.database import TableProtocol
+from backend.database.sqlite_wrapper import Database as SqliteDatabase
 from interface.qt.dialogs.database_import_dialog import DbMigrationJob, ImportThread
 
 
 class TestImportThread:
 
     def test_run_cancels_when_old_version_prompt_rejected(self, monkeypatch):
-        version_table = MagicMock()
+        version_table = MagicMock(spec=TableProtocol)
         version_table.find_one.return_value = {"version": "13", "os": "Linux"}
         new_db_connection = {"version": version_table}
 
@@ -27,7 +29,7 @@ class TestImportThread:
             lambda *args, **kwargs: QMessageBox.StandardButton.No,
         )
 
-        migrate_job = MagicMock()
+        migrate_job = MagicMock(spec=DbMigrationJob)
         thread = ImportThread(
             migrate_job=migrate_job,
             new_db_path="/tmp/new.db",
@@ -48,7 +50,7 @@ class TestImportThread:
         migrate_job.do_migrate.assert_not_called()
 
     def test_run_executes_migration_for_compatible_version(self, monkeypatch):
-        version_table = MagicMock()
+        version_table = MagicMock(spec=TableProtocol)
         version_table.find_one.return_value = {"version": "41", "os": "Linux"}
         new_db_connection = {"version": version_table}
 
@@ -57,7 +59,7 @@ class TestImportThread:
             lambda _: new_db_connection,
         )
 
-        migrate_job = MagicMock()
+        migrate_job = MagicMock(spec=DbMigrationJob)
         thread = ImportThread(
             migrate_job=migrate_job,
             new_db_path="/tmp/new.db",
@@ -86,7 +88,7 @@ class TestImportThread:
         )
 
         thread = ImportThread(
-            migrate_job=MagicMock(),
+            migrate_job=MagicMock(spec=DbMigrationJob),
             new_db_path="/tmp/new.db",
             original_db_path="/tmp/original.db",
             platform="Linux",
@@ -129,7 +131,7 @@ class TestDbMigrationJob:
             "smtp_use_tls": True,
         }
 
-        target_folders_table = MagicMock()
+        target_folders_table = MagicMock(spec=TableProtocol)
         target_folders_table.find.return_value = [
             {"id": 99, "folder_name": "/same/path"},
         ]
@@ -139,7 +141,7 @@ class TestDbMigrationJob:
         mock_cursor = MagicMock()
         mock_cursor.execute.return_value = mock_cursor
         mock_cursor.fetchall.return_value = pragma_columns
-        target_db = MagicMock()
+        target_db = MagicMock(spec=SqliteDatabase)
         target_db.__getitem__ = MagicMock(
             side_effect=lambda key: {"folders": target_folders_table}[key]
         )
@@ -177,7 +179,7 @@ class TestDbMigrationJob:
             "copy_to_directory": "D:/copy",
         }
 
-        target_folders_table = MagicMock()
+        target_folders_table = MagicMock(spec=TableProtocol)
         target_folders_table.find.return_value = [
             {"id": 7, "folder_name": "C:/shared/path"},
         ]
@@ -186,7 +188,7 @@ class TestDbMigrationJob:
         mock_cursor = MagicMock()
         mock_cursor.execute.return_value = mock_cursor
         mock_cursor.fetchall.return_value = pragma_columns
-        target_db = MagicMock()
+        target_db = MagicMock(spec=SqliteDatabase)
         target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(
@@ -210,14 +212,14 @@ class TestDbMigrationJob:
 
         imported = {"id": 12, "folder_name": "/target/path"}
 
-        target_folders_table = MagicMock()
+        target_folders_table = MagicMock(spec=TableProtocol)
         target_folders_table.find.return_value = [{"folder_name": "/different/path"}]
 
         pragma_columns = [(i, name) for i, name in enumerate(imported.keys())]
         mock_cursor = MagicMock()
         mock_cursor.execute.return_value = mock_cursor
         mock_cursor.fetchall.return_value = pragma_columns
-        target_db = MagicMock()
+        target_db = MagicMock(spec=SqliteDatabase)
         target_db.raw_connection.cursor.return_value = mock_cursor
 
         monkeypatch.setattr(

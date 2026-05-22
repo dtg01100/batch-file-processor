@@ -21,6 +21,7 @@ from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION as CURRENT_DB_VERSION
 from core.database import schema
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from migrations import folders_database_migrator
 from scripts import create_database
@@ -629,7 +630,7 @@ class TestOrchestratorWithRealDB:
             database=folders,
         )
         orch = DispatchOrchestrator(orch_config)
-        result = orch.process_folder(dict(folder_row), MagicMock())
+        result = orch.process_folder(dict(folder_row), MagicMock(spec=RunLog))
 
         assert len(backend.sent) == 1
         assert result.files_processed == 1
@@ -704,7 +705,7 @@ class TestOrchestratorWithRealDB:
         assert len(active) == 3
 
         for f in active:
-            orch.process_folder(dict(f), MagicMock())
+            orch.process_folder(dict(f), MagicMock(spec=RunLog))
 
         assert len(backend.sent) == 3
         conn.close()
@@ -1101,7 +1102,7 @@ class TestAppUpgradeViaDatabaseObj:
         backend = TrackingBackend()
         orch_config = DispatchConfig(backends={"copy": backend}, settings={})
         orch = DispatchOrchestrator(orch_config)
-        result = orch.process_folder(folder, MagicMock())
+        result = orch.process_folder(folder, MagicMock(spec=RunLog))
 
         assert len(backend.sent) == 1
         assert result.files_processed == 1

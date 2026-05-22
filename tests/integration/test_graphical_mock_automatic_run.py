@@ -8,6 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dispatch.interfaces import RunLog
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
+from interface.services.reporting_service import ReportingService
 from scripts.graphical_mock_automatic_run import (
     _mock_orchestrator_process_folder,
     run_graphical_mock_automatic,
@@ -22,7 +25,7 @@ pytestmark = [
 
 
 def test_mock_orchestrator_process_folder_writes_log_and_returns_success() -> None:
-    run_log = MagicMock()
+    run_log = MagicMock(spec=RunLog)
 
     result = _mock_orchestrator_process_folder(
         MagicMock(),
@@ -43,9 +46,9 @@ def test_run_graphical_mock_automatic_creates_expected_artifacts(
         # Simulate initialization required for _graphical_process_directories path,
         # without creating a real GUI event loop.
         self._args = argparse.Namespace(automatic=False, graphical_automatic=True)
-        self._progress_service = MagicMock()
-        self._ui_service = MagicMock()
-        self._reporting_service = MagicMock()
+        self._progress_service = MagicMock(spec=ProgressServiceProtocol)
+        self._ui_service = MagicMock(spec=UIServiceProtocol)
+        self._reporting_service = MagicMock(spec=ReportingService)
         self._logs_directory = self._database.get_oversight_or_default()
         self._errors_directory = self._logs_directory
         self._refresh_users_list = MagicMock()

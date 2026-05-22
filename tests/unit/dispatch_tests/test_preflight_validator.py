@@ -1,5 +1,6 @@
 """Tests for dispatch.preflight_validator."""
 
+import os
 from unittest.mock import MagicMock
 
 from dispatch.preflight_validator import (
@@ -44,7 +45,7 @@ def _make_settings(**overrides):
 
 def _make_os_module(dirs_exist=True):
     """Create a fake os module where path.isdir returns dirs_exist."""
-    os_mod = MagicMock()
+    os_mod = MagicMock(spec=os)
     os_mod.path.isdir.return_value = dirs_exist
     return os_mod
 

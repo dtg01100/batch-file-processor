@@ -5,12 +5,13 @@ Unit tests for SqliteProcessedFilesRepository.
 from unittest.mock import MagicMock
 
 from adapters.sqlite.repositories import SqliteProcessedFilesRepository
+from backend.database.database_obj import DatabaseObj, TableProtocol
 from core.ports.repositories import IProcessedFilesRepository
 
 
 def _make_db():
-    db = MagicMock()
-    db.processed_files = MagicMock()
+    db = MagicMock(spec=DatabaseObj)
+    db.processed_files = MagicMock(spec=TableProtocol)
     return db
 
 

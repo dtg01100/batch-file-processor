@@ -11,10 +11,12 @@ This test module focuses on:
 
 import os
 from unittest.mock import MagicMock
-from interface.services.smtp_service import SMTPServiceProtocol
 
 import pytest
 from PyQt5.QtWidgets import QMessageBox, QPushButton, QWidget
+
+from interface.operations.maintenance_functions import MaintenanceFunctions
+from interface.services.smtp_service import SMTPServiceProtocol
 
 pytestmark = pytest.mark.qt
 from core.constants import CURRENT_DATABASE_VERSION
@@ -1399,7 +1401,7 @@ class TestMaintenanceDialogStress:
         from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 
         # Create a mock that raises an exception
-        mock_mf = MagicMock()
+        mock_mf = MagicMock(spec=MaintenanceFunctions)
         mock_mf.set_all_active.side_effect = RuntimeError("Operation failed")
 
         mock_critical = MagicMock()

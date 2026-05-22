@@ -117,7 +117,7 @@ def strip_invalid_filename_chars(filename: str) -> str:
         Filename with only alphanumeric, dots, spaces, and underscores
 
     """
-    return re.sub("[^A-Za-z0-9. _]+", "", filename)
+    return _INVALID_FILENAME_CHARS_RE.sub("", filename)
 
 
 def ensure_directory_exists(path: str) -> bool:
@@ -294,7 +294,7 @@ def apply_file_rename(
     if ext:
         new_name = f"{new_name}.{ext}"
 
-    new_name = re.sub("[^A-Za-z0-9. _]+", "", new_name)
+    new_name = _INVALID_FILENAME_CHARS_RE.sub("", new_name)
 
     temp_dir = tempfile.mkdtemp(prefix="edi_rename_")
     temp_dirs.append(temp_dir)

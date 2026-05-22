@@ -5,18 +5,21 @@ Uses pytest-qt (qtbot fixture) for proper widget lifecycle management.
 Dialogs are tested via show() + direct widget manipulation, never exec().
 """
 
+# test_qt_dialogs.py (top of file)
 import pytest
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
 from unittest.mock import MagicMock
-from interface.services.smtp_service import SMTPServiceProtocol
-from interface.ports import UIServiceProtocol
-from tests.conftest import MockFactories
 
 import pytest
 from PyQt5.QtCore import QDate, QItemSelectionModel, Qt
 from PyQt5.QtWidgets import QPushButton, QTableWidget
+
+from interface.ports import UIServiceProtocol
+from interface.services.smtp_service import SMTPServiceProtocol
+from interface.validation.folder_settings_validator import FolderSettingsValidator
+from tests.conftest import MockFactories
 
 
 # ---------------------------------------------------------------------------
@@ -507,7 +510,7 @@ class TestEditFoldersDialog:
         result = ValidationResult(is_valid=False)
         result.add_error("ftp_server", "Error 1")
         result.add_error("ftp_port", "Error 2")
-        validator = MagicMock()
+        validator = MagicMock(spec=FolderSettingsValidator)
         validator.validate_extracted_fields.return_value = result
         dialog._validator = validator
         dialog._fields["active_checkbutton"].setChecked(True)
@@ -955,7 +958,10 @@ class TestDatabaseImportDialog:
         assert dialog._select_button.isEnabled() is True
 
     def test_start_import_disables_buttons_and_starts_thread(self, qtbot, monkeypatch):
-        from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+        from interface.qt.dialogs.database_import_dialog import (
+            DatabaseImportDialog,
+            DbMigrationJob,
+        )
 
         class _FakeSignal:
             def __init__(self):
@@ -992,7 +998,7 @@ class TestDatabaseImportDialog:
         )
         qtbot.addWidget(dialog)
         dialog._new_database_path = "/new.db"
-        dialog._database_migrate_job = MagicMock()
+        dialog._database_migrate_job = MagicMock(spec=DbMigrationJob)
         dialog._import_button.setEnabled(True)
 
         dialog._start_import()
@@ -1406,8 +1412,6 @@ class TestResendDialog:
         assert_contrast_ratio(calendar, min_ratio=4.5)
 
     def test_no_selection_initially(self, qtbot, monkeypatch):
-        MagicMock()
-
         # Mock ResendService to avoid database operations
         mock_service = MockFactories.resend_service()
         mock_service.has_processed_files.return_value = True

@@ -270,7 +270,7 @@ class TestInvFetcherIntegration:
     @pytest.fixture
     def mock_query_runner(self):
         """Create mock query runner with realistic data."""
-        runner = MagicMock()
+        runner = MagicMock(spec=QueryRunnerProtocol)
 
         def query_side_effect(query, params=None):
             if "ohhst" in query:

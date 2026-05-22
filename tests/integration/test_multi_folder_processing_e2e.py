@@ -15,6 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dispatch.interfaces import RunLog
+
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
 
@@ -93,7 +95,7 @@ class TestSequentialMultiFolderProcessing:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         results = []
 
         # Process each folder sequentially
@@ -123,7 +125,7 @@ class TestSequentialMultiFolderProcessing:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Configure each folder differently
         configs = [
@@ -174,7 +176,7 @@ class TestMixedSuccessFailureScenarios:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         results = []
 
         for folder_config in multiple_folders_workspace["folders"]:
@@ -200,7 +202,7 @@ class TestMixedSuccessFailureScenarios:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process all folders
         results = []
@@ -234,7 +236,7 @@ class TestResourceContention:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Configure all to use same output but with unique subfolders per source folder
         for folder in multiple_folders_workspace["folders"]:
@@ -267,7 +269,7 @@ class TestResourceContention:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process folders with database tracking
         for folder_config in multiple_folders_workspace["folders"]:
@@ -316,7 +318,7 @@ class TestProgressTracking:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process multiple folders
         for folder_config in multiple_folders_workspace["folders"]:
@@ -339,7 +341,7 @@ class TestProgressTracking:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         total_processed = 0
         for folder_config in multiple_folders_workspace["folders"]:
@@ -369,7 +371,7 @@ class TestParallelProcessing:
                 converter_step=EDIConverterStep(),
             )
             orchestrator = DispatchOrchestrator(config)
-            run_log = MagicMock()
+            run_log = MagicMock(spec=RunLog)
             return orchestrator.process_folder(folder_config["config"], run_log)
 
         # Process in parallel using threads
@@ -442,7 +444,7 @@ class TestLargeScaleMultiFolder:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process all folders
         results = []
@@ -485,7 +487,7 @@ class TestMultiFolderErrorRecovery:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process folders - some will fail initially but retry
         results = []
@@ -515,7 +517,7 @@ class TestMultiFolderErrorRecovery:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process all folders - all should fail gracefully
         results = []

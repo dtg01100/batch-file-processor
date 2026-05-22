@@ -8,15 +8,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from interface.plugins.plugin_manager import PluginManager
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
-from interface.validation.folder_settings_validator import ValidationResult
+from interface.services.ftp_service import FTPServiceProtocol
+from interface.validation.folder_settings_validator import (
+    FolderSettingsValidator,
+    ValidationResult,
+)
 
 
 @pytest.fixture
 def mock_plugin_manager():
     """Fixture to mock the PluginManager for dialog tests."""
     with patch("interface.qt.dialogs.edit_folders_dialog.PluginManager") as mock_pm:
-        mock_manager = MagicMock()
+        mock_manager = MagicMock(spec=PluginManager)
         mock_manager.get_configuration_plugins.return_value = []
         mock_pm.return_value = mock_manager
         yield mock_pm
@@ -28,7 +33,7 @@ def _make_dialog(qtbot, folder_config=None, mock_pm=None, **kwargs):
         folder_config = {}
 
     # Create default mocks if not provided in kwargs
-    default_ftp_service = kwargs.pop("ftp_service", MagicMock())
+    default_ftp_service = kwargs.pop("ftp_service", MagicMock(spec=FTPServiceProtocol))
     default_validator = kwargs.pop("validator", MagicMock())
 
     # Use provided mock or create one
@@ -45,7 +50,7 @@ def _make_dialog(qtbot, folder_config=None, mock_pm=None, **kwargs):
         with patch(
             "interface.qt.dialogs.edit_folders_dialog.PluginManager"
         ) as mock_pm_inline:
-            mock_manager = MagicMock()
+            mock_manager = MagicMock(spec=PluginManager)
             mock_manager.get_configuration_plugins.return_value = []
             mock_pm_inline.return_value = mock_manager
 
@@ -175,9 +180,9 @@ class TestEditFoldersDialogErrorHandling:
 
     def test_validation_error_handling(self, qtbot):
         """Test handling of validation errors."""
-        mock_ftp_service = MagicMock()
+        mock_ftp_service = MagicMock(spec=FTPServiceProtocol)
         mock_validator = MagicMock()
-        mock_validator.validate.side_effect = Exception("Validation error")
+        mock_validator.validate_extracted_fields.side_effect = Exception("Validation error")
 
         dialog = _make_dialog(
             qtbot, ftp_service=mock_ftp_service, validator=mock_validator
@@ -434,7 +439,7 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
         result = ValidationResult(is_valid=False)
         result.add_error("ftp_server", "FTP Server Field Is Required")
         result.add_error("ftp_port", "FTP Port Field Is Required")
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=FolderSettingsValidator)
         mock_validator.validate_extracted_fields.return_value = result
         dialog._validator = mock_validator
 
@@ -462,7 +467,7 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
         result.add_error(
             "email_recipient", "Email Destination Address Field Is Required"
         )
-        mock_validator = MagicMock()
+        mock_validator = MagicMock(spec=FolderSettingsValidator)
         mock_validator.validate_extracted_fields.return_value = result
         dialog._validator = mock_validator
 

@@ -6,7 +6,9 @@ Tests:
 - Text wrapping for page width
 """
 
+import io
 import platform
+import subprocess
 import textwrap
 from unittest.mock import MagicMock, patch
 
@@ -31,8 +33,7 @@ class TestPrintRunLog:
     @pytest.fixture
     def sample_file_handle(self, sample_log_content):
         """Create a mock file handle."""
-        mock_handle = MagicMock()
-        mock_handle.read.return_value = sample_log_content
+        mock_handle = io.StringIO(sample_log_content)
         return mock_handle
 
     def test_module_import(self):
@@ -75,7 +76,7 @@ class TestPrintRunLog:
         # The do function reads from the file handle
         content = sample_file_handle.read()
         assert "Batch File Processor" in content
-        sample_file_handle.read.assert_called_once()
+        assert sample_file_handle.read() == ""  # Second read returns empty after exhaustion
 
     def test_windows_line_endings_in_output(self, sample_log_content):
         """Test that output uses Windows line endings (\\r\\n)."""
@@ -112,19 +113,16 @@ class TestPrintRunLog:
         mock_system.return_value = "Linux"
         mock_process = MagicMock()
         mock_popen.return_value = mock_process
-        mock_process.stdin = MagicMock()
-        mock_process.stdin.write = MagicMock()
+        mock_process.stdin = io.BytesIO()
 
         # Simulate the Unix branch of the code
         if platform.system() != "Windows":
-            import subprocess
-
             content = sample_file_handle.read()
             formatted_log = "\r\n".join(
                 textwrap.wrap(content, width=75, replace_whitespace=False)
             )
             lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
-            lpr.stdin.write(formatted_log.encode())
+            lpr.stdin.write(formatted_log.encode())  # type: ignore[union-attr]
 
         mock_popen.assert_called_once_with("/usr/bin/lpr", stdin=subprocess.PIPE)
 
@@ -224,10 +222,8 @@ class TestPrintRunLogUnix:
     def test_lpr_command_construction(self, mock_popen):
         """Test that lpr command is constructed correctly."""
         mock_process = MagicMock()
-        mock_process.stdin = MagicMock()
+        mock_process.stdin = io.BytesIO()
         mock_popen.return_value = mock_process
-
-        import subprocess
 
         subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
 
@@ -235,18 +231,18 @@ class TestPrintRunLogUnix:
 
     def test_data_written_to_stdin(self):
         """Test that formatted data is written to lpr stdin."""
-        mock_stdin = MagicMock()
+        mock_stdin = io.BytesIO()
         test_data = "Test log content"
 
         mock_stdin.write(test_data.encode())
 
-        mock_stdin.write.assert_called_once_with(test_data.encode())
+        assert mock_stdin.getvalue() == test_data.encode()
 
     @patch("platform.system")
     def test_unix_branch_not_windows(self, mock_system):
         """Test that Unix branch is taken on non-Windows systems."""
         mock_system.return_value = "Linux"
 
-        # This would trigger the Unix branch in the actual code
+        # This would trigger the Unix branch in the code
         is_unix = platform.system() != "Windows"
         assert is_unix is True

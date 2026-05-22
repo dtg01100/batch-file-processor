@@ -13,12 +13,12 @@ Note: This converter requires AS400 database access, so tests mock the DB2SSH co
 """
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from tests.conftest import MockFactories
 from dispatch.converters import convert_to_stewarts_custom
+from tests.conftest import MockFactories
 
 
 class TestConvertToStewartsCustomFixtures:
@@ -431,7 +431,7 @@ class TestConvertToStewartsCustomOutputStructure(
                 {},
             )
 
-            with open(result, "r") as f:
+            with open(result) as f:
                 content = f.read()
             assert "Invoice Details" in content
 
@@ -465,7 +465,7 @@ class TestConvertToStewartsCustomOutputStructure(
                 {},
             )
 
-            with open(result, "r") as f:
+            with open(result) as f:
                 content = f.read()
             # Check for expected column headers in the output
             assert "Description" in content or "Qty" in content or "Item" in content

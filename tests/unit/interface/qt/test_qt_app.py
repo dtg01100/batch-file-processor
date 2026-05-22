@@ -16,24 +16,27 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt5.QtWidgets import QApplication, QPushButton
 
+from backend.database import DatabaseConnectionProtocol, DatabaseObj, TableProtocol
+from interface.operations.folder_manager import FolderManager
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.app import QtBatchFileSenderApp
 
 
 @pytest.fixture
 def mock_database():
     """Provide a mock database object."""
-    db = MagicMock()
+    db = MagicMock(spec=DatabaseObj)
     db.close = MagicMock()
     db.get_oversight_or_default = MagicMock(return_value={})
     db.get_settings_or_default = MagicMock(return_value={})
-    db.folders_table = MagicMock()
+    db.folders_table = MagicMock(spec=TableProtocol)
     db.folders_table.count = MagicMock(return_value=0)
-    db.processed_files = MagicMock()
+    db.processed_files = MagicMock(spec=TableProtocol)
     db.processed_files.count = MagicMock(return_value=0)
-    db.database_connection = MagicMock()
-    db.settings = MagicMock()
+    db.database_connection = MagicMock(spec=DatabaseConnectionProtocol)
+    db.settings = MagicMock(spec=TableProtocol)
     db.settings.update = MagicMock()
-    db.oversight_and_defaults = MagicMock()
+    db.oversight_and_defaults = MagicMock(spec=TableProtocol)
     db.oversight_and_defaults.update = MagicMock()
     return db
 
@@ -41,7 +44,7 @@ def mock_database():
 @pytest.fixture
 def mock_folder_manager():
     """Provide a mock folder manager."""
-    manager = MagicMock()
+    manager = MagicMock(spec=FolderManager)
     manager.add_folder = MagicMock()
     manager.delete_folder_with_related = MagicMock()
     manager.check_folder_exists = MagicMock(return_value={"truefalse": False})
@@ -51,7 +54,7 @@ def mock_folder_manager():
 @pytest.fixture
 def mock_ui_service():
     """Provide a mock UI service."""
-    service = MagicMock()
+    service = MagicMock(spec=UIServiceProtocol)
     service.ask_directory = MagicMock(return_value=None)
     service.ask_yes_no = MagicMock(return_value=False)
     service.ask_ok_cancel = MagicMock(return_value=False)
@@ -61,7 +64,7 @@ def mock_ui_service():
 @pytest.fixture
 def mock_progress_service():
     """Provide a mock progress service."""
-    service = MagicMock()
+    service = MagicMock(spec=ProgressServiceProtocol)
     service.show = MagicMock()
     service.hide = MagicMock()
     return service

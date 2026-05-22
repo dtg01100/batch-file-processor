@@ -2,11 +2,12 @@
 from unittest.mock import MagicMock
 
 from dispatch.error_handler import ErrorHandler
+from dispatch.observability.alert_dispatcher import AlertDispatcher
 
 
 class TestErrorHandlerAlertIntegration:
     def test_record_error_calls_alert_dispatcher_when_configured(self):
-        mock_dispatcher = MagicMock()
+        mock_dispatcher = MagicMock(spec=AlertDispatcher)
         handler = ErrorHandler(alert_dispatcher=mock_dispatcher)
         handler.record_error(
             folder="/test",
@@ -34,7 +35,7 @@ class TestErrorHandlerAlertIntegration:
         )
 
     def test_record_error_alert_never_crashes_processing(self):
-        mock_dispatcher = MagicMock()
+        mock_dispatcher = MagicMock(spec=AlertDispatcher)
         mock_dispatcher.dispatch_error_alert.side_effect = RuntimeError(
             "Dispatcher broken"
         )
@@ -48,7 +49,7 @@ class TestErrorHandlerAlertIntegration:
         assert len(handler.errors) == 1
 
     def test_record_error_skips_alert_when_alert_on_failure_false(self):
-        mock_dispatcher = MagicMock()
+        mock_dispatcher = MagicMock(spec=AlertDispatcher)
         handler = ErrorHandler(alert_dispatcher=mock_dispatcher)
         handler.record_error(
             folder="/",

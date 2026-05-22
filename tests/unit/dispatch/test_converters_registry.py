@@ -1,6 +1,5 @@
 """Tests for dispatch.converters.registry module."""
 
-import pytest
 
 from dispatch.converters.registry import (
     ConverterMetadata,

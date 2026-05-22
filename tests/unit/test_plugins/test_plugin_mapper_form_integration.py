@@ -5,9 +5,11 @@ from unittest.mock import MagicMock, patch
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
+    ExtractedPluginConfig,
     PluginConfigurationMapper,
     PluginSectionStateManager,
 )
+from interface.plugins.plugin_manager import PluginManager
 
 
 class TestPluginMapperWithFormGenerator(unittest.TestCase):
@@ -42,10 +44,10 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
         with patch(
             "interface.operations.plugin_configuration_mapper.PluginManager"
         ) as mock_manager_class:
-            mock_manager = MagicMock()
+            mock_manager = MagicMock(spec=PluginManager)
             mock_manager_class.return_value = mock_manager
-            mock_manager.discover_plugins = MagicMock()
-            mock_manager.initialize_plugins = MagicMock()
+            mock_manager.discover_plugins = MagicMock(spec=object)
+            mock_manager.initialize_plugins = MagicMock(spec=object)
             mock_manager.get_configuration_plugins = MagicMock(return_value=[])
 
             extracted = mapper.extract_plugin_configurations(
@@ -105,8 +107,8 @@ class TestPluginMapperWithFolderConfig(unittest.TestCase):
         )
 
         extracted_configs = [
-            MagicMock(),
-            MagicMock(),
+            MagicMock(spec=ExtractedPluginConfig),
+            MagicMock(spec=ExtractedPluginConfig),
         ]
 
         extracted_configs[0].format_name = "csv"

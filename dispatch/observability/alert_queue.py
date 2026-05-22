@@ -1,6 +1,7 @@
 # dispatch/observability/alert_queue.py
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -41,8 +42,13 @@ class AlertQueue:
     def peek(self) -> list[dict[str, Any]]:
         if not self._queue_path.exists():
             return []
+        alerts = []
         with open(self._queue_path, encoding="utf-8") as f:
-            return [json.loads(line) for line in f if line.strip()]
+            for line in f:
+                if line.strip():
+                    with contextlib.suppress(json.JSONDecodeError, ValueError):
+                        alerts.append(json.loads(line))
+        return alerts
 
     def dequeue(self) -> dict[str, Any] | None:
         alerts = self.peek()

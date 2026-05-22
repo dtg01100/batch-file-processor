@@ -256,7 +256,7 @@ class TestQueryRunnerProtocol:
 
     def test_generator_accepts_mock(self):
         """Test CRecGenerator accepts mock implementing protocol."""
-        mock_runner = MagicMock()
+        mock_runner = MagicMock(spec=QueryRunnerProtocol)
         mock_runner.run_query.return_value = [(0, 100)]
 
         generator = CRecGenerator(mock_runner)
@@ -269,13 +269,9 @@ class TestQueryRunnerProtocol:
 
     def test_protocol_runtime_checkable(self):
         """Test protocol is runtime checkable."""
-        mock_runner = MagicMock()
-        mock_runner.run_query = lambda q, p=None: []
+        mock_runner = MagicMock(spec=QueryRunnerProtocol)
 
-        # Should not raise
         assert isinstance(mock_runner, QueryRunnerProtocol)
-
-
 class TestCRecordFormat:
     """Tests for C record output format compliance."""
 

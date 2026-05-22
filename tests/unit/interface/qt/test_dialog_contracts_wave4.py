@@ -17,7 +17,11 @@ from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 from interface.qt.dialogs.resend_dialog import ResendDialog
-from interface.validation.folder_settings_validator import ValidationResult
+from interface.services.resend_service import ResendService
+from interface.validation.folder_settings_validator import (
+    FolderSettingsValidator,
+    ValidationResult,
+)
 
 pytestmark = pytest.mark.qt
 
@@ -163,7 +167,7 @@ class TestNonApplyDialogRejectContracts:
             qtbot.mouseClick(close_btn, Qt.MouseButton.LeftButton)
 
     def test_resend_close_button_rejects(self, qtbot, monkeypatch):
-        service = MagicMock()
+        service = MagicMock(spec=ResendService)
         service.has_processed_files.return_value = True
         service.get_all_files_for_resend.return_value = []
         monkeypatch.setattr(
@@ -266,7 +270,7 @@ class TestValidationFocusContracts:
         invalid = ValidationResult(is_valid=False)
         invalid.add_error("ftp_server", "FTP server required")
         invalid.add_error("email_recipient", "Email required")
-        validator = MagicMock()
+        validator = MagicMock(spec=FolderSettingsValidator)
         validator.validate_extracted_fields.return_value = invalid
         dialog._validator = validator
         dialog._fields["active_checkbutton"].setChecked(True)
@@ -285,7 +289,7 @@ class TestValidationFocusContracts:
 
 class TestBaseDialogHelperUsageGuards:
     def test_resend_empty_data_uses_show_info_helper(self, qtbot, monkeypatch):
-        service = MagicMock()
+        service = MagicMock(spec=ResendService)
         service.has_processed_files.return_value = False
         monkeypatch.setattr(
             "interface.qt.dialogs.resend_dialog.ResendService", lambda *_args: service
@@ -298,7 +302,7 @@ class TestBaseDialogHelperUsageGuards:
             show_info.assert_called_once()
 
     def test_resend_toggle_error_uses_show_error_helper(self, qtbot, monkeypatch):
-        service = MagicMock()
+        service = MagicMock(spec=ResendService)
         service.has_processed_files.return_value = True
         service.get_all_files_for_resend.return_value = []
         service.set_resend_flags_batch.side_effect = RuntimeError("boom")

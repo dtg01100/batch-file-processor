@@ -22,6 +22,10 @@ class MockDatabase:
         self.find_calls = []
         self.insert_calls = []
 
+    @property
+    def raw_connection(self):
+        return None
+
     def find(self, **kwargs):
         self.find_calls.append(kwargs)
         return []
@@ -42,6 +46,9 @@ class MockDatabase:
         return 0
 
     def query(self, sql):
+        return []
+
+    def all(self):
         return []
 
 

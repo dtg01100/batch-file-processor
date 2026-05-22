@@ -5,6 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt5.QtCore import Qt
 
+from backend.database.database_obj import TableProtocol
+from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+
 pytestmark = pytest.mark.qt
 
 
@@ -463,7 +466,7 @@ class TestDbMigrationJob:
             "folder_is_active": True,
         }
 
-        target_folders = MagicMock()
+        target_folders = MagicMock(spec=TableProtocol)
         target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
@@ -512,7 +515,7 @@ class TestDbMigrationJob:
             "ftp_password": "pass",
         }
 
-        target_folders = MagicMock()
+        target_folders = MagicMock(spec=TableProtocol)
         target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
@@ -561,7 +564,7 @@ class TestDbMigrationJob:
             "email_subject_line": "Test Subject",
         }
 
-        target_folders = MagicMock()
+        target_folders = MagicMock(spec=TableProtocol)
         target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",
@@ -603,7 +606,7 @@ class TestDbMigrationJob:
             "folder_name": "/test/folder",
         }
 
-        target_folders = MagicMock()
+        target_folders = MagicMock(spec=TableProtocol)
         target_folders.find.return_value = [
             {
                 "folder_name": "/different/folder",
@@ -640,7 +643,7 @@ class TestDbMigrationJob:
             "folder_name": "/test/folder",
         }
 
-        target_folders = MagicMock()
+        target_folders = MagicMock(spec=TableProtocol)
         target_folders.find.return_value = [
             {
                 "folder_name": "/test/folder",  # Same name
@@ -700,6 +703,7 @@ class TestDbMigrationJob:
 
         class _Thread:
             progress = _Signal()
+            _is_cancelled = False
 
         job = DbMigrationJob(target_path, legacy_v32_db)
         job.do_migrate(_Thread(), legacy_v32_db, target_path)
@@ -728,7 +732,7 @@ class TestShowDatabaseImportDialog:
         )
 
         exec_called = []
-        mock_dialog = MagicMock()
+        mock_dialog = MagicMock(spec=DatabaseImportDialog)
         mock_dialog.exec = lambda: exec_called.append(1)
 
         mock_dialog_class = MagicMock(return_value=mock_dialog)
@@ -763,7 +767,7 @@ class TestShowDatabaseImportDialog:
         )
 
         exec_called = []
-        mock_dialog = MagicMock()
+        mock_dialog = MagicMock(spec=DatabaseImportDialog)
         mock_dialog.exec = lambda: exec_called.append(1)
 
         mock_dialog_class = MagicMock(return_value=mock_dialog)

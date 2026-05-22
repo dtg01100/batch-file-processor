@@ -20,6 +20,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dispatch.interfaces import RunLog
+
 pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.workflow]
 
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
@@ -139,8 +141,8 @@ class TestMixedBackendConfigurations:
         config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
         orch = DispatchOrchestrator(config)
 
-        r0 = orch.process_folder(fc_copy, MagicMock())
-        r1 = orch.process_folder(fc_both, MagicMock())
+        r0 = orch.process_folder(fc_copy, MagicMock(spec=RunLog))
+        r1 = orch.process_folder(fc_both, MagicMock(spec=RunLog))
 
         assert r0.success is True
         assert r1.success is True
@@ -166,7 +168,7 @@ class TestMixedBackendConfigurations:
             settings={},
         )
         orch = DispatchOrchestrator(config)
-        result = orch.process_folder(fc, MagicMock())
+        result = orch.process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is True
         assert result.files_processed == 2
@@ -190,7 +192,7 @@ class TestBackendSwitching:
         # --- run 1: copy only ---
         copy_be = CopyBackend()
         cfg1 = DispatchConfig(backends={"copy": copy_be}, settings={})
-        r1 = DispatchOrchestrator(cfg1).process_folder(fc, MagicMock())
+        r1 = DispatchOrchestrator(cfg1).process_folder(fc, MagicMock(spec=RunLog))
         assert r1.success is True
         assert len(copy_be.sent) == 1
 
@@ -201,7 +203,7 @@ class TestBackendSwitching:
 
         ftp_be = RecordingBackend("ftp")
         cfg2 = DispatchConfig(backends={"ftp": ftp_be}, settings={})
-        r2 = DispatchOrchestrator(cfg2).process_folder(fc, MagicMock())
+        r2 = DispatchOrchestrator(cfg2).process_folder(fc, MagicMock(spec=RunLog))
         assert r2.success is True
         assert len(ftp_be.sent) == 1
 
@@ -226,7 +228,7 @@ class TestSharedOutputDirectory:
         for idx in range(3):
             fc = _make_folder(tmp_path, idx)
             fc["copy_to_directory"] = str(shared_out)
-            result = orch.process_folder(fc, MagicMock())
+            result = orch.process_folder(fc, MagicMock(spec=RunLog))
             assert result.success is True
 
         output_files = list(shared_out.glob("*.edi"))
@@ -251,9 +253,9 @@ class TestErrorIsolation:
         good_cfg = DispatchConfig(backends={"copy": good_be}, settings={})
         bad_cfg = DispatchConfig(backends={"copy": bad_be}, settings={})
 
-        r0 = DispatchOrchestrator(good_cfg).process_folder(fcs[0], MagicMock())
-        r1 = DispatchOrchestrator(bad_cfg).process_folder(fcs[1], MagicMock())
-        r2 = DispatchOrchestrator(good_cfg).process_folder(fcs[2], MagicMock())
+        r0 = DispatchOrchestrator(good_cfg).process_folder(fcs[0], MagicMock(spec=RunLog))
+        r1 = DispatchOrchestrator(bad_cfg).process_folder(fcs[1], MagicMock(spec=RunLog))
+        r2 = DispatchOrchestrator(good_cfg).process_folder(fcs[2], MagicMock(spec=RunLog))
 
         assert r0.success is True
         assert r1.success is False
@@ -264,8 +266,8 @@ class TestErrorIsolation:
         fc_good = _make_folder(tmp_path, 0)
         fc_bad = _make_folder(tmp_path, 1)
 
-        log_good = MagicMock()
-        log_bad = MagicMock()
+        log_good = MagicMock(spec=RunLog)
+        log_bad = MagicMock(spec=RunLog)
 
         good_be = CopyBackend()
         bad_be = FailingBackend("boom")
@@ -299,7 +301,7 @@ class TestPartialSuccess:
         ftp_be = FailingBackend("ftp down")
 
         config = DispatchConfig(backends={"copy": copy_be, "ftp": ftp_be}, settings={})
-        result = DispatchOrchestrator(config).process_folder(fc, MagicMock())
+        result = DispatchOrchestrator(config).process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is False
         assert result.files_failed == 2
@@ -345,7 +347,7 @@ class TestLargeFileProcessing:
 
         copy_be = CopyBackend()
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
-        result = DispatchOrchestrator(config).process_folder(fc, MagicMock())
+        result = DispatchOrchestrator(config).process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is True
         assert result.files_processed == 1
@@ -368,7 +370,7 @@ class TestResourceCleanup:
 
         for idx in range(10):
             fc = _make_folder(tmp_path, idx)
-            result = orch.process_folder(fc, MagicMock())
+            result = orch.process_folder(fc, MagicMock(spec=RunLog))
             assert result.success is True
 
         for idx in range(10):
@@ -471,7 +473,7 @@ class TestManyFilesPerFolder:
         fc = _make_folder(tmp_path, 0, edi_count=20)
         copy_be = CopyBackend()
         config = DispatchConfig(backends={"copy": copy_be}, settings={})
-        result = DispatchOrchestrator(config).process_folder(fc, MagicMock())
+        result = DispatchOrchestrator(config).process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is True
         assert result.files_processed == 20
@@ -485,7 +487,7 @@ class TestManyFilesPerFolder:
         fc = _make_folder(tmp_path, 0, edi_count=100)
         slow_be = SlowBackend(delay=0.001)  # 1ms per file → ~0.1s total
         config = DispatchConfig(backends={"copy": slow_be}, settings={})
-        result = DispatchOrchestrator(config).process_folder(fc, MagicMock())
+        result = DispatchOrchestrator(config).process_folder(fc, MagicMock(spec=RunLog))
 
         assert result.success is True
         assert result.files_processed == 100
@@ -503,6 +505,7 @@ class InMemoryProcessedFiles:
     def __init__(self):
         self.records = []
         self._next_id = 1
+        self.raw_connection = None  # No real DB connection for in-memory mock
 
     def find(self, folder_id=None, **kwargs):
         result = list(self.records)
@@ -525,6 +528,10 @@ class InMemoryProcessedFiles:
         self.records.append(record)
         return record["id"]
 
+    def insert_many(self, records):
+        for record in records:
+            self.insert(record)
+
     def update(self, record, keys):
         for r in self.records:
             if all(r.get(k) == record.get(k) for k in keys):
@@ -533,6 +540,12 @@ class InMemoryProcessedFiles:
 
     def count(self, **kwargs):
         return len(self.find(**kwargs))
+
+    def all(self):
+        return list(self.records)
+
+    def query(self, sql):
+        return []  # In-memory mock doesn't support raw SQL
 
 
 class TestSentFilesHistoryIsolation:
@@ -561,7 +574,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process folder A
         result_a = orch.process_folder(
-            folder_a, MagicMock(), processed_files=processed_files
+            folder_a, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_a.success is True
 
@@ -578,7 +591,7 @@ class TestSentFilesHistoryIsolation:
 
         # Now process folder B
         result_b = orch.process_folder(
-            folder_b, MagicMock(), processed_files=processed_files
+            folder_b, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_b.success is True
 
@@ -626,13 +639,13 @@ class TestSentFilesHistoryIsolation:
 
         # Process copy-only folder
         result_copy = orch.process_folder(
-            folder_copy, MagicMock(), processed_files=processed_files
+            folder_copy, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_copy.success is True
 
         # Process FTP folder
         result_ftp = orch.process_folder(
-            folder_ftp, MagicMock(), processed_files=processed_files
+            folder_ftp, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_ftp.success is True
 
@@ -694,7 +707,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process only folder A (should clear resend flag for A but not B)
         result_a = orch.process_folder(
-            folder_a, MagicMock(), processed_files=processed_files
+            folder_a, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_a.success is True
 
@@ -708,7 +721,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process folder B and verify its flag is cleared
         result_b = orch.process_folder(
-            folder_b, MagicMock(), processed_files=processed_files
+            folder_b, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_b.success is True
 
@@ -763,7 +776,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process config A
         result_a = orch.process_folder(
-            folder_a, MagicMock(), processed_files=processed_files
+            folder_a, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_a.success is True
 
@@ -778,7 +791,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process config B (same file through different config)
         result_b = orch.process_folder(
-            folder_b, MagicMock(), processed_files=processed_files
+            folder_b, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_b.success is True
 
@@ -863,7 +876,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process config A only (clears resend flag for folder_id=1)
         result_a = orch.process_folder(
-            folder_a, MagicMock(), processed_files=processed_files
+            folder_a, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_a.success is True
 
@@ -877,7 +890,7 @@ class TestSentFilesHistoryIsolation:
 
         # Process config B and verify its flag is also cleared
         result_b = orch.process_folder(
-            folder_b, MagicMock(), processed_files=processed_files
+            folder_b, MagicMock(spec=RunLog), processed_files=processed_files
         )
         assert result_b.success is True
 

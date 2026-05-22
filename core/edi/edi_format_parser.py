@@ -19,11 +19,11 @@ Example:
 
 import json
 from pathlib import Path
+from typing import Any, ClassVar
 
 from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
-from typing import Any, ClassVar
 
 
 class EDIFormatError(Exception):

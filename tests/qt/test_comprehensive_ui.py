@@ -22,6 +22,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMessageBox, QPushButton
 
 from backend.database.database_obj import DatabaseObj
+from backend.database.sqlite_wrapper import Table
 from core.constants import CURRENT_DATABASE_VERSION
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
@@ -30,6 +31,7 @@ from interface.qt.dialogs.resend_dialog import ResendDialog
 from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.widgets.folder_list_widget import FolderListWidget
 from interface.qt.widgets.search_widget import SearchWidget
+from interface.services.smtp_service import SMTPServiceProtocol
 from scripts import create_database
 
 # =============================================================================
@@ -117,7 +119,7 @@ def mock_folder_table():
     def _match(f, kwargs):
         return all(f.get(k) == v for k, v in kwargs.items() if k in _DATA_KEYS)
 
-    mock_table = MagicMock()
+    mock_table = MagicMock(spec=Table)
     mock_table.find.side_effect = lambda **kwargs: (
         f for f in folders if _match(f, kwargs)
     )
@@ -337,7 +339,7 @@ class TestFolderListWidgetComprehensive:
 
     def test_empty_folder_list(self, qtbot):
         """Test widget behavior with no folders."""
-        empty_table = MagicMock()
+        empty_table = MagicMock(spec=Table)
         empty_table.find.return_value = iter([])
         empty_table.count.return_value = 0
         empty_table.find_one.return_value = None
@@ -830,7 +832,7 @@ class TestDialogStateValidation:
             "errors_folder": "/test/errors",
         }
 
-        mock_smtp = MagicMock()
+        mock_smtp = MagicMock(spec=SMTPServiceProtocol)
         mock_smtp.test_connection.return_value = (True, None)
 
         dialog = EditSettingsDialog(None, folder_config, smtp_service=mock_smtp)
@@ -1069,7 +1071,7 @@ class TestUIErrorHandlingEdgeCases:
 
     def test_folder_list_with_database_error(self, qtbot):
         """Test folder list handles database errors gracefully."""
-        mock_table = MagicMock()
+        mock_table = MagicMock(spec=Table)
         mock_table.find.side_effect = RuntimeError("Database error")
         mock_table.count.return_value = 0
 

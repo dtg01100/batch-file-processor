@@ -170,7 +170,7 @@ class TestQueryRunnerProtocol:
 
     def test_fetcher_accepts_mock(self):
         """Test POFetcher accepts mock implementing protocol."""
-        mock_runner = MagicMock()
+        mock_runner = MagicMock(spec=QueryRunnerProtocol)
         mock_runner.run_query.return_value = [("PO",)]
 
         fetcher = POFetcher(mock_runner)
@@ -180,8 +180,6 @@ class TestQueryRunnerProtocol:
 
     def test_protocol_runtime_checkable(self):
         """Test protocol is runtime checkable."""
-        mock_runner = MagicMock()
-        mock_runner.run_query = lambda q, p=None: []
+        mock_runner = MagicMock(spec=QueryRunnerProtocol)
 
-        # Should not raise
         assert isinstance(mock_runner, QueryRunnerProtocol)

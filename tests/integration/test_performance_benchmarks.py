@@ -19,6 +19,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dispatch.interfaces import RunLog
+
 pytestmark = [pytest.mark.integration, pytest.mark.performance, pytest.mark.slow]
 
 RUN_PERF_ASSERTS = os.getenv("RUN_PERF_ASSERTS") == "1"
@@ -122,7 +124,7 @@ class TestScalabilityByFileCount:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_time() as t:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -154,7 +156,7 @@ class TestScalabilityByFileCount:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_time() as t:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -186,7 +188,7 @@ class TestScalabilityByFileCount:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_time() as t:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -302,7 +304,7 @@ class TestMemoryUsage:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_memory() as mem:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -337,7 +339,7 @@ class TestMemoryUsage:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_memory() as mem:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -486,7 +488,7 @@ class TestConversionPerformance:
             "convert_to_type": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         with measure_time() as t:
             result = orchestrator.process_folder(folder_config, run_log)
@@ -545,7 +547,7 @@ class TestConcurrentProcessing:
                 "convert_to_type": "csv",
             }
 
-            run_log = MagicMock()
+            run_log = MagicMock(spec=RunLog)
             return orchestrator.process_folder(folder_config, run_log)
 
         # Process in parallel

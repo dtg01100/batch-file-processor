@@ -12,7 +12,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from backend.database.database_obj import (
+    DatabaseConnectionProtocol,
+    DatabaseObj,
+    TableProtocol,
+)
+from interface.operations.folder_manager import FolderManager
+from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.app import QtBatchFileSenderApp
+from interface.services.reporting_service import ReportingService
 
 pytestmark = [pytest.mark.qt, pytest.mark.gui]
 
@@ -22,8 +30,8 @@ class TestToggleFolderCommunication:
 
     def _make_app(self) -> QtBatchFileSenderApp:
         app = QtBatchFileSenderApp()
-        app._folder_manager = MagicMock()
-        app._ui_service = MagicMock()
+        app._folder_manager = MagicMock(spec=FolderManager)
+        app._ui_service = MagicMock(spec=UIServiceProtocol)
         app._refresh_users_list = MagicMock()
         app._set_main_button_states = MagicMock()
         return app
@@ -90,7 +98,7 @@ class TestRunTimerCommunication:
     ) -> None:
         app = QtBatchFileSenderApp()
         app._window = MagicMock()
-        app._database = MagicMock()
+        app._database = MagicMock(spec=DatabaseObj)
         app._database.folders_table = object()
         app._graphical_process_directories = MagicMock()
         app._args = argparse.Namespace(automatic=False, graphical_automatic=True)
@@ -126,8 +134,8 @@ class TestProcessingCallbackCommunication:
     ) -> None:
         import types
 
-        db = MagicMock()
-        db.database_connection = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.database_connection = MagicMock(spec=DatabaseConnectionProtocol)
         db.get_settings_or_default.return_value = {
             "id": 1,
             "enable_interval_backups": False,
@@ -138,22 +146,22 @@ class TestProcessingCallbackCommunication:
             "logs_directory": str(tmp_path / "logs"),
             "enable_reporting": True,
         }
-        db.settings = MagicMock()
-        db.emails_table = MagicMock()
-        db.processed_files = MagicMock()
+        db.settings = MagicMock(spec=TableProtocol)
+        db.emails_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
 
         app = QtBatchFileSenderApp(database_obj=db)
         app._database_path = str(tmp_path / "folders.db")
         app._logs_directory = {"logs_directory": str(tmp_path / "logs")}
         app._errors_directory = {"errors_directory": str(tmp_path / "errors")}
         app._version = "test-version"
-        app._progress_service = MagicMock()
-        app._reporting_service = MagicMock()
+        app._progress_service = MagicMock(spec=ProgressServiceProtocol)
+        app._reporting_service = MagicMock(spec=ReportingService)
         app._args = argparse.Namespace(automatic=False)
         app._check_logs_directory = MagicMock(return_value=True)
         (tmp_path / "logs").mkdir(parents=True, exist_ok=True)
 
-        folders_table = MagicMock()
+        folders_table = MagicMock(spec=TableProtocol)
         folders_table.find.return_value = []
 
         captured_config_kwargs: dict = {}

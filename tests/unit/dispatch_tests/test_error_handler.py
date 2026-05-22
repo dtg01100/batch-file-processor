@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from dispatch.error_handler import ErrorHandler
 from dispatch.file_system import RealFileSystem
+from dispatch.interfaces import FileSystemInterface, RunLog
 
 
 class MockDatabase:
@@ -120,7 +121,7 @@ class TestErrorHandler:
     def test_record_error_to_logs_non_threaded(self):
         """Test error recording to logs (non-threaded)."""
         handler = ErrorHandler()
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         errors_log = StringIO()
 
         handler.record_error_to_logs(
@@ -260,8 +261,8 @@ class TestRecordErrorToLogs:
 
     def test_non_threaded(self):
         """Test record_error_to_logs in non-threaded mode."""
-        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock())
-        run_log = MagicMock()
+        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface))
+        run_log = MagicMock(spec=RunLog)
         errors_log = StringIO()
 
         handler.record_error_to_logs(
@@ -278,7 +279,7 @@ class TestRecordErrorToLogs:
 
     def test_threaded(self):
         """Test record_error_to_logs in threaded mode."""
-        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock())
+        handler = ErrorHandler(errors_folder=MagicMock(), file_system=MagicMock(spec=FileSystemInterface))
         run_log = []
         errors_log = []
 

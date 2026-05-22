@@ -4,21 +4,21 @@ import contextlib
 import os
 import shutil
 import sys
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 pytest_plugins = ["conftest_magicmock_plugin"]
 
+from adapters.db2ssh.connection import DB2SSHConnection
 from backend.database import sqlite_wrapper
-from backend.database.database_obj import DatabaseConnectionProtocol
 from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
 from dispatch.pipeline.interfaces import PipelineStep
 from dispatch.send_manager import SendManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.services.resend_service import ResendService
 from migrations import folders_database_migrator
-from adapters.db2ssh.connection import DB2SSHConnection
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -331,7 +331,24 @@ class MockFactories:
 
     @staticmethod
     def database_obj() -> MagicMock:
-        return MagicMock(spec=DatabaseConnectionProtocol)
+        """Create a mock DatabaseObj with common attributes pre-configured.
+
+        Uses a bare MagicMock to allow arbitrary attribute access for tests
+        that need methods not in the DatabaseConnectionProtocol.
+        """
+        mock = MagicMock()
+        mock.folders_table = MagicMock()
+        mock.folders_table.find.return_value = []
+        mock.folders_table.find_one.return_value = None
+        mock.folders_table.count.return_value = 0
+        mock.processed_files = MagicMock()
+        mock.processed_files.count.return_value = 0
+        mock.oversight_and_defaults = MagicMock()
+        mock.oversight_and_defaults.update = MagicMock()
+        mock.oversight_and_defaults.find_one.return_value = None
+        mock.get_oversight_or_default.return_value = {"id": 1}
+        mock.get_settings_or_default.return_value = {"id": 1}
+        return mock
 
     @staticmethod
     def folder_manager() -> MagicMock:
@@ -343,5 +360,21 @@ class MockFactories:
 
     @staticmethod
     def resend_service() -> MagicMock:
-        return MagicMock(spec=ResendService)  # FolderManager has no protocol, use bare mock with attrs if needed
+        return MagicMock(spec=ResendService)
+
+    @staticmethod
+    def qt_pushbutton() -> MagicMock:
+        """Create a mock QPushButton with common methods."""
+        mock = MagicMock()
+        mock.setEnabled = MagicMock()
+        return mock
+
+    @staticmethod
+    def folders_table() -> MagicMock:
+        """Create a mock folders_table with common methods."""
+        mock = MagicMock()
+        mock.find.return_value = []
+        mock.find_one.return_value = None
+        mock.count.return_value = 0
+        return mock
 

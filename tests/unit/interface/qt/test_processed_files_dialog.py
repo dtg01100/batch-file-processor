@@ -5,6 +5,9 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt5.QtWidgets import QDialogButtonBox
 
+from backend.database import DatabaseObj, TableProtocol
+from interface.ports import UIServiceProtocol
+
 
 @pytest.mark.qt
 class TestProcessedFilesDialogInitialization:
@@ -27,7 +30,9 @@ class TestProcessedFilesDialogInitialization:
         """Test that dialog can be initialized with minimal parameters."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = []
 
@@ -42,7 +47,9 @@ class TestProcessedFilesDialogInitialization:
         """Test that dialog stores database reference."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = []
 
@@ -55,7 +62,9 @@ class TestProcessedFilesDialogInitialization:
         """Test that dialog loads prior output folder from database."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {
             "export_processed_folder_prior": "/path/to/exports"
         }
@@ -70,7 +79,9 @@ class TestProcessedFilesDialogInitialization:
         """Test that dialog builds UI even with no folders."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = []
 
@@ -84,7 +95,9 @@ class TestProcessedFilesDialogInitialization:
         """Test dialog uses BaseDialog close-only actions."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = []
 
@@ -105,7 +118,9 @@ class TestProcessedFilesDialogFolderSelection:
         """Test that selecting a folder updates the actions panel."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = [
             {"id": 1, "alias": "Test Folder", "folder_name": "/test"},
@@ -129,7 +144,9 @@ class TestProcessedFilesDialogExport:
         """Test that export button opens file dialog."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = [
             {"id": 1, "alias": "Test", "folder_name": "/test"},
@@ -161,7 +178,9 @@ class TestProcessedFilesDialogEdgeCases:
         """Test dialog behavior when no processed files exist."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = [
             {"id": 1, "alias": "Empty", "folder_name": "/empty"},
@@ -178,11 +197,13 @@ class TestProcessedFilesDialogEdgeCases:
         """Test that UI service can be injected."""
         from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 
-        db = MagicMock()
+        db = MagicMock(spec=DatabaseObj)
+        db.folders_table = MagicMock(spec=TableProtocol)
+        db.processed_files = MagicMock(spec=TableProtocol)
         db.get_oversight_or_default.return_value = {}
         db.folders_table.all.return_value = []
 
-        ui_service = MagicMock()
+        ui_service = MagicMock(spec=UIServiceProtocol)
         dialog = ProcessedFilesDialog(None, db, ui_service=ui_service)
         qtbot.addWidget(dialog)
 

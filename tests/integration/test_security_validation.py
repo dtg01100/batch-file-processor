@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 
 from backend.copy_backend import do as copy_backend_do
 from backend.database.database_obj import DatabaseObj
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.pipeline.converter import EDIConverterStep
 from dispatch.pipeline.validator import EDIValidationStep
@@ -111,7 +112,7 @@ C00000003000030000
         folders = list(db.folders_table.all())
 
         # Should process without executing malicious content
-        result = orchestrator.process_folder(folders[0], MagicMock())
+        result = orchestrator.process_folder(folders[0], MagicMock(spec=RunLog))
 
         # Result must be a FolderResult with defined outcome (success or failure with errors)
         assert hasattr(result, "success"), "process_folder must return a FolderResult"
@@ -167,7 +168,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        result = orchestrator.process_folder(folders[0], MagicMock())
+        result = orchestrator.process_folder(folders[0], MagicMock(spec=RunLog))
 
         # Should complete without errors -- normal EDI must process successfully
         assert hasattr(result, "success"), "process_folder must return a FolderResult"
@@ -288,7 +289,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        orchestrator.process_folder(folders[0], MagicMock())
+        orchestrator.process_folder(folders[0], MagicMock(spec=RunLog))
 
         # Verify outside file wasn't modified
         assert outside_file.read_text() == "sensitive data"
@@ -378,7 +379,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        orchestrator.process_folder(folders[0], MagicMock())
+        orchestrator.process_folder(folders[0], MagicMock(spec=RunLog))
 
         # Verify database integrity
         folders_after = list(db.folders_table.all())
@@ -429,7 +430,7 @@ B001001ITEM001     000010EA0010Test Item                       0000010000
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        orchestrator.process_folder(folders[0], MagicMock())
+        orchestrator.process_folder(folders[0], MagicMock(spec=RunLog))
 
         # Verify output files exist and are readable
         output_files = list((workspace / "output").glob("*"))
@@ -477,7 +478,7 @@ class TestErrorHandling:
         orchestrator = DispatchOrchestrator(config)
 
         folders = list(db.folders_table.all())
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Should handle error gracefully
         result = orchestrator.process_folder(folders[0], run_log)
@@ -486,8 +487,9 @@ class TestErrorHandling:
         assert result.success is False or result.files_failed > 0
 
         # Error should be logged but not expose sensitive paths
-        if run_log.log_error.called:
-            error_message = str(run_log.log_error.call_args)
+        if run_log.write.called:
+            call_args = run_log.write.call_args
+            error_message = str(call_args) if call_args else ""
             # Should not expose full system paths in error messages
             assert "/etc/" not in error_message
             assert "/root/" not in error_message

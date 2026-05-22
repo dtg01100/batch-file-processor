@@ -13,6 +13,7 @@ from interface.models.folder_configuration import ConvertFormat
 from interface.plugins import PluginManager
 from interface.plugins.config_schemas import FieldType
 from interface.plugins.csv_configuration_plugin import CSVConfigurationPlugin
+from interface.plugins.ui_abstraction import ConfigurationWidgetBuilder
 
 
 class TestFormGeneratorForPlugins(unittest.TestCase):
@@ -134,12 +135,12 @@ class TestFormGeneratorForPlugins(unittest.TestCase):
 class TestPluginUIRendering(unittest.TestCase):
     """Tests for plugin UI widget creation and rendering."""
 
-    @patch("interface.plugins.csv_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
     def test_create_widget_method(self, mock_builder):
         """Test that create_widget method works correctly."""
         # Create mock widget builder
-        mock_instance = MagicMock()
-        mock_builder_instance = MagicMock()
+        mock_instance = MagicMock(spec=object)
+        mock_builder_instance = MagicMock(spec=ConfigurationWidgetBuilder)
         mock_builder.return_value = mock_builder_instance
         mock_builder_instance.build_configuration_panel.return_value = mock_instance
 
@@ -149,17 +150,18 @@ class TestPluginUIRendering(unittest.TestCase):
         self.assertIsNotNone(widget)
         mock_builder_instance.build_configuration_panel.assert_called_once()
 
-    @patch("interface.plugins.csv_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
     def test_create_widget_with_parent(self, mock_builder):
         """Test creating widget with parent widget."""
+        """Test creating widget with parent widget."""
         # Create mock widget builder
-        mock_instance = MagicMock()
-        mock_builder_instance = MagicMock()
+        mock_instance = MagicMock(spec=object)
+        mock_builder_instance = MagicMock(spec=ConfigurationWidgetBuilder)
         mock_builder.return_value = mock_builder_instance
         mock_builder_instance.build_configuration_panel.return_value = mock_instance
 
         plugin = CSVConfigurationPlugin()
-        parent = MagicMock()
+        parent = MagicMock(spec=object)
         widget = plugin.create_widget(parent)
 
         self.assertIsNotNone(widget)
@@ -169,12 +171,12 @@ class TestPluginUIRendering(unittest.TestCase):
         call_args = mock_builder_instance.build_configuration_panel.call_args
         self.assertEqual(call_args[0][2], parent)
 
-    @patch("interface.plugins.csv_configuration_plugin.ConfigurationWidgetBuilder")
+    @patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
     def test_create_widget_with_config(self, mock_builder):
         """Test creating widget with existing configuration."""
         # Create mock widget builder
-        mock_instance = MagicMock()
-        mock_builder_instance = MagicMock()
+        mock_instance = MagicMock(spec=object)
+        mock_builder_instance = MagicMock(spec=ConfigurationWidgetBuilder)
         mock_builder.return_value = mock_builder_instance
         mock_builder_instance.build_configuration_panel.return_value = mock_instance
 
@@ -193,7 +195,7 @@ class TestPluginUIRendering(unittest.TestCase):
         self.assertEqual(call_args[0][1]["filter_ampersand"], True)
 
 
-@patch("interface.plugins.csv_configuration_plugin.ConfigurationWidgetBuilder")
+@patch("interface.plugins.base_simple_configuration_plugin.ConfigurationWidgetBuilder")
 class TestPluginManagerUIFunctionality(unittest.TestCase):
     """Tests for PluginManager UI functionality."""
 
@@ -204,8 +206,8 @@ class TestPluginManagerUIFunctionality(unittest.TestCase):
     def test_create_configuration_widget_from_manager(self, mock_builder):
         """Test creating configuration widget via plugin manager."""
         # Create mock widget builder
-        mock_instance = MagicMock()
-        mock_builder_instance = MagicMock()
+        mock_instance = MagicMock(spec=object)
+        mock_builder_instance = MagicMock(spec=ConfigurationWidgetBuilder)
         mock_builder.return_value = mock_builder_instance
         mock_builder_instance.build_configuration_panel.return_value = mock_instance
 

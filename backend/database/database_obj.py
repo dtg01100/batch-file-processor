@@ -170,7 +170,8 @@ class DatabaseObj:
         self.processed_files: TableProtocol
         self.settings: TableProtocol
 
-        # Initialize to None for now - will be set in _initialize_connection or when connection is injected
+        # Initialize to None for now; will be set in
+        # _initialize_connection or when connection is injected
         self.database_connection = None  # type: ignore[assignment]
         self.session_database = None  # type: ignore[assignment]
         self.folders_table = None  # type: ignore[assignment]

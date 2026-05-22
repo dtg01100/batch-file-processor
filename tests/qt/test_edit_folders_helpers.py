@@ -9,6 +9,8 @@ import pytest
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QCheckBox, QDialog, QPushButton, QVBoxLayout, QWidget
 
+from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.plugins.plugin_manager import PluginManager
 from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
 from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
@@ -167,7 +169,7 @@ class TestDynamicEDIBuilder:
         builder.plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
             return_value=None
         )
-        isolated_pm = MagicMock()
+        isolated_pm = MagicMock(spec=PluginManager)
         isolated_pm.get_configuration_plugins.return_value = []
         isolated_pm.get_configuration_plugin_by_format_name = MagicMock(
             return_value=None
@@ -206,7 +208,7 @@ class TestDynamicEDIBuilder:
         layout = QVBoxLayout(container)
 
         fields = {}
-        mock_plugin_manager = MagicMock()
+        mock_plugin_manager = MagicMock(spec=PluginManager)
         mock_plugin_manager.get_configuration_plugins.return_value = []
         builder = DynamicEDIBuilder(
             fields=fields,
@@ -219,7 +221,7 @@ class TestDynamicEDIBuilder:
         builder.convert_sub_container = container
         builder.convert_sub_layout = layout
 
-        plugin = MagicMock()
+        plugin = MagicMock(spec=ConfigurationPlugin)
         mock_plugin_manager.get_configuration_plugin_by_format_name = MagicMock(
             return_value=plugin
         )
@@ -276,9 +278,9 @@ class TestDynamicEDIBuilder:
         qtbot.addWidget(container)
         layout = QVBoxLayout(container)
 
-        plugin1 = MagicMock()
+        plugin1 = MagicMock(spec=ConfigurationPlugin)
         plugin1.get_format_name.return_value = "csv"
-        plugin2 = MagicMock()
+        plugin2 = MagicMock(spec=ConfigurationPlugin)
         plugin2.get_format_name.return_value = "fintech"
 
         builder = DynamicEDIBuilder(

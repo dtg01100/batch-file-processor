@@ -15,6 +15,7 @@ import pytest
 
 from backend.copy_backend import CopyBackend
 from core.utils.bool_utils import normalize_bool
+from dispatch.interfaces import RunLog
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from dispatch.send_manager import MockBackend
 
@@ -79,7 +80,7 @@ class TestAddFolderConfigureProcessWorkflow:
         orchestrator = DispatchOrchestrator(config)
 
         # Create mock run log
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process folder
         result = orchestrator.process_folder(sample_folder_config, run_log)
@@ -108,7 +109,7 @@ class TestAddFolderConfigureProcessWorkflow:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(sample_folder_config, run_log)
 
         assert result is not None
@@ -124,7 +125,7 @@ class TestAddFolderConfigureProcessWorkflow:
         config = DispatchConfig(backends={"copy": CopyBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # First processing
         result1 = orchestrator.process_folder(sample_folder_config, run_log)
@@ -265,7 +266,7 @@ class TestErrorRecoveryWorkflow:
         config = DispatchConfig(backends={"copy": flaky}, settings={"max_retries": 2})
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Since the orchestrator catches exceptions, we expect it to process successfully
         # but one file may fail - that's expected behavior without explicit retry logic
@@ -287,7 +288,7 @@ class TestErrorRecoveryWorkflow:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(sample_folder_config, run_log)
 
         # Should process valid files despite invalid one
@@ -321,7 +322,7 @@ class TestErrorRecoveryWorkflow:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         orchestrator.process_folder(sample_folder_config, run_log)
 
         # Verify errors were logged
@@ -352,7 +353,7 @@ B002001ITEM001     000020EA0020Test Item                     0000020000
         config = DispatchConfig(backends={"copy": CopyBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Process first folder
         config1 = {
@@ -416,7 +417,7 @@ B002001ITEM001     000020EA0020Test Item                     0000020000
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(sample_folder_config, run_log)
 
         # All backends should be called
@@ -436,7 +437,7 @@ class TestDatabaseIntegrationWorkflow:
         config = DispatchConfig(backends={"copy": CopyBackend()}, settings={})
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
 
         # Add folder id to config (needed for tracking)
         folder_config = sample_folder_config.copy()
@@ -462,7 +463,7 @@ class TestDatabaseIntegrationWorkflow:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(sample_folder_config, run_log)
         assert result.success is True
 
@@ -554,7 +555,7 @@ class TestEdgeCaseWorkflows:
             "convert_to_format": "csv",
         }
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(folder_config, run_log)
 
         # Should handle gracefully
@@ -576,7 +577,7 @@ class TestEdgeCaseWorkflows:
         )
         orchestrator = DispatchOrchestrator(config)
 
-        run_log = MagicMock()
+        run_log = MagicMock(spec=RunLog)
         result = orchestrator.process_folder(sample_folder_config, run_log)
 
         # Should process successfully
@@ -615,7 +616,7 @@ B001001ITEM001     000010EA0010Test Item                     0000010000
                 "convert_to_format": "csv",
             }
 
-            run_log = MagicMock()
+            run_log = MagicMock(spec=RunLog)
             result = orchestrator.process_folder(folder_config, run_log)
 
             # Should handle special characters

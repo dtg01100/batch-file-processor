@@ -409,7 +409,8 @@ def run_modern_migrations(
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
-                        tweak_edi         = 0
+                        tweak_edi         = 0,
+                        process_edi       = 1
                     WHERE tweak_edi = 1
                       AND convert_to_format IS NOT NULL
                       AND convert_to_format != ''
@@ -419,11 +420,11 @@ def run_modern_migrations(
                 cursor.execute(f"""
                     UPDATE {table}
                     SET convert_to_format = 'tweaks',
-                        tweak_edi         = 0
+                        tweak_edi         = 0,
+                        process_edi       = 1
                     WHERE tweak_edi = 1
                       AND (convert_to_format IS NULL OR convert_to_format = '')
                 """)
-
         database_connection.raw_connection.commit()
 
         update_version = dict(id=1, version="45", os=running_platform)
@@ -451,8 +452,16 @@ def run_modern_migrations(
                 AND (convert_to_format IS NULL OR convert_to_format = '')
             """)
 
+        # Only promote folders that were set to tweaks format in v44→v45
+        # (i.e., originally had tweak_edi=1). These are the folders that need
+        # process_edi=1 to continue sending tweaked EDI.
         with contextlib.suppress(sqlite3.OperationalError):
-            cursor.execute("UPDATE folders SET tweak_edi = 0")
+            cursor.execute("""
+                UPDATE folders
+                SET tweak_edi = 0,
+                    process_edi = 1
+                WHERE convert_to_format = 'tweaks'
+            """)
 
         with contextlib.suppress(sqlite3.OperationalError):
             cursor.execute("UPDATE administrative SET tweak_edi = 0")

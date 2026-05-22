@@ -2,7 +2,7 @@
 
 import io
 import logging
-from ftplib import error_perm
+from ftplib import FTP, error_perm
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,7 +18,7 @@ class TestRealFTPClient:
     def mock_ftplib(self):
         """Mock ftplib module."""
         with patch("backend.ftp_client.ftplib") as mock:
-            mock_ftp = MagicMock()
+            mock_ftp = MagicMock(spec=FTP)
             mock.FTP.return_value = mock_ftp
             mock.FTP_TLS.return_value = mock_ftp
             yield mock

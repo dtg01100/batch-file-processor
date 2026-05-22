@@ -8,7 +8,7 @@ validation and serialization/deserialization methods.
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, ClassVar, Iterator
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 

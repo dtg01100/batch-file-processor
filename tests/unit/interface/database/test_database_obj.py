@@ -14,7 +14,7 @@ from core.constants import CURRENT_DATABASE_VERSION
 
 def create_mock_connection(mock_tables):
     """Create a mock connection that returns the correct tables."""
-    conn = MagicMock()
+    conn = MagicMock(spec=DatabaseConnectionProtocol)
 
     # Use a mock that returns the correct table when __getitem__ is called
     # MagicMock's __getitem__ passes self as first arg, so we need to handle that
@@ -34,14 +34,14 @@ class TestDatabaseObj:
     def mock_tables(self):
         """Create mock table objects."""
         tables = {
-            "folders": MagicMock(),
-            "emails_to_send": MagicMock(),
-            "working_batch_emails_to_send": MagicMock(),
-            "sent_emails_removal_queue": MagicMock(),
-            "administrative": MagicMock(),
-            "processed_files": MagicMock(),
-            "settings": MagicMock(),
-            "version": MagicMock(),
+            "folders": MagicMock(spec=TableProtocol),
+            "emails_to_send": MagicMock(spec=TableProtocol),
+            "working_batch_emails_to_send": MagicMock(spec=TableProtocol),
+            "sent_emails_removal_queue": MagicMock(spec=TableProtocol),
+            "administrative": MagicMock(spec=TableProtocol),
+            "processed_files": MagicMock(spec=TableProtocol),
+            "settings": MagicMock(spec=TableProtocol),
+            "version": MagicMock(spec=TableProtocol),
         }
         # Set up version table to return valid version
         tables["version"].find_one.return_value = {"version": "33", "os": "Linux"}
@@ -176,10 +176,16 @@ class TestDatabaseObjProtocolCompliance:
         # Create a proper mock class that satisfies the protocol
         class MockConnection:
             def __getitem__(self, key):
-                return MagicMock()
+                return MagicMock(spec=TableProtocol)
 
             def close(self):
                 pass
+
+            def query(self, sql):
+                return []
+
+            def get_oversight_or_default(self):
+                return {}
 
         mock_conn = MockConnection()
         assert isinstance(mock_conn, DatabaseConnectionProtocol)
@@ -229,14 +235,14 @@ class TestDatabaseObjVersionChecking:
     def mock_tables(self):
         """Create mock table objects."""
         return {
-            "folders": MagicMock(),
-            "emails_to_send": MagicMock(),
-            "working_batch_emails_to_send": MagicMock(),
-            "sent_emails_removal_queue": MagicMock(),
-            "administrative": MagicMock(),
-            "processed_files": MagicMock(),
-            "settings": MagicMock(),
-            "version": MagicMock(),
+            "folders": MagicMock(spec=TableProtocol),
+            "emails_to_send": MagicMock(spec=TableProtocol),
+            "working_batch_emails_to_send": MagicMock(spec=TableProtocol),
+            "sent_emails_removal_queue": MagicMock(spec=TableProtocol),
+            "administrative": MagicMock(spec=TableProtocol),
+            "processed_files": MagicMock(spec=TableProtocol),
+            "settings": MagicMock(spec=TableProtocol),
+            "version": MagicMock(spec=TableProtocol),
         }
 
     def test_version_too_old_triggers_upgrade(self, mock_tables):
@@ -430,14 +436,14 @@ class TestDatabaseObjReload:
     def test_reload_reinitializes_tables(self):
         """Test reload reinitializes table references."""
         mock_tables = {
-            "folders": MagicMock(),
-            "emails_to_send": MagicMock(),
-            "working_batch_emails_to_send": MagicMock(),
-            "sent_emails_removal_queue": MagicMock(),
-            "administrative": MagicMock(),
-            "processed_files": MagicMock(),
-            "settings": MagicMock(),
-            "version": MagicMock(),
+            "folders": MagicMock(spec=TableProtocol),
+            "emails_to_send": MagicMock(spec=TableProtocol),
+            "working_batch_emails_to_send": MagicMock(spec=TableProtocol),
+            "sent_emails_removal_queue": MagicMock(spec=TableProtocol),
+            "administrative": MagicMock(spec=TableProtocol),
+            "processed_files": MagicMock(spec=TableProtocol),
+            "settings": MagicMock(spec=TableProtocol),
+            "version": MagicMock(spec=TableProtocol),
         }
         mock_tables["version"].find_one.return_value = {"version": "33", "os": "Linux"}
 
@@ -453,14 +459,14 @@ class TestDatabaseObjReload:
 
         # Simulate reload with new connection
         mock_tables2 = {
-            "folders": MagicMock(),
-            "emails_to_send": MagicMock(),
-            "working_batch_emails_to_send": MagicMock(),
-            "sent_emails_removal_queue": MagicMock(),
-            "administrative": MagicMock(),
-            "processed_files": MagicMock(),
-            "settings": MagicMock(),
-            "version": MagicMock(),
+            "folders": MagicMock(spec=TableProtocol),
+            "emails_to_send": MagicMock(spec=TableProtocol),
+            "working_batch_emails_to_send": MagicMock(spec=TableProtocol),
+            "sent_emails_removal_queue": MagicMock(spec=TableProtocol),
+            "administrative": MagicMock(spec=TableProtocol),
+            "processed_files": MagicMock(spec=TableProtocol),
+            "settings": MagicMock(spec=TableProtocol),
+            "version": MagicMock(spec=TableProtocol),
         }
         mock_tables2["version"].find_one.return_value = {"version": "33", "os": "Linux"}
         mock_conn2 = create_mock_connection(mock_tables2)

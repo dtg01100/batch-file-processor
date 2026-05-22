@@ -25,6 +25,8 @@ pytestmark = [pytest.mark.unit, pytest.mark.conversion]
 import os
 from unittest.mock import MagicMock, patch
 
+from core.edi.inv_fetcher import InvFetcher
+
 
 def _default_edi_content() -> str:
     """Return default sample EDI content shared by most converter tests."""
@@ -565,7 +567,7 @@ class TestConvertToFintech:
         output_file = tmp_path / "output"
 
         # Create a mock InvFetcher instance
-        mock_inv_fetcher = MagicMock()
+        mock_inv_fetcher = MagicMock(spec=InvFetcher)
         mock_inv_fetcher.fetch_cust_no.return_value = "12345"
 
         # Mock the InvFetcher class to return our mock instance

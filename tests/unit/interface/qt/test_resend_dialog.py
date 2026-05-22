@@ -5,6 +5,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt5.QtWidgets import QLineEdit, QTableWidget
 
+from backend.database import DatabaseConnectionProtocol
+from interface.services.resend_service import ResendService
+
 
 @pytest.mark.qt
 class TestResendDialogInitialization:
@@ -27,9 +30,9 @@ class TestResendDialogInitialization:
         """Test that dialog can be initialized with minimal parameters."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -47,9 +50,9 @@ class TestResendDialogInitialization:
         """Test that dialog stores database connection."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -66,9 +69,9 @@ class TestResendDialogInitialization:
         """Test that dialog initializes ResendService."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -85,9 +88,9 @@ class TestResendDialogInitialization:
         """Test that dialog builds UI with table and search input."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = []
 
@@ -113,9 +116,9 @@ class TestResendDialogFileManagement:
         """Test that table rows are created for processed files."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = [
             {
@@ -152,9 +155,9 @@ class TestResendDialogFileManagement:
         """Test that selecting files and marking for resend calls the service."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
         mock_service.get_all_files_for_resend.return_value = [
             {
@@ -195,7 +198,7 @@ class TestResendDialogEdgeCases:
         """Test dialog behavior when service fails."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
         with (
             patch(
@@ -218,9 +221,9 @@ class TestResendDialogEdgeCases:
         """Load More should re-enable after a successful page load when more data exists."""
         from interface.qt.dialogs.resend_dialog import ResendDialog
 
-        db_conn = MagicMock()
+        db_conn = MagicMock(spec=DatabaseConnectionProtocol)
 
-        mock_service = MagicMock()
+        mock_service = MagicMock(spec=ResendService)
         mock_service.has_processed_files.return_value = True
 
         first_page = [

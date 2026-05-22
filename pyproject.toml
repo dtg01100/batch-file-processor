@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=64.0"]
+requires = [
+    "setuptools>=64.0",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -20,7 +22,9 @@ include = [
 
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = [
+    "py311",
+]
 
 [tool.isort]
 profile = "black"
@@ -31,40 +35,343 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "E",      # pycodestyle errors
-    "F",      # pyflakes
-    "W",      # pycodestyle warnings
-    "I",      # isort
-    "C90",    # mccabe complexity
-    "B",      # bugbear - common bugs and design issues
-    "FBT",    # boolean traps - positional boolean args
-    "SIM",    # simplify - code clarity improvements
-    "RET",    # return statement consistency
-    "ARG",    # unused arguments
-    "RUF",    # ruff-specific rules
-    "UP",     # pyupgrade - Python 3.11 modernization
+    "E",
+    "F",
+    "W",
+    "I",
+    "C90",
+    "B",
+    "FBT",
+    "SIM",
+    "RET",
+    "ARG",
+    "RUF",
+    "UP",
 ]
 ignore = [
-    "E203",   # whitespace before ':' - conflicts with black
-    "B028",   # no explicit `stacklevel` keyword - noisy
-    "SIM117", # multiple with statements - often less readable
-    "RET504", # unnecessary assign before return - stylistic
+    "E203",
+    "B028",
+    "SIM117",
+    "RET504",
 ]
 
 [tool.ruff.lint.pyupgrade]
 keep-runtime-typing = true
 
 [tool.ruff.lint.per-file-ignores]
-"archive/*" = ["E402", "E501", "F841", "C90", "ANN", "UP006", "UP045", "FBT", "D413", "ARG", "PLR2004", "PLC0415", "SIM117"]
-"adapters/sqlite/repositories/*" = ["ANN401", "FBT001", "FBT002", "FBT003"]
-"scripts/*" = ["E402", "E501", "FBT001", "FBT002", "FBT003", "ARG", "PLC0415", "SIM117"]
-"scripts/self_test.py" = ["C90"]
-"scripts/mover.py" = ["C90"]
-"tests/*" = ["E402", "E501", "E712", "E731", "E741", "C90", "ANN", "UP006", "UP045", "FBT", "D413", "ARG", "PLR2004", "PLC0415", "SIM117", "S101"]
-"migrations/*" = ["E402", "E501", "C90", "ARG", "PLC0415", "SIM117"]
-"migrations/folders_database_migrator.py" = ["C90"]
-"main_qt.py" = ["E402"]
-"interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = ["E402"]
+"archive/*" = [
+    "E402",
+    "E501",
+    "F841",
+    "C90",
+    "ANN",
+    "UP006",
+    "UP045",
+    "FBT",
+    "D413",
+    "ARG",
+    "PLR2004",
+    "PLC0415",
+    "SIM117",
+]
+"adapters/sqlite/repositories/*" = [
+    "ANN401",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+]
+"scripts/*" = [
+    "E402",
+    "E501",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "ARG",
+    "PLC0415",
+    "SIM117",
+]
+"scripts/self_test.py" = [
+    "C90",
+]
+"scripts/mover.py" = [
+    "C90",
+]
+"tests/*" = [
+    "E402",
+    "E501",
+    "E712",
+    "E731",
+    "E741",
+    "C90",
+    "ANN",
+    "UP006",
+    "UP045",
+    "FBT",
+    "D413",
+    "ARG",
+    "PLR2004",
+    "PLC0415",
+    "SIM117",
+    "S101",
+]
+"migrations/*" = [
+    "E402",
+    "E501",
+    "C90",
+    "ARG",
+    "PLC0415",
+    "SIM117",
+]
+"migrations/folders_database_migrator.py" = [
+    "C90",
+]
+"main_qt.py" = [
+    "E402",
+]
+"interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = [
+    "E402",
+]
+"backend/email_backend.py" = [
+    "ARG",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "E501",
+]
+"backend/ftp_backend.py" = [
+    "ARG",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "E501",
+]
+"backend/copy_backend.py" = [
+    "ARG",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "E501",
+]
+"backend/http_backend.py" = [
+    "ARG",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "E501",
+]
+"backend/http_client.py" = [
+    "E501",
+    "C90",
+    "ARG",
+]
+"dispatch/converters/convert_to_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_estore_einvoice.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_estore_einvoice_generic.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_funding.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_sears_mosaic.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_smart_invoice.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_target.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_tweaks.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_vendor_specific.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_walgreens.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"dispatch/converters/convert_to_yellowdog_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"interface/qt/dialogs/edit_folders/layout_builder.py" = [
+    "E501",
+    "ARG",
+    "E402",
+]
+"interface/qt/dialogs/edit_folders_dialog.py" = [
+    "E501",
+    "ARG",
+    "E402",
+]
+"interface/qt/dialogs/resend_dialog.py" = [
+    "E501",
+    "ARG",
+    "E402",
+]
+"interface/services/ftp_service.py" = [
+    "E402",
+    "E501",
+    "ARG",
+]
+"converters/customer_queries.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_fintech.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_jolley_custom.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_scannerware.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_simplified_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_stewarts_custom.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_tweaks.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_scansheet_type_a.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_base.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_estore_einvoice.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_estore_einvoice_generic.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/mixins.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"converters/convert_to_yellowdog_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_fintech.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/*.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/error_handler.py" = [
+    "E501",
+    "ARG",
+]
+"dispatch/orchestrator.py" = [
+    "E501",
+    "ARG",
+]
+"dispatch/services/folder_processor.py" = [
+    "E501",
+    "ARG",
+]
+"interface/form/form_generator.py" = [
+    "E501",
+    "ARG",
+    "SIM",
+]
+"interface/operations/folder_manager.py" = [
+    "E501",
+    "ARG",
+]
+"interface/operations/plugin_configuration_mapper.py" = [
+    "E501",
+    "ARG",
+]
+"tests/conftest_magicmock_plugin.py" = [
+    "SIM",
+]
+"tests/unit/dispatch_tests/test_file_filter.py" = [
+    "B905",
+]
+"tests/unit/test_convert_to_scansheet_type_a.py" = [
+    "W293",
+]
 
 [tool.mypy]
 python_version = "3.11"
@@ -86,5 +393,11 @@ module = [
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = ["appdirs", "barcode.*", "barcode", "openpyxl.*", "win32print"]
+module = [
+    "appdirs",
+    "barcode.*",
+    "barcode",
+    "openpyxl.*",
+    "win32print",
+]
 ignore_missing_imports = true

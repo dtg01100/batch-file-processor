@@ -19,9 +19,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.conftest import MockFactories
-
+from backend.database.database_obj import TableProtocol
 from core.utils.bool_utils import normalize_bool
+from tests.conftest import MockFactories
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent.resolve()
@@ -59,7 +59,7 @@ class TestAutomaticModeIntegration:
     def test_automatic_mode_requires_active_folders(self):
         """Automatic mode should print error if no active folders exist."""
         # Mock the folders table to return 0 active folders
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.count.return_value = 0
 
         # Test the logic directly without patching dispatch module
@@ -71,7 +71,7 @@ class TestAutomaticModeIntegration:
 
     def test_automatic_mode_calls_process_for_active_folders(self):
         """Automatic mode should process directories when active folders exist."""
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.count.return_value = 2  # Two active folders
 
         # Verify count is called with correct parameter
@@ -90,7 +90,7 @@ class TestAutomaticModeIntegration:
         ]
 
         for active_count, should_process in test_cases:
-            mock_table = MagicMock()
+            mock_table = MagicMock(spec=TableProtocol)
             mock_table.count.return_value = active_count
 
             # This is the exact logic from automatic_process_directories
@@ -120,7 +120,7 @@ class TestSingleFolderModeIntegration:
 
     def test_single_folder_queries_correct_folder_by_id(self):
         """Single folder mode should query the correct folder by ID."""
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.find_one.return_value = {
             "id": 123,
             "folder_name": "/test/folder",
@@ -138,7 +138,7 @@ class TestSingleFolderModeIntegration:
     def test_single_folder_creates_session_table(self):
         """Single folder mode should use session_database for single table."""
         mock_db = MockFactories.database_obj()
-        mock_session_db = {"single_table": MagicMock()}
+        mock_session_db = {"single_table": MagicMock(spec=TableProtocol)}
         mock_db.session_database = mock_session_db
 
         # This simulates: single_table = database_obj_instance.session_database["single_table"]
@@ -186,7 +186,7 @@ class TestGraphicalProcessDirectories:
 
     def test_checks_for_missing_folders(self):
         """Should check if folders exist before processing."""
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.find.return_value = [
             {"folder_name": "/missing/folder", "folder_is_active": "True"}
         ]
@@ -202,7 +202,7 @@ class TestGraphicalProcessDirectories:
 
     def test_checks_for_active_folders(self):
         """Should check if there are active folders before processing."""
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.count.return_value = 0
 
         # Simulate the check in graphical_process_directories
@@ -212,7 +212,7 @@ class TestGraphicalProcessDirectories:
 
     def test_processes_when_folders_exist_and_active(self):
         """Should process when folders exist and are active."""
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.find.return_value = [
             {"folder_name": "/test/folder", "folder_is_active": "True"}
         ]
@@ -306,7 +306,7 @@ class TestDispatchProcessIntegration:
 
         # This test verifies the integration point between the UI modes
         # and the dispatch module
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.find.return_value = [sample_folder_config]
         mock_folders_table.count.return_value = 1
 
@@ -527,7 +527,7 @@ class TestPostProcessingRefresh:
         """Button states should be updated after processing."""
         # Test the logic for setting button states based on folder state
 
-        mock_folders_table = MagicMock()
+        mock_folders_table = MagicMock(spec=TableProtocol)
         mock_folders_table.count.return_value = 0
 
         # If no folders, buttons should be disabled

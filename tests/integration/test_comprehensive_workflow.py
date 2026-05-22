@@ -25,22 +25,22 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from dispatch.interfaces import RunLog
-
 import pytest
+
+from dispatch.interfaces import RunLog
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+from adapters.sqlite.repositories import SqliteFolderRepository
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
 from core.database.schema import ensure_schema
 from dispatch.hash_utils import generate_file_hash
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
 from interface.operations.folder_manager import FolderManager
-from adapters.sqlite.repositories import SqliteFolderRepository
 
 # =============================================================================
 # FIXTURES

@@ -7,7 +7,6 @@ Reference:
     Author: greg p (GPL3)
 """
 
-import logging
 
 from core.constants import (
     UPC_A_LENGTH,
@@ -15,7 +14,7 @@ from core.constants import (
     UPCE_LENGTH,
     UPCE_SHORT_LENGTH,
 )
-from core.structured_logging import get_logger, log_with_context
+from core.structured_logging import get_logger
 
 logger = get_logger(__name__)
 
