@@ -1,0 +1,19 @@
+"Invoice Details"
+""
+"Delivery Date","Terms","Invoice Number","Due Date","PO Number"
+"Not Available","NET30","1234560001","Not Available"
+"Bill To:","123456
+Test Customer
+Springfield
+IL, 62701, 5551234567, 
+US","Ship To:","Test Customer
+123 Main St
+IL
+62701, 5559876543, , 
+US"
+""
+"Description","UPC #","Quantity","UOM","Price","Amount"
+"Credit Item One       123","000000000000","0","?","$1000.00","$0.00"
+"Credit Item Two       654","000000000017","0","?","$2000.00","$0.00"
+"Credit Memo Charge       ","000000000000","1","EA","$      0.00","$      0.00"
+"","","","","Total:","$1250000.00"
