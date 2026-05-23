@@ -55,7 +55,11 @@ def require_test_edi():
         pytest.skip(f"test_edi directory not found: {TEST_EDI_DIR}")
     # Check if directory has any EDI files
     try:
-        files = [f for f in os.listdir(TEST_EDI_DIR) if os.path.isfile(os.path.join(TEST_EDI_DIR, f))]
+        files = [
+            f
+            for f in os.listdir(TEST_EDI_DIR)
+            if os.path.isfile(os.path.join(TEST_EDI_DIR, f))
+        ]
         if not files:
             pytest.skip(f"test_edi directory is empty: {TEST_EDI_DIR}")
     except OSError as e:

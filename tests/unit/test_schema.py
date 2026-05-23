@@ -568,7 +568,7 @@ class TestSchemaErrorHandling:
         mock_conn = MagicMock(spec=sqlite3.Connection)
         mock_database._conn = mock_conn
         # Prevent auto-creation of raw_connection which would bypass _conn fallback
-        if hasattr(mock_database, 'raw_connection'):
+        if hasattr(mock_database, "raw_connection"):
             del mock_database.raw_connection
         mock_conn.execute.side_effect = sqlite3.OperationalError("Raw connection error")
 

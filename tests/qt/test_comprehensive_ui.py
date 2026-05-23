@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox, QPushButton
 from backend.database.database_obj import DatabaseObj
 from backend.database.sqlite_wrapper import Table
 from core.constants import CURRENT_DATABASE_VERSION
+from interface.operations.maintenance_functions import MaintenanceFunctions
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
@@ -32,7 +33,6 @@ from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.widgets.folder_list_widget import FolderListWidget
 from interface.qt.widgets.search_widget import SearchWidget
 from interface.services.smtp_service import SMTPServiceProtocol
-from interface.operations.maintenance_functions import MaintenanceFunctions
 from scripts import create_database
 
 # =============================================================================

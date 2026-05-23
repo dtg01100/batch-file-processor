@@ -10,6 +10,7 @@ Usage:
     # Update golden files with current output
     pytest tests/unit/test_golden_output.py --update-golden
 """
+
 import os
 import re
 
@@ -28,6 +29,7 @@ from dispatch.services.uom_lookup_service import UOMLookupService
 _project_root = Path(__file__).parent.parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
+
 
 class QueryRunnerWithTestData:
     """Query runner that returns preset data without executing SQL.
@@ -101,6 +103,7 @@ class QueryRunnerWithTestData:
     def close(self):
         """Close the underlying connection."""
         self._sqlite_runner.close()
+
 
 @dataclass
 class GoldenTestCase:
@@ -532,7 +535,8 @@ def run_converter(
 
         # Determine whether we have credentials or test data
         has_creds = all(
-            settings_dict.get(cred) for cred in ["as400_username", "as400_address", "as400_password"]
+            settings_dict.get(cred)
+            for cred in ["as400_username", "as400_address", "as400_password"]
         )
 
         # Inject test data for CustomerLookupService + UOMLookupService converters
@@ -542,7 +546,9 @@ def run_converter(
             from dispatch.converters.customer_queries import BASIC_CUSTOMER_QUERY_SQL
 
             # Dynamically find the converter class by name
-            converter_cls_name = "".join(word.title() for word in format_name.split("_")) + "Converter"
+            converter_cls_name = (
+                "".join(word.title() for word in format_name.split("_")) + "Converter"
+            )
             converter_class = getattr(module, converter_cls_name)
 
             # Create test query runner with injected data
@@ -558,6 +564,7 @@ def run_converter(
                 from dispatch.converters.customer_queries import (
                     STEWARTS_CUSTOMER_QUERY_SQL,
                 )
+
                 customer_sql = STEWARTS_CUSTOMER_QUERY_SQL
             else:
                 customer_sql = BASIC_CUSTOMER_QUERY_SQL
@@ -580,12 +587,17 @@ def run_converter(
                     self._db_connector._db_initialized = True
 
                     # Initialize customer and UOM services with the test runner
-                    self._customer_service = CustomerLookupService(test_runner, customer_sql)
+                    self._customer_service = CustomerLookupService(
+                        test_runner, customer_sql
+                    )
                     self._uom_service = UOMLookupService(test_runner)
 
                     # Open CSV output file
                     context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
-                        context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+                        context.get_output_path(".csv"),
+                        "w",
+                        newline="\n",
+                        encoding="utf-8",
                     )
                     context.csv_writer = csv.writer(context.output_file, dialect="unix")
 
@@ -609,7 +621,11 @@ def run_converter(
                 {},  # upc_lookup
             )
         # Inject InvFetcher test data for InvFetcher-based converters
-        elif test_inv_fetcher_data and format_name in ("fintech", "estore_einvoice", "estore_einvoice_generic"):
+        elif test_inv_fetcher_data and format_name in (
+            "fintech",
+            "estore_einvoice",
+            "estore_einvoice_generic",
+        ):
             # Patch InvFetcher.fetch_po on the converter instance after it's created
             # We do this by patching the instance's inv_fetcher after _initialize_output runs
             # Store test data on the converter instance for the patched methods to use
@@ -628,7 +644,9 @@ def run_converter(
             def patched_po_query(self, invoice_number):
                 # Return test data as a dict-like result
                 # The _set_values_from_row expects dict.values() or tuple
-                return [{"po": test_po, "custname": test_cust_name, "custno": test_cust_no}]
+                return [
+                    {"po": test_po, "custname": test_cust_name, "custno": test_cust_no}
+                ]
 
             InvFetcher._po_query = patched_po_query
 

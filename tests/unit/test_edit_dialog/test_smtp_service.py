@@ -1,7 +1,6 @@
 """SMTP Service tests for connection validation and error formatting."""
 
 import errno
-import smtplib
 from unittest.mock import MagicMock, patch
 
 from interface.services.smtp_service import SMTPService

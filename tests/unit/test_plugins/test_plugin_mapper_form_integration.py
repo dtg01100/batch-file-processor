@@ -150,7 +150,9 @@ class TestPluginMapperWithFolderConfig(unittest.TestCase):
 
         self.assertTrue(state_manager.get_state("csv").is_valid)
 
-        state_manager.update_state("csv", {"value": 2}, is_valid=False, validation_errors=["Invalid value"])
+        state_manager.update_state(
+            "csv", {"value": 2}, is_valid=False, validation_errors=["Invalid value"]
+        )
 
         state = state_manager.get_state("csv")
         self.assertFalse(state.is_valid)

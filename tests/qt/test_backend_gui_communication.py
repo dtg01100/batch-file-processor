@@ -186,7 +186,9 @@ class TestProcessingCallbackCommunication:
         monkeypatch.setattr("interface.qt.app.os.path.isdir", lambda _: True)
         monkeypatch.setattr("interface.qt.app.utils.clear_old_files", lambda *_: None)
         monkeypatch.setattr("dispatch.results.DispatchConfig", FakeDispatchConfig)
-        monkeypatch.setattr("dispatch.orchestrator.DispatchOrchestrator", FakeDispatchOrchestrator)
+        monkeypatch.setattr(
+            "dispatch.orchestrator.DispatchOrchestrator", FakeDispatchOrchestrator
+        )
 
         app._process_directories(folders_table)
 

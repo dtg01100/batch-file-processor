@@ -128,7 +128,9 @@ class TestAuditBulletproof:
         import dispatch.observability
 
         mock_audit_db = MagicMock()
-        mock_audit_db.audit_log_table.insert.side_effect = RuntimeError("Database locked")
+        mock_audit_db.audit_log_table.insert.side_effect = RuntimeError(
+            "Database locked"
+        )
 
         audit_queue = queue_lib.Queue()
         audit_logger = dispatch.observability.AuditLogger()
@@ -145,7 +147,9 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_audit_db)
+        writer = dispatch.observability.AuditBackgroundWriter(
+            audit_queue, mock_audit_db
+        )
 
         import threading
 
@@ -184,7 +188,9 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_audit_db)
+        writer = dispatch.observability.AuditBackgroundWriter(
+            audit_queue, mock_audit_db
+        )
 
         import threading
 
