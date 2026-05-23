@@ -49,17 +49,17 @@ class TestPrettifyDates:
     @pytest.mark.parametrize(
         "offset,adj_offset,expected",
         [
-            (1, 0, "01/25/24"),
-            (-1, 0, "01/23/24"),
-            (0, 2, "01/26/24"),
-            (1, -1, "01/24/24"),
-            ("2", 1, "01/27/24"),
+            (1, 0, "05/05/10"),
+            (-1, 0, "05/03/10"),
+            (0, 2, "05/06/10"),
+            (1, -1, "05/04/10"),
+            ("2", 1, "05/07/10"),
         ],
     )
     def test_prettify_offsets(self, offset, adj_offset, expected):
         """Offsets and adjustment offsets are applied deterministically."""
         assert (
-            prettify_dates("1240124", offset=offset, adj_offset=adj_offset) == expected
+            prettify_dates("010124", offset=offset, adj_offset=adj_offset) == expected
         )
 
     @pytest.mark.parametrize(

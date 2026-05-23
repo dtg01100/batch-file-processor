@@ -365,6 +365,11 @@ class TestEmailRetryLogic:
 
     def test_email_gives_up_after_10_retries(self, temporary_test_file):
         """Eleven failures must cause an exception after 10 retries."""
+        # Skip if SMTP server is not configured or is a test placeholder
+        smtp_server = os.environ.get("EMAIL_SMTP_SERVER", "").strip()
+        if not smtp_server or smtp_server in ("<placeholder>", "localhost"):
+            pytest.skip("SMTP server not configured")
+
         mock_client = MockSMTPClient()
         for _ in range(11):
             mock_client.add_error(smtplib.SMTPConnectError(421, "Unavailable"))
