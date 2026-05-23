@@ -10,7 +10,6 @@ Usage:
     # Update golden files with current output
     pytest tests/unit/test_golden_output.py --update-golden
 """
-
 import os
 import re
 
@@ -22,10 +21,86 @@ from typing import Any
 
 import pytest
 
+from core.database import QueryRunner, SQLiteConnection
+from dispatch.services.customer_lookup_service import CustomerLookupService
+from dispatch.services.uom_lookup_service import UOMLookupService
+
 _project_root = Path(__file__).parent.parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
+class QueryRunnerWithTestData:
+    """Query runner that returns preset data without executing SQL.
+
+    This class wraps a QueryRunner for actual query execution but allows
+    preset test data to be returned for specific queries, avoiding the
+    need for AS400-specific SQL syntax in tests.
+    """
+
+    def __init__(self, sqlite_conn):
+        """Initialize with a SQLite connection and empty preset data."""
+        self._sqlite_runner = QueryRunner(sqlite_conn)
+        self._customer_data = []
+        self._uom_data = []
+
+    def set_customer_data(self, data):
+        """Set the customer data to return for header queries."""
+        self._customer_data = data
+
+    def set_uom_data(self, data):
+        """Set the UOM data to return for UOM queries."""
+        self._uom_data = data
+
+    def run_query(self, query, params=None):
+        """Return preset data for known queries, or execute against SQLite."""
+        query_upper = query.upper()
+        # Check if this is a customer header query (has ohhst and dsabrep)
+        if "OHHS" in query_upper and "DSABRE" in query_upper:
+            if not self._customer_data:
+                return []
+            columns = [
+                "Salesperson Name",
+                "Invoice Date",
+                "Terms Code",
+                "Terms Duration",
+                "Customer Status",
+                "Customer Number",
+                "Customer Name",
+                "Customer Store Number",  # present in STEWARTS_CUSTOMER_QUERY_SQL
+                "Customer Address",
+                "Customer Town",
+                "Customer State",
+                "Customer Zip",
+                "Customer Phone",
+                "Customer Email",
+                "Customer Email 2",
+                "Corporate Customer Status",
+                "Corporate Customer Number",
+                "Corporate Customer Name",
+                "Corporate Customer Store Number",  # present in STEWARTS_CUSTOMER_QUERY_SQL
+                "Corporate Customer Address",
+                "Corporate Customer Town",
+                "Corporate Customer State",
+                "Corporate Customer Zip",
+                "Corporate Customer Phone",
+                "Corporate Customer Email",
+                "Corporate Customer Email 2",
+            ]
+            return [
+                dict(zip(columns, row, strict=False)) for row in self._customer_data
+            ]
+        # Check if this is a UOM query (has odhst)
+        if "ODHS" in query_upper:
+            if not self._uom_data:
+                return []
+            columns = ["itemno", "uom_mult", "uom_code"]
+            return [dict(zip(columns, row, strict=False)) for row in self._uom_data]
+        # Fall back to SQLite execution for other queries
+        return self._sqlite_runner.run_query(query, params)
+
+    def close(self):
+        """Close the underlying connection."""
+        self._sqlite_runner.close()
 
 @dataclass
 class GoldenTestCase:
@@ -438,6 +513,11 @@ def run_converter(
         if cred in params_copy:
             settings_dict[cred] = params_copy.pop(cred)
 
+    # Extract test data if present (used for injecting mock DB results)
+    test_customer_data = params_copy.pop("test_customer_data", None)
+    test_uom_data = params_copy.pop("test_uom_data", None)
+    test_inv_fetcher_data = params_copy.pop("test_inv_fetcher_data", None)
+
     # Create a temp input file to ensure we have a valid path
     with tempfile.TemporaryDirectory() as temp_workdir:
         # Copy input to temp directory with .edi extension
@@ -450,14 +530,130 @@ def run_converter(
         # Create output path in temp directory
         temp_output = os.path.join(temp_workdir, "output")
 
-        # Run conversion
-        result = edi_convert(
-            temp_input,
-            temp_output,
-            settings_dict,
-            params_copy,
-            {},  # upc_lookup
+        # Determine whether we have credentials or test data
+        has_creds = all(
+            settings_dict.get(cred) for cred in ["as400_username", "as400_address", "as400_password"]
         )
+
+        # Inject test data for CustomerLookupService + UOMLookupService converters
+        if test_customer_data is not None or test_uom_data is not None:
+            import csv
+
+            from dispatch.converters.customer_queries import BASIC_CUSTOMER_QUERY_SQL
+
+            # Dynamically find the converter class by name
+            converter_cls_name = "".join(word.title() for word in format_name.split("_")) + "Converter"
+            converter_class = getattr(module, converter_cls_name)
+
+            # Create test query runner with injected data
+            sqlite_conn = SQLiteConnection(":memory:")
+            test_runner = QueryRunnerWithTestData(sqlite_conn)
+            if test_customer_data is not None:
+                test_runner.set_customer_data(test_customer_data)
+            if test_uom_data is not None:
+                test_runner.set_uom_data(test_uom_data)
+
+            # Use STEWARTS_CUSTOMER_QUERY_SQL for stewarts_custom, BASIC_CUSTOMER_QUERY_SQL for jolley_custom
+            if format_name == "stewarts_custom":
+                from dispatch.converters.customer_queries import (
+                    STEWARTS_CUSTOMER_QUERY_SQL,
+                )
+                customer_sql = STEWARTS_CUSTOMER_QUERY_SQL
+            else:
+                customer_sql = BASIC_CUSTOMER_QUERY_SQL
+
+            # Wrap edi_convert to intercept converter creation and patch instance methods
+            original_edi_convert = edi_convert
+
+            def wrapped_edi_convert(
+                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+            ):
+                # Patch the converter class's _initialize_output so that when the
+                # converter instance calls self._initialize_output(context), our patch runs.
+                # We must patch the class before the converter is instantiated inside
+                # original_edi_convert -> make_edi_convert -> converter.edi_convert().
+                original_init = converter_class._initialize_output
+
+                def patched_init(self, context):
+                    # Inject test query runner into the database connector
+                    self._db_connector._query_runner = test_runner
+                    self._db_connector._db_initialized = True
+
+                    # Initialize customer and UOM services with the test runner
+                    self._customer_service = CustomerLookupService(test_runner, customer_sql)
+                    self._uom_service = UOMLookupService(test_runner)
+
+                    # Open CSV output file
+                    context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
+                        context.get_output_path(".csv"), "w", newline="\n", encoding="utf-8"
+                    )
+                    context.csv_writer = csv.writer(context.output_file, dialect="unix")
+
+                converter_class._initialize_output = patched_init
+                try:
+                    return original_edi_convert(
+                        edi_process,
+                        output_filename,
+                        settings_dict,
+                        parameters_dict,
+                        upc_lookup,
+                    )
+                finally:
+                    converter_class._initialize_output = original_init
+
+            result = wrapped_edi_convert(
+                temp_input,
+                temp_output,
+                settings_dict,
+                params_copy,
+                {},  # upc_lookup
+            )
+        # Inject InvFetcher test data for InvFetcher-based converters
+        elif test_inv_fetcher_data and format_name in ("fintech", "estore_einvoice", "estore_einvoice_generic"):
+            # Patch InvFetcher.fetch_po on the converter instance after it's created
+            # We do this by patching the instance's inv_fetcher after _initialize_output runs
+            # Store test data on the converter instance for the patched methods to use
+
+            # We need to hook after converter creation but before first use
+            # Use a monkeypatch approach: patch the InvFetcher class methods
+            from core.edi.inv_fetcher import InvFetcher
+
+            original_inv_fetcher_class_run_query = InvFetcher._po_query
+
+            test_po = test_inv_fetcher_data.get("po", "")
+            test_cust_name = test_inv_fetcher_data.get("cust_name", "")
+            test_cust_no = test_inv_fetcher_data.get("cust_no", 0)
+
+            # Create a patched version that returns test data instead of querying
+            def patched_po_query(self, invoice_number):
+                # Return test data as a dict-like result
+                # The _set_values_from_row expects dict.values() or tuple
+                return [{"po": test_po, "custname": test_cust_name, "custno": test_cust_no}]
+
+            InvFetcher._po_query = patched_po_query
+
+            try:
+                result = edi_convert(
+                    temp_input,
+                    temp_output,
+                    settings_dict,
+                    params_copy,
+                    {},  # upc_lookup
+                )
+            finally:
+                InvFetcher._po_query = original_inv_fetcher_class_run_query
+        # Skip if no credentials and no test data was used by any branch above
+        elif not has_creds:
+            pytest.skip("Requires AS400 credentials or test data")
+        else:
+            # Run conversion with real credentials
+            result = edi_convert(
+                temp_input,
+                temp_output,
+                settings_dict,
+                params_copy,
+                {},  # upc_lookup
+            )
 
         if not result or not os.path.exists(result):
             return b""
