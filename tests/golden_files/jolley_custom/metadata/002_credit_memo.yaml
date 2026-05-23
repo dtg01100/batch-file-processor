@@ -1,8 +1,37 @@
 test_id: "002"
-description: "credit_memo"
-format: "jolley_custom"
+description: credit_memo
+format: jolley_custom
 parameters:
-  convert_to_format: "jolley_custom"
-  as400_username: "${AS400_USERNAME}"
-  as400_address: "${AS400_ADDRESS}"
-  as400_password: "${AS400_PASSWORD}"
+  convert_to_format: jolley_custom
+  test_customer_data:
+    - - "John Salesperson"
+      - "260427"
+      - "NET30"
+      - 30
+      - "ACTIVE"
+      - 123456
+      - "Test Customer"
+      - "123 Main St"
+      - "Springfield"
+      - "IL"
+      - "62701"
+      - "5551234567"
+      - ""
+      - ""
+      - "ACTIVE"
+      - 123456
+      - "Test Customer"
+      - "123 Main St"
+      - "Springfield"
+      - "IL"
+      - "62701"
+      - "5559876543"
+      - ""
+      - ""
+  test_uom_data:
+    - - 123456
+      - 1
+      - EA
+    - - 654321
+      - 1
+      - EA

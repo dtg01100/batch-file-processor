@@ -1,8 +1,10 @@
+test_id: "001"
 description: basic_invoice
 format: fintech
 parameters:
-  as400_address: ${AS400_ADDRESS}
-  as400_password: ${AS400_PASSWORD}
-  as400_username: ${AS400_USERNAME}
   convert_to_format: fintech
-test_id: '001'
+  fintech_division_id: ""
+  test_inv_fetcher_data:
+    po: "PO12345"
+    cust_name: "Test Customer"
+    cust_no: 0

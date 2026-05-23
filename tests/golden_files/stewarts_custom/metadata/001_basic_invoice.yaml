@@ -1,8 +1,36 @@
+test_id: "001"
 description: basic_invoice
 format: stewarts_custom
 parameters:
-  as400_address: ${AS400_ADDRESS}
-  as400_password: ${AS400_PASSWORD}
-  as400_username: ${AS400_USERNAME}
   convert_to_format: stewarts_custom
-test_id: '001'
+  test_customer_data:
+    - - "John Salesperson"          # Salesperson Name
+      - "260427"                    # Invoice Date
+      - "ACH"                       # Terms Code
+      - 30                           # Terms Duration
+      - "ACTIVE"                     # Customer Status
+      - 60670                        # Customer Number
+      - "BESSERY QUALITY MARKET VT"  # Customer Name
+      - ""                           # Customer Store Number
+      - "1398 NORTH AVENUE"          # Customer Address
+      - "BURLINGTON"                 # Customer Town
+      - "VT"                        # Customer State
+      - "05401"                     # Customer Zip
+      - "5551234567"                # Customer Phone
+      - ""                           # Customer Email
+      - ""                           # Customer Email 2
+      - "ACTIVE"                    # Corporate Customer Status
+      - 60670                        # Corporate Customer Number
+      - "BESSERY QUALITY MARKET VT"  # Corporate Customer Name
+      - ""                           # Corporate Customer Store Number
+      - "1398 NORTH AVENUE"          # Corporate Customer Address
+      - "BURLINGTON"                # Corporate Customer Town
+      - "VT"                        # Corporate Customer State
+      - "05401"                     # Corporate Customer Zip
+      - "5559876543"                # Corporate Customer Phone
+      - ""                           # Corporate Customer Email
+      - ""                           # Corporate Customer Email 2
+  test_uom_data:
+    - - 1          # itemno (vendor_item int for VI001)
+      - 1          # uom_mult
+      - EA         # uom_code
