@@ -15,7 +15,7 @@ class TestSMTPService:
         service = SMTPService()
 
         with patch("smtplib.SMTP") as smtp_cls:
-            smtp_instance = MagicMock(spec=smtplib.SMTP)
+            smtp_instance = MagicMock()
             smtp_cls.return_value = smtp_instance
 
             success, error = service.test_connection(

@@ -64,9 +64,9 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
         scannerware_config = {"padding": "left"}
         estore_config = {"store_number": "12345"}
 
-        state_manager.initialize_state("csv", csv_config, True, [])
-        state_manager.initialize_state("scannerware", scannerware_config, True, [])
-        state_manager.initialize_state("estore", estore_config, True, [])
+        state_manager.initialize_state("csv", csv_config, is_valid=True)
+        state_manager.initialize_state("scannerware", scannerware_config, is_valid=True)
+        state_manager.initialize_state("estore", estore_config, is_valid=True)
 
         all_configs = state_manager.get_all_configs()
 
@@ -79,9 +79,9 @@ class TestPluginMapperWithFormGenerator(unittest.TestCase):
         """Test undo/redo with multiple plugin formats."""
         state_manager = PluginSectionStateManager()
 
-        state_manager.initialize_state("csv", {"v1": 1}, True, [])
-        state_manager.update_state("csv", {"v1": 2}, True, [])
-        state_manager.update_state("csv", {"v1": 3}, True, [])
+        state_manager.initialize_state("csv", {"v1": 1}, is_valid=True)
+        state_manager.update_state("csv", {"v1": 2}, is_valid=True)
+        state_manager.update_state("csv", {"v1": 3}, is_valid=True)
 
         state_manager.undo()
         state_manager.undo()
@@ -146,11 +146,11 @@ class TestPluginMapperWithFolderConfig(unittest.TestCase):
         """Test that validation state is properly tracked."""
         state_manager = PluginSectionStateManager()
 
-        state_manager.initialize_state("csv", {"value": 1}, True, [])
+        state_manager.initialize_state("csv", {"value": 1}, is_valid=True)
 
         self.assertTrue(state_manager.get_state("csv").is_valid)
 
-        state_manager.update_state("csv", {"value": 2}, False, ["Invalid value"])
+        state_manager.update_state("csv", {"value": 2}, is_valid=False, validation_errors=["Invalid value"])
 
         state = state_manager.get_state("csv")
         self.assertFalse(state.is_valid)

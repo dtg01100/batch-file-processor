@@ -127,8 +127,8 @@ class TestAuditBulletproof:
 
         import dispatch.observability
 
-        mock_db = MagicMock()
-        mock_db.audit_log_table.insert.side_effect = RuntimeError("Database locked")
+        mock_audit_db = MagicMock()
+        mock_audit_db.audit_log_table.insert.side_effect = RuntimeError("Database locked")
 
         audit_queue = queue_lib.Queue()
         audit_logger = dispatch.observability.AuditLogger()
@@ -145,7 +145,7 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_db)
+        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_audit_db)
 
         import threading
 
@@ -155,7 +155,7 @@ class TestAuditBulletproof:
         if t.is_alive():
             writer._shutdown.set()
 
-        assert mock_db.audit_log_table.insert.called
+        assert mock_audit_db.audit_log_table.insert.called
 
     def test_audit_events_not_lost_on_db_failure(self, tmp_path):
         """Verify audit events are handled gracefully when DB is down."""
@@ -163,8 +163,8 @@ class TestAuditBulletproof:
 
         import dispatch.observability
 
-        mock_db = MagicMock()
-        mock_db.audit_log_table.insert.side_effect = sqlite3.OperationalError(
+        mock_audit_db = MagicMock()
+        mock_audit_db.audit_log_table.insert.side_effect = sqlite3.OperationalError(
             "Database unavailable"
         )
 
@@ -184,7 +184,7 @@ class TestAuditBulletproof:
         for event in audit_logger.drain():
             audit_queue.put(event)
 
-        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_db)
+        writer = dispatch.observability.AuditBackgroundWriter(audit_queue, mock_audit_db)
 
         import threading
 
@@ -194,7 +194,7 @@ class TestAuditBulletproof:
         if t.is_alive():
             writer._shutdown.set()
 
-        assert mock_db.audit_log_table.insert.called
+        assert mock_audit_db.audit_log_table.insert.called
 
     def test_audit_queue_is_thread_safe(self):
         """Verify audit logger is thread-safe for concurrent access."""

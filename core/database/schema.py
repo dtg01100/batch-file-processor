@@ -477,6 +477,20 @@ def ensure_schema(database_connection) -> None:
         "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
         "Migration: added plugin_configurations column to folders table",
     )
+    # Initialize existing rows with default value {}
+    try:
+        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+            _execute_sqlite_statement(
+                raw_conn,
+                "UPDATE folders SET plugin_configurations = '{}' WHERE plugin_configurations IS NULL",
+            )
+        else:
+            database_connection.query(
+                "UPDATE folders SET plugin_configurations = '{}' WHERE plugin_configurations IS NULL"
+            )
+        logger.info("Migration: initialized plugin_configurations for existing rows")
+    except Exception:
+        logger.info("Migration: plugin_configurations initialization skipped (may already exist)")
 
     _safe_alter(
         raw_conn,

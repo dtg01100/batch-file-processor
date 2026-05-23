@@ -32,6 +32,7 @@ from interface.qt.services.qt_services import QtProgressService, QtUIService
 from interface.qt.widgets.folder_list_widget import FolderListWidget
 from interface.qt.widgets.search_widget import SearchWidget
 from interface.services.smtp_service import SMTPServiceProtocol
+from interface.operations.maintenance_functions import MaintenanceFunctions
 from scripts import create_database
 
 # =============================================================================
@@ -871,7 +872,8 @@ class TestDialogStateValidation:
 
     def test_maintenance_dialog_operations(self, qtbot, temp_database):
         """Test maintenance dialog operations."""
-        dialog = MaintenanceDialog(None, temp_database)
+        mf = MaintenanceFunctions(database_obj=temp_database)
+        dialog = MaintenanceDialog(None, mf)
         qtbot.addWidget(dialog)
 
         # Should have operation buttons
@@ -1049,7 +1051,9 @@ class TestUIThreadSafetyAndState:
         dialogs = []
 
         # Create multiple dialogs
-        dialog1 = MaintenanceDialog(None, temp_database)
+        # Create multiple dialogs
+        mf = MaintenanceFunctions(database_obj=temp_database)
+        dialog1 = MaintenanceDialog(None, mf)
         dialogs.append(dialog1)
         qtbot.addWidget(dialog1)
 

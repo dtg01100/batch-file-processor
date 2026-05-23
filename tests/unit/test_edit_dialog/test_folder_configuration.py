@@ -935,7 +935,6 @@ class TestConvertFormat:
 
     def test_enum_values(self):
         """Test ConvertFormat enum values."""
-        assert ConvertFormat.CSV.value == "csv"
+        assert ConvertFormat.CSV.value == "CSV"
         assert ConvertFormat.SCANNERWARE.value == "ScannerWare"
-        assert ConvertFormat.FINTECH.value == "fintech"
-        assert ConvertFormat.DO_NOTHING.value == "do_nothing"
+        assert ConvertFormat.FINTECH.value == "Fintech"

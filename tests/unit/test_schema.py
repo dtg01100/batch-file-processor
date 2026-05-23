@@ -28,6 +28,8 @@ Tables tested:
 - file_tags
 """
 
+import sqlite3
+
 import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.database]
@@ -549,8 +551,8 @@ class TestSchemaErrorHandling:
         # Make query raise an exception
         mock_database.query.side_effect = Exception("Query error")
 
-        # Provide a raw connection
-        mock_conn = MagicMock(spec=object)
+        # Provide a raw connection (spec=sqlite3.Connection since that's what _conn is)
+        mock_conn = MagicMock(spec=sqlite3.Connection)
         mock_database._conn = mock_conn
 
         # Should use raw connection
@@ -563,8 +565,12 @@ class TestSchemaErrorHandling:
         """Test that ensure_schema handles all errors silently."""
         # Make both query and raw connection fail
         mock_database.query.side_effect = Exception("Query error")
-        mock_database._conn = MagicMock(spec=object)
-        mock_database._conn.execute.side_effect = Exception("Raw connection error")
+        mock_conn = MagicMock(spec=sqlite3.Connection)
+        mock_database._conn = mock_conn
+        # Prevent auto-creation of raw_connection which would bypass _conn fallback
+        if hasattr(mock_database, 'raw_connection'):
+            del mock_database.raw_connection
+        mock_conn.execute.side_effect = sqlite3.OperationalError("Raw connection error")
 
         # Should not raise exception
         schema.ensure_schema(mock_database)

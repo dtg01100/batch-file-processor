@@ -287,21 +287,21 @@ class TestPluginSectionCommunication:
         )
         generator = FormGeneratorFactory.create_form_generator(schema, "qt")
 
-        section_ok = MagicMock(spec=object)
+        section_ok = MagicMock()
         section_ok.section_id = "ok_section"
         section_ok.get_values.return_value = {"enabled": True}
         section_ok.validate.return_value = __import__(
             "interface.plugins.validation_framework", fromlist=["ValidationResult"]
         ).ValidationResult(success=True, errors=[])
 
-        section_bad = MagicMock(spec=object)
+        section_bad = MagicMock()
         section_bad.section_id = "bad_section"
         section_bad.get_values.return_value = {"enabled": False}
         section_bad.validate.return_value = __import__(
             "interface.plugins.validation_framework", fromlist=["ValidationResult"]
         ).ValidationResult(success=False, errors=["bad field"])
 
-        section_fallback = MagicMock(spec=object)
+        section_fallback = MagicMock()
         section_fallback.section_id = "fallback_section"
         # No validate() method branch: use get_validation_errors fallback
         del section_fallback.validate

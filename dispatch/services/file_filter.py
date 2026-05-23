@@ -34,7 +34,9 @@ logger = get_logger(__name__)
 
 def _has_sql(table: Any) -> bool:
     """Return True if the table supports raw SQL execution."""
-    return hasattr(table, "raw_connection") or hasattr(table, "execute")
+    return hasattr(table, "execute") or (
+        hasattr(table, "raw_connection") and table.raw_connection is not None
+    )
 
 
 def get_skipped_checksums(table: Any, folder_id: int) -> set[str]:

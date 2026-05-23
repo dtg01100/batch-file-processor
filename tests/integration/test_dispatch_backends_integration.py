@@ -962,32 +962,30 @@ class TestChecksumIntegration:
 
     def test_checksum_calculation(self, sample_edi_file):
         """Test that checksums are correctly calculated."""
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
+        from core.utils.file_utils import calculate_file_checksum
 
-        checksum = orchestrator._calculate_checksum(sample_edi_file)
+        checksum = calculate_file_checksum(sample_edi_file)
 
         # Verify it's a valid MD5 hex string
         assert len(checksum) == 32
         assert all(c in "0123456789abcdef" for c in checksum)
 
         # Verify consistency
-        checksum2 = orchestrator._calculate_checksum(sample_edi_file)
+        checksum2 = calculate_file_checksum(sample_edi_file)
         assert checksum == checksum2
 
     def test_different_files_different_checksums(self, tmp_path):
         """Test that different files produce different checksums."""
+        from core.utils.file_utils import calculate_file_checksum
+
         file1 = tmp_path / "file1.edi"
         file2 = tmp_path / "file2.edi"
 
         file1.write_text("Content A")
         file2.write_text("Content B")
 
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        checksum1 = orchestrator._calculate_checksum(str(file1))
-        checksum2 = orchestrator._calculate_checksum(str(file2))
+        checksum1 = calculate_file_checksum(str(file1))
+        checksum2 = calculate_file_checksum(str(file2))
 
         assert checksum1 != checksum2
 
