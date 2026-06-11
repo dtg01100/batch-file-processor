@@ -179,7 +179,8 @@ class TestFolderSettingsValidator:
     def test_validate_alias_too_long(self, validator):
         """Test alias length validation."""
         result = validator.validate_alias(
-            alias="a" * 51, folder_name="test_folder"  # Max is 50
+            alias="a" * 51,
+            folder_name="test_folder",  # Max is 50
         )
 
         assert result.is_valid is False

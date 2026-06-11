@@ -437,6 +437,6 @@ class TestDB2SSHAdapter:
 
         source = inspect.getsource(_run_query)
         # Verify -t flag is present (use raw string to avoid escaping issues)
-        assert (
-            "-t" in source
-        ), "db2 command should use -t flag for semicolon termination"
+        assert "-t" in source, (
+            "db2 command should use -t flag for semicolon termination"
+        )

@@ -447,7 +447,10 @@ def create_csv_writer(
 
     """
     return csv.writer(
-        file_handle, dialect=dialect, lineterminator=lineterminator, quoting=quoting  # type: ignore[arg-type]  # Literal vs int mismatch
+        file_handle,
+        dialect=dialect,
+        lineterminator=lineterminator,
+        quoting=quoting,  # type: ignore[arg-type]  # Literal vs int mismatch
     )
 
 

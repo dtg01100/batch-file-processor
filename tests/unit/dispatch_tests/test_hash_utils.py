@@ -254,8 +254,8 @@ class TestGenerateFileHashRetryCount:
             # attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> attempt 4 succeeds
             # But with the fix: attempt 1 (fails) -> attempt 2 (fails) -> attempt 3 (fails) -> then raise
             # So with 1 failure, we should have 2 attempts total (initial + 1 retry)
-            assert (
-                call_count[0] == 2
-            ), f"Expected 2 attempts (1 fail + 1 success), got {call_count[0]}"
+            assert call_count[0] == 2, (
+                f"Expected 2 attempts (1 fail + 1 success), got {call_count[0]}"
+            )
         finally:
             os.unlink(temp_path)

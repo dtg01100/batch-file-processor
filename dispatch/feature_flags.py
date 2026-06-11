@@ -76,7 +76,7 @@ def set_feature_flag(name: str, *, value: bool) -> None:
 
     if name not in flag_map:
         raise ValueError(
-            f"Unknown feature flag: {name}. " f"Valid flags: {list(flag_map.keys())}"
+            f"Unknown feature flag: {name}. Valid flags: {list(flag_map.keys())}"
         )
 
     os.environ[flag_map[name]] = "true" if value else "false"

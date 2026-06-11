@@ -14,7 +14,6 @@ from interface.qt.dialogs.database_import_dialog import DbMigrationJob, ImportTh
 
 
 class TestImportThread:
-
     def test_run_cancels_when_old_version_prompt_rejected(self, monkeypatch):
         version_table = MagicMock(spec=TableProtocol)
         version_table.find_one.return_value = {"version": "13", "os": "Linux"}
@@ -106,7 +105,6 @@ class TestImportThread:
 
 
 class TestDbMigrationJob:
-
     def test_migrate_folder_merges_copy_ftp_email_fields(self, monkeypatch):
         job = DbMigrationJob("/tmp/original.db", "/tmp/new.db")
 

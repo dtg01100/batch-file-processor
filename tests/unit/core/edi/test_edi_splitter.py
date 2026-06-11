@@ -420,9 +420,9 @@ class TestRealFilesystem:
             "get_absolute_path",
         ]
         for method in required_methods:
-            assert hasattr(
-                fs, method
-            ), f"RealFilesystem missing required method: {method}"
+            assert hasattr(fs, method), (
+                f"RealFilesystem missing required method: {method}"
+            )
 
 
 class TestEDISplitterProtocolCompliance:

@@ -615,7 +615,8 @@ class ResendDialog(BaseDialog):
                         assert model is not None
                         sel_model.select(
                             model.index(row, 0),
-                            QItemSelectionModel.SelectionFlag.Deselect | QItemSelectionModel.SelectionFlag.Rows,  # type: ignore[call-overload]
+                            QItemSelectionModel.SelectionFlag.Deselect
+                            | QItemSelectionModel.SelectionFlag.Rows,  # type: ignore[call-overload]
                         )
                     break
             self._is_updating_selection = False

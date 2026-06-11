@@ -157,7 +157,7 @@ def test_boolean_option_cases_include_both_states() -> None:
         option for option, states in seen_states.items() if states != {False, True}
     ]
     assert not missing_two_state, (
-        "Options missing True/False coverage: " f"{sorted(missing_two_state)}"
+        f"Options missing True/False coverage: {sorted(missing_two_state)}"
     )
 
 
@@ -188,6 +188,6 @@ def test_real_world_scenarios_use_shared_option_matrices() -> None:
         parametrize_marks = [m for m in marks if m.name == "parametrize"]
         assert parametrize_marks, f"{func_name} missing @pytest.mark.parametrize"
         actual_values = parametrize_marks[0].args[1]
-        assert (
-            actual_values == expected_values
-        ), f"{func_name} must use shared matrix constants; found non-matching values."
+        assert actual_values == expected_values, (
+            f"{func_name} must use shared matrix constants; found non-matching values."
+        )

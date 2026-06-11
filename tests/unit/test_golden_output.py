@@ -474,9 +474,9 @@ class TestGoldenOutput:
         # Output should not be more than 10x the expected size
         # (catches infinite loops or runaway output)
         max_reasonable_size = len(expected_bytes) * 10
-        assert (
-            len(actual_bytes) <= max_reasonable_size
-        ), f"Output size {len(actual_bytes)} exceeds reasonable limit {max_reasonable_size}"
+        assert len(actual_bytes) <= max_reasonable_size, (
+            f"Output size {len(actual_bytes)} exceeds reasonable limit {max_reasonable_size}"
+        )
 
 
 def run_converter(
@@ -867,9 +867,9 @@ class TestFormatCoverage:
             expected_dir = format_dir / "expected"
 
             assert inputs_dir.exists(), f"{format_dir.name} missing inputs directory"
-            assert (
-                expected_dir.exists()
-            ), f"{format_dir.name} missing expected directory"
+            assert expected_dir.exists(), (
+                f"{format_dir.name} missing expected directory"
+            )
 
             # Count files
             input_files = (

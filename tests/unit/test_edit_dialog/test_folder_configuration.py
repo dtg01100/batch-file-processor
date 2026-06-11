@@ -335,7 +335,8 @@ class TestUPCOverrideConfiguration:
     def test_validate_enabled_invalid_category(self):
         """Test validation fails when category is invalid."""
         config = UPCOverrideConfiguration(
-            enabled=True, category_filter="1,150,ALL"  # 150 is out of range
+            enabled=True,
+            category_filter="1,150,ALL",  # 150 is out of range
         )
 
         errors = config.validate()

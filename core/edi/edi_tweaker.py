@@ -325,9 +325,7 @@ class EDITweaker:
                     )
                 else:
                     logger.exception(
-                        "Error opening file for read %s: %s",
-                        filepath,
-                        error
+                        "Error opening file for read %s: %s", filepath, error
                     )
                     raise
         msg = f"unreachable: _open_input_with_retry always returns or raises for {filepath}"  # noqa: E501
@@ -351,9 +349,7 @@ class EDITweaker:
                     )
                 else:
                     logger.exception(
-                        "Error opening file for write %s: %s",
-                        filepath,
-                        error
+                        "Error opening file for write %s: %s", filepath, error
                     )
                     raise
         msg = f"unreachable: _open_output_with_retry always returns or raises for {filepath}"  # noqa: E501

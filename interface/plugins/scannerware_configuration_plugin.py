@@ -91,8 +91,7 @@ class ScannerWareConfigurationPlugin(BaseSimpleConfigurationPlugin):
                 field_type=FieldType.INTEGER,
                 label="Invoice Date Offset",
                 description=(
-                    "Number of days to offset the invoice date"
-                    " (negative or positive)"
+                    "Number of days to offset the invoice date (negative or positive)"
                 ),
                 default=0,
                 min_value=-14,

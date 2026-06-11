@@ -26,8 +26,7 @@ class QtDiagnosticsService:
 
     def run_self_test(self) -> int:
         print(
-            f"Running self-test for {self._app._appname} Version "
-            f"{self._app._version}"
+            f"Running self-test for {self._app._appname} Version {self._app._version}"
         )
         print(f"Platform: {self._app._running_platform}")
         print("=" * 50)
@@ -132,8 +131,7 @@ class QtDiagnosticsService:
                 print(f" [OK] Config directory: {self._app._config_folder}")
             else:
                 print(
-                    f" [FAIL] Config directory not created: "
-                    f"{self._app._config_folder}"
+                    f" [FAIL] Config directory not created: {self._app._config_folder}"
                 )
                 return 1
         except Exception as e:

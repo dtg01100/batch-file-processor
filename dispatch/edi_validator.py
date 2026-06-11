@@ -278,11 +278,7 @@ class EDIValidator:
     def _edi_item_context(
         self, line_num: int, proposed_upc: str, description: str
     ) -> str:
-        return (
-            f"line {line_num}"
-            f" (UPC: {proposed_upc.strip()!r},"
-            f" desc: {description!r})"
-        )
+        return f"line {line_num} (UPC: {proposed_upc.strip()!r}, desc: {description!r})"
 
     def _edi_check_line_for_issues(self, line_num: int, line: str) -> list[str]:
         """Check a single line for EDI issues and return messages."""

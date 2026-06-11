@@ -335,9 +335,9 @@ class TestLargeFileProcessing:
         for i in range(500):
             records.append(
                 f"A{i:06d}20240101001VENDOR{i:06d}       Vendor {i:<24}{i:05d}\n"
-                f"B{i:06d}001ITEM{i:06d}   {i*10:06d}0EA{(i*100) % 10000:04d}"
-                f"Test Item {i:<25}{i*1000:08d}\n"
-                f"C{0:07d}{i*10000:08d}\n"
+                f"B{i:06d}001ITEM{i:06d}   {i * 10:06d}0EA{(i * 100) % 10000:04d}"
+                f"Test Item {i:<25}{i * 1000:08d}\n"
+                f"C{0:07d}{i * 10000:08d}\n"
             )
         (inp / "big.edi").write_text("".join(records))
 

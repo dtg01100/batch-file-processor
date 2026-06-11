@@ -14,7 +14,6 @@ _StandardButton = QMessageBox.StandardButton
 
 @pytest.mark.qt
 class TestQtUIService:
-
     def test_show_info(self, qtbot, monkeypatch):
         calls = []
         monkeypatch.setattr(
@@ -167,7 +166,6 @@ class TestQtUIService:
 
 @pytest.mark.qt
 class TestQtProgressService:
-
     def test_initially_hidden(self, qtbot):
         parent = QWidget()
         qtbot.addWidget(parent)

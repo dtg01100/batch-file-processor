@@ -411,9 +411,9 @@ class TestMigrationRollback:
             # Check backup outcome
             if backup_path.exists():
                 backup_files = list(backup_path.glob("*.db"))
-                assert (
-                    backup_files
-                ), f"Backup directory exists but no .db backup file was found: {backup_path}"
+                assert backup_files, (
+                    f"Backup directory exists but no .db backup file was found: {backup_path}"
+                )
             else:
                 folders = list(db_for_migration["folders"].find({}))
                 processed_files = list(db_for_migration["processed_files"].find({}))

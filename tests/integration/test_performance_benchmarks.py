@@ -198,7 +198,7 @@ class TestScalabilityByFileCount:
         # Allow more time for large batch
         assert_perf_threshold(elapsed < 300.0, "Should complete in under 5 minutes")
         print(
-            f"\n1000 files processed in {elapsed:.3f}s ({elapsed/1000*1000:.1f} ms/file)"
+            f"\n1000 files processed in {elapsed:.3f}s ({elapsed / 1000 * 1000:.1f} ms/file)"
         )
 
 
@@ -314,7 +314,7 @@ class TestMemoryUsage:
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 100  # Should use less than 100 MB
         print(
-            f"\nSmall batch memory - Current: {current/1024/1024:.2f}MB, Peak: {peak_mb:.2f}MB"
+            f"\nSmall batch memory - Current: {current / 1024 / 1024:.2f}MB, Peak: {peak_mb:.2f}MB"
         )
 
     def test_memory_usage_large_batch(self, large_dataset_workspace):
@@ -349,7 +349,7 @@ class TestMemoryUsage:
         peak_mb = peak / 1024 / 1024
         assert peak_mb < 500  # Should use less than 500 MB
         print(
-            f"\nLarge batch memory - Current: {current/1024/1024:.2f}MB, Peak: {peak_mb:.2f}MB"
+            f"\nLarge batch memory - Current: {current / 1024 / 1024:.2f}MB, Peak: {peak_mb:.2f}MB"
         )
 
 
@@ -405,9 +405,9 @@ class TestDiskIO:
         # Verify all files were actually written
         written_files = list(output_dir.glob("test_*.txt"))
         assert len(written_files) == num_files, "Should write all 100 files"
-        assert all(
-            f.stat().st_size == file_size for f in written_files
-        ), "Each written file should be exactly 1KB"
+        assert all(f.stat().st_size == file_size for f in written_files), (
+            "Each written file should be exactly 1KB"
+        )
         assert_perf_threshold(elapsed < 1.0, "Should complete in under 1 second")
 
 

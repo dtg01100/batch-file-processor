@@ -207,9 +207,9 @@ class TestFolderListWidgetComprehensive:
         qtbot.addWidget(widget)
 
         # "Test Folder" (id=4) should be visible; unrelated aliases should be hidden
-        assert not widget._row_widgets[
-            4
-        ].isHidden(), "Test Folder row should not be hidden"
+        assert not widget._row_widgets[4].isHidden(), (
+            "Test Folder row should not be hidden"
+        )
         # "Archive" and "Inactive 1" should not match "Test Folder" with score_cutoff=80
         assert widget._row_widgets[5].isHidden(), "Archive row should be hidden"
 

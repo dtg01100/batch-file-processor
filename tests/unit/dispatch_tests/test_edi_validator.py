@@ -379,9 +379,9 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any(
-            "N4143303084" in e for e in errors
-        ), "Warning should include the offending UPC value"
+        assert any("N4143303084" in e for e in errors), (
+            "Warning should include the offending UPC value"
+        )
 
     def test_non_numeric_upc_warning_includes_description(self):
         """Regression: warning for non-numeric UPC must include item description."""
@@ -392,9 +392,9 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any(
-            "TURK/PROV SUB ITEM" in e for e in errors
-        ), "Warning should include the item description"
+        assert any("TURK/PROV SUB ITEM" in e for e in errors), (
+            "Warning should include the item description"
+        )
 
     def test_non_numeric_upc_warning_via_validate_with_warnings(self):
         """Regression: non-numeric UPC appears in warnings via validate_with_warnings."""
@@ -462,9 +462,9 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any(
-            "line 3" in e for e in errors
-        ), "Warning should contain the correct line number"
+        assert any("line 3" in e for e in errors), (
+            "Warning should contain the correct line number"
+        )
 
 
 class TestEDIValidatorEdgeCases:

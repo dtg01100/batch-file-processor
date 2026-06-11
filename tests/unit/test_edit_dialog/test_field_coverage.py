@@ -504,9 +504,9 @@ class TestFieldCoverageAnalysis:
             (len(fields_to_check) - len(missing_fields)) / len(fields_to_check) * 100
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("EXTRACTOR FIELD COVERAGE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total to_dict keys: {len(fields_to_check)}")
         print(f"Extractor fields: {len(extractor_fields)}")
         print(f"Coverage: {coverage_pct:.1f}%")
@@ -529,9 +529,9 @@ class TestFieldCoverageAnalysis:
 
         coverage_pct = len(expected_keys & actual_keys) / len(expected_keys) * 100
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("to_dict() FIELD COVERAGE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Expected keys: {len(expected_keys)}")
         print(f"Actual keys: {len(actual_keys)}")
         print(f"Coverage: {coverage_pct:.1f}%")
@@ -644,9 +644,9 @@ class TestFieldCoverageAnalysis:
         assert config.csv is not None
         assert config.csv.include_headers is True
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("from_dict() FIELD COVERAGE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"All {len(test_dict)} fields loaded successfully")
 
     def test_database_columns_match_config(self):
@@ -660,9 +660,9 @@ class TestFieldCoverageAnalysis:
         # Fields in initial DB schema but not in to_dict
         orphan_in_db = db_columns - to_dict_keys
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("DATABASE COLUMN COVERAGE ANALYSIS")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"to_dict keys: {len(to_dict_keys)}")
         print(f"Initial DB columns: {len(db_columns)}")
 
@@ -701,9 +701,9 @@ class TestFieldCoverageAnalysis:
             }
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("ORPHAN DATABASE COLUMN CHECK")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         if orphan_columns:
             print("Orphan DB columns (no corresponding config field):")
@@ -721,9 +721,9 @@ class TestFieldCoverageAnalysis:
         # (These would be lost when saving to database)
         orphan_config = to_dict_keys - db_columns
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("ORPHAN CONFIG FIELD CHECK")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         if orphan_config:
             print("Config fields NOT in initial DB schema (may be lost on save):")
@@ -739,9 +739,9 @@ class TestFieldCoverageAnalysis:
         backend_fields = get_backend_required_fields()
         dispatch_fields = get_dispatch_required_fields()
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("BACKEND FIELD REQUIREMENTS CHECK")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         all_satisfied = True
 
@@ -792,27 +792,27 @@ class TestNestedConfigurationCoverage:
         ftp_fields = get_dataclass_fields_flat(FTPConfiguration)
         expected = {"server", "port", "username", "password", "folder"}
 
-        assert (
-            ftp_fields == expected
-        ), f"FTP fields mismatch. Expected: {expected}, Got: {ftp_fields}"
+        assert ftp_fields == expected, (
+            f"FTP fields mismatch. Expected: {expected}, Got: {ftp_fields}"
+        )
 
     def test_email_configuration_fields(self):
         """Verify EmailConfiguration has all expected fields."""
         email_fields = get_dataclass_fields_flat(EmailConfiguration)
         expected = {"recipients", "subject_line", "sender_address"}
 
-        assert (
-            email_fields == expected
-        ), f"Email fields mismatch. Expected: {expected}, Got: {email_fields}"
+        assert email_fields == expected, (
+            f"Email fields mismatch. Expected: {expected}, Got: {email_fields}"
+        )
 
     def test_copy_configuration_fields(self):
         """Verify CopyConfiguration has all expected fields."""
         copy_fields = get_dataclass_fields_flat(CopyConfiguration)
         expected = {"destination_directory"}
 
-        assert (
-            copy_fields == expected
-        ), f"Copy fields mismatch. Expected: {expected}, Got: {copy_fields}"
+        assert copy_fields == expected, (
+            f"Copy fields mismatch. Expected: {expected}, Got: {copy_fields}"
+        )
 
     def test_edi_configuration_fields(self):
         """Verify EDIConfiguration has all 11 expected fields."""
@@ -831,9 +831,9 @@ class TestNestedConfigurationCoverage:
             "split_edi_filter_mode",
         }
 
-        assert (
-            edi_fields == expected
-        ), f"EDI fields mismatch. Expected: {expected}, Got: {edi_fields}"
+        assert edi_fields == expected, (
+            f"EDI fields mismatch. Expected: {expected}, Got: {edi_fields}"
+        )
 
     def test_upc_override_configuration_fields(self):
         """Verify UPCOverrideConfiguration has all expected fields."""
@@ -846,9 +846,9 @@ class TestNestedConfigurationCoverage:
             "padding_pattern",
         }
 
-        assert (
-            upc_fields == expected
-        ), f"UPC fields mismatch. Expected: {expected}, Got: {upc_fields}"
+        assert upc_fields == expected, (
+            f"UPC fields mismatch. Expected: {expected}, Got: {upc_fields}"
+        )
 
     def test_a_record_padding_configuration_fields(self):
         """Verify ARecordPaddingConfiguration has all expected fields."""
@@ -862,9 +862,9 @@ class TestNestedConfigurationCoverage:
             "force_txt_extension",
         }
 
-        assert (
-            a_rec_fields == expected
-        ), f"A-record fields mismatch. Expected: {expected}, Got: {a_rec_fields}"
+        assert a_rec_fields == expected, (
+            f"A-record fields mismatch. Expected: {expected}, Got: {a_rec_fields}"
+        )
 
     def test_invoice_date_configuration_fields(self):
         """Verify InvoiceDateConfiguration has all expected fields."""
@@ -876,9 +876,9 @@ class TestNestedConfigurationCoverage:
             "retail_uom",
         }
 
-        assert (
-            inv_date_fields == expected
-        ), f"Invoice date fields mismatch. Expected: {expected}, Got: {inv_date_fields}"
+        assert inv_date_fields == expected, (
+            f"Invoice date fields mismatch. Expected: {expected}, Got: {inv_date_fields}"
+        )
 
     def test_backend_specific_configuration_fields(self):
         """Verify BackendSpecificConfiguration has all expected fields."""
@@ -891,9 +891,9 @@ class TestNestedConfigurationCoverage:
             "fintech_division_id",
         }
 
-        assert (
-            backend_fields == expected
-        ), f"Backend-specific fields mismatch. Expected: {expected}, Got: {backend_fields}"
+        assert backend_fields == expected, (
+            f"Backend-specific fields mismatch. Expected: {expected}, Got: {backend_fields}"
+        )
 
     def test_csv_configuration_fields(self):
         """Verify CSVConfiguration has all expected fields."""
@@ -907,9 +907,9 @@ class TestNestedConfigurationCoverage:
             "split_prepaid_sales_tax_crec",
         }
 
-        assert (
-            csv_fields == expected
-        ), f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
+        assert csv_fields == expected, (
+            f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
+        )
 
 
 class TestFieldCoverageReport:
@@ -922,9 +922,9 @@ class TestFieldCoverageReport:
         db_columns = get_database_columns_from_create_db()
         backend_fields = get_backend_required_fields()
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print("FIELD COVERAGE SUMMARY REPORT")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
 
         print(f"\n1. FolderConfiguration.to_dict() output: {len(to_dict_keys)} fields")
         print(f"   Fields: {sorted(to_dict_keys)}")
@@ -942,11 +942,11 @@ class TestFieldCoverageReport:
         print("\n4. Coverage Analysis:")
         print(
             f"   to_dict vs Extractor: {to_dict_vs_extractor}/{len(to_dict_keys)} "
-            f"({to_dict_vs_extractor/len(to_dict_keys)*100:.1f}%)"
+            f"({to_dict_vs_extractor / len(to_dict_keys) * 100:.1f}%)"
         )
         print(
             f"   to_dict vs DB columns: {to_dict_vs_db}/{len(to_dict_keys)} "
-            f"({to_dict_vs_db/len(to_dict_keys)*100:.1f}%)"
+            f"({to_dict_vs_db / len(to_dict_keys) * 100:.1f}%)"
         )
 
         # Missing field analysis
@@ -971,7 +971,7 @@ class TestFieldCoverageReport:
                 f"   {backend_name.upper()}: {coverage}/{len(required)} fields covered"
             )
 
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
 
         # Keep a concrete invariant so this test verifies report inputs are valid
         assert len(to_dict_keys) > 0
@@ -1207,9 +1207,9 @@ class TestRoundTripIntegrity:
             == original.csv.split_prepaid_sales_tax_crec
         )
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("ROUNDTRIP TEST PASSED")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"All {len(dict_form)} fields survived the round trip!")
 
 

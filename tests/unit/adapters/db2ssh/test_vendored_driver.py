@@ -42,15 +42,13 @@ class TestParseDb2Output:
         assert rows == []
 
     def test_single_column_output(self):
-        output = "NAME\n" "----\n" "Alice\n" "Bob\n" "\n" "  2 RECORD(S) SELECTED\n"
+        output = "NAME\n----\nAlice\nBob\n\n  2 RECORD(S) SELECTED\n"
         desc, rows = _parse_db2_output(output)
         assert desc == ["NAME"]
         assert rows == [("Alice",), ("Bob",)]
 
     def test_handles_empty_data_section(self):
-        output = (
-            "NAME          AGE\n" "-----------   ---\n" "\n" "  0 RECORD(S) SELECTED\n"
-        )
+        output = "NAME          AGE\n-----------   ---\n\n  0 RECORD(S) SELECTED\n"
         desc, rows = _parse_db2_output(output)
         assert desc == ["NAME", "AGE"]
         assert rows == []
@@ -71,22 +69,22 @@ class TestParseDb2Output:
 
 class TestParseError:
     def test_extracts_sqlstate(self):
-        output = "SQLSTATE: 42704\n" "Some other text\n"
+        output = "SQLSTATE: 42704\nSome other text\n"
         result = _parse_error(output)
         assert "SQLSTATE: 42704" in result
 
     def test_extracts_native_error(self):
-        output = "NATIVE ERROR  -204\n" "Some other text\n"
+        output = "NATIVE ERROR  -204\nSome other text\n"
         result = _parse_error(output)
         assert "NATIVE ERROR  -204" in result
 
     def test_detects_not_found(self):
-        output = "Some header\n" "TABLE not found\n" "More text\n"
+        output = "Some header\nTABLE not found\nMore text\n"
         result = _parse_error(output)
         assert "TABLE not found" in result
 
     def test_detects_error_keyword(self):
-        output = "Some output\n" "An error occurred during execution\n"
+        output = "Some output\nAn error occurred during execution\n"
         result = _parse_error(output)
         assert "An error occurred during execution" in result
 
@@ -100,7 +98,7 @@ class TestParseError:
         assert result == ""
 
     def test_joins_multiple_errors(self):
-        output = "SQLSTATE: 42704\n" "NATIVE ERROR  -204\n" "TABLE not found\n"
+        output = "SQLSTATE: 42704\nNATIVE ERROR  -204\nTABLE not found\n"
         result = _parse_error(output)
         assert "SQLSTATE: 42704" in result
         assert "NATIVE ERROR  -204" in result
@@ -222,9 +220,9 @@ class TestRunQuery:
         _run_query(mock_ssh, "SELECT 1 FROM DUAL")
 
         written_sql = mock_stdin.write.call_args[0][0]
-        assert written_sql.endswith(
-            ";"
-        ), "SQL should end with semicolon for db2 -t flag"
+        assert written_sql.endswith(";"), (
+            "SQL should end with semicolon for db2 -t flag"
+        )
 
     def test_does_not_duplicate_semicolon(self):
         mock_ssh, mock_stdin = self._make_mock_ssh()

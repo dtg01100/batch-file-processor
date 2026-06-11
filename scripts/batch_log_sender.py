@@ -59,7 +59,6 @@ def do(
     message.set_content(email_body_text)
 
     for log in emails_table.all():
-
         progress_callback.update_message(
             "sending reports emails\r"
             + "email "
