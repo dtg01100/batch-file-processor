@@ -421,7 +421,7 @@ class AuditLogger:
         if corr_id:
             extra["correlation_id"] = corr_id
 
-        self._logger.log(level, f"[AUDIT] {action}", extra=extra, exc_info=exc_info)
+        self._logger.log(level, "[AUDIT] %s", action, extra=extra, exc_info=exc_info)
 
     def set_correlation_id(self, correlation_id: str | None) -> None:
         """Set the correlation ID for audit entries in the current context.

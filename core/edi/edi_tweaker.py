@@ -89,7 +89,7 @@ def _create_query_runner_adapter(settings_dict: dict) -> TweakerQueryRunnerProto
         message = "Missing AS400 credentials for tweaker query runner: " + ", ".join(
             missing_keys
         )
-        logger.warning(message + " - using NoOpQueryRunner")
+        logger.warning("%s - using NoOpQueryRunner", message)
 
         class NoOpQueryRunner:
             def run_query(self, _query: str, _params: tuple | None = None) -> list:
@@ -324,11 +324,10 @@ class EDITweaker:
                         max_retries,
                     )
                 else:
-                    logger.error(
+                    logger.exception(
                         "Error opening file for read %s: %s",
                         filepath,
-                        error,
-                        exc_info=True,
+                        error
                     )
                     raise
         msg = f"unreachable: _open_input_with_retry always returns or raises for {filepath}"  # noqa: E501
@@ -351,11 +350,10 @@ class EDITweaker:
                         max_retries,
                     )
                 else:
-                    logger.error(
+                    logger.exception(
                         "Error opening file for write %s: %s",
                         filepath,
-                        error,
-                        exc_info=True,
+                        error
                     )
                     raise
         msg = f"unreachable: _open_output_with_retry always returns or raises for {filepath}"  # noqa: E501

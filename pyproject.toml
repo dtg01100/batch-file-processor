@@ -47,6 +47,7 @@ select = [
     "ARG",
     "RUF",
     "UP",
+    "G",
 ]
 ignore = [
     "E203",

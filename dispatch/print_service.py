@@ -138,7 +138,7 @@ class WindowsPrintService(BasePrintService):
         try:
             return win32print.GetDefaultPrinter()  # type: ignore[no-any-return]
         except Exception as e:
-            logger.error("Failed to get default printer: %s", e, exc_info=True)
+            logger.exception("Failed to get default printer: %s", e)
             return None
 
     def print_file(self, file_path: str) -> bool:
@@ -156,10 +156,10 @@ class WindowsPrintService(BasePrintService):
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
-            logger.error("File not found: %s", file_path, exc_info=True)
+            logger.exception("File not found: %s", file_path)
             return False
         except Exception as e:
-            logger.error("Failed to read file for printing: %s", e, exc_info=True)
+            logger.exception("Failed to read file for printing: %s", e)
             return False
 
     def print_content(self, content: str) -> bool:
@@ -205,7 +205,7 @@ class WindowsPrintService(BasePrintService):
             return True
 
         except Exception as e:
-            logger.error("Failed to print: %s", e, exc_info=True)
+            logger.exception("Failed to print: %s", e)
             return False
 
     def is_available(self) -> bool:
@@ -247,10 +247,10 @@ class UnixPrintService(BasePrintService):
                 content = f.read()
             return self.print_content(content)
         except FileNotFoundError:
-            logger.error("File not found: %s", file_path, exc_info=True)
+            logger.exception("File not found: %s", file_path)
             return False
         except Exception as e:
-            logger.error("Failed to read file for printing: %s", e, exc_info=True)
+            logger.exception("Failed to read file for printing: %s", e)
             return False
 
     def print_content(self, content: str) -> bool:
@@ -284,10 +284,10 @@ class UnixPrintService(BasePrintService):
             return True
 
         except FileNotFoundError:
-            logger.error("lpr command not found at %s", self.lpr_path, exc_info=True)
+            logger.exception("lpr command not found at %s", self.lpr_path)
             return False
         except Exception as e:
-            logger.error("Failed to print: %s", e, exc_info=True)
+            logger.exception("Failed to print: %s", e)
             return False
 
     def is_available(self) -> bool:

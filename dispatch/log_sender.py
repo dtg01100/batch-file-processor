@@ -202,7 +202,7 @@ class SMTPEmailService:
                 error=e,
                 context={"recipients": to, "subject": subject},
             )
-            logger.error("Failed to send email: %s", e, exc_info=True)
+            logger.exception("Failed to send email: %s", e)
             return False
 
 

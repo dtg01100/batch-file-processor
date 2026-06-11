@@ -469,7 +469,7 @@ class EDISplitterStep(ErrorRecordingMixin):
                 errors=errors,
             )
         except Exception as e:
-            logger.error("Split failed for %s: %s", input_path, e, exc_info=True)
+            logger.exception("Split failed for %s: %s", input_path, e)
             error_msg = f"Split failed: {e}"
             errors.append(error_msg)
             self._record_error(input_path, error_msg)
@@ -533,9 +533,8 @@ class EDISplitterStep(ErrorRecordingMixin):
                 else:
                     logger.debug("No filtering applied to %s", input_path)
             except Exception as e:
-                logger.error(
-                    "Category filtering failed for %s: %s", input_path, e, exc_info=True
-                )
+                logger.exception(
+                    "Category filtering failed for %s: %s", input_path, e)
                 error_msg = f"Category filtering failed: {e}"
                 errors.append(error_msg)
                 self._record_error(
