@@ -470,7 +470,7 @@ def ensure_schema(database_connection) -> None:
                 database_connection.query(sql)
             logger.info(log_msg)
         except Exception:
-            logger.info(f"{log_msg} skipped (may already exist)")
+            logger.info("%s skipped (may already exist)", log_msg)
 
     _safe_alter(
         raw_conn,

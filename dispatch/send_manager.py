@@ -158,7 +158,7 @@ class SendManager:
                     success=False,
                     error=e,
                 )
-                logger.error(f"Backend '{backend_name}' failed to send: {e}")
+                logger.error("Backend '%s' failed to send: %s", backend_name, e)
                 logger.debug("Backend '%s' result: failure", backend_name)
                 # Continue with other backends instead of raising
 

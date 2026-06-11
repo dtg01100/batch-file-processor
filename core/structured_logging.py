@@ -23,9 +23,9 @@ Thread Safety:
         from core.structured_logging import set_correlation_id, get_logger
 
         def worker(thread_id):
-            set_correlation_id(f"corr-{thread_id}")
+            set_correlation_id("corr-%s" % thread_id)
             logger = get_logger(__name__)
-            logger.info(f"Thread {thread_id} working")
+            logger.info("Thread %s working", thread_id)
 
         # Each thread has its own correlation ID
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(3)]
