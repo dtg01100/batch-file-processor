@@ -149,3 +149,6 @@ tests/_tmp/
 *.env
 credentials*.txt
 secrets*.txt
+
+# AI session handoff files (per .clio/instructions.md)
+ai-assisted/
