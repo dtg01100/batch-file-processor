@@ -402,18 +402,23 @@ class DbMigrationJob:
         backup_increment.do_backup(self.original_folder_path)
         modified_new_path = backup_increment.do_backup(self.new_folder_path)
 
-        original_db_version = original_db["version"]
         original_db_version_dict = cast(
-            dict[str, Any] | None, original_db_version.find_one(id=1)
+            dict[str, Any] | None, original_db["version"].find_one(id=1)
         )
         if original_db_version_dict is None:
-            raise KeyError("version")
+            # A fresh app DB may not have a version row yet; treat it as
+            # the lowest possible version so the upgrade path runs.
+            original_db_version_dict = {"id": 1, "version": "0", "os": "Linux"}
 
         new_db = sqlite_wrapper.Database.connect(modified_new_path)
-        new_db_version = new_db["version"]
-        new_db_version_dict = cast(dict[str, Any] | None, new_db_version.find_one(id=1))
+        new_db_version_dict = cast(
+            dict[str, Any] | None, new_db["version"].find_one(id=1)
+        )
         if new_db_version_dict is None:
-            raise KeyError("version")
+            # Same handling for the legacy/imported DB: a missing row
+            # means a freshly-created database that needs the full
+            # upgrade path.
+            new_db_version_dict = {"id": 1, "version": "0", "os": "Linux"}
 
         if int(new_db_version_dict["version"]) < int(
             original_db_version_dict["version"]

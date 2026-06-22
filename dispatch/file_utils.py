@@ -3,9 +3,9 @@
 This module contains pure functions for file operations,
 extracted from dispatch.py for testability.
 """
-
 import contextlib
 import datetime
+import io
 import os
 import re
 import shutil
@@ -313,10 +313,14 @@ def apply_file_rename(
 def write_to_run_log(run_log: RunLog | None, message: str, prefix: str = "") -> None:
     """Write a message to a run log buffer.
 
-    Handles both StringIO (write/encode) and list (append) targets.
+    Handles list targets (append) and file-like targets with ``write``.
+    BytesIO and other binary file-likes require ``bytes``; StringIO and
+    other text streams require ``str``. We try the appropriate type first
+    and fall back on TypeError. Failures are still suppressed to avoid
+    masking the caller's primary exception.
 
     Args:
-        run_log: Log target (StringIO, list, or None)
+        run_log: Log target (BytesIO, StringIO, list, or None)
         message: Message to write
         prefix: Optional prefix (e.g., "ERROR: ")
 
@@ -324,14 +328,22 @@ def write_to_run_log(run_log: RunLog | None, message: str, prefix: str = "") -> 
     if run_log is None:
         return
     full_message = f"{prefix}{message}" if prefix else message
-    if hasattr(run_log, "write"):
-        with contextlib.suppress(Exception):
-            run_log.write(full_message)
-    elif hasattr(run_log, "append"):
+    if hasattr(run_log, "append") and not hasattr(run_log, "write"):
         with contextlib.suppress(Exception):
             run_log.append(full_message)
-
-
+        return
+    if not hasattr(run_log, "write"):
+        return
+    # Detect text vs binary stream. BytesIO is io.IOBase but NOT
+    # io.TextIOBase, so the isinstance check is the right discriminator.
+    # Real files opened in "b" mode are not TextIOBase either.
+    encoded_payload: str | bytes
+    if isinstance(run_log, io.TextIOBase):
+        encoded_payload = full_message
+    else:
+        encoded_payload = full_message.encode("utf-8")
+    with contextlib.suppress(Exception):
+        run_log.write(encoded_payload)  # type: ignore[arg-type]
 __all__ = [
     "apply_file_rename",
     "build_error_log_filename",

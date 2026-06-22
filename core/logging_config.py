@@ -22,12 +22,13 @@ Usage::
 
 from __future__ import annotations
 
+import io
 import logging
 import os
 import sys
 from collections.abc import MutableMapping
 from contextvars import ContextVar
-from typing import IO, Any
+from typing import IO, Any  # kept for type annotations on RunLogHandler.run_log
 
 from core.structured_logging import JSONFormatter, StructuredLogAdapter
 
@@ -273,8 +274,14 @@ class RunLogHandler(logging.Handler):
         try:
             message = self.format(record)
 
-            if isinstance(self.run_log, IO):
-                self.run_log.write((message + "\r\n").encode())
+            # `typing.IO` is a generic alias, not a runtime class — use the
+            # concrete `io.IOBase` so isinstance() correctly recognises
+            # BytesIO/StringIO file-like objects that callers pass in.
+            if isinstance(self.run_log, io.IOBase):
+                # Local alias helps type-checkers narrow the union to a
+                # file-like object before the .write() call.
+                run_log_file: io.IOBase = self.run_log
+                run_log_file.write((message + "\r\n").encode())
             elif isinstance(self.run_log, list):
                 self.run_log.append(message)
         except Exception:

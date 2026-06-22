@@ -599,7 +599,6 @@ class TestMaintenanceWorkflow:
             "interface.qt.dialogs.database_import_dialog.show_database_import_dialog",
             _fake_show_database_import_dialog,
         )
-
         # Ensure the run coordinator can write logs without interactive prompts.
         logs_dir = temp_workspace["workspace"] / "logs"
         logs_dir.mkdir(exist_ok=True)
