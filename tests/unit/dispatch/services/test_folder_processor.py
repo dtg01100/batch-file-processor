@@ -316,20 +316,12 @@ class TestFolderPipelineExecutor:
         assert result == {}
 
     def test_record_processed_file(self):
-        """Test _record_processed_file uses raw SQL to insert record."""
+        """Test _record_processed_file uses Table API (insert) to record file."""
         deps = FolderProcessingDependencies()
         executor = FolderPipelineExecutor(deps)
 
         mock_processed = Mock()
-        # find_one is checked but raw SQL is used for insert
         mock_processed.find_one.return_value = None
-
-        # Mock raw_connection for SQL path
-        mock_conn = Mock()
-        mock_cursor = Mock()
-        mock_cursor.fetchone.return_value = None  # No existing resend record
-        mock_conn.execute.return_value = mock_cursor
-        mock_processed.raw_connection = mock_conn
 
         mock_file_result = Mock(
             file_name="/test.txt",
@@ -342,11 +334,12 @@ class TestFolderPipelineExecutor:
             mock_file_result,
         )
 
-        # The code uses raw SQL via conn.execute(), not table.insert()
-        # Verify INSERT was called via raw_connection.execute()
-        calls = mock_conn.execute.call_args_list
-        insert_call = [c for c in calls if "INSERT" in str(c)]
-        assert len(insert_call) == 1, "Expected INSERT via raw_connection.execute()"
+        # The code uses Table API (insert/find_one/update), not raw SQL
+        mock_processed.insert.assert_called_once()
+        call_kwargs = mock_processed.insert.call_args[0][0]
+        assert call_kwargs["file_name"] == "/test.txt"
+        assert call_kwargs["file_checksum"] == "abc123"
+        assert call_kwargs["folder_id"] == 1
 
     def test_record_processed_file_handles_error(self):
         """Test _record_processed_file handles insert errors gracefully."""

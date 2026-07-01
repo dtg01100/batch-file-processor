@@ -43,4 +43,4 @@ def do(filename) -> None:
         import subprocess
 
         lpr = subprocess.Popen("/usr/bin/lpr", stdin=subprocess.PIPE)
-        lpr.stdin.write(formatted_log.encode("utf-8"))  # type: ignore[union-attr]
+        lpr.communicate(input=formatted_log.encode("utf-8"))

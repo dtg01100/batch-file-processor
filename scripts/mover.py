@@ -72,12 +72,18 @@ class DbMigrationThing:
                 original_db_version = original_database_connection_for_migrate[
                     "version"
                 ]
-                original_db_version_dict = original_db_version.find_one(id=1)
+                original_db_version_dict = original_db_version.find_one(id=1) or {
+                    "version": "0",
+                    "os": "Linux",
+                }
                 _new_db_conn = sqlite_wrapper.Database.connect(
                     _thread_result["modified_new_folder_path"]
                 )
                 new_db_version = _new_db_conn["version"]
-                new_db_version_dict = new_db_version.find_one(id=1)
+                new_db_version_dict = new_db_version.find_one(id=1) or {
+                    "version": "0",
+                    "os": "Linux",
+                }
                 if int(new_db_version_dict["version"]) < int(
                     original_db_version_dict["version"]
                 ):
@@ -159,6 +165,7 @@ class DbMigrationThing:
                 line_match, new_db_line = test_line_for_match(line)
                 logger.debug("line_match=%s", line_match)
                 if line_match is True:
+                    assert new_db_line is not None
                     update_db_line = new_db_line
                     if line.get("process_backend_copy") in (True, 1, "True"):
                         logger.info("merging copy backend settings")

@@ -379,7 +379,11 @@ class ErrorHandler:
         """
         assert self.db is not None
         try:
-            raw_conn = getattr(self.db, "raw_connection", None)
+            raw_conn = (
+                self.db.raw_connection
+                if hasattr(self.db, "raw_connection")
+                else None
+            )
             if raw_conn is not None:
                 columns = [
                     "timestamp",

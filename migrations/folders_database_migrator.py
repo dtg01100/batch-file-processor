@@ -6,7 +6,7 @@ migrations extracted into focused modules.
 External consumers import from this module:
 - `upgrade_database(database_connection, config_folder, running_platform, target_version)`
 - `CURRENT_SCHEMA_VERSION` (re-exported for convenience)
-- `_log_migration_step`, `_normalize_legacy_v32_values` (backward compat)
+- `_log_migration_step` (backward compat)
 """
 
 import logging
@@ -15,8 +15,8 @@ from migrations.legacy_migrations import run_legacy_migrations
 
 # Backward-compatible re-exports for external consumers
 from migrations.migration_helpers import (
-    CURRENT_SCHEMA_VERSION,  # noqa: F401 — re-exported for external consumers
-    _normalize_legacy_v32_values,
+   CURRENT_SCHEMA_VERSION,  # noqa: F401 — re-exported for external consumers
+   _log_migration_step,  # noqa: F401 — re-exported for external consumers
 )
 from migrations.modern_migrations import migrate_v33_to_v50, run_modern_migrations
 
@@ -56,11 +56,11 @@ def upgrade_database(
 
     # Fast-path: jump from v32 directly to v50 for production databases
     # (skip when target_version is set for testing intermediate versions)
+    # Note: _normalize_legacy_v32_values already ran inside run_legacy_migrations above.
     if str(db_version_dict["version"]) == "32" and target_version is None:
         logger.info(
             "Production database at v32, applying consolidated v33→v50 migration"
         )
-        _normalize_legacy_v32_values(database_connection)
         migrate_v33_to_v50(database_connection, db_version, running_platform)
         return
 

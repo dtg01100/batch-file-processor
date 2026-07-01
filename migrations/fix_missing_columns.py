@@ -11,8 +11,11 @@ Usage:
 """
 
 import argparse
+import logging
 import sqlite3
 import sys
+
+logger = logging.getLogger(__name__)
 
 
 def _quote_identifier(name: str) -> str:
@@ -39,7 +42,7 @@ def _get_db_version(conn: sqlite3.Connection) -> int | None:
         if row:
             return int(row[0])
     except Exception:
-        pass
+        logger.debug("Could not read DB version (may not exist yet)", exc_info=True)
     return None
 
 
