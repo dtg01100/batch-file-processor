@@ -452,6 +452,7 @@ class TestConverterEmptyFileHandling:
             )
             assert result is not None
 
+    @pytest.mark.xfail(strict=False, reason="requires live database connection")
     def test_convert_to_stewarts_custom_with_valid_content(
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
@@ -485,19 +486,15 @@ class TestConverterEmptyFileHandling:
             ]
             mock_qr_class.return_value = mock_qr_instance
 
-            try:
-                result = convert_to_stewarts_custom.edi_convert(
-                    valid_edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
-                # Should create a CSV file
-                assert os.path.exists(result + ".csv")
-            except Exception:
-                # May fail with valid content due to additional query requirements
-                pass
+            result = convert_to_stewarts_custom.edi_convert(
+                valid_edi_file,
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            # Should create a CSV file
+            assert os.path.exists(result + ".csv")
 
     def test_convert_to_stewarts_custom_missing_input(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -553,6 +550,7 @@ class TestConverterEmptyFileHandling:
             )
             assert result is not None
 
+    @pytest.mark.xfail(strict=False, reason="requires live database connection")
     def test_convert_to_jolley_custom_with_valid_content(
         self, valid_edi_file, tmp_path, default_settings_dict, default_parameters_dict
     ):
@@ -596,19 +594,15 @@ class TestConverterEmptyFileHandling:
             ]
             mock_qr_class.return_value = mock_qr_instance
 
-            try:
-                result = convert_to_jolley_custom.edi_convert(
-                    valid_edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
-                # Should create a CSV file
-                assert os.path.exists(result + ".csv")
-            except Exception:
-                # May fail with valid content due to additional query requirements
-                pass
+            result = convert_to_jolley_custom.edi_convert(
+                valid_edi_file,
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            # Should create a CSV file
+            assert os.path.exists(result + ".csv")
 
     def test_convert_to_jolley_custom_missing_input(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -687,6 +681,7 @@ class TestConverterMalformedInput:
         p.write_text(content, encoding="utf-8")
         return str(p)
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle truncated records")
     def test_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -698,18 +693,14 @@ class TestConverterMalformedInput:
         content = make_a_record() + "\n" + truncated_b + "\n"
         edi_file = self._write_edi(tmp_path, content)
 
-        # Should either succeed (skipping the bad line) or raise a known exception
-        try:
-            result = convert_to_csv.edi_convert(
-                edi_file,
-                output_base,
-                default_settings_dict,
-                default_parameters_dict,
-                {},
-            )
-            assert os.path.exists(result)
-        except Exception:
-            pass  # Acceptable -- truncated records may raise
+        result = convert_to_csv.edi_convert(
+            edi_file,
+            output_base,
+            default_settings_dict,
+            default_parameters_dict,
+            {},
+        )
+        assert os.path.exists(result)
 
     def test_csv_whitespace_only_lines(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -729,6 +720,7 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle unknown record types")
     def test_csv_unknown_record_type(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -744,18 +736,14 @@ class TestConverterMalformedInput:
         )
         edi_file = self._write_edi(tmp_path, content)
 
-        # capture_records returns None for unknown types; converter should skip
-        try:
-            result = convert_to_csv.edi_convert(
-                edi_file,
-                output_base,
-                default_settings_dict,
-                default_parameters_dict,
-                {},
-            )
-            assert os.path.exists(result)
-        except Exception:
-            pass  # Acceptable if converter raises on unknown record
+        result = convert_to_csv.edi_convert(
+            edi_file,
+            output_base,
+            default_settings_dict,
+            default_parameters_dict,
+            {},
+        )
+        assert os.path.exists(result)
 
     def test_csv_mixed_line_endings(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -777,6 +765,7 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle truncated records")
     def test_simplified_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -787,17 +776,14 @@ class TestConverterMalformedInput:
         content = make_a_record() + "\n" + truncated_b + "\n"
         edi_file = self._write_edi(tmp_path, content)
 
-        try:
-            result = convert_to_simplified_csv.edi_convert(
-                edi_file,
-                output_base,
-                default_settings_dict,
-                default_parameters_dict,
-                {},
-            )
-            assert os.path.exists(result)
-        except Exception:
-            pass
+        result = convert_to_simplified_csv.edi_convert(
+            edi_file,
+            output_base,
+            default_settings_dict,
+            default_parameters_dict,
+            {},
+        )
+        assert os.path.exists(result)
 
     def test_scannerware_whitespace_only_lines(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
@@ -821,6 +807,7 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle unknown record types")
     def test_fintech_unknown_record_type(
         self,
         tmp_path,
@@ -871,17 +858,14 @@ class TestConverterMalformedInput:
             )
             mock_utils.convert_to_price.return_value = "1.00"
 
-            try:
-                result = convert_to_fintech.edi_convert(
-                    edi_file,
-                    output_base,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {123456: ("CAT", "01234567890", "012345678901")},
-                )
-                assert os.path.exists(result)
-            except Exception:
-                pass  # Acceptable if converter raises on unknown record
+            result = convert_to_fintech.edi_convert(
+                edi_file,
+                output_base,
+                default_settings_dict,
+                default_parameters_dict,
+                {123456: ("CAT", "01234567890", "012345678901")},
+            )
+            assert os.path.exists(result)
 
 
 # ---------------------------------------------------------------------------
@@ -1643,6 +1627,7 @@ class TestSimplifiedCsvSortOrder:
 class TestEstoreEinvoiceGenericProcessing:
     """Test estore_einvoice_generic converter with various EDI content scenarios."""
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle missing A record")
     def test_estore_einvoice_generic_with_b_record_only(
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
@@ -1664,19 +1649,14 @@ class TestEstoreEinvoiceGenericProcessing:
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
-            # Should complete without crashing
-            try:
-                result = convert_to_estore_einvoice_generic.edi_convert(
-                    str(edi_file),
-                    output_filename_initial,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
-                assert os.path.exists(result)
-            except Exception:
-                # Acceptable - missing A record may cause issues
-                pass
+            result = convert_to_estore_einvoice_generic.edi_convert(
+                str(edi_file),
+                output_filename_initial,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            assert os.path.exists(result)
 
     def test_estore_einvoice_generic_with_c_record_only(
         self, tmp_path, default_settings_dict, default_parameters_dict
@@ -1751,6 +1731,7 @@ class TestEstoreEinvoiceGenericProcessing:
             # Should have multiple rows (header + B records)
             assert len(csv_content.split("\n")) >= 3
 
+    @pytest.mark.xfail(strict=False, reason="converter may not handle negative quantities")
     def test_estore_einvoice_generic_negative_quantity(
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
@@ -1774,18 +1755,14 @@ class TestEstoreEinvoiceGenericProcessing:
             mock_fetcher_instance.fetch_uom_desc.return_value = "CS"
             mock_fetcher_class.return_value = mock_fetcher_instance
 
-            try:
-                result = convert_to_estore_einvoice_generic.edi_convert(
-                    str(edi_file),
-                    output_filename_initial,
-                    default_settings_dict,
-                    default_parameters_dict,
-                    {},
-                )
-                assert os.path.exists(result)
-            except Exception:
-                # Negative qty may cause issues - that's acceptable
-                pass
+            result = convert_to_estore_einvoice_generic.edi_convert(
+                str(edi_file),
+                output_filename_initial,
+                default_settings_dict,
+                default_parameters_dict,
+                {},
+            )
+            assert os.path.exists(result)
 
     def test_estore_einvoice_generic_with_upc_lookup(
         self, tmp_path, default_settings_dict, default_parameters_dict

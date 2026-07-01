@@ -782,8 +782,8 @@ class TestMigrationVersion49to50:
 class TestV32UpgradeIntegration:
     """Integration tests for the v32→current upgrade path using the real legacy fixture."""
 
-    @pytest.fixture
-    def migrated_db_conn(self, tmp_path):
+    @pytest.fixture(scope="class")
+    def migrated_db_conn(self, tmp_path_factory):
         """Migrate the real v32 fixture to current schema and return a raw sqlite3 connection."""
         import shutil
 
@@ -791,11 +791,12 @@ class TestV32UpgradeIntegration:
         if not src.exists():
             pytest.skip("Legacy v32 database fixture not found")
 
-        db_path = str(tmp_path / "folders.db")
+        db_dir = tmp_path_factory.mktemp("migration")
+        db_path = str(db_dir / "folders.db")
         shutil.copy2(str(src), db_path)
 
         db = sqlite_wrapper.Database.connect(db_path)
-        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
+        folders_database_migrator.upgrade_database(db, str(db_dir), "Linux")
         db.close()
 
         conn = sqlite3.connect(db_path)

@@ -257,9 +257,10 @@ class EDITweaker:
 
         try:
             work_file = self._open_input_with_retry(input_path)
-
-            work_file_lined = [n for n in work_file.readlines()]
-            work_file.close()
+            try:
+                work_file_lined = [n for n in work_file.readlines()]
+            finally:
+                work_file.close()
 
             StructuredLogger.log_debug(
                 logger,
@@ -274,10 +275,10 @@ class EDITweaker:
                 output_path = output_path + ".txt"
 
             output_file = self._open_output_with_retry(output_path)
-
-            self._process_records(work_file_lined, output_file, upc_dict)
-
-            output_file.close()
+            try:
+                self._process_records(work_file_lined, output_file, upc_dict)
+            finally:
+                output_file.close()
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             StructuredLogger.log_debug(
