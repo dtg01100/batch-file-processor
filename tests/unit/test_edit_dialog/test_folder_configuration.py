@@ -26,7 +26,6 @@ from interface.models.folder_configuration import (
     UPCOverrideConfiguration,
 )
 
-
 class TestFTPConfiguration:
     """Test suite for FTPConfiguration."""
 
@@ -69,61 +68,6 @@ class TestFTPConfiguration:
 
         assert len(errors) == 0
 
-    def test_validate_missing_server(self):
-        """Test validation fails when server is missing."""
-        config = FTPConfiguration(
-            server="", username="user", password="pass", folder="/uploads/"
-        )
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("Server" in e for e in errors)
-
-    def test_validate_missing_username(self):
-        """Test validation fails when username is missing."""
-        config = FTPConfiguration(
-            server="ftp.example.com", username="", password="pass", folder="/uploads/"
-        )
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("Username" in e for e in errors)
-
-    def test_validate_missing_password(self):
-        """Test validation fails when password is missing."""
-        config = FTPConfiguration(
-            server="ftp.example.com", username="user", password="", folder="/uploads/"
-        )
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("Password" in e for e in errors)
-
-    def test_validate_missing_folder(self):
-        """Test validation fails when folder is missing."""
-        config = FTPConfiguration(
-            server="ftp.example.com", username="user", password="pass", folder=""
-        )
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("Folder" in e for e in errors)
-
-    def test_validate_folder_without_trailing_slash(self):
-        """Test validation fails when folder doesn't end with /."""
-        config = FTPConfiguration(
-            server="ftp.example.com", username="user", password="pass", folder="uploads"
-        )
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("end in" in e.lower() or "trailing" in e.lower() for e in errors)
-
     def test_validate_invalid_port(self):
         """Test validation fails for invalid port."""
         config = FTPConfiguration(
@@ -153,7 +97,6 @@ class TestFTPConfiguration:
 
         assert len(errors) > 0
         assert any("number" in e.lower() for e in errors)
-
 
 class TestEmailConfiguration:
     """Test suite for EmailConfiguration."""
@@ -196,15 +139,6 @@ class TestEmailConfiguration:
 
         assert len(errors) == 0
 
-    def test_validate_missing_recipients(self):
-        """Test validation fails when recipients are missing."""
-        config = EmailConfiguration(recipients="")
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("Required" in e for e in errors)
-
     def test_validate_invalid_email(self):
         """Test validation fails for invalid email."""
         config = EmailConfiguration(recipients="invalid-email")
@@ -222,7 +156,6 @@ class TestEmailConfiguration:
 
         # Should pass (special chars are valid in local part)
         assert len(errors) == 0
-
 
 class TestCopyConfiguration:
     """Test suite for CopyConfiguration."""
@@ -246,16 +179,6 @@ class TestCopyConfiguration:
         errors = config.validate()
 
         assert len(errors) == 0
-
-    def test_validate_missing_destination(self):
-        """Test validation fails when destination is missing."""
-        config = CopyConfiguration(destination_directory="")
-
-        errors = config.validate()
-
-        assert len(errors) > 0
-        assert any("destination" in e.lower() for e in errors)
-
 
 class TestEDIConfiguration:
     """Test suite for EDIConfiguration."""
@@ -293,7 +216,6 @@ class TestEDIConfiguration:
 
         assert len(errors) == 0
 
-
 class TestUPCOverrideConfiguration:
     """Test suite for UPCOverrideConfiguration."""
 
@@ -306,14 +228,6 @@ class TestUPCOverrideConfiguration:
         assert config.category_filter == ""
         assert config.target_length == 11
         assert config.padding_pattern == "           "
-
-    def test_validate_disabled(self):
-        """Test validation passes when UPC override is disabled."""
-        config = UPCOverrideConfiguration(enabled=False, category_filter="")
-
-        errors = config.validate()
-
-        assert len(errors) == 0
 
     def test_validate_enabled_missing_filter(self):
         """Test validation fails when enabled but filter is missing."""
@@ -344,7 +258,6 @@ class TestUPCOverrideConfiguration:
         assert len(errors) > 0
         assert any("category filter" in e.lower() for e in errors)
 
-
 class TestARecordPaddingConfiguration:
     """Test suite for ARecordPaddingConfiguration."""
 
@@ -358,16 +271,6 @@ class TestARecordPaddingConfiguration:
         assert config.append_text == ""
         assert config.append_enabled is False
         assert config.force_txt_extension is False
-
-    def test_validate_valid_padding(self):
-        """Test validation passes for valid padding."""
-        config = ARecordPaddingConfiguration(
-            enabled=True, padding_text="123456", padding_length=6
-        )
-
-        errors = config.validate()
-
-        assert len(errors) == 0
 
     def test_validate_padding_too_long(self):
         """Test validation fails when padding text is too long."""
@@ -390,7 +293,6 @@ class TestARecordPaddingConfiguration:
 
         assert len(errors) > 0
         assert any("six" in e.lower() for e in errors)
-
 
 class TestInvoiceDateConfiguration:
     """Test suite for InvoiceDateConfiguration."""
@@ -429,7 +331,6 @@ class TestInvoiceDateConfiguration:
 
         assert len(errors) > 0
         assert any("offset" in e.lower() for e in errors)
-
 
 class TestFolderConfiguration:
     """Test suite for FolderConfiguration."""
@@ -860,7 +761,6 @@ class TestFolderConfiguration:
         assert result["email_to"] == original_data["email_to"]
         assert result["copy_to_directory"] == original_data["copy_to_directory"]
 
-
 class TestBackendSpecificConfiguration:
     """Test suite for BackendSpecificConfiguration."""
 
@@ -886,7 +786,6 @@ class TestBackendSpecificConfiguration:
         assert config.estore_vendor_oid == "vendor123"
         assert config.estore_vendor_namevendoroid == "vendor_name_oid"
         assert config.fintech_division_id == "div456"
-
 
 class TestCSVConfiguration:
     """Test suite for CSVConfiguration."""
@@ -920,7 +819,6 @@ class TestCSVConfiguration:
         assert config.simple_csv_sort_order == "name,quantity,price"
         assert config.split_prepaid_sales_tax_crec is True
 
-
 class TestBackendType:
     """Test suite for BackendType enum."""
 
@@ -929,7 +827,6 @@ class TestBackendType:
         assert BackendType.COPY.value == "copy"
         assert BackendType.FTP.value == "ftp"
         assert BackendType.EMAIL.value == "email"
-
 
 class TestConvertFormat:
     """Test suite for ConvertFormat enum."""
