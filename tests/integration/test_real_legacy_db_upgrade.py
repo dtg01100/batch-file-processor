@@ -890,13 +890,15 @@ class TestRequiredFieldReadability:
     }
 
     @pytest.fixture
-    def fully_migrated_db(self, legacy_db, tmp_path):
-        """Database that has been through full upgrade + ensure_schema (same as app startup)."""
-        db = sqlite_wrapper.Database.connect(legacy_db)
-        folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
-        schema.ensure_schema(db)
-        yield db
-        db.close()
+    def fully_migrated_db(self, migrated_db_session):
+        """Database that has been through full upgrade + ensure_schema (same as app startup).
+
+        Reuses the session-cached migrated DB and adds ensure_schema() to mirror
+        real app startup. ensure_schema() is additive/idempotent so sharing the
+        read-only session DB is safe.
+        """
+        schema.ensure_schema(migrated_db_session)
+        yield migrated_db_session
 
     def test_all_folders_readable_as_folder_configuration(self, fully_migrated_db):
         """FolderConfiguration.from_dict() must not raise for any migrated folder."""
