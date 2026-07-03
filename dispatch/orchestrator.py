@@ -386,7 +386,14 @@ class DispatchOrchestrator:
         result.errors.append(error_msg)
         result.success = False
         result.files_failed = 1
-        self._log_error(run_log, error_msg)
+        log_with_context(
+            logger,
+            logging.ERROR,
+            f"ERROR: {error_msg}",
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log",
+        )
+        write_to_run_log(run_log, error_msg, prefix="ERROR: ")
         return result
 
 
@@ -551,17 +558,27 @@ class DispatchOrchestrator:
                 result.errors.append(
                     self._format_send_error(backend_name, error_message)
                 )
-                self._log_message(
-                    run_log,
+                _msg = (
                     f"FAILED sending {file_basename} via {backend_name}: "
-                    f"{error_message}",
+                    f"{error_message}"
+                )
+                write_to_run_log(run_log, _msg)
+                log_with_context(
+                    logger,
+                    logging.INFO,
+                    _msg,
+                    correlation_id=get_or_create_correlation_id(),
+                    operation="run_log",
                 )
             return
-
         result.errors.append(f"Failed to send file: {current_file}")
-        self._log_message(
-            run_log,
+        write_to_run_log(run_log, f"FAILED sending {file_basename}")
+        log_with_context(
+            logger,
+            logging.INFO,
             f"FAILED sending {file_basename}",
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log",
         )
 
     def _format_send_error(
@@ -578,10 +595,16 @@ class DispatchOrchestrator:
         file_path: str,
     ) -> None:
         """Log success and any extracted invoice numbers."""
-        self._log_message(run_log, f"Success: {file_basename}")
+        write_to_run_log(run_log, f"Success: {file_basename}")
+        log_with_context(logger, logging.INFO, f"Success: {file_basename}",
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log")
         invoice_numbers = self._extract_invoice_numbers(file_path)
         if invoice_numbers:
-            self._log_message(run_log, f"Invoice numbers: {invoice_numbers}")
+            write_to_run_log(run_log, f"Invoice numbers: {invoice_numbers}")
+            log_with_context(logger, logging.INFO, f"Invoice numbers: {invoice_numbers}",
+                correlation_id=get_or_create_correlation_id(),
+                operation="run_log")
 
     def _run_validation_pipeline(
         self,
@@ -665,9 +688,14 @@ class DispatchOrchestrator:
         )
 
         if run_conversion:
-            self._log_message(
-                run_log,
-                f"Converting {file_basename} to {convert_format}",
+            _msg = f"Converting {file_basename} to {convert_format}"
+            write_to_run_log(run_log, _msg)
+            log_with_context(
+                logger,
+                logging.INFO,
+                _msg,
+                correlation_id=get_or_create_correlation_id(),
+                operation="run_log",
             )
             converted_file = self._execute_conversion_step(
                 converter_step=converter_step,
@@ -757,9 +785,14 @@ class DispatchOrchestrator:
         else:
             result.errors.append(str(errors_or_file))
 
-        self._log_message(
-            run_log,
-            f"Validation failed for {file_basename}: {result.errors}",
+        _msg = f"Validation failed for {file_basename}: {result.errors}"
+        write_to_run_log(run_log, _msg)
+        log_with_context(
+            logger,
+            logging.INFO,
+            _msg,
+            correlation_id=get_or_create_correlation_id(),
+            operation="run_log",
         )
 
         if not normalize_bool(
@@ -827,9 +860,14 @@ class DispatchOrchestrator:
             display_name = self.send_manager.DEFAULT_BACKENDS.get(backend_name, {}).get(
                 "display_name", backend_name
             )
-            self._log_message(
-                run_log,
-                f"sending {file_basename} to {display_name}",
+            _msg = f"sending {file_basename} to {display_name}"
+            write_to_run_log(run_log, _msg)
+            log_with_context(
+                logger,
+                logging.INFO,
+                _msg,
+                correlation_id=get_or_create_correlation_id(),
+                operation="run_log",
             )
             log_backend_call(
                 logger,
@@ -1062,29 +1100,6 @@ class DispatchOrchestrator:
             or normalize_bool(folder.get("force_edi_validation", False))
         )
 
-    def _log_message(self, run_log: RunLog | None, message: str) -> None:
-        """Log a message to the run log and Python logger."""
-
-        log_with_context(
-            logger,
-            logging.INFO,
-            message,
-            correlation_id=get_or_create_correlation_id(),
-            operation="run_log",
-        )
-        write_to_run_log(run_log, message)
-
-    def _log_error(self, run_log: RunLog | None, message: str) -> None:
-        """Log an error message to the run log and Python logger."""
-
-        log_with_context(
-            logger,
-            logging.ERROR,
-            f"ERROR: {message}",
-            correlation_id=get_or_create_correlation_id(),
-            operation="run_log",
-        )
-        write_to_run_log(run_log, message, prefix="ERROR: ")
 
     def get_summary(self) -> str:
         """Get a summary of the processing run.

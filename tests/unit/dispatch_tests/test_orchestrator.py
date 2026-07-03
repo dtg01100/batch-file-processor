@@ -408,23 +408,6 @@ class TestOrchestratorHelperMethods:
         # With force_edi_validation
         assert orchestrator._should_validate({"force_edi_validation": True}) is True
 
-    def test_log_message(self):
-        """Test message logging."""
-        config = DispatchConfig()
-        orchestrator = DispatchOrchestrator(config)
-
-        # Test with file-like object
-        run_log = MagicMock(spec=RunLog)
-        orchestrator._log_message(run_log, "Test message")
-
-        run_log.write.assert_called_once()
-
-        # Test with list
-        run_log = []
-        orchestrator._log_message(run_log, "Test message")
-
-        assert len(run_log) == 1
-        assert "Test message" in run_log[0]
 
 
 class TestOrchestratorIntegration:
