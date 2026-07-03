@@ -36,38 +36,27 @@ ODBC_REQUIRED_KEYS = [
 ]
 
 
-def _load_dotenv():
-    """Load .env file from project root if present."""
-    env_path = project_root / ".env"
-    if env_path.exists():
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    os.environ.setdefault(key, value)
-
-
-_load_dotenv()
 
 
 @pytest.fixture
-def odbc_creds():
-    """Require ODBC credentials from .env file.
+def odbc_creds(monkeypatch):
+    """Provide ODBC credentials for tests that need them. Hermetic — uses literal
+    test values, not environment reads.
 
-    Skips the test if AS400_ADDRESS, AS400_USERNAME, AS400_PASSWORD, or
-    ODBC_DRIVER are not set in the environment (loaded from .env file
-    in the project root).
+    The credentials set here are placeholders; tests that consume this fixture
+    should mock the AS/400 query runner to avoid any real network call.
     """
-    missing = [key for key in ODBC_REQUIRED_KEYS if not os.environ.get(key)]
-    if missing:
-        pytest.skip(f"ODBC credentials missing from .env: {', '.join(missing)}")
-    return {
-        "address": os.environ["AS400_ADDRESS"],
-        "username": os.environ["AS400_USERNAME"],
-        "password": os.environ["AS400_PASSWORD"],
-        "driver": os.environ["ODBC_DRIVER"],
+    creds = {
+        "address": "test.as400.example.com",
+        "username": "test_user",
+        "password": "test_pass",
+        "driver": "{IBM i Access ODBC Driver}",
     }
+    monkeypatch.setenv("AS400_ADDRESS", creds["address"])
+    monkeypatch.setenv("AS400_USERNAME", creds["username"])
+    monkeypatch.setenv("AS400_PASSWORD", creds["password"])
+    monkeypatch.setenv("ODBC_DRIVER", creds["driver"])
+    return creds
 
 
 def pytest_configure(config):
