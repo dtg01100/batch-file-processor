@@ -27,12 +27,14 @@ from __future__ import annotations
 
 import os
 import pkgutil
+import threading
 from dataclasses import dataclass
 from typing import Any, cast
 
 # Registry storage - populated on first access
 _CONVERTER_REGISTRY: dict[str, dict[str, Any]] = {}
 _REGISTRY_INITIALIZED = False
+_REGISTRY_LOCK = threading.Lock()
 
 
 @dataclass
@@ -83,10 +85,18 @@ def _discover_converters() -> None:
     """
     global _REGISTRY_INITIALIZED, _CONVERTER_REGISTRY
 
+    # Double-checked locking: fast path returns without acquiring the lock.
     if _REGISTRY_INITIALIZED:
         return
 
-    _CONVERTER_REGISTRY.clear()
+    with _REGISTRY_LOCK:
+        # Re-check under the lock to avoid a TOCTOU race where two threads
+        # both pass the guard and the second call's clear() wipes the first
+        # call's registrations.
+        if _REGISTRY_INITIALIZED:
+            return
+
+        _CONVERTER_REGISTRY.clear()
 
     # Default display name mappings for converters without explicit metadata
     DISPLAY_NAME_OVERRIDES = {
