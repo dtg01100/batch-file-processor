@@ -800,8 +800,6 @@ class DispatchOrchestrator:
 
     def _apply_file_rename(self, file_path: str, context: Any) -> str:
         """Apply file rename using the shared utility."""
-        from dispatch.file_utils import apply_file_rename
-
         temp_dirs = getattr(context, "temp_dirs", [])
         rename_template = context.effective_folder.get("rename_file", "").strip()
         return apply_file_rename(file_path, rename_template, temp_dirs)
