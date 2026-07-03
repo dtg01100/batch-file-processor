@@ -335,7 +335,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Service unavailable"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -352,7 +352,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Try again"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -374,7 +374,7 @@ class TestEmailRetryLogic:
         for _ in range(11):
             mock_client.add_error(smtplib.SMTPConnectError(421, "Unavailable"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             with pytest.raises(Exception, match=r"."):
                 email_backend.do(
                     EMAIL_PARAMS,
@@ -387,7 +387,7 @@ class TestEmailRetryLogic:
         """time.sleep must not be called when the first attempt succeeds."""
         mock_client = MockSMTPClient()
 
-        with patch("backend.email_backend.time.sleep") as mock_sleep:
+        with patch("backend.backend_base.time.sleep") as mock_sleep:
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -403,7 +403,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Temp fail"))
 
-        with patch("backend.email_backend.time.sleep") as mock_sleep:
+        with patch("backend.backend_base.time.sleep") as mock_sleep:
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -420,7 +420,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Try again"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -443,7 +443,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(smtplib.SMTPConnectError(421, "Retry"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = email_backend.do(
                 params, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
             )
@@ -458,7 +458,7 @@ class TestEmailRetryLogic:
         for _ in range(10):
             mock_client.add_error(smtplib.SMTPConnectError(421, "Fail"))
 
-        with patch("backend.email_backend.time.sleep"):
+        with patch("backend.backend_base.time.sleep"):
             result = email_backend.do(
                 EMAIL_PARAMS,
                 EMAIL_SETTINGS,
@@ -473,7 +473,7 @@ class TestEmailRetryLogic:
         mock_client = MockSMTPClient()
         mock_client.add_error(OSError(errno.ENETUNREACH, "Network is unreachable"))
 
-        with patch("backend.email_backend.time.sleep") as mock_sleep:
+        with patch("backend.backend_base.time.sleep") as mock_sleep:
             with pytest.raises(RuntimeError, match="Network is unreachable"):
                 email_backend.do(
                     EMAIL_PARAMS,

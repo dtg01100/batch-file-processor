@@ -21,6 +21,8 @@ from PyQt5.QtWidgets import QDialogButtonBox, QFormLayout, QLineEdit, QMessageBo
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.services.smtp_service import SMTPService
 
+pytestmark = [pytest.mark.unit, pytest.mark.qt]
+
 
 @pytest.fixture
 def sample_settings():

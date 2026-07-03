@@ -7,6 +7,18 @@ import time
 from core.utils.timing_utils import TimerResult, context_timer
 
 
+def _busy_wait(seconds: float) -> None:
+    """Block for ``seconds`` of wall-clock time without calling ``time.sleep``.
+
+    Used by timing tests so they remain hermetic (no ``time.sleep`` in tests).
+    A busy wait gives real elapsed time on the perf_counter clock without
+    requiring the GIL to release.
+    """
+    end = time.perf_counter() + seconds
+    while time.perf_counter() < end:
+        pass
+
+
 class TestTimerResult:
     """``TimerResult`` holds the duration of a timed block."""
 
@@ -50,7 +62,7 @@ class TestContextTimer:
 
     def test_measures_duration(self):
         with context_timer() as timer:
-            time.sleep(0.01)
+            _busy_wait(0.01)
         # At least the sleep duration, with some tolerance
         assert timer.duration_ms >= 5  # 5ms tolerance
         assert timer.end_time >= timer.start_time
@@ -65,7 +77,7 @@ class TestContextTimer:
 
     def test_records_end_time_on_exit(self):
         with context_timer() as timer:
-            time.sleep(0.001)
+            _busy_wait(0.001)
         assert timer.end_time > 0
         assert timer.end_time >= timer.start_time
         assert abs(timer.end_time - timer.start_time - timer.duration_ms / 1000) < 0.01
@@ -79,7 +91,7 @@ class TestContextTimer:
         try:
             with context_timer() as timer:
                 timer_holder["t"] = timer
-                time.sleep(0.005)
+                _busy_wait(0.005)
                 raise _TestFailed()
         except _TestFailed:
             pass

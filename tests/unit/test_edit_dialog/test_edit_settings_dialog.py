@@ -19,6 +19,9 @@ sys.path.insert(
 )
 
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.gui]
 
 
 def _make_dialog(qtbot, settings_data=None, **kwargs):

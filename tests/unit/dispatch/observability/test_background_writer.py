@@ -1,11 +1,11 @@
 # tests/unit/dispatch/observability/test_background_writer.py
 import queue
+import threading
 import time
 from unittest.mock import MagicMock
 
 from dispatch.observability.audit_logger import AuditEvent
 from dispatch.observability.background_writer import AuditBackgroundWriter
-
 
 class TestAuditBackgroundWriter:
     def test_start_creates_thread(self):
@@ -36,17 +36,23 @@ class TestAuditBackgroundWriter:
             event_type="convert",
             event_status="success",
         )
+        written = threading.Event()
+        db.audit_log_table.insert.side_effect = lambda *_a, **_kw: written.set()
         writer = AuditBackgroundWriter(q, db)
         writer.start()
         q.put(evt)
-        time.sleep(0.5)
+        assert written.wait(timeout=2), "writer did not process event within 2s"
         db.audit_log_table.insert.assert_called_once()
         writer.stop()
 
     def test_does_not_crash_on_db_error(self):
         q = queue.Queue()
         db = MagicMock()
-        db.audit_log_table.insert.side_effect = RuntimeError("DB error")
+        attempted = threading.Event()
+        def _raise(*_a, **_kw):
+            attempted.set()
+            raise RuntimeError("DB error")
+        db.audit_log_table.insert.side_effect = _raise
         writer = AuditBackgroundWriter(q, db)
         writer.start()
         evt = AuditEvent(
@@ -57,5 +63,5 @@ class TestAuditBackgroundWriter:
             event_status="failure",
         )
         q.put(evt)
-        time.sleep(0.5)
+        assert attempted.wait(timeout=2), "writer never invoked insert (would hang test)"
         writer.stop()

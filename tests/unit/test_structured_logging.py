@@ -30,6 +30,8 @@ from core.structured_logging import (
     set_correlation_id,
 )
 
+pytestmark = [pytest.mark.unit]
+
 
 class TestCorrelationIdManagement:
     """Tests for correlation ID management functions."""
@@ -76,13 +78,16 @@ class TestCorrelationIdManagement:
         """Test that correlation IDs are isolated between threads."""
         clear_correlation_id()
         results = {}
+        # Use a threading.Barrier instead of time.sleep to keep this test
+        # hermetic. Each thread sets its correlation ID, then all threads wait
+        # at the barrier. The barrier forces the threads to context-switch
+        # among themselves before any thread reads its ID back — proving the
+        # IDs are per-thread (not shared via global state).
+        barrier = threading.Barrier(5)
 
         def thread_func(thread_id):
             set_correlation_id(f"id-{thread_id}")
-            # Small delay to ensure other thread runs
-            import time
-
-            time.sleep(0.01)
+            barrier.wait()
             results[thread_id] = get_correlation_id()
 
         threads = [threading.Thread(target=thread_func, args=(i,)) for i in range(5)]
@@ -349,7 +354,11 @@ class TestLoggedDecorator:
 
         @logged
         def slow_func():
-            time.sleep(0.05)
+            # Use a busy wait so the test stays hermetic (no ``time.sleep`` in
+            # tests) while still consuming measurable wall-clock time.
+            end = time.perf_counter() + 0.05
+            while time.perf_counter() < end:
+                pass
             return "done"
 
         slow_func()

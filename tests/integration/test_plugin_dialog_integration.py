@@ -256,5 +256,3 @@ class TestPluginValidationIntegration:
         assert isinstance(defaults, dict), "Should return default configuration"
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

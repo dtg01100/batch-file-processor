@@ -15,6 +15,8 @@ from dispatch.processed_files_tracker import (
     create_processed_files_tracker,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
+
 
 class TestProcessedFileRecord:
     """Tests for ProcessedFileRecord dataclass."""

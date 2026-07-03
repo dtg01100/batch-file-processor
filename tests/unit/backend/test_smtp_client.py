@@ -10,6 +10,8 @@ import pytest
 from backend.protocols import SMTPClientProtocol
 from backend.smtp_client import MockSMTPClient, RealSMTPClient, create_smtp_client
 
+pytestmark = [pytest.mark.unit, pytest.mark.backend]
+
 
 class TestRealSMTPClient:
     """Tests for RealSMTPClient implementation."""

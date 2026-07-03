@@ -11,6 +11,8 @@ from dispatch.pipeline.validator import (
     ValidationResult,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
+
 
 class MockFileSystem:
     """Mock file system for testing."""

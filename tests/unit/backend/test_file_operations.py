@@ -12,6 +12,8 @@ from backend.file_operations import (
 )
 from backend.protocols import FileOperationsProtocol
 
+pytestmark = [pytest.mark.unit, pytest.mark.backend]
+
 
 class TestRealFileOperations:
     """Tests for RealFileOperations implementation."""

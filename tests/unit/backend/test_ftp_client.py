@@ -10,6 +10,8 @@ import pytest
 from backend.ftp_client import MockFTPClient, RealFTPClient, create_ftp_client
 from backend.protocols import FTPClientProtocol
 
+pytestmark = [pytest.mark.unit, pytest.mark.backend]
+
 
 class TestRealFTPClient:
     """Tests for RealFTPClient implementation."""

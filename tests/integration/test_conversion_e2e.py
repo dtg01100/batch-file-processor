@@ -260,7 +260,7 @@ def sample_upc_lut():
 class TestConvertToCSV:
     """End-to-end tests for convert_to_csv.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_csv_produces_valid_output(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_csv produces a valid CSV file."""
@@ -442,7 +442,7 @@ class TestConvertToFintech:
     for the fintech converter - it doesn't require actual database connections.
     """
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_fintech_produces_valid_output(
         self,
         edi_file,
         tmp_path,
@@ -612,7 +612,7 @@ class TestConvertToScannerware:
 class TestConvertToSimplifiedCSV:
     """End-to-end tests for convert_to_simplified_csv.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_simplified_csv_produces_valid_output(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_simplified_csv produces a valid CSV file."""
@@ -690,7 +690,7 @@ class TestConvertToSimplifiedCSV:
 class TestConvertToYellowdogCSV:
     """End-to-end tests for convert_to_yellowdog_csv.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_yellowdog_csv_produces_valid_output(
         self,
         edi_file,
         tmp_path,
@@ -757,7 +757,7 @@ class TestConvertToYellowdogCSV:
 class TestConvertToEstoreEinvoice:
     """End-to-end tests for convert_to_estore_einvoice.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_estore_einvoice_produces_valid_output(
         self, edi_file, tmp_path, default_parameters_dict, sample_upc_lut
     ):
         """Test that convert_to_estore_einvoice produces a valid CSV file."""
@@ -804,7 +804,7 @@ class TestConvertToEstoreEinvoice:
 class TestConvertToEstoreEinvoiceGeneric:
     """End-to-end tests for convert_to_estore_einvoice_generic.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_estore_einvoice_generic_produces_valid_output(
         self,
         edi_file,
         tmp_path,
@@ -840,7 +840,7 @@ class TestConvertToEstoreEinvoiceGeneric:
 class TestConvertToStewartsCustom:
     """End-to-end tests for convert_to_stewarts_custom.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_stewarts_custom_produces_valid_output(
         self,
         edi_file,
         tmp_path,
@@ -968,7 +968,7 @@ class TestConvertToScansheetTypeA:
 class TestConvertToJolleyCustom:
     """End-to-end tests for convert_to_jolley_custom.py converter."""
 
-    def test_convert_produces_valid_csv(
+    def test_convert_to_jolley_custom_produces_valid_output(
         self,
         edi_file,
         tmp_path,

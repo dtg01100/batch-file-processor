@@ -12,6 +12,7 @@ Tests validate:
 """
 
 import os
+from unittest.mock import MagicMock, patch
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -25,10 +26,7 @@ _project_root = Path(__file__).parent.parent.parent.parent
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
-# Database credentials from environment
-AS400_USERNAME = os.environ.get("AS400_USERNAME", "")
-AS400_ADDRESS = os.environ.get("AS400_ADDRESS", "")
-AS400_PASSWORD = os.environ.get("AS400_PASSWORD", "")
+# Test credentials are fixtures, not real values.
 
 
 def run_scansheet_converter(
@@ -48,23 +46,28 @@ def run_scansheet_converter(
 
     if params is None:
         params = {}
-
     settings_dict: dict[str, Any] = {
-        "as400_username": AS400_USERNAME,
-        "as400_address": AS400_ADDRESS,
-        "as400_password": AS400_PASSWORD,
+        "as400_username": "test_user",
+        "as400_address": "test.address.com",
+        "as400_password": "test_pass",
     }
-
-    # Filter out credentials from params
     filter_params = {
         k: v
         for k, v in params.items()
         if k not in ["as400_username", "as400_address", "as400_password"]
     }
 
+    # Mock the AS400 query runner so the test never opens an SSH connection.
+    # The scansheet converter calls ``run_query`` once per invoice line; return
+    # an empty list so no UPC rows are written (matches a real "no match" DB).
+    mock_runner = MagicMock()
+    mock_runner.run_query.return_value = []
     output_path = os.path.join(output_dir, "output.xlsx")
 
-    try:
+    with patch(
+        "core.database.query_runner.create_query_runner_from_settings",
+        return_value=mock_runner,
+    ):
         return edi_convert(
             input_file,
             output_path,
@@ -72,8 +75,6 @@ def run_scansheet_converter(
             filter_params,
             {},
         )
-    except Exception as e:
-        pytest.fail(f"Conversion failed: {e}")
 
 
 def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:

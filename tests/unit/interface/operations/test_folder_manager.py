@@ -15,6 +15,8 @@ from core.ports.repositories import (
 )
 from interface.operations.folder_manager import FolderManager
 
+pytestmark = [pytest.mark.unit, pytest.mark.database]
+
 
 class MockDatabase:
     """Helper to create mock repositories for FolderManager testing.

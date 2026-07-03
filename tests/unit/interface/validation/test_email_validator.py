@@ -13,6 +13,8 @@ from interface.validation.email_validator import (
     validate_email_list,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.security]
+
 
 class TestValidateEmail:
     """Tests for validate_email function."""

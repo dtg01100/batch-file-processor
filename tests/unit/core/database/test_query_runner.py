@@ -11,6 +11,8 @@ from core.database.query_runner import (
     create_query_runner_from_settings,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.database]
+
 
 class TestMockConnection:
     """Tests for MockConnection class."""

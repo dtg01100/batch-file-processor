@@ -17,6 +17,8 @@ import pytest
 
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FileResult
 
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch, pytest.mark.integration]
+
 # =============================================================================
 # Test Doubles (Lightweight, no MagicMock)
 # =============================================================================

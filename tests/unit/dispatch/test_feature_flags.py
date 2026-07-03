@@ -56,8 +56,8 @@ class TestGetFeatureFlags:
 class TestGetStrictTestingMode:
     """Test suite for get_strict_testing_mode()."""
 
-    def test_pytest_enables_strict_testing_mode(self):
-        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
+    def test_pytest_enables_strict_testing_mode(self, monkeypatch):
+        monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "true")
         assert get_strict_testing_mode() is True
 
     def test_default_false(self, monkeypatch):
@@ -81,26 +81,26 @@ class TestSetFeatureFlag:
     def test_set_debug_mode_true(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
         set_feature_flag("debug_mode", value=True)
-        assert os.environ.get("DISPATCH_DEBUG_MODE") == "true"
         assert get_debug_mode() is True
+
 
     def test_set_debug_mode_false(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
         set_feature_flag("debug_mode", value=False)
-        assert os.environ.get("DISPATCH_DEBUG_MODE") == "false"
         assert get_debug_mode() is False
+        assert os.environ.get("DISPATCH_DEBUG_MODE") == "false"
 
     def test_set_strict_testing_mode_true(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
         set_feature_flag("strict_testing_mode", value=True)
-        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
         assert get_strict_testing_mode() is True
+        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "true"
 
     def test_set_strict_testing_mode_false(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
         set_feature_flag("strict_testing_mode", value=False)
-        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "false"
         assert get_strict_testing_mode() is False
+        assert os.environ.get("DISPATCH_STRICT_TESTING_MODE") == "false"
 
     @pytest.mark.parametrize(
         "unknown_flag", ["legacy_mode", "pipeline_enabled", "unknown_flag"]

@@ -97,6 +97,19 @@ def make_temp_log(tmp_path, name="run.log", content="Log line 1\nLog line 2\n"):
     return str(p)
 
 
+def _wait_until(predicate, timeout=2.0, interval=0.01):
+    """Poll predicate() until it returns truthy or timeout elapses.
+
+    Replaces fixed ``time.sleep()`` waits with a deterministic deadline so a
+    faster handler doesn't slow the suite and a slower one fails fast.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(interval)
+    return predicate()
+
 # ---------------------------------------------------------------------------
 # LogSender unit tests (MockEmailService)
 # ---------------------------------------------------------------------------
@@ -336,9 +349,10 @@ class TestLogSenderWithRealSMTP:
         )
 
         assert result is True
-        # Give the handler a moment to process
-        time.sleep(0.2)
-        assert len(handler.messages) == 1
+        # Deterministic wait: handler should record exactly one message.
+        assert _wait_until(lambda: len(handler.messages) == 1), (
+            f"handler.messages={handler.messages!r}"
+        )
         msg = handler.messages[0]
         assert msg["rcpt_tos"] == ["dest@test.local"]
         raw = msg["data"].decode("utf-8", errors="replace")
@@ -364,8 +378,9 @@ class TestLogSenderWithRealSMTP:
         result = sender.send_log_file(log_path, ["recv@test.local"], "File Test")
 
         assert result is True
-        time.sleep(0.2)
-        assert len(handler.messages) >= 1
+        assert _wait_until(lambda: len(handler.messages) >= 1), (
+            f"handler.messages={handler.messages!r}"
+        )
         raw = handler.messages[-1]["data"].decode("utf-8", errors="replace")
         assert "real_test.log" in raw
 

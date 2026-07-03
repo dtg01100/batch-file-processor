@@ -18,6 +18,9 @@ from interface.ports import (
     QtUIService,
     UIServiceProtocol,
 )
+import pytest
+
+pytestmark = [pytest.mark.unit]
 
 
 class TestUIServiceProtocol:

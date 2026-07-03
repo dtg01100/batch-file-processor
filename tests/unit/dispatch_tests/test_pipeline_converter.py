@@ -13,6 +13,8 @@ from dispatch.pipeline.converter import (
     MockConverter,
 )
 
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch, pytest.mark.conversion]
+
 
 class MockFileSystem:
     """Mock file system for testing."""

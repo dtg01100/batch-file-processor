@@ -767,86 +767,59 @@ class TestResolveEnvVars:
         result = resolve_env_vars("plain string")
         assert result == "plain string"
 
-    def test_brace_syntax(self):
+    def test_brace_syntax(self, monkeypatch):
         """Test ${VAR} syntax is resolved."""
-        import os
+        monkeypatch.setenv("TEST_VAR", "hello")
+        result = resolve_env_vars("prefix_${TEST_VAR}_suffix")
+        assert result == "prefix_hello_suffix"
 
-        os.environ["TEST_VAR"] = "hello"
-        try:
-            result = resolve_env_vars("prefix_${TEST_VAR}_suffix")
-            assert result == "prefix_hello_suffix"
-        finally:
-            del os.environ["TEST_VAR"]
-
-    def test_dollar_syntax(self):
+    def test_dollar_syntax(self, monkeypatch):
         """Test $VAR syntax is resolved."""
-        import os
-
-        os.environ["TEST_VAR"] = "world"
-        try:
-            result = resolve_env_vars("hello $TEST_VAR")
-            assert result == "hello world"
-        finally:
-            del os.environ["TEST_VAR"]
+        monkeypatch.setenv("TEST_VAR", "world")
+        result = resolve_env_vars("hello $TEST_VAR")
+        assert result == "hello world"
 
     def test_missing_var_resolves_to_empty(self):
         """Test that missing environment variables resolve to empty string."""
         result = resolve_env_vars("before_${NONEXISTENT_VAR}_after")
         assert result == "before__after"
 
-    def test_dict_values(self):
+    def test_dict_values(self, monkeypatch):
         """Test that dictionary values are resolved recursively."""
-        import os
-
-        os.environ["DB_USER"] = "admin"
-        os.environ["DB_PASS"] = "secret"
-        try:
-            result = resolve_env_vars(
-                {
-                    "username": "${DB_USER}",
-                    "password": "${DB_PASS}",
-                    "host": "localhost",
-                }
-            )
-            assert result == {
-                "username": "admin",
-                "password": "secret",
+        monkeypatch.setenv("DB_USER", "admin")
+        monkeypatch.setenv("DB_PASS", "secret")
+        result = resolve_env_vars(
+            {
+                "username": "${DB_USER}",
+                "password": "${DB_PASS}",
                 "host": "localhost",
             }
-        finally:
-            del os.environ["DB_USER"]
-            del os.environ["DB_PASS"]
+        )
+        assert result == {
+            "username": "admin",
+            "password": "secret",
+            "host": "localhost",
+        }
 
-    def test_list_values(self):
+    def test_list_values(self, monkeypatch):
         """Test that list values are resolved."""
-        import os
-
-        os.environ["ITEM1"] = "first"
-        os.environ["ITEM2"] = "second"
-        try:
-            result = resolve_env_vars(["${ITEM1}", "plain", "${ITEM2}"])
-            assert result == ["first", "plain", "second"]
-        finally:
-            del os.environ["ITEM1"]
-            del os.environ["ITEM2"]
+        monkeypatch.setenv("ITEM1", "first")
+        monkeypatch.setenv("ITEM2", "second")
+        result = resolve_env_vars(["${ITEM1}", "plain", "${ITEM2}"])
+        assert result == ["first", "plain", "second"]
 
     def test_none_value(self):
         """Test that None passes through unchanged."""
         result = resolve_env_vars(None)
         assert result is None
 
-    def test_nested_structure(self):
+    def test_nested_structure(self, monkeypatch):
         """Test deeply nested structures are resolved."""
-        import os
+        monkeypatch.setenv("DEEP_VAL", "found")
+        result = resolve_env_vars(
+            {"level1": {"level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]}}
+        )
 
-        os.environ["DEEP_VAL"] = "found"
-        try:
-            result = resolve_env_vars(
-                {"level1": {"level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]}}
-            )
-            assert result == {"level1": {"level2": ["found", {"nested": "found"}]}}
-        finally:
-            del os.environ["DEEP_VAL"]
 
 
 class TestFormatCoverage:

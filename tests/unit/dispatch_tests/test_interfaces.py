@@ -12,6 +12,9 @@ from dispatch.interfaces import (
     LogInterface,
     ValidatorInterface,
 )
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 
 
 class MockDatabase:

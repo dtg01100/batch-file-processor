@@ -16,6 +16,9 @@ from dispatch.print_service import (
     create_print_service,
     create_run_log_printer,
 )
+import pytest
+
+pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 
 
 class TestMockPrintService:
