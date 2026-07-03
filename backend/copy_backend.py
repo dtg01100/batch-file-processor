@@ -119,6 +119,13 @@ class CopyBackend(BackendBase):
         if not dest_dir:
             raise ValueError("copy_to_directory is not configured")
 
+        # Reject paths containing parent-directory traversal segments.
+        # Splitting handles both POSIX and Windows separators.
+        for segment in dest_dir.replace("\\", "/").split("/"):
+            if segment == "..":
+                raise ValueError(
+                    f"copy_to_directory contains parent traversal '..': {dest_dir}"
+                )
         # Ensure destination directory exists
         if not self.file_ops.exists(dest_dir):
             try:
