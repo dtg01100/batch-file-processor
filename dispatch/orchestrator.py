@@ -773,19 +773,15 @@ class DispatchOrchestrator:
             Tuple of (continue_processing, current_file_path)
 
         """
-        result.validated = is_valid
+        result.record_validation_outcome(is_valid, errors_or_file)
 
         if is_valid:
             if isinstance(errors_or_file, str):
                 return True, errors_or_file
             return True, current_file
 
-        if isinstance(errors_or_file, list):
-            result.errors.extend(errors_or_file)
-        else:
-            result.errors.append(str(errors_or_file))
-
         _msg = f"Validation failed for {file_basename}: {result.errors}"
+
         write_to_run_log(run_log, _msg)
         log_with_context(
             logger,
@@ -971,9 +967,6 @@ class DispatchOrchestrator:
         files: list[str],
         processed_files: DatabaseInterface,
         folder: dict,
-        folder_index: int | None = None,
-        folder_total: int | None = None,
-        progress_reporter: ProgressReporter | None = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.
 
@@ -1010,9 +1003,6 @@ class DispatchOrchestrator:
             processed_files,
             folder_id,
             files,
-            progress_reporter=progress_reporter,
-            folder_index=folder_index,
-            folder_total=folder_total,
         )
 
     def _record_processed_file(

@@ -49,6 +49,21 @@ class FileResult:
     converted: bool = False
     errors: list[str] = field(default_factory=list)
 
+    def record_validation_outcome(
+        self, is_valid: bool, errors_or_file: Any
+    ) -> None:
+        """Record validation outcome: set validated flag and append errors.
+
+        Mutates self.validated and self.errors. Does NOT log or write to
+        run_log — logging is the caller's responsibility.
+        """
+        self.validated = is_valid
+        if not is_valid:
+            if isinstance(errors_or_file, list):
+                self.errors.extend(errors_or_file)
+            else:
+                self.errors.append(str(errors_or_file))
+
 
 @dataclass
 class ProcessingContext:
