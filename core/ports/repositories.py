@@ -5,84 +5,114 @@ These interfaces define the contract for data access, allowing
 different implementations (SQLite, in-memory, async, etc.) to be
 substituted without changing business logic.
 
-All concrete implementations live under adapters/.
+All concrete implementations live under ``adapters/``.
+
+Domain typing policy
+--------------------
+Where canonical domain types exist (``FolderConfiguration``,
+``ProcessedFile``), the ports return them. This forces the seam
+to carry semantic meaning rather than a raw row dict, and lets
+adapters be swapped without consumers re-learning the schema.
+
+``ISettingsRepository`` and ``IEmailQueueRepository`` continue to
+use ``dict[str, Any]`` because no canonical domain types exist
+yet and the call surface is small/admin-level. When/if domain
+types are introduced, the ports can be tightened.
 """
 
 from abc import ABC, abstractmethod
 from typing import Any
 
+from core.domain.models.folder import FolderConfiguration
+from core.domain.models.processed_file import ProcessedFile
+
 
 class IFolderRepository(ABC):
-    """Abstract interface for folder configuration data access."""
+    """Abstract interface for folder configuration data access.
+
+    Reads return :class:`FolderConfiguration`; writes accept
+    :class:`FolderConfiguration`. The model's ``id`` field is not
+    populated by ``from_dict`` — adapters that need the row PK
+    (e.g. for ``update``) extract it from the underlying row
+    before constructing the domain object.
+    """
 
     @abstractmethod
-    def find_all(self, *, active_only: bool = False) -> list[dict[str, Any]]:
+    def find_all(self, *, active_only: bool = False) -> list[FolderConfiguration]:
         """Get all folders, optionally filtered to active only.
 
         Args:
             active_only: If True, return only folders where folder_is_active is True.
 
         Returns:
-            List of folder dicts.
+            List of FolderConfiguration objects.
 
         """
         ...
 
     @abstractmethod
-    def find_by_id(self, folder_id: int) -> dict[str, Any] | None:
-        """Get a folder by its ID.
+    def find_by_id(self, folder_id: int) -> FolderConfiguration | None:
+        """Get a folder by its primary key.
 
         Args:
             folder_id: Primary key of the folder record.
 
         Returns:
-            Folder dict, or None if not found.
+            FolderConfiguration, or None if not found.
 
         """
         ...
 
     @abstractmethod
-    def find_by_path(self, path: str) -> dict[str, Any] | None:
+    def find_by_path(self, path: str) -> FolderConfiguration | None:
         """Get a folder by its filesystem path (folder_name column).
 
         Args:
             path: Filesystem path to look up.
 
         Returns:
-            Folder dict, or None if not found.
+            FolderConfiguration, or None if not found.
 
         """
         ...
 
     @abstractmethod
-    def find_by_alias(self, alias: str) -> dict[str, Any] | None:
+    def find_by_alias(self, alias: str) -> FolderConfiguration | None:
         """Get a folder by its alias.
 
         Args:
             alias: Display name / alias to look up.
 
         Returns:
-            Folder dict, or None if not found.
+            FolderConfiguration, or None if not found.
 
         """
         ...
 
     @abstractmethod
-    def insert(self, folder_data: dict[str, Any]) -> None:
+    def insert(self, folder: FolderConfiguration) -> int:
         """Insert a new folder record.
 
         Args:
-            folder_data: Dict of column values. Must not include 'id'.
+            folder: FolderConfiguration to insert. The folder's id is
+                ignored — the database assigns one.
+
+        Returns:
+            The assigned primary key.
 
         """
         ...
 
     @abstractmethod
-    def update(self, folder_data: dict[str, Any]) -> None:
+    def update(self, folder: FolderConfiguration, folder_id: int) -> None:
         """Update an existing folder record.
 
         Args:
-            folder_data: Dict of column values. Must include 'id'.
+            folder: FolderConfiguration carrying the new field values.
+            folder_id: Primary key of the row to update.
+
+        Raises:
+            ValueError: If folder_id is not a positive int.
 
         """
         ...
@@ -116,6 +146,9 @@ class ISettingsRepository(ABC):
 
     Settings are stored in the 'administrative' table as a singleton
     row (id=1) and also as key/value pairs in the 'settings' table.
+
+    Returns ``dict[str, Any]`` rather than a domain type because the
+    settings row is loose-schema admin data with no canonical model.
     """
 
     @abstractmethod
@@ -165,7 +198,12 @@ class ISettingsRepository(ABC):
 
 
 class IProcessedFilesRepository(ABC):
-    """Abstract interface for processed-files tracking."""
+    """Abstract interface for processed-files tracking.
+
+    Reads return :class:`ProcessedFile`; writes accept
+    :class:`ProcessedFile`. The ProcessedFile id is optional and
+    assigned by the database on insert.
+    """
 
     @abstractmethod
     def is_processed(self, file_hash: str) -> bool:
@@ -181,13 +219,12 @@ class IProcessedFilesRepository(ABC):
         ...
 
     @abstractmethod
-    def mark_processed(self, file_hash: str, folder_id: int, filename: str) -> None:
+    def mark_processed(self, record: ProcessedFile) -> None:
         """Record that a file has been processed.
 
         Args:
-            file_hash: Hash string identifying the file.
-            folder_id: ID of the folder the file belongs to.
-            filename: Original filename (for display/audit).
+            record: ProcessedFile identifying the file. ``id`` is
+                ignored — the database assigns one.
 
         """
         ...
@@ -216,21 +253,25 @@ class IProcessedFilesRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_hash(self, file_hash: str) -> dict[str, Any] | None:
+    def find_by_hash(self, file_hash: str) -> ProcessedFile | None:
         """Find a processed-file record by its hash.
 
         Args:
             file_hash: Hash string to look up.
 
         Returns:
-            Record dict, or None if not found.
+            ProcessedFile, or None if not found.
 
         """
         ...
 
 
 class IEmailQueueRepository(ABC):
-    """Abstract interface for outbound email queue management."""
+    """Abstract interface for outbound email queue management.
+
+    Returns ``dict[str, Any]`` because the email queue row has no
+    canonical domain model yet; admin-only path.
+    """
 
     @abstractmethod
     def enqueue(self, email_data: dict[str, Any]) -> None:

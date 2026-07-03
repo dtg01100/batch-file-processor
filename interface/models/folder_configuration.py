@@ -378,7 +378,18 @@ class FolderConfigurationPydantic(BaseModel):
 
 @dataclass
 class FolderConfiguration:
-    """Complete folder configuration data model."""
+    """Complete folder configuration data model.
+
+    Attributes:
+        id: Database primary key, or None for not-yet-persisted
+            instances. Set by the SQLite repository after ``insert``;
+            preserved on ``from_dict`` round-trips so the in-memory
+            object retains its identity across read-modify-write
+            cycles.
+    """
+
+    # Database primary key (None until persisted).
+    id: int | None = None
 
     # Identity
     folder_name: str = ""
@@ -645,6 +656,7 @@ class FolderConfiguration:
         )
 
         folder_config = cls(
+            id=data.get("id"),
             folder_name=data.get("folder_name", ""),
             folder_is_active=normalize_bool(data.get("folder_is_active", False)),
             alias=data.get("alias", ""),
@@ -666,7 +678,6 @@ class FolderConfiguration:
             csv=csv,
             plugin_configurations=data.get("plugin_configurations", {}),
         )
-
         folder_config.validate_with_pydantic()
         return folder_config
 
