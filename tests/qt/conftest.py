@@ -18,6 +18,10 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
+# Apply the `qt` marker to every test defined in this directory.
+# Allows `pytest -m "not qt"` to skip them in fast non-GUI runs.
+pytestmark = pytest.mark.qt
+
 # ---------------------------------------------------------------------------
 # _SpyMaintenanceFunctions — thin spy subclass for maintenance dialog tests
 # ---------------------------------------------------------------------------

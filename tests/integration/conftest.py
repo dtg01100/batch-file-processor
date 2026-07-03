@@ -15,6 +15,10 @@ import pytest
 from backend.database import sqlite_wrapper
 from core.database.schema import ensure_schema
 
+# Apply the `integration` marker to every test defined in this directory.
+# Allows `pytest -m "not integration"` to skip them in fast unit-only runs.
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture(scope="session")
 def db_template(tmp_path_factory):
