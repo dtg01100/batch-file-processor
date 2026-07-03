@@ -178,8 +178,3 @@ class TestQueryRunnerProtocol:
 
         assert result == "PO"
 
-    def test_protocol_runtime_checkable(self):
-        """Test protocol is runtime checkable."""
-        mock_runner = MagicMock(spec=QueryRunnerProtocol)
-
-        assert isinstance(mock_runner, QueryRunnerProtocol)

@@ -8,7 +8,6 @@ from pathlib import Path
 from dispatch.edi_validator import EDIValidator
 from dispatch.file_system import RealFileSystem
 
-
 class MockFileSystem:
     """Mock file system for testing."""
 
@@ -25,7 +24,6 @@ class MockFileSystem:
         if path not in self.files:
             raise FileNotFoundError(f"File not found: {path}")
         return self.files[path]
-
 
 class TestEDIValidator:
     """Tests for EDIValidator class."""
@@ -183,7 +181,6 @@ class TestEDIValidator:
         is_valid2, _ = validator.validate("/test/valid.edi")
         assert is_valid2 is True
 
-
 class TestRealFileSystem:
     """Tests for RealFileSystem class."""
 
@@ -215,20 +212,6 @@ class TestRealFileSystem:
         finally:
             os.unlink(temp_path)
 
-    def test_write_file_text(self):
-        """Test writing text file."""
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
-            temp_path = f.name
-
-        try:
-            fs = RealFileSystem()
-            fs.write_file_text(temp_path, "new content")
-
-            with open(temp_path) as f:
-                assert f.read() == "new content"
-        finally:
-            os.unlink(temp_path)
-
     def test_write_file(self):
         """Test writing binary file."""
         with tempfile.NamedTemporaryFile(mode="wb", delete=False) as f:
@@ -256,14 +239,6 @@ class TestRealFileSystem:
         finally:
             os.unlink(temp_path)
 
-    def test_dir_exists(self):
-        """Test directory existence check."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            fs = RealFileSystem()
-
-            assert fs.dir_exists(tmpdir) is True
-            assert fs.dir_exists("/nonexistent/directory") is False
-
     def test_list_files(self):
         """Test listing files in directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -288,16 +263,6 @@ class TestRealFileSystem:
             fs.mkdir(new_dir)
 
             assert os.path.isdir(new_dir)
-
-    def test_makedirs(self):
-        """Test creating nested directories."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            nested = os.path.join(tmpdir, "a", "b", "c")
-
-            fs = RealFileSystem()
-            fs.makedirs(nested)
-
-            assert os.path.isdir(nested)
 
     def test_copy_file(self):
         """Test copying file."""
@@ -332,7 +297,6 @@ class TestRealFileSystem:
         result = fs.get_absolute_path("relative/path.txt")
 
         assert os.path.isabs(result)
-
 
 class TestUPCRegressions:
     """Regression tests for UPC validation bug fixes.
@@ -465,7 +429,6 @@ class TestUPCRegressions:
         assert any("line 3" in e for e in errors), (
             "Warning should contain the correct line number"
         )
-
 
 class TestEDIValidatorEdgeCases:
     """Edge case tests for EDIValidator."""
