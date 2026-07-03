@@ -23,10 +23,7 @@ from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunL
 from dispatch.send_manager import SendManager
 
 from core.utils.file_utils import calculate_file_checksum
-from dispatch.file_utils import (
-    apply_file_rename,
-    extract_invoice_numbers,
-)
+from dispatch.file_utils import extract_invoice_numbers
 
 logger = get_logger(__name__)
 
@@ -191,7 +188,6 @@ class FileProcessor:
                 error=e,
                 context={
                     "folder_config": folder,
-                    "pipeline_mode": True,
                     "correlation_id": correlation_id,
                     "file_path": file_path,
                 },
@@ -202,38 +198,21 @@ class FileProcessor:
 
         return result
 
+
     def _build_context(
         self,
         folder: dict,
         upc_dict: dict,
         effective_folder: dict | ProcessingContext | None = None,
     ) -> ProcessingContext:
-        """Build processing context for a file.
-
-        Args:
-            folder: Folder configuration
-            upc_dict: UPC dictionary
-            effective_folder: Either a pre-built ProcessingContext or a normalized
-                folder dict. If a ProcessingContext is provided it is returned
-                unchanged; if a dict is provided it will be used as the
-                effective_folder field on a new ProcessingContext.
-
-        Returns:
-            ProcessingContext with initialized state
-
-        """
-        # If a full ProcessingContext was passed, return it unchanged
+        """Build processing context for a file."""
         if isinstance(effective_folder, ProcessingContext):
             return effective_folder
-
-        # Extract settings if effective_folder is a dict, otherwise use empty dict
         settings = (
             effective_folder.get("settings")
             if isinstance(effective_folder, dict)
             else {}
         )
-
-        # Build new ProcessingContext
         return ProcessingContext(
             folder=folder,
             effective_folder=effective_folder or folder,
@@ -323,14 +302,26 @@ class FileProcessor:
 
         # Run conversion
         convert_start = time.time()
-        current_file, did_convert, conversion_failed = self._run_conversion(
-            current_file=current_file,
-            file_basename=file_basename,
-            _original_file_path=file_path,
-            context=context,
-            _run_log=run_log,
-            validation_passed=result.validated,
-        )
+        current_file, did_convert, conversion_failed = current_file, False, False
+        if self.converter_step and result.validated:
+            try:
+                converted_file = self.converter_step.execute(
+                    current_file,
+                    context.effective_folder,
+                    context.settings,
+                    context.upc_dict,
+                    context=context,
+                )
+                if converted_file:
+                    current_file, did_convert = converted_file, True
+                    logger.debug(
+                        "Conversion completed for %s: %s", file_basename, current_file
+                    )
+                else:
+                    conversion_failed = True
+            except Exception as e:
+                logger.exception("Conversion error for %s: %s", file_basename, e)
+                conversion_failed = True
         convert_duration = int((time.time() - convert_start) * 1000)
         if did_convert:
             result.converted = True
@@ -543,88 +534,7 @@ class FileProcessor:
             result.errors.append(f"Splitting error: {e}")
             return False
 
-    def _run_conversion(
-        self,
-        current_file: str,
-        file_basename: str,
-        _original_file_path: str,
-        context: ProcessingContext,
-        _run_log: RunLog | None,
-        *,
-        validation_passed: bool,
-    ) -> tuple[str, bool, bool]:
-        """Run conversion step of the pipeline.
 
-        Args:
-            current_file: Current file path
-            file_basename: File basename
-            original_file_path: Original file path
-            context: Processing context
-            run_log: Run log
-            validation_passed: Whether validation passed
-
-        Returns:
-            Tuple of (new_file_path, did_convert, conversion_failed)
-
-        """
-        did_convert = False
-        conversion_failed = False
-        file_path = current_file
-
-        conversion_step = self.converter_step
-        if conversion_step and validation_passed:
-            file_path, did_convert, conversion_failed = self._execute_conversion(
-                conversion_step,
-                file_path,
-                file_basename,
-                context,
-            )
-
-        return file_path, did_convert, conversion_failed
-
-    def _execute_conversion(
-        self,
-        conversion_step: Any,
-        file_path: str,
-        file_basename: str,
-        context: ProcessingContext,
-    ) -> tuple[str, bool, bool]:
-        """Execute a conversion-style step.
-
-                Args:
-        conversion_step: Converter step
-                    file_path: Current file path
-                    file_basename: File basename
-                    context: Processing context
-
-                Returns:
-                    Tuple of (new_file_path, did_convert, conversion_failed)
-
-        """
-        did_convert = False
-        conversion_failed = False
-
-        try:
-            converted_file = conversion_step.execute(
-                file_path,
-                context.effective_folder,
-                context.settings,
-                context.upc_dict,
-                context=context,
-            )
-            if converted_file:
-                file_path = converted_file
-                did_convert = True
-                logger.debug(
-                    "Conversion completed for %s: %s", file_basename, file_path
-                )
-            else:
-                conversion_failed = True
-        except Exception as e:
-            logger.exception("Conversion error for %s: %s", file_basename, e)
-            conversion_failed = True
-
-        return file_path, did_convert, conversion_failed
 
     def _send_file(
         self,
@@ -655,7 +565,10 @@ class FileProcessor:
             return
 
         # Apply file rename if configured
-        final_file = self._apply_rename(current_file, context)
+        from dispatch.file_utils import apply_file_rename as _ar
+        _td = context.temp_dirs
+        _tmpl = context.effective_folder.get('rename_file', '').strip()
+        final_file = _ar(current_file, _tmpl, _td)
 
         # Send to backends
         result.sent = self._send_to_backends(
@@ -680,11 +593,6 @@ class FileProcessor:
 
         self._log_success(file_basename, file_path, run_log)
 
-    def _apply_rename(self, file_path: str, context: ProcessingContext) -> str:
-        """Apply file rename using the shared utility."""
-
-        rename_template = context.effective_folder.get("rename_file", "").strip()
-        return apply_file_rename(file_path, rename_template, context.temp_dirs)
 
     def _send_to_backends(
         self,

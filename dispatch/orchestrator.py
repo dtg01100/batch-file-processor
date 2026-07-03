@@ -490,7 +490,11 @@ class DispatchOrchestrator:
                     result.converted = True
 
                 send_result = self._send_pipeline_file(
-                    self._apply_file_rename(current_pipeline_file, context),
+                    apply_file_rename(
+                        current_pipeline_file,
+                        context.effective_folder.get("rename_file", "").strip(),
+                        getattr(context, "temp_dirs", []),
+                    ),
                     context.effective_folder,
                     run_log,
                 )
@@ -797,11 +801,6 @@ class DispatchOrchestrator:
             upc_dict=upc_dict,
         )
 
-    def _apply_file_rename(self, file_path: str, context: Any) -> str:
-        """Apply file rename using the shared utility."""
-        temp_dirs = getattr(context, "temp_dirs", [])
-        rename_template = context.effective_folder.get("rename_file", "").strip()
-        return apply_file_rename(file_path, rename_template, temp_dirs)
 
     def _send_pipeline_file(
         self, file_path: str, folder: dict, run_log: RunLog | None = None
@@ -936,7 +935,6 @@ class DispatchOrchestrator:
         folder: dict,
         folder_index: int | None = None,
         folder_total: int | None = None,
-        _folder_name: str | None = None,
         progress_reporter: ProgressReporter | None = None,
     ) -> list[str]:
         """Filter out already processed files, unless marked for resend.
@@ -947,11 +945,11 @@ class DispatchOrchestrator:
             folder: Folder configuration
             folder_index: Current folder index (1-based, optional)
             folder_total: Total number of folders (optional)
-            folder_name: Display name of the folder (optional)
             progress_reporter: Optional progress reporter for per-file updates
 
         Returns:
             List of unprocessed or resend-marked file paths
+
 
         """
         from dispatch.services.file_filter import filter_pending_files
