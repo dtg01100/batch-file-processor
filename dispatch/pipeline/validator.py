@@ -3,10 +3,9 @@
 This module provides a pipeline step for EDI file validation,
 wrapping the existing EDIValidator with pipeline integration.
 """
-
 from dataclasses import dataclass, field
 from io import StringIO
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from core.structured_logging import get_logger, log_file_operation, log_with_context
 from dispatch.edi_validator import EDIValidator
@@ -14,6 +13,41 @@ from dispatch.error_handler import ErrorHandler
 from dispatch.interfaces import FileSystemInterface
 
 logger = get_logger(__name__)
+
+
+def normalize_validation_output(
+    output: object,
+    current_file: str,
+) -> tuple[bool, Any]:
+    """Normalize a validator step's return value to ``(is_valid, errors_or_file)``.
+
+    Accepts a 2-tuple, ``ValidationResult``, ``dict`` with a ``"valid"`` key,
+    or a plain ``bool``. Any other type is logged as a warning and returned
+    as invalid with a diagnostic error message.
+
+    Spec: specs/refactor-dispatch-simplification.md §3.4 (Phase 1 contract
+    unification between ``orchestrator._normalize_validation_output`` and
+    the isinstance-cascade head of
+    ``file_processor._handle_validation_result``).
+    """
+    if isinstance(output, tuple) and len(output) == 2:
+        return bool(output[0]), output[1]
+    if isinstance(output, ValidationResult):
+        return output.is_valid, (
+            output.errors if not output.is_valid else current_file
+        )
+    if isinstance(output, dict):
+        is_valid = bool(output.get("valid", True))
+        if is_valid:
+            return is_valid, output.get("file_path", current_file)
+        return is_valid, output.get("errors", [])
+    if isinstance(output, bool):
+        return output, current_file
+    logger.warning(
+        "Unexpected validation output type: %s, treating as invalid",
+        type(output).__name__,
+    )
+    return False, [f"Validator returned unexpected type: {type(output).__name__}"]
 
 
 @dataclass

@@ -710,30 +710,14 @@ class DispatchOrchestrator:
     def _normalize_validation_output(
         self, validation_output: Any, current_file: str
     ) -> tuple[bool, Any]:
-        """Normalize validator step output to `(is_valid, errors_or_file)` tuple."""
-        if isinstance(validation_output, tuple):
-            return validation_output
+        """Normalize validator step output to `(is_valid, errors_or_file)` tuple.
 
-        from dispatch.pipeline.validator import ValidationResult
+        Delegates to ``dispatch.pipeline.validator.normalize_validation_output``
+        (spec: refactor-dispatch-simplification.md §3.4 Phase 1).
+        """
+        from dispatch.pipeline.validator import normalize_validation_output
 
-        if isinstance(validation_output, ValidationResult):
-            return (
-                validation_output.is_valid,
-                (
-                    validation_output.errors
-                    if not validation_output.is_valid
-                    else current_file
-                ),
-            )
-
-        if isinstance(validation_output, bool):
-            return validation_output, current_file
-
-        logger.warning(
-            "Unexpected validation output type: %s, treating as invalid",
-            type(validation_output).__name__,
-        )
-        return False, [str(validation_output)]
+        return normalize_validation_output(validation_output, current_file)
 
     def _apply_validation_outcome(
         self,

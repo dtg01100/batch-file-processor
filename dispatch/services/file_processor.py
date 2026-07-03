@@ -442,28 +442,11 @@ class FileProcessor:
             Tuple of (continue_processing, current_file)
 
         """
-        if isinstance(validation_output, tuple):
-            is_valid, errors_or_file = validation_output
-        elif isinstance(validation_output, dict):
-            is_valid = validation_output.get("valid", True)
-            errors_or_file = (
-                validation_output.get("file_path", current_file)
-                if is_valid
-                else validation_output.get("errors", [])
-            )
-        elif isinstance(validation_output, bool):
-            is_valid = validation_output
-            errors_or_file = current_file
-        else:
-            logger.warning(
-                "Unexpected validation output type: %s, treating as invalid",
-                type(validation_output).__name__,
-            )
-            is_valid = False
-            errors_or_file = [
-                f"Validator returned unexpected type: "
-                f"{type(validation_output).__name__}"
-            ]
+        from dispatch.pipeline.validator import normalize_validation_output
+
+        is_valid, errors_or_file = normalize_validation_output(
+            validation_output, current_file
+        )
 
         result.validated = is_valid
         if not is_valid:
