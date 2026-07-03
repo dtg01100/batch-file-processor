@@ -389,11 +389,7 @@ class DispatchOrchestrator:
         self._log_error(run_log, error_msg)
         return result
 
-    @staticmethod
-    def _is_strict_database_lookup(settings: dict) -> bool:
-        """Return True when database lookup mode requires fail-fast behavior."""
-        mode = str(settings.get("database_lookup_mode", "optional")).strip().lower()
-        return mode in {"strict", "required", "test"}
+
 
     def _get_upc_dictionary(self, settings: dict) -> dict:
         """Get or fetch UPC dictionary using the UPC lookup service.
@@ -408,7 +404,10 @@ class DispatchOrchestrator:
         if self.config.upc_dict:
             return self.config.upc_dict
 
-        strict_db_mode = self._is_strict_database_lookup(settings)
+        strict_db_mode = (
+            str(settings.get("database_lookup_mode", "optional")).strip().lower()
+            in {"strict", "required", "test"}
+        )
         self.upc_service.settings = settings
         result = self.upc_service.get_dictionary(
             upc_service=self.config.upc_service,
