@@ -271,10 +271,12 @@ class MaintenanceFunctions:
         return []
 
     def _checksum_of_file(self, path: str) -> str:
-        """Compute MD5 checksum for given file path."""
+        """Compute MD5 checksum for given file path.
+
+        Note: MD5 used for non-security content fingerprinting (deduplication only).
+        """
         with open(path, "rb") as fh:
             return hashlib.md5(fh.read()).hexdigest()
-
     def _progress_message(
         self,
         prefix: str,

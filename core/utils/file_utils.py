@@ -21,6 +21,7 @@ def calculate_file_checksum(file_path: str) -> str:
         MD5 hex digest string, or empty string on error
 
     """
+    # MD5 used for non-security content fingerprinting (deduplication only).
     md5_hash = hashlib.md5()
     try:
         with open(file_path, "rb") as f:

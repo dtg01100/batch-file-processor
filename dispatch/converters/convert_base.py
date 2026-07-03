@@ -48,6 +48,31 @@ from core.structured_logging import (
 logger = get_logger(__name__)
 
 
+def _make_csv_writer(
+    file_handle: Any,
+    dialect: str = "excel",
+    lineterminator: str = "\r\n",
+) -> "_csv._writer":
+    """Construct a csv.writer with the project-standard dialect/line terminator.
+
+    Centralises the ``csv.writer(handle, dialect=..., lineterminator=...)``
+    pattern so future call sites can be migrated to a single, consistent
+    configuration. The call sites are intentionally not replaced here —
+    each one passes slightly different arguments and a bulk swap risks
+    subtle behavioural changes to produced files.
+
+    Args:
+        file_handle: An open, writable file-like object.
+        dialect: csv dialect name (default ``"excel"``).
+        lineterminator: Line terminator (default ``"\\r\\n"``).
+
+    Returns:
+        A configured ``csv.writer`` instance.
+
+    """
+    return csv.writer(file_handle, dialect=dialect, lineterminator=lineterminator)
+
+
 @dataclass
 class EDIRecord:
     """Represents a parsed EDI record.

@@ -15,6 +15,12 @@ SMTP_TIMEOUT_SECONDS = 30
 FTP_TIMEOUT_SECONDS = 30
 HASH_CALC_MAX_RETRIES = 5
 
+# Default backend ports (RFC 1700 / well-known)
+SMTP_DEFAULT_PORT = 587  # SMTP submission (RFC 6409)
+FTP_DEFAULT_PORT = 21  # FTP control (RFC 959)
+HTTP_DEFAULT_PORT = 80
+HTTPS_DEFAULT_PORT = 443
+
 # Date boundary constants for legacy date handling
 MIN_DATE = datetime(1900, 1, 1)
 MAX_DATE = datetime(9999, 12, 31)

@@ -68,6 +68,7 @@ def generate_file_hash(
     while generated_checksum is None:
         try:
             with open(absolute_path, "rb") as f:
+                # MD5 used for non-security content fingerprinting (deduplication only).
                 h = hashlib.md5()
                 for chunk in iter(lambda: f.read(8192), b""):
                     h.update(chunk)

@@ -804,6 +804,10 @@ class Database:
             try:
                 cur = self._conn.execute(sql)
             except sqlite3.Error:
+                # Intentional: callers can opt in to strict failure via
+                # raise_on_error=True. Default behavior swallows the error
+                # and returns [] so non-critical lookups do not crash the
+                # application. See query() docstring for the contract.
                 if raise_on_error:
                     raise
                 with contextlib.suppress(sqlite3.Error):

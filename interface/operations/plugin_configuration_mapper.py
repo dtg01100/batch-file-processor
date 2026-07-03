@@ -431,6 +431,8 @@ class PluginConfigurationMapper:
 
     def _get_qt_text_edit_value(self, widget: Any, field_name: str) -> Any:
         """Deserialize JSON data from a Qt text edit widget."""
+        # TODO: One-shot migration of legacy plugin_configurations values to
+        # JSON, then drop ast.literal_eval fallback.
         try:
             return json.loads(widget.toPlainText())
         except Exception as exc:

@@ -623,6 +623,8 @@ class QtTextEditWidget(QtWidgetBase):
             self.widget.setText(json.dumps(value, indent=2))
 
     def get_value(self) -> Any:
+        # TODO: One-shot migration of legacy plugin_configurations values to
+        # JSON, then drop ast.literal_eval fallback.
         try:
             import json
 

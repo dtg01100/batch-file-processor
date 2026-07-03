@@ -3,8 +3,9 @@
 This module provides a testable wrapper around the EDI validation functionality,
 using dependency injection for file system operations.
 """
-
+import logging
 from io import StringIO
+
 
 from core.constants import (
     EDI_B_RECORD_NO_PRICING_LENGTH,
@@ -56,8 +57,6 @@ class EDIValidator:
             error messages (empty if valid)
 
         """
-        import logging
-
         log_file_operation(
             logger,
             "validate",

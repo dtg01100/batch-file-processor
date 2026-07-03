@@ -23,8 +23,8 @@ Thread Safety:
             for file_path in files_to_send:
                 send_manager.send_all(..., file_path, ...)
 """
-
 import importlib
+import logging
 import os
 from typing import ClassVar
 
@@ -110,8 +110,6 @@ class SendManager:
         """
         self.results = {}
         self.errors = {}
-
-        import logging
 
         basename = os.path.basename(file_path)
         sorted_backends = sorted(enabled_backends)

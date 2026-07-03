@@ -135,6 +135,13 @@ class PluginManager:
         """
         Load a plugin module from file path.
 
+        Security / trust boundary:
+            The trust boundary for plugin loading is the application's own
+            ``interface/plugins/`` directory. ``module_path`` must point inside
+            that package directory. Do NOT pass user-controlled or externally
+            supplied paths here; doing so would cause arbitrary Python code to
+            execute in the application process.
+
         Args:
             module_path: Path to plugin module
             discovered: List to append discovered plugins to
