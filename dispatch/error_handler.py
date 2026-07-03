@@ -14,153 +14,45 @@ from typing import Any
 from core.structured_logging import get_logger, log_with_context
 from dispatch.file_system import RealFileSystem
 from dispatch.interfaces import DatabaseInterface, FileSystemInterface, RunLog
-from scripts import record_error
 
 logger = get_logger(__name__)
 
 
-class ErrorLogger:
-    """Legacy error logger preserved for compatibility.
+# Legacy run-log line ending: the Windows run-log reader in the field expects
+# \r\n between header lines. Centralise the constant so call sites do not have
+# to know about the legacy format.
+_LEGACY_RUN_LOG_LINE_ENDING = "\r\n"
 
-    This class wraps the scripts.record_error.do() function to provide
-    an object-oriented interface for recording errors to both run logs
-    and error logs.
 
-    Note:
-        New code should use ErrorHandler.record_error() instead, which
-        provides richer context tracking and multiple destination support.
+def generate_edi_validation_report(errors: str) -> str:
+    """Format an EDI validation report.
 
-    Attributes:
-        errors_folder: Path to the folder where error logs are stored.
-        run_log: Run log file handle or buffer.
-        folder_errors_log: In-memory buffer for folder-level errors.
-
+    Mirrors the legacy ``ReportGenerator.generate_edi_validation_report`` output
+    that ``ErrorHandler.write_validation_report`` has been emitting since the
+    report-format migration. Callers must not depend on any specific line
+    ordering beyond the header being the first line.
     """
-
-    def __init__(self, errors_folder: str = "", run_log: RunLog | None = None) -> None:
-        """Initialize the error logger.
-
-        Args:
-            errors_folder: Path to folder for storing error logs.
-            run_log: Optional run log file handle or buffer.
-
-        """
-        self.errors_folder = errors_folder
-        self.run_log = run_log
-        self.folder_errors_log = StringIO()
-
-    def log_error(self, error_message: str, filename: str, module: str) -> None:
-        """Record an error to both the run log and errors log.
-
-        Args:
-            error_message: The error message to record.
-            filename: Name of the file being processed when the error occurred.
-            module: Name of the module or component where the error originated.
-
-        """
-        record_error.do(
-            self.run_log,
-            self.folder_errors_log,
-            error_message,
-            filename,
-            module,
-        )
-
-    def log_folder_error(
-        self, error_message: str, folder_name: str, module: str = "Dispatch"
-    ) -> None:
-        """Record an error that occurred at the folder level.
-
-        Args:
-            error_message: The error message to record.
-            folder_name: Name of the folder where the error occurred.
-            module: Name of the module where the error originated (default: "Dispatch").
-
-        """
-        self.log_error(error_message, folder_name, module)
-
-    def log_file_error(
-        self, error_message: str, filename: str, module: str = "Dispatch"
-    ) -> None:
-        """Record an error that occurred while processing a specific file.
-
-        Args:
-            error_message: The error message to record.
-            filename: Name of the file being processed when the error occurred.
-            module: Name of the module where the error originated (default: "Dispatch").
-
-        """
-        self.log_error(error_message, filename, module)
-
-    def get_errors(self) -> str:
-        """Get the accumulated folder error log contents.
-
-        Returns:
-            String containing all folder error log entries.
-
-        """
-        return self.folder_errors_log.getvalue()
-
-    def has_errors(self) -> bool:
-        """Check if any folder errors have been recorded.
-
-        Returns:
-            True if error log is non-empty, False otherwise.
-
-        """
-        return bool(self.get_errors())
-
-    def close(self) -> None:
-        """Close the folder error log StringIO buffer."""
-        self.folder_errors_log.close()
+    timestamp = datetime.datetime.now().isoformat().replace(":", "-")
+    return (
+        f"EDI Validation Report - {timestamp}{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"{'=' * 50}{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"{errors}"
+    )
 
 
-class ReportGenerator:
-    """Legacy report generator preserved for compatibility.
+def generate_processing_report(errors: str, version: str) -> str:
+    """Format a processing report with program version and error block.
 
-    This class generates simple text-based validation and processing
-    reports with timestamps and error summaries.
-
-    Note:
-        New code should use structured logging via core.structured_logging
-        instead of these legacy text reports.
-
+    Mirrors the legacy ``ReportGenerator.generate_processing_report`` output
+    consumed by ``ErrorHandler.write_processing_report``.
     """
-
-    @staticmethod
-    def generate_edi_validation_report(errors: str) -> str:
-        """Generate an EDI validation report with error details.
-
-        Args:
-            errors: Error message string to include in the report.
-
-        Returns:
-            Formatted report string with timestamp and error details.
-
-        """
-        timestamp = datetime.datetime.now().isoformat().replace(":", "-")
-        report = f"EDI Validation Report - {timestamp}\r\n"
-        report += "=" * 50 + "\r\n"
-        report += errors
-        return report
-
-    @staticmethod
-    def generate_processing_report(errors: str, version: str) -> str:
-        """Generate a processing report with program version and errors.
-
-        Args:
-            errors: Error message string to include in the report.
-            version: Program version string to display in the report header.
-
-        Returns:
-            Formatted report string with version and error details.
-
-        """
-        report = f"Program Version = {version}\r\n\r\n"
-        report += "Processing Errors\r\n"
-        report += "=" * 30 + "\r\n"
-        report += errors
-        return report
+    return (
+        f"Program Version = {version}{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"Processing Errors{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"{'=' * 30}{_LEGACY_RUN_LOG_LINE_ENDING}"
+        f"{errors}"
+    )
 
 
 class ErrorHandler:
@@ -204,8 +96,7 @@ class ErrorHandler:
         self.fs = file_system or RealFileSystem()
         self.errors: list[dict] = []
         self.error_log: StringIO = StringIO()
-        self.logger = ErrorLogger(self.errors_folder, self.run_log)
-        self.report_generator = ReportGenerator()
+
         self._alert_dispatcher = alert_dispatcher
 
     def record_error(
@@ -348,12 +239,14 @@ class ErrorHandler:
             Formatted error message string
 
         """
+        # _LEGACY_RUN_LOG_LINE_ENDING: legacy Windows run-log reader compatibility
         return (
-            # \r\n for legacy Windows run-log reader compatibility
-            f"At: {time.ctime()}\r\n"
-            f"From module: {error_source}\r\n"
-            f"For object: {filename}\r\n"
-            f"Error Message is:\r\n{error_message}\r\n\r\n"
+            f"At: {time.ctime()}{_LEGACY_RUN_LOG_LINE_ENDING}"
+            f"From module: {error_source}{_LEGACY_RUN_LOG_LINE_ENDING}"
+            f"For object: {filename}{_LEGACY_RUN_LOG_LINE_ENDING}"
+            f"Error Message is:{_LEGACY_RUN_LOG_LINE_ENDING}"
+            f"{error_message}{_LEGACY_RUN_LOG_LINE_ENDING}"
+            f"{_LEGACY_RUN_LOG_LINE_ENDING}"
         )
 
     def _write_to_log(self, error_record: dict) -> None:
@@ -380,9 +273,7 @@ class ErrorHandler:
         assert self.db is not None
         try:
             raw_conn = (
-                self.db.raw_connection
-                if hasattr(self.db, "raw_connection")
-                else None
+                self.db.raw_connection if hasattr(self.db, "raw_connection") else None
             )
             if raw_conn is not None:
                 columns = [
@@ -491,43 +382,6 @@ class ErrorHandler:
         """
         return len(self.errors)
 
-    def log_error(self, error_message: str, filename: str, module: str) -> None:
-        """Delegate error logging to the legacy ErrorLogger.
-
-        Args:
-            error_message: The error message to record.
-            filename: Name of the file being processed.
-            module: Name of the module where the error originated.
-
-        """
-        self.logger.log_error(error_message, filename, module)
-
-    def log_folder_error(
-        self, error_message: str, folder_name: str, module: str = "Dispatch"
-    ) -> None:
-        """Delegate folder-level error logging to the legacy ErrorLogger.
-
-        Args:
-            error_message: The error message to record.
-            folder_name: Name of the folder where the error occurred.
-            module: Name of the module where the error originated.
-
-        """
-        self.logger.log_folder_error(error_message, folder_name, module)
-
-    def log_file_error(
-        self, error_message: str, filename: str, module: str = "Dispatch"
-    ) -> None:
-        """Delegate file-level error logging to the legacy ErrorLogger.
-
-        Args:
-            error_message: The error message to record.
-            filename: Name of the file being processed.
-            module: Name of the module where the error originated.
-
-        """
-        self.logger.log_file_error(error_message, filename, module)
-
     def write_validation_report(self, errors: str) -> str:
         """Write an EDI validation report to a file.
 
@@ -542,7 +396,7 @@ class ErrorHandler:
             f"Validator Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
         )
         validator_log_path = os.path.join(self.run_log_directory, validator_log_name)
-        content = self.report_generator.generate_edi_validation_report(errors)
+        content = generate_edi_validation_report(errors)
         self.fs.write_file_text(validator_log_path, content)
         return validator_log_path
 
@@ -562,6 +416,6 @@ class ErrorHandler:
             f" {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
         )
         folder_log_path = os.path.join(self.run_log_directory, folder_log_name)
-        content = self.report_generator.generate_processing_report(errors, version)
+        content = generate_processing_report(errors, version)
         self.fs.write_file_text(folder_log_path, content)
         return folder_log_path
