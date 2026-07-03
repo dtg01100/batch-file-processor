@@ -34,6 +34,13 @@ from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
 
+from core.utils.file_utils import calculate_file_checksum
+from dispatch.file_utils import (
+    apply_file_rename,
+    extract_invoice_numbers,
+    write_to_run_log,
+)
+
 logger = get_logger(__name__)
 
 
@@ -702,7 +709,6 @@ class DispatchOrchestrator:
         self, result: FileResult, file_path: str, file_basename: str
     ) -> None:
         """Calculate and set checksum on a FileResult and log debug info."""
-        from core.utils.file_utils import calculate_file_checksum
 
         result.checksum = calculate_file_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
@@ -1042,7 +1048,6 @@ class DispatchOrchestrator:
 
     def _extract_invoice_numbers(self, file_path: str) -> str:
         """Extract invoice numbers from EDI A-records in a file."""
-        from dispatch.file_utils import extract_invoice_numbers
 
         return extract_invoice_numbers(file_path, self.config.file_system)
 
@@ -1064,7 +1069,6 @@ class DispatchOrchestrator:
 
     def _log_message(self, run_log: RunLog | None, message: str) -> None:
         """Log a message to the run log and Python logger."""
-        from dispatch.file_utils import write_to_run_log
 
         log_with_context(
             logger,
@@ -1077,7 +1081,6 @@ class DispatchOrchestrator:
 
     def _log_error(self, run_log: RunLog | None, message: str) -> None:
         """Log an error message to the run log and Python logger."""
-        from dispatch.file_utils import write_to_run_log
 
         log_with_context(
             logger,

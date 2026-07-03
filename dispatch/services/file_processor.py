@@ -22,6 +22,12 @@ from core.utils import normalize_bool
 from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunLog
 from dispatch.send_manager import SendManager
 
+from core.utils.file_utils import calculate_file_checksum
+from dispatch.file_utils import (
+    apply_file_rename,
+    extract_invoice_numbers,
+)
+
 logger = get_logger(__name__)
 
 
@@ -255,7 +261,6 @@ class FileProcessor:
         """
         import time
 
-        from core.utils.file_utils import calculate_file_checksum
 
         result.checksum = calculate_file_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
@@ -677,7 +682,6 @@ class FileProcessor:
 
     def _apply_rename(self, file_path: str, context: ProcessingContext) -> str:
         """Apply file rename using the shared utility."""
-        from dispatch.file_utils import apply_file_rename
 
         rename_template = context.effective_folder.get("rename_file", "").strip()
         return apply_file_rename(file_path, rename_template, context.temp_dirs)
@@ -777,6 +781,5 @@ class FileProcessor:
 
     def _extract_invoice_numbers(self, file_path: str) -> str:
         """Extract invoice numbers from EDI A-records."""
-        from dispatch.file_utils import extract_invoice_numbers
 
         return extract_invoice_numbers(file_path, self.file_system)
