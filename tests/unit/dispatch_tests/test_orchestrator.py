@@ -409,6 +409,20 @@ class TestOrchestratorHelperMethods:
         assert orchestrator._should_validate({"force_edi_validation": True}) is True
 
 
+    def test_filter_processed_files_signature_slim(self):
+        """_filter_processed_files must not re-introduce removed params.
+
+        Regression test for Phase 5 of refactor-dispatch-simplification.md.
+        Keeps the slim 3-arg signature intact (only `files`, `processed_files`,
+        `folder`).
+        """
+        varnames = DispatchOrchestrator._filter_processed_files.__code__.co_varnames
+        forbidden = {"_folder_name", "_folder_index", "_folder_total", "progress_reporter"}
+        assert not (forbidden & set(varnames)), (
+            f"_filter_processed_files re-introduced forbidden params: "
+            f"{forbidden & set(varnames)}"
+        )
+
 
 class TestOrchestratorIntegration:
     """Integration tests for DispatchOrchestrator."""

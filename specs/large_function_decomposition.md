@@ -112,6 +112,14 @@ These methods are reasonably sized. Focus only if other refactoring requires it.
 2. **Phase 2**: `orchestrator.py` - core orchestration, careful with public APIs
 3. **Phase 3**: `converter.py` - complex converter logic
 
+## Pass 2 status (refactor-dispatch-simplification, 6 phases complete)
+
+**Resolutions applied since the original decomposition tables were drafted:**
+- `_normalize_validation_output` divergence (orchestrator.py:710-736 vs file_processor.py:445-466) — unified to `dispatch.pipeline.validator.normalize_validation_output` (Phase 1, commit fd12e6f92).
+- One-call wrappers `_run_conversion`, `_apply_rename`, `orchestrator._apply_file_rename`, `_is_strict_database_lookup` — all inlined or replaced with direct utility calls (Phase 3, commit 49f064719).
+- `_log_message` / `_log_error` orchestrator helpers — collapsed to direct `log_with_context` + `write_to_run_log` at each callsite (Phase 4, commit 901a846f2).
+
+
 ## Testing Strategy
 
 - All existing tests must pass after each phase
