@@ -18,9 +18,28 @@ CURRENT_SCHEMA_VERSION = "50"
 
 
 def _quote_identifier(name: str) -> str:
-    """Quote a SQL identifier, escaping any embedded quotes."""
-    escaped = name.replace('"', '""')
-    return f'"{escaped}"'
+    """Quote a SQL identifier safely.
+
+    Doubles any embedded double quotes and wraps the name in double quotes.
+    Validates that the identifier contains only valid characters
+    (alphanumeric, underscore, or hyphen).
+
+    Args:
+        name: The identifier to quote.
+
+    Returns:
+        Safely quoted identifier.
+
+    Raises:
+        ValueError: If the identifier contains invalid characters.
+
+    """
+    if not name:
+        raise ValueError("Empty identifier name")
+    if not all(c.isalnum() or c in "_-" for c in name):
+        raise ValueError(f"Invalid identifier characters in: {name}")
+    safe_name = name.replace('"', '""')
+    return f'"{safe_name}"'
 
 
 def _add_column_safe(db, table_name, column_name, default_sql, sql_type="TEXT") -> None:
