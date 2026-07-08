@@ -339,3 +339,81 @@ class TestQueryRunnerAdapter:
 
         runner = _create_query_runner_adapter({"as400_username": "", "as400_password": "", "as400_address": ""})
         assert isinstance(runner, TweakerQueryRunnerProtocol)
+
+
+class TestEachUOMCategoryFilter:
+    """Tests for the each_uom_categories / each_uom_mode filter on retail UOM."""
+
+    @pytest.fixture
+    def mock_query_runner(self):
+        return MagicMock(spec=TweakerQueryRunnerProtocol)
+
+    def test_tweaker_config_defaults(self):
+        config = TweakerConfig()
+        assert config.each_uom_categories == "ALL"
+        assert config.each_uom_mode == "include"
+
+    def test_from_params_each_uom_filter(self):
+        config = TweakerConfig.from_params(
+            {
+                "each_uom_categories": "1,2",
+                "each_uom_mode": "exclude",
+            }
+        )
+        assert config.each_uom_categories == "1,2"
+        assert config.each_uom_mode == "exclude"
+
+    @pytest.mark.parametrize(
+        "categories,mode,vendor_item,upc_dict,expected",
+        [
+            ("ALL", "include", 123, {123: ("1", "u", "v")}, True),
+            ("", "include", 123, {123: ("1", "u", "v")}, True),
+            ("1", "include", 123, {123: ("1", "u", "v")}, True),
+            ("1", "include", 123, {123: ("2", "u", "v")}, False),
+            ("1,2", "include", 123, {123: ("2", "u", "v")}, True),
+            ("1", "exclude", 123, {123: ("1", "u", "v")}, False),
+            ("1", "exclude", 123, {123: ("2", "u", "v")}, True),
+            # Item not in upc dict -> passes through (transform runs)
+            ("1", "include", 999, {123: ("1", "u", "v")}, True),
+        ],
+    )
+    def test_should_apply_retail_uom_helper(
+        self, categories, mode, vendor_item, upc_dict, expected
+    ):
+        from dispatch.converters.csv_utils import should_apply_retail_uom
+
+        fields = {"vendor_item": str(vendor_item)}
+        assert (
+            should_apply_retail_uom(fields, upc_dict, categories, mode) is expected
+        )
+
+    def test_transform_retail_uom_gated_by_filter(self, mock_query_runner):
+        config = TweakerConfig(
+            retail_uom=True,
+            each_uom_categories="1",
+            each_uom_mode="include",
+        )
+        t = EDITweaker(mock_query_runner, config)
+        fields = {
+            "vendor_item": "123",
+            "unit_cost": "10000",
+            "unit_multiplier": "000006",
+            "qty_of_units": "00010",
+            "upc_number": "           ",
+        }
+        original_cost = fields["unit_cost"]
+        result = t._transform_retail_uom(fields, {123: ("2", "u", "v")})
+        assert result["unit_cost"] == original_cost
+
+    def test_transform_retail_uom_passes_with_all(self, mock_query_runner):
+        config = TweakerConfig(retail_uom=True)
+        t = EDITweaker(mock_query_runner, config)
+        fields = {
+            "vendor_item": "123",
+            "unit_cost": "10000",
+            "unit_multiplier": "000006",
+            "qty_of_units": "00010",
+            "upc_number": "           ",
+        }
+        result = t._transform_retail_uom(fields, {123: ("2", "u", "v")})
+        assert result["unit_cost"] != "10000"

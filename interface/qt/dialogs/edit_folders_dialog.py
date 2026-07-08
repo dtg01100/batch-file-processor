@@ -792,6 +792,8 @@ class EditFoldersDialog(BaseDialog):
             extracted.invoice_date_custom_format_string
         )
         target["retail_uom"] = extracted.retail_uom
+        target["each_uom_categories"] = extracted.each_uom_categories
+        target["each_uom_mode"] = extracted.each_uom_mode
         target["override_upc_bool"] = extracted.override_upc_bool
         target["override_upc_level"] = extracted.override_upc_level
         target["override_upc_category_filter"] = extracted.override_upc_category_filter

@@ -88,6 +88,8 @@ class QtFolderDataExtractor:
                 "invoice_date_custom_format_field"
             ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
+            each_uom_categories=self._get_text("edi_each_uom_categories_entry"),
+            each_uom_mode=self._get_combo("edi_each_uom_mode"),
             override_upc_bool=self._get_bool("override_upc_bool"),
             override_upc_level=self._get_int("override_upc_level", 1),
             override_upc_category_filter=self._get_text(

@@ -480,6 +480,40 @@ class TestMigrationChain:
 
         conn.close()
 
+    def test_v50_to_v51_adds_each_uom_columns(self, tmp_path):
+        """v50→v51 migration adds each_uom_categories and each_uom_mode and
+        is idempotent (running it twice doesn't error).
+        """
+        db_path = str(tmp_path / "v50.db")
+        config = str(tmp_path / "cfg")
+        os.makedirs(config, exist_ok=True)
+
+        create_database.do("50", db_path, config, "Linux")
+        conn = sqlite_wrapper.Database.connect(db_path)
+
+        folders_database_migrator.upgrade_database(conn, config, "Linux")
+
+        ver = conn["version"].find_one(id=1)
+        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
+        assert int(CURRENT_DB_VERSION) >= 51
+
+        # Verify new columns exist with default values
+        cursor = conn.raw_connection.cursor()
+        for table in ("folders", "administrative"):
+            cursor.execute(f"PRAGMA table_info({table})")
+            cols = {row[1] for row in cursor.fetchall()}
+            assert "each_uom_categories" in cols, (
+                f"each_uom_categories missing in {table}"
+            )
+            assert "each_uom_mode" in cols, f"each_uom_mode missing in {table}"
+
+        # Migration is idempotent
+        folders_database_migrator.upgrade_database(conn, config, "Linux")
+        ver = conn["version"].find_one(id=1)
+        assert int(ver["version"]) == int(CURRENT_DB_VERSION)
+
+        conn.close()
+
 
 # ---------------------------------------------------------------------------
 # Tests: DatabaseObj wrapper

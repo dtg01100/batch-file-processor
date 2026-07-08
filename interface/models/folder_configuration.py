@@ -315,6 +315,8 @@ class InvoiceDateConfiguration:
     custom_format_enabled: bool = False
     custom_format_string: str = ""
     retail_uom: bool = False
+    each_uom_categories: str = "ALL"
+    each_uom_mode: str = "include"
 
     def validate(self) -> list[str]:
         """Validate invoice date configuration."""
@@ -633,6 +635,8 @@ class FolderConfiguration:
             custom_format_enabled=_bool_from_data(data, "invoice_date_custom_format"),
             custom_format_string=data.get("invoice_date_custom_format_string", ""),
             retail_uom=_bool_from_data(data, "retail_uom"),
+            each_uom_categories=data.get("each_uom_categories", "ALL") or "ALL",
+            each_uom_mode=data.get("each_uom_mode", "include") or "include",
         )
 
         # Backend-specific
@@ -817,6 +821,8 @@ class FolderConfiguration:
                         self.invoice_date.custom_format_string
                     ),
                     "retail_uom": normalize_bool(self.invoice_date.retail_uom),
+                    "each_uom_categories": self.invoice_date.each_uom_categories,
+                    "each_uom_mode": self.invoice_date.each_uom_mode,
                 }
             )
 

@@ -657,6 +657,21 @@ class DynamicEDIBuilder:
         self.fields["edi_each_uom_tweak"] = each_uom_check
         layout.addWidget(each_uom_check)
 
+        each_uom_filter_row = QHBoxLayout()
+        each_uom_filter_row.addWidget(QLabel("Categories:"))
+        each_uom_categories_entry = QLineEdit()
+        each_uom_categories_entry.setMaximumWidth(120)
+        each_uom_categories_entry.setAccessibleName("Each UOM category filter")
+        self.fields["edi_each_uom_categories_entry"] = each_uom_categories_entry
+        each_uom_filter_row.addWidget(each_uom_categories_entry)
+        each_uom_filter_row.addWidget(QLabel("Mode:"))
+        each_uom_mode_combo = QComboBox()
+        each_uom_mode_combo.addItems(["include", "exclude"])
+        each_uom_mode_combo.setMaximumWidth(90)
+        self.fields["edi_each_uom_mode"] = each_uom_mode_combo
+        each_uom_filter_row.addWidget(each_uom_mode_combo)
+        layout.addLayout(each_uom_filter_row)
+
         split_sales_tax_check = QCheckBox("Split Sales Tax 'C' Records")
         self.fields["split_sales_tax_prepaid_var"] = split_sales_tax_check
         layout.addWidget(split_sales_tax_check)
@@ -743,6 +758,14 @@ class DynamicEDIBuilder:
         self.fields["edi_each_uom_tweak"].setChecked(
             normalize_bool(cfg.get("retail_uom", False))
         )
+        self.fields["edi_each_uom_categories_entry"].setText(
+            str(cfg.get("each_uom_categories", "ALL"))
+        )
+        _each_uom_mode_idx = self.fields["edi_each_uom_mode"].findText(
+            str(cfg.get("each_uom_mode", "include"))
+        )
+        if _each_uom_mode_idx >= 0:
+            self.fields["edi_each_uom_mode"].setCurrentIndex(_each_uom_mode_idx)
         self.fields["split_sales_tax_prepaid_var"].setChecked(
             normalize_bool(cfg.get("split_prepaid_sales_tax_crec", False))
         )
@@ -828,6 +851,21 @@ class DynamicEDIBuilder:
         self.fields["edi_each_uom_tweak"] = each_uom_check
         layout.addWidget(each_uom_check)
 
+        each_uom_filter_row = QHBoxLayout()
+        each_uom_filter_row.addWidget(QLabel("Categories:"))
+        each_uom_categories_entry = QLineEdit()
+        each_uom_categories_entry.setMaximumWidth(120)
+        each_uom_categories_entry.setAccessibleName("Each UOM category filter")
+        self.fields["edi_each_uom_categories_entry"] = each_uom_categories_entry
+        each_uom_filter_row.addWidget(each_uom_categories_entry)
+        each_uom_filter_row.addWidget(QLabel("Mode:"))
+        each_uom_mode_combo = QComboBox()
+        each_uom_mode_combo.addItems(["include", "exclude"])
+        each_uom_mode_combo.setMaximumWidth(90)
+        self.fields["edi_each_uom_mode"] = each_uom_mode_combo
+        each_uom_filter_row.addWidget(each_uom_mode_combo)
+        layout.addLayout(each_uom_filter_row)
+
         sort_row = QHBoxLayout()
         sort_row.addWidget(QLabel("CSV Column Sort:"))
         column_sort_field = QLineEdit()
@@ -844,6 +882,14 @@ class DynamicEDIBuilder:
             normalize_bool(cfg.get("include_item_description", False))
         )
         each_uom_check.setChecked(normalize_bool(cfg.get("retail_uom", False)))
+        self.fields["edi_each_uom_categories_entry"].setText(
+            str(cfg.get("each_uom_categories", "ALL"))
+        )
+        _each_uom_mode_idx = self.fields["edi_each_uom_mode"].findText(
+            str(cfg.get("each_uom_mode", "include"))
+        )
+        if _each_uom_mode_idx >= 0:
+            self.fields["edi_each_uom_mode"].setCurrentIndex(_each_uom_mode_idx)
         column_sort_field.setText(str(cfg.get("simple_csv_sort_order", "")))
 
         if self.convert_sub_layout is not None:

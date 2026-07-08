@@ -549,3 +549,86 @@ class TestConvertToSimplifiedCSVIntegration(TestConvertToSimplifiedCSVFixtures):
                 if r and "upc_number" not in str(r).lower() and "UPC" not in r
             ]
             assert len(data_rows) == 2
+
+
+class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures):
+    """Tests for the each_uom_categories / each_uom_mode filter in simplified_csv."""
+
+    VENDOR_ITEM = 123456
+
+    @pytest.fixture
+    def upc_lookup(self):
+        return {self.VENDOR_ITEM: ("1", "11111111111", "22222222222")}
+
+    def _run(self, default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path):
+        from dispatch.converters import convert_to_simplified_csv
+
+        b_record = (
+            "B"
+            + "01234567890"
+            + "Test Item Description    "
+            + f"{self.VENDOR_ITEM:0>6}"
+            + "001000"
+            + "01"
+            + "000006"
+            + "00010"
+            + "00199"
+            + "001"
+            + "000000"
+        )
+        content = sample_header_record + "\n" + b_record + "\n"
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(content)
+        output_file = str(tmp_path / "output")
+        convert_to_simplified_csv.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            params,
+            upc_lookup,
+        )
+        with open(output_file + ".csv", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+        # Filter out header row
+        return [r for r in rows if r and "UPC" not in r[0]]
+
+    def test_retail_uom_all_transforms(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+        """With each_uom_categories='ALL', retail_uom=True transforms."""
+        params = dict(default_parameters)
+        params["retail_uom"] = "True"
+        params["each_uom_categories"] = "ALL"
+        params["each_uom_mode"] = "include"
+        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        assert rows  # transformed
+
+    def test_retail_uom_filter_excludes_category(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+        """With include filter that excludes the item's category, fields are NOT transformed."""
+        params = dict(default_parameters)
+        params["retail_uom"] = "True"
+        params["each_uom_categories"] = "99"
+        params["each_uom_mode"] = "include"
+        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        # Cost stays at original 1000 cents; no transform ran
+        assert rows
+        # column 2 (unit_cost) should still be 10.00 (not divided by 6)
+        assert rows[0][2] == "10.00"
+
+    def test_retail_uom_exclude_mode(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+        """With exclude filter for the item's category, fields are NOT transformed."""
+        params = dict(default_parameters)
+        params["retail_uom"] = "True"
+        params["each_uom_categories"] = "1"
+        params["each_uom_mode"] = "exclude"
+        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        assert rows[0][2] == "10.00"
+
+    def test_retail_uom_include_mode_matches(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+        """With include filter matching the item's category, transform runs."""
+        params = dict(default_parameters)
+        params["retail_uom"] = "True"
+        params["each_uom_categories"] = "1"
+        params["each_uom_mode"] = "include"
+        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        # Transform should have run: 1000 cents / 6 = 166.66... -> 1.66
+        assert rows[0][2] != "10.00"

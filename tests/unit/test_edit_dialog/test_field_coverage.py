@@ -219,6 +219,8 @@ def get_from_dict_expected_keys() -> set[str]:
         "invoice_date_custom_format",
         "invoice_date_custom_format_string",
         "retail_uom",
+        "each_uom_categories",
+        "each_uom_mode",
         # Backend-specific
         "estore_store_number",
         "estore_Vendor_OId",
@@ -392,6 +394,8 @@ EXPECTED_TO_DICT_KEYS = {
     "invoice_date_custom_format",
     "invoice_date_custom_format_string",
     "retail_uom",
+    "each_uom_categories",
+    "each_uom_mode",
     # Backend-specific (4 fields)
     "estore_store_number",
     "estore_Vendor_OId",
@@ -455,6 +459,8 @@ EXPECTED_EXTRACTOR_FIELDS = {
     "invoice_date_custom_format",
     "invoice_date_custom_format_string",
     "retail_uom",
+    "each_uom_categories",
+    "each_uom_mode",
     # UPC override
     "override_upc_bool",
     "override_upc_level",
@@ -874,6 +880,8 @@ class TestNestedConfigurationCoverage:
             "custom_format_enabled",
             "custom_format_string",
             "retail_uom",
+            "each_uom_categories",
+            "each_uom_mode",
         }
 
         assert inv_date_fields == expected, (

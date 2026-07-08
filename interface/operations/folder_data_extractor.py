@@ -76,6 +76,8 @@ class ExtractedDialogFields:
     invoice_date_custom_format: bool = False
     invoice_date_custom_format_string: str = ""
     retail_uom: bool = False
+    each_uom_categories: str = "ALL"
+    each_uom_mode: str = "include"
 
     # UPC override
     override_upc_bool: bool = False
@@ -186,6 +188,8 @@ class FolderDataExtractor:
                 "invoice_date_custom_format_field"
             ),
             retail_uom=self._get_bool("edi_each_uom_tweak"),
+            each_uom_categories=self._get_text("edi_each_uom_categories_entry"),
+            each_uom_mode=self._get_value("edi_each_uom_mode"),
             # UPC override
             override_upc_bool=self._get_bool("override_upc_bool"),
             override_upc_level=self._get_int("override_upc_level"),

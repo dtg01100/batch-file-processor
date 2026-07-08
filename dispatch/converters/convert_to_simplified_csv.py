@@ -37,7 +37,7 @@ from dispatch.converters.convert_base import (
     make_edi_convert,
     normalize_parameter,
 )
-from dispatch.converters.csv_utils import apply_retail_uom
+from dispatch.converters.csv_utils import apply_retail_uom, should_apply_retail_uom
 
 
 class SimplifiedCSVConverter(BaseEDIConverter):
@@ -62,6 +62,12 @@ class SimplifiedCSVConverter(BaseEDIConverter):
 
         context.user_data["retail_uom"] = normalize_parameter(
             params.get("retail_uom"), default=False
+        )
+        context.user_data["each_uom_categories"] = (
+            params.get("each_uom_categories") or "ALL"
+        )
+        context.user_data["each_uom_mode"] = (
+            params.get("each_uom_mode") or "include"
         )
         context.user_data["inc_headers"] = normalize_parameter(
             params.get(
@@ -217,6 +223,13 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             Modified fields dictionary
 
         """
+        if not should_apply_retail_uom(
+            fields,
+            context.upc_lut,
+            context.user_data.get("each_uom_categories", "ALL"),
+            context.user_data.get("each_uom_mode", "include"),
+        ):
+            return fields
         return apply_retail_uom(fields, context.upc_lut, upc_target_length=11)
 
 

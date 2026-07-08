@@ -152,3 +152,4 @@ secrets*.txt
 
 # AI session handoff files (per .clio/instructions.md)
 ai-assisted/
+.aider*

@@ -31,6 +31,39 @@ from core.utils import calc_check_digit, convert_upce_to_upca, safe_int
 logger = get_logger(__name__)
 
 
+def should_apply_retail_uom(
+    fields: dict[str, str],
+    upc_lut: dict[int, tuple],
+    categories: str,
+    mode: str,
+) -> bool:
+    """Determine whether the retail UOM transform should be applied to this B record.
+
+    Returns True when no filter is configured (empty / "ALL") or when the
+    item's category (from the UPC lookup) matches the configured filter
+    in include mode / does not match in exclude mode. Items whose
+    vendor_item is missing from ``upc_lut`` always pass so the existing
+    padding fallback in ``apply_retail_uom`` can run.
+    """
+    categories = (categories or "").strip()
+    if categories in ("", "ALL"):
+        return True
+    try:
+        vendor_item = int(str(fields["vendor_item"]).strip())
+    except (KeyError, ValueError, TypeError, AttributeError):
+        return True
+    if vendor_item not in upc_lut:
+        return True
+    upc_data = upc_lut[vendor_item]
+    try:
+        item_category = str(upc_data[0]).strip()
+    except (IndexError, TypeError):
+        return True
+    categories_list = [c.strip() for c in categories.split(",")]
+    in_list = item_category in categories_list
+    return in_list if mode == "include" else not in_list
+
+
 def apply_retail_uom(
     fields: dict[str, str],
     upc_lut: dict[int, tuple],

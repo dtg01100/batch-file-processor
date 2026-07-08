@@ -8,7 +8,7 @@ APP_VERSION = "(Git Branch: Master)"
 # Database version - this is the single source of truth for the current
 # database schema version
 # Update this when adding new database migrations
-CURRENT_DATABASE_VERSION = "50"
+CURRENT_DATABASE_VERSION = "51"
 
 # Backend timeout constants (seconds)
 SMTP_TIMEOUT_SECONDS = 30
@@ -88,6 +88,8 @@ FOLDER_DEFAULTS: dict = {
     "force_txt_file_ext": False,
     "calculate_upc_check_digit": False,
     "retail_uom": False,
+    "each_uom_categories": "ALL",
+    "each_uom_mode": "include",
     "override_upc_bool": False,
     "split_prepaid_sales_tax_crec": False,
     "process_backend_http": False,

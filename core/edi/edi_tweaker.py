@@ -138,6 +138,8 @@ class TweakerConfig:
     calc_upc: bool = False
     invoice_date_offset: int = 0
     retail_uom: bool = False
+    each_uom_categories: str = "ALL"
+    each_uom_mode: str = "include"
     override_upc: bool = False
     override_upc_level: int = 1
     override_upc_category_filter: str = "ALL"
@@ -174,6 +176,8 @@ class TweakerConfig:
             calc_upc=normalize_bool(params.get("calculate_upc_check_digit", False)),
             invoice_date_offset=int(params.get("invoice_date_offset", 0) or 0),
             retail_uom=normalize_bool(params.get("retail_uom", False)),
+            each_uom_categories=params.get("each_uom_categories", "ALL") or "ALL",
+            each_uom_mode=params.get("each_uom_mode", "include") or "include",
             override_upc=normalize_bool(params.get("override_upc_bool", False)),
             override_upc_level=int(params.get("override_upc_level", 1) or 1),
             override_upc_category_filter=params.get(
@@ -677,8 +681,18 @@ class EDITweaker:
             Modified fields dictionary
 
         """
-        if self.config.retail_uom:
-            fields = self._apply_retail_uom(fields, upc_dict)
+        if not self.config.retail_uom:
+            return fields
+        from dispatch.converters.csv_utils import should_apply_retail_uom
+
+        if not should_apply_retail_uom(
+            fields,
+            upc_dict,
+            self.config.each_uom_categories,
+            self.config.each_uom_mode,
+        ):
+            return fields
+        fields = self._apply_retail_uom(fields, upc_dict)
         return fields
 
     def _transform_upc_calc(self, fields: dict) -> dict:

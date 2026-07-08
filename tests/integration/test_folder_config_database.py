@@ -103,6 +103,8 @@ def sample_folder_config():
             custom_format_enabled=True,
             custom_format_string="%Y-%m-%d",
             retail_uom=True,
+            each_uom_categories="1,2,3",
+            each_uom_mode="exclude",
         ),
         # Backend-specific configuration
         backend_specific=BackendSpecificConfiguration(
@@ -205,6 +207,8 @@ class TestFolderConfigDatabaseMapping:
         assert config_dict["invoice_date_custom_format"] is True
         assert config_dict["invoice_date_custom_format_string"] == "%Y-%m-%d"
         assert config_dict["retail_uom"] is True
+        assert config_dict["each_uom_categories"] == "1,2,3"
+        assert config_dict["each_uom_mode"] == "exclude"
 
         # Backend-specific fields
         assert config_dict["estore_store_number"] == "STORE123"
@@ -449,6 +453,14 @@ class TestFolderConfigRoundtrip:
         assert (
             loaded_config.invoice_date.offset
             == sample_folder_config.invoice_date.offset
+        )
+        assert (
+            loaded_config.invoice_date.each_uom_categories
+            == sample_folder_config.invoice_date.each_uom_categories
+        )
+        assert (
+            loaded_config.invoice_date.each_uom_mode
+            == sample_folder_config.invoice_date.each_uom_mode
         )
 
         # Verify Backend-specific

@@ -132,6 +132,8 @@ def sample_folder_config():
         "invoice_date_custom_format": False,
         "invoice_date_custom_format_string": "",
         "retail_uom": False,
+        "each_uom_categories": "ALL",
+        "each_uom_mode": "include",
         "override_upc_bool": False,
         "override_upc_level": 1,
         "override_upc_category_filter": "",
