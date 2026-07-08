@@ -3,12 +3,38 @@
 This module provides tests that verify converter output matches reference
 files byte-for-byte, detecting regressions in converter implementations.
 
-Usage:
-    # Run tests in compare mode (default)
-    pytest tests/unit/test_golden_output.py -v
+Golden file location
+--------------------
+Golden files live in ``tests/golden_files/`` — one subdirectory per
+format (``csv/``, ``scannerware/``, etc.). Each test case has a separate
+``.golden`` file under its format's directory.
 
-    # Update golden files with current output
-    pytest tests/unit/test_golden_output.py --update-golden
+How regeneration works
+----------------------
+There is **no automatic update mode** (no ``--update-golden`` flag; the
+flag name in earlier docstrings is aspirational). When a converter change
+intentionally shifts output, regenerate the affected golden files
+**manually**:
+
+  1. Re-run the failing test::
+         pytest tests/unit/test_golden_output.py -v
+
+     The failure report (see ``pytest.fail`` calls below) shows the diff
+     between actual and expected output.
+
+  2. If the diff is the intended new behaviour, copy the actual output
+     over the golden file. The test loads input from
+     ``<golden_dir>/<format>/<test_id>.golden`` and writes nothing itself,
+     so regenerate by replacing those files with the new bytes.
+
+  3. Re-run the test to confirm it passes.
+
+Missing golden files
+--------------------
+If a golden file is intentionally absent (e.g. a corpus fixture hasn't
+been generated yet), the test should be marked ``xfail`` with a clear
+reason. An accidental missing file surfaces as a ``pytest.fail`` from
+the open call — treat that as a test bug, not a passing skip.
 """
 
 import os
@@ -816,7 +842,7 @@ class TestResolveEnvVars:
     def test_nested_structure(self, monkeypatch):
         """Test deeply nested structures are resolved."""
         monkeypatch.setenv("DEEP_VAL", "found")
-        result = resolve_env_vars(
+        resolve_env_vars(
             {"level1": {"level2": ["${DEEP_VAL}", {"nested": "${DEEP_VAL}"}]}}
         )
 

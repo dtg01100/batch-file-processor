@@ -6,6 +6,8 @@ This module tests the refactored print service with mock implementations.
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from dispatch.print_service import (
     MockPrintService,
     NullPrintService,
@@ -16,7 +18,6 @@ from dispatch.print_service import (
     create_print_service,
     create_run_log_printer,
 )
-import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 
@@ -24,15 +25,16 @@ pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 class TestMockPrintService:
     """Tests for MockPrintService."""
 
-    def test_print_file_records_file(self):
+    def test_print_file_records_file(self, tmp_path):
         """Test that print_file records the file path."""
         service = MockPrintService()
+        target = str(tmp_path / "test.log")
 
-        result = service.print_file("/tmp/test.log")
+        result = service.print_file(target)
 
         assert result is True
-        assert "/tmp/test.log" in service.printed_files
-        assert service.get_last_printed_file() == "/tmp/test.log"
+        assert target in service.printed_files
+        assert service.get_last_printed_file() == target
 
     def test_print_content_records_content(self):
         """Test that print_content records the content."""
@@ -44,11 +46,11 @@ class TestMockPrintService:
         assert "Test log content" in service.printed_content
         assert service.get_last_printed_content() == "Test log content"
 
-    def test_print_file_can_fail(self):
+    def test_print_file_can_fail(self, tmp_path):
         """Test that print_file can be configured to fail."""
         service = MockPrintService(should_fail=True)
 
-        result = service.print_file("/tmp/test.log")
+        result = service.print_file(str(tmp_path / "test.log"))
 
         assert result is False
         assert len(service.printed_files) == 0
@@ -68,10 +70,10 @@ class TestMockPrintService:
 
         assert service.is_available() is True
 
-    def test_reset_clears_records(self):
+    def test_reset_clears_records(self, tmp_path):
         """Test that reset clears all recorded data."""
         service = MockPrintService()
-        service.print_file("/tmp/test.log")
+        service.print_file(str(tmp_path / "test.log"))
         service.print_content("Content")
 
         service.reset()
@@ -91,29 +93,31 @@ class TestMockPrintService:
 
         assert service.get_last_printed_content() is None
 
-    def test_multiple_prints(self):
+    def test_multiple_prints(self, tmp_path):
         """Test multiple print operations."""
         service = MockPrintService()
+        path1 = str(tmp_path / "log1.txt")
+        path2 = str(tmp_path / "log2.txt")
 
-        service.print_file("/tmp/log1.txt")
-        service.print_file("/tmp/log2.txt")
+        service.print_file(path1)
+        service.print_file(path2)
         service.print_content("Content 1")
         service.print_content("Content 2")
 
         assert len(service.printed_files) == 2
         assert len(service.printed_content) == 2
-        assert service.get_last_printed_file() == "/tmp/log2.txt"
+        assert service.get_last_printed_file() == path2
         assert service.get_last_printed_content() == "Content 2"
 
 
 class TestNullPrintService:
     """Tests for NullPrintService."""
 
-    def test_print_file_returns_true(self):
+    def test_print_file_returns_true(self, tmp_path):
         """Test that print_file always returns True."""
         service = NullPrintService()
 
-        result = service.print_file("/tmp/test.log")
+        result = service.print_file(str(tmp_path / "test.log"))
 
         assert result is True
 
@@ -279,7 +283,7 @@ class TestRunLogPrinter:
         assert result is True
         assert "Log content here" in mock_service.printed_content
 
-    def test_print_run_log_unavailable_service(self):
+    def test_print_run_log_unavailable_service(self, tmp_path):
         """Test printing when service is unavailable."""
 
         # Create a service that's not available
@@ -295,7 +299,7 @@ class TestRunLogPrinter:
 
         printer = RunLogPrinter(print_service=UnavailableService())
 
-        result = printer.print_run_log("/tmp/test.log")
+        result = printer.print_run_log(str(tmp_path / "test.log"))
 
         assert result is False
 

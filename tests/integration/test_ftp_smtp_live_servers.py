@@ -702,7 +702,7 @@ class TestSMTPLiveServer:
                 f"{addr} not in rcpt_tos: {msg_data['rcpt_tos']}"
             )
 
-    def test_smtp_retry_on_connection_failure(self, tmp_path):
+    def test_smtp_retry_on_connection_failure(self, tmp_path, monkeypatch):
         """Verify email_backend retries after initial MockSMTPClient connect failure."""
         mock = MockSMTPClient()
         # First connect() call raises an error; second succeeds
@@ -719,13 +719,9 @@ class TestSMTPLiveServer:
             "email_password": "",
         }
 
-        # Suppress sleep for speed
-        original_sleep = email_backend.time.sleep
-        email_backend.time.sleep = lambda _: None
-        try:
-            result = email_backend.do(params, settings, filepath, smtp_client=mock)
-        finally:
-            email_backend.time.sleep = original_sleep
+        # Suppress sleep for speed; pytest restores on teardown.
+        monkeypatch.setattr(email_backend.time, "sleep", lambda _: None)
+        result = email_backend.do(params, settings, filepath, smtp_client=mock)
 
         assert result is True
         assert len(mock.connections) == 1  # second attempt succeeded
