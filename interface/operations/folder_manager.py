@@ -7,11 +7,47 @@ for folder configurations, separating business logic from UI code.
 import os
 from typing import Any, ClassVar
 
+from core.domain.models.folder import FolderConfiguration
 from core.ports.repositories import (
     IFolderRepository,
     IProcessedFilesRepository,
     ISettingsRepository,
 )
+
+
+def _to_db_dict(folder: Any) -> dict[str, Any] | None:
+    """Return a DB-row dict for either a FolderConfiguration or a plain dict.
+
+    Tests and legacy callers pass plain dicts or SimpleNamespace mocks;
+    production repos return FolderConfiguration instances. The folder
+    manager boundary normalises all of these to the dict shape its
+    public API exposes. ``id`` is merged from the source so callers can
+    index the dict by primary key — ``FolderConfiguration.to_dict``
+    intentionally strips it.
+    """
+    if folder is None:
+        return None
+    if isinstance(folder, FolderConfiguration):
+        data = folder.to_dict()
+        if folder.id is not None:
+            data["id"] = folder.id
+        return data
+    if isinstance(folder, dict):
+        return dict(folder)
+    if hasattr(folder, "to_dict"):
+        result = folder.to_dict()
+        return result if isinstance(result, dict) else dict(result)
+    raw = dict(vars(folder))
+    if getattr(folder, "id", None) is not None:
+        raw.setdefault("id", folder.id)
+    return raw
+
+
+def _is_active_folder(folder: Any) -> bool:
+    """Return whether a folder-like value is active, accepting dict or object."""
+    if isinstance(folder, dict):
+        return bool(folder.get("folder_is_active", True))
+    return bool(getattr(folder, "folder_is_active", True))
 
 
 class FolderManager:
@@ -75,7 +111,7 @@ class FolderManager:
 
     def add_folder(
         self, folder_path: str, template_data: dict | None = None
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """Add a folder to the database using template defaults.
 
         Args:
@@ -102,8 +138,9 @@ class FolderManager:
         template_settings["folder_name"] = folder_path
         template_settings["alias"] = folder_name
 
-        self._folder_repo.insert(template_settings)
-        return self._folder_repo.find_by_path(folder_path)  # type: ignore[return-value]
+        folder_config = FolderConfiguration.from_dict(template_settings)
+        new_id = self._folder_repo.insert(folder_config)
+        return _to_db_dict(self._folder_repo.find_by_id(new_id))
 
     def _alias_exists(self, alias: str) -> bool:
         return bool(self._folder_repo.find_by_alias(alias))
@@ -149,23 +186,28 @@ class FolderManager:
 
         """
         all_folders = self._folder_repo.find_all()
+        normalised = os.path.normpath(folder_path)
 
-        matched_folders = [
-            folder
-            for folder in all_folders
-            if os.path.normpath(folder["folder_name"]) == os.path.normpath(folder_path)
-        ]
+        matched = []
+        for folder in all_folders:
+            name = (
+                folder.get("folder_name")
+                if isinstance(folder, dict)
+                else folder.folder_name
+            )
+            if os.path.normpath(name or "") == normalised:
+                matched.append(folder)
 
-        if matched_folders:
+        if matched:
             return {
                 "truefalse": True,
-                "matched_folder": matched_folders[0],
-                "all_matched_folders": matched_folders,
+                "matched_folder": _to_db_dict(matched[0]),
+                "all_matched_folders": [_to_db_dict(m) for m in matched],
             }
 
         return {"truefalse": False, "matched_folder": None, "all_matched_folders": []}
 
-    def get_folder_by_id(self, folder_id: int) -> dict | None:
+    def get_folder_by_id(self, folder_id: int) -> dict[str, Any] | None:
         """Get a folder by its ID.
 
         Args:
@@ -175,9 +217,9 @@ class FolderManager:
             Folder dict or None if not found
 
         """
-        return self._folder_repo.find_by_id(folder_id)
+        return _to_db_dict(self._folder_repo.find_by_id(folder_id))
 
-    def get_folder_by_name(self, folder_name: str) -> dict | None:
+    def get_folder_by_name(self, folder_name: str) -> dict[str, Any] | None:
         """Get a folder by its name (path).
 
         Args:
@@ -187,9 +229,9 @@ class FolderManager:
             Folder dict or None if not found
 
         """
-        return self._folder_repo.find_by_path(folder_name)
+        return _to_db_dict(self._folder_repo.find_by_path(folder_name))
 
-    def get_folder_by_alias(self, alias: str) -> dict | None:
+    def get_folder_by_alias(self, alias: str) -> dict[str, Any] | None:
         """Get a folder by its alias.
 
         Args:
@@ -199,7 +241,7 @@ class FolderManager:
             Folder dict or None if not found
 
         """
-        return self._folder_repo.find_by_alias(alias)
+        return _to_db_dict(self._folder_repo.find_by_alias(alias))
 
     def set_folder_active(self, folder_id: int, *, active: bool) -> bool:
         """Set a folder's active state.
@@ -212,12 +254,12 @@ class FolderManager:
             True if successful, False if folder not found
 
         """
-        folder = self.get_folder_by_id(folder_id)
-        if folder:
-            folder["folder_is_active"] = active
-            self._folder_repo.update(folder)
-            return True
-        return False
+        folder = _to_db_dict(self._folder_repo.find_by_id(folder_id))
+        if folder is None:
+            return False
+        folder["folder_is_active"] = active
+        self._folder_repo.update(FolderConfiguration.from_dict(folder), folder_id)
+        return True
 
     def disable_folder(self, folder_id: int) -> bool:
         """Disable a folder.
@@ -284,16 +326,20 @@ class FolderManager:
             return True
         return False
 
-    def get_active_folders(self) -> list[dict]:
+    def get_active_folders(self) -> list[dict[str, Any]]:
         """Get all active folders.
 
         Returns:
             List of active folder dicts
 
         """
-        return self._folder_repo.find_all(active_only=True)
+        return [
+            result
+            for f in self._folder_repo.find_all(active_only=True)
+            if (result := _to_db_dict(f)) is not None
+        ]
 
-    def get_inactive_folders(self) -> list[dict]:
+    def get_inactive_folders(self) -> list[dict[str, Any]]:
         """Get all inactive folders.
 
         Returns:
@@ -301,9 +347,14 @@ class FolderManager:
 
         """
         all_folders = self._folder_repo.find_all(active_only=False)
-        return [f for f in all_folders if not f.get("folder_is_active", True)]
+        return [
+            result
+            for f in all_folders
+            if not _is_active_folder(f)
+            if (result := _to_db_dict(f)) is not None
+        ]
 
-    def get_all_folders(self, _order_by: str | None = "alias") -> list[dict]:
+    def get_all_folders(self, _order_by: str | None = "alias") -> list[dict[str, Any]]:
         """Get all folders.
 
         Args:
@@ -313,7 +364,11 @@ class FolderManager:
             List of all folder dicts
 
         """
-        return self._folder_repo.find_all()
+        return [
+            result
+            for f in self._folder_repo.find_all()
+            if (result := _to_db_dict(f)) is not None
+        ]
 
     def count_folders(self, *, active_only: bool = False) -> int:
         """Count folders.
@@ -340,11 +395,14 @@ class FolderManager:
         if "id" not in folder_data:
             return False
 
-        folder = self.get_folder_by_id(folder_data["id"])
-        if folder:
-            self._folder_repo.update(folder_data)
-            return True
-        return False
+        existing = _to_db_dict(self._folder_repo.find_by_id(folder_data["id"]))
+        if existing is None:
+            return False
+        merged = {**existing, **folder_data}
+        self._folder_repo.update(
+            FolderConfiguration.from_dict(merged), folder_data["id"]
+        )
+        return True
 
     def update_folder_by_name(self, folder_data: dict) -> bool:
         """Update a folder configuration by name.
@@ -359,12 +417,17 @@ class FolderManager:
         if "folder_name" not in folder_data:
             return False
 
-        folder = self.get_folder_by_name(folder_data["folder_name"])
-        if folder:
-            folder_data["id"] = folder["id"]
-            self._folder_repo.update(folder_data)
-            return True
-        return False
+        existing = _to_db_dict(
+            self._folder_repo.find_by_path(folder_data["folder_name"])
+        )
+        if existing is None:
+            return False
+        folder_id = existing["id"]
+        merged = {**existing, **folder_data}
+        self._folder_repo.update(
+            FolderConfiguration.from_dict(merged), folder_id
+        )
+        return True
 
     def batch_add_folders(
         self, parent_path: str, *, skip_existing: bool = True
