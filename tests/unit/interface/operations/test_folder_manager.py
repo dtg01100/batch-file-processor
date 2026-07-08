@@ -4,6 +4,7 @@ Tests the FolderManager class with mocked database connections
 to ensure proper behavior without requiring actual database files.
 """
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -74,11 +75,13 @@ class TestFolderManager:
     def test_add_folder_creates_record(self, manager, mock_db):
         """Test adding a folder creates a database record."""
         mock_db.folder_repo.find_by_alias.return_value = None
-        # Mock find_by_path to return the expected folder dict
-        mock_db.folder_repo.find_by_path.return_value = {
+        mock_db.folder_repo.insert.return_value = 42
+        persisted = MagicMock()
+        persisted.to_dict.return_value = {
             "folder_name": "/path/to/folder",
             "alias": "folder",
         }
+        mock_db.folder_repo.find_by_id.return_value = persisted
 
         result = manager.add_folder("/path/to/folder")
 
@@ -91,11 +94,13 @@ class TestFolderManager:
             {"alias": "folder"},
             None,
         ]
-        # Mock find_by_path to return the expected folder dict
-        mock_db.folder_repo.find_by_path.return_value = {
+        mock_db.folder_repo.insert.return_value = 42
+        persisted = MagicMock()
+        persisted.to_dict.return_value = {
             "folder_name": "/path/to/folder",
             "alias": "folder 1",
         }
+        mock_db.folder_repo.find_by_id.return_value = persisted
 
         result = manager.add_folder("/path/to/folder")
 
@@ -104,12 +109,14 @@ class TestFolderManager:
     def test_add_folder_with_template_data(self, manager, mock_db):
         """Test adding folder with custom template data."""
         mock_db.folder_repo.find_by_alias.return_value = None
-        # Mock find_by_path to return the expected folder dict
-        mock_db.folder_repo.find_by_path.return_value = {
+        mock_db.folder_repo.insert.return_value = 42
+        persisted = MagicMock()
+        persisted.to_dict.return_value = {
             "folder_name": "/path/to/folder",
             "alias": "folder",
             "custom_setting": "custom_value",
         }
+        mock_db.folder_repo.find_by_id.return_value = persisted
 
         custom_template = {
             "id": 1,
@@ -125,7 +132,7 @@ class TestFolderManager:
         """Test checking existing folder."""
         folder_path = str(tmp_path)
         mock_db.folder_repo.find_all.return_value = [
-            {"folder_name": folder_path, "alias": "test"}
+            SimpleNamespace(folder_name=folder_path, alias="test")
         ]
 
         result = manager.check_folder_exists(folder_path)
@@ -145,7 +152,7 @@ class TestFolderManager:
     def test_check_folder_exists_normalized_path(self, manager, mock_db):
         """Test that path normalization works correctly."""
         mock_db.folder_repo.find_all.return_value = [
-            {"folder_name": "/path/to/folder", "alias": "test"}
+            SimpleNamespace(folder_name="/path/to/folder", alias="test")
         ]
 
         result = manager.check_folder_exists("/path/to/folder/")
@@ -156,8 +163,8 @@ class TestFolderManager:
         """Test that check_folder_exists returns all matched folders."""
         folder_path = str(tmp_path)
         mock_db.folder_repo.find_all.return_value = [
-            {"folder_name": folder_path, "alias": "config1", "id": 1},
-            {"folder_name": folder_path, "alias": "config2", "id": 2},
+            SimpleNamespace(folder_name=folder_path, alias="config1", id=1),
+            SimpleNamespace(folder_name=folder_path, alias="config2", id=2),
         ]
 
         result = manager.check_folder_exists(folder_path)
@@ -180,7 +187,7 @@ class TestFolderManager:
         assert result is True
         mock_db.folder_repo.update.assert_called_once()
         call_args = mock_db.folder_repo.update.call_args
-        assert call_args[0][0]["folder_is_active"] is False
+        assert call_args[0][0].to_dict()["folder_is_active"] is False
 
     def test_disable_folder_not_found(self, manager, mock_db):
         """Test disabling non-existent folder."""
@@ -202,7 +209,7 @@ class TestFolderManager:
         assert result is True
         mock_db.folder_repo.update.assert_called_once()
         call_args = mock_db.folder_repo.update.call_args
-        assert call_args[0][0]["folder_is_active"] is True
+        assert call_args[0][0].to_dict()["folder_is_active"] is True
 
     def test_enable_folder_not_found(self, manager, mock_db):
         """Test enabling non-existent folder."""
@@ -232,7 +239,7 @@ class TestFolderManager:
     def test_get_active_folders(self, manager, mock_db):
         """Test getting active folders."""
         mock_db.folder_repo.find_all.return_value = [
-            {"id": 1, "folder_is_active": True}
+            SimpleNamespace(id=1, folder_is_active=True)
         ]
 
         result = manager.get_active_folders()
@@ -243,7 +250,7 @@ class TestFolderManager:
     def test_get_inactive_folders(self, manager, mock_db):
         """Test getting inactive folders."""
         mock_db.folder_repo.find_all.return_value = [
-            {"id": 2, "folder_is_active": False}
+            SimpleNamespace(id=2, folder_is_active=False)
         ]
 
         result = manager.get_inactive_folders()
@@ -254,8 +261,8 @@ class TestFolderManager:
     def test_get_all_folders(self, manager, mock_db):
         """Test getting all folders."""
         mock_db.folder_repo.find_all.return_value = [
-            {"id": 1, "alias": "a"},
-            {"id": 2, "alias": "b"},
+            SimpleNamespace(id=1, alias="a"),
+            SimpleNamespace(id=2, alias="b"),
         ]
 
         result = manager.get_all_folders()
@@ -404,7 +411,7 @@ class TestFolderManagerBatchOperations:
         (tmp_path / "folder2").mkdir()
 
         mock_db.folder_repo.find_all.return_value = [
-            {"folder_name": str(tmp_path / "folder1"), "alias": "folder1"},
+            SimpleNamespace(folder_name=str(tmp_path / "folder1"), alias="folder1"),
         ]
         mock_db.folder_repo.find_by_alias.return_value = None
 
@@ -437,12 +444,14 @@ class TestFolderManagerSkipList:
             "valid_setting": "should_be_included",
         }
         mock_folder_repo.find_by_alias.return_value = None
-        # Mock find_by_path to return the expected folder dict
-        mock_folder_repo.find_by_path.return_value = {
+        mock_folder_repo.insert.return_value = 42
+        persisted = MagicMock()
+        persisted.to_dict.return_value = {
             "folder_name": "/path/to/folder",
             "alias": "folder",
             "valid_setting": "should_be_included",
         }
+        mock_folder_repo.find_by_id.return_value = persisted
 
         manager = FolderManager(
             folder_repo=mock_folder_repo,
@@ -528,9 +537,9 @@ class TestFolderManagerCommunicationWiring:
 
         assert result is True
         mock_db.folder_repo.update.assert_called_once()
-        updated_record = mock_db.folder_repo.update.call_args[0][0]
-        assert updated_record["id"] == 5
-        assert updated_record["alias"] == "renamed"
+        updated_config = mock_db.folder_repo.update.call_args[0][0]
+        assert updated_config.id == 5
+        assert updated_config.alias == "renamed"
 
     def test_batch_add_folders_without_skip_adds_all_subfolders(
         self, manager, tmp_path, monkeypatch
