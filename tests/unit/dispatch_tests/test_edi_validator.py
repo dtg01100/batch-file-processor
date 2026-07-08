@@ -8,6 +8,7 @@ from pathlib import Path
 from dispatch.edi_validator import EDIValidator
 from dispatch.file_system import RealFileSystem
 
+
 class MockFileSystem:
     """Mock file system for testing."""
 

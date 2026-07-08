@@ -4,6 +4,8 @@ These tests verify that the Protocol interfaces are properly defined
 and can be used with isinstance() checks for dependency injection.
 """
 
+import pytest
+
 from dispatch.interfaces import (
     BackendInterface,
     DatabaseInterface,
@@ -12,7 +14,6 @@ from dispatch.interfaces import (
     LogInterface,
     ValidatorInterface,
 )
-import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 

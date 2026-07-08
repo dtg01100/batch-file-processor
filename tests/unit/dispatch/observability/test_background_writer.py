@@ -1,11 +1,11 @@
 # tests/unit/dispatch/observability/test_background_writer.py
 import queue
 import threading
-import time
 from unittest.mock import MagicMock
 
 from dispatch.observability.audit_logger import AuditEvent
 from dispatch.observability.background_writer import AuditBackgroundWriter
+
 
 class TestAuditBackgroundWriter:
     def test_start_creates_thread(self):

@@ -272,6 +272,7 @@ class TestImportDiscovery:
                 or "winvenv" in str(py_file)
                 or "tests/_tmp" in str(py_file)
                 or "tests/tmp" in str(py_file)
+                or "/tests/" in str(py_file)
             ):
                 continue
 

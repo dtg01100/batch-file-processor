@@ -5,13 +5,10 @@ Contract unification per specs/refactor-dispatch-simplification.md §3.4.
 
 import logging
 
-import pytest
-
 from dispatch.pipeline.validator import (
     ValidationResult,
     normalize_validation_output,
 )
-
 
 CURRENT_FILE = "/tmp/test.edi"
 

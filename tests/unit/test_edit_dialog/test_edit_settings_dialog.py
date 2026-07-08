@@ -18,8 +18,9 @@ sys.path.insert(
     ),
 )
 
-from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 import pytest
+
+from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 
 pytestmark = [pytest.mark.unit, pytest.mark.gui]
 

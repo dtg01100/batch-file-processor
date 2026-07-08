@@ -12,12 +12,12 @@ Tests validate:
 """
 
 import os
-from unittest.mock import MagicMock, patch
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
 

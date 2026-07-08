@@ -52,7 +52,7 @@ def _make_csv_writer(
     file_handle: Any,
     dialect: str = "excel",
     lineterminator: str = "\r\n",
-) -> "_csv._writer":
+) -> "csv._writer":
     """Construct a csv.writer with the project-standard dialect/line terminator.
 
     Centralises the ``csv.writer(handle, dialect=..., lineterminator=...)``

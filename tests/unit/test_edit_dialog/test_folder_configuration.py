@@ -26,6 +26,7 @@ from interface.models.folder_configuration import (
     UPCOverrideConfiguration,
 )
 
+
 class TestFTPConfiguration:
     """Test suite for FTPConfiguration."""
 
@@ -305,6 +306,8 @@ class TestInvoiceDateConfiguration:
         assert config.custom_format_enabled is False
         assert config.custom_format_string == ""
         assert config.retail_uom is False
+        assert config.each_uom_categories == "ALL"
+        assert config.each_uom_mode == "include"
 
     def test_validate_valid_offset(self):
         """Test validation passes for valid offsets."""
