@@ -220,8 +220,8 @@ class TestLegacyDatabaseMigration:
             assert folder_list[0]["alias"] == "Legacy Folder 1"
 
         except Exception as e:
-            # Migration might not support v1 directly, that's OK
-            pytest.skip(f"Migration not supported for v1: {e}")
+            # TODO(#migration-v1): narrow once v1 migration is implemented
+            pytest.xfail(f"Migration not supported for v1: {e}")
         finally:
             db_for_migration.close()
 
@@ -250,7 +250,8 @@ class TestLegacyDatabaseMigration:
             assert folder_list[0]["alias"] == "V2 Folder"
 
         except Exception as e:
-            pytest.skip(f"Migration not supported for v2: {e}")
+            # TODO(#migration-v2): narrow once v2 migration is implemented
+            pytest.xfail(f"Migration not supported for v2: {e}")
         finally:
             db_for_migration.close()
 
@@ -285,7 +286,8 @@ class TestLegacyDatabaseMigration:
             assert processed_list[0]["filename"] == "test.edi"
 
         except Exception as e:
-            pytest.skip(f"Migration not supported for v3: {e}")
+            # TODO(#migration-v3): narrow once v3 migration is implemented
+            pytest.xfail(f"Migration not supported for v3: {e}")
         finally:
             db_for_migration.close()
 
@@ -332,7 +334,8 @@ class TestMigrationWithDataValidation:
             assert len(migrated_processed) == len(original_processed)
 
         except Exception as e:
-            pytest.skip(f"Migration failed: {e}")
+            # TODO(#migration-data-validation): narrow once multi-conn path verified
+            pytest.xfail(f"Migration failed: {e}")
         finally:
             db_for_migration.close()
 
@@ -362,7 +365,8 @@ class TestMigrationWithDataValidation:
             assert isinstance(folders[0]["alias"], str)
 
         except Exception as e:
-            pytest.skip(f"Migration failed: {e}")
+            # TODO(#migration-types): narrow once type-preservation path is exercised
+            pytest.xfail(f"Migration failed: {e}")
         finally:
             db_for_migration.close()
 
@@ -402,7 +406,8 @@ class TestMigrationRollback:
                         "environment",
                     )
                 ):
-                    pytest.skip(f"Migration not supported in this environment: {e}")
+                    # TODO(#migration-env): narrow once environment detection is solid
+                    pytest.xfail(f"Migration not supported in this environment: {e}")
                 pytest.fail(f"Migration failed unexpectedly: {e}")
 
             version_row = db_for_migration["version"].find_one(id=1)
@@ -506,7 +511,8 @@ class TestInterruptedMigration:
 
         except Exception as e:
             # If interrupted, should be able to retry
-            pytest.skip(f"Migration interrupted: {e}")
+            # TODO(#migration-interruption): narrow once interruption path is exercised
+            pytest.xfail(f"Migration interrupted: {e}")
         finally:
             db_for_migration.close()
 
@@ -577,7 +583,8 @@ class TestMultiVersionMigration:
             assert len(folders) == 2
 
         except Exception as e:
-            pytest.skip(f"Multi-version skip not supported: {e}")
+            # TODO(#migration-data-validation): narrow once v3 data path is implemented
+            pytest.xfail(f"Migration failed: {e}")
         finally:
             db_for_migration.close()
 
@@ -604,7 +611,8 @@ class TestMultiVersionMigration:
             assert len(folders) > 0
 
         except Exception as e:
-            pytest.skip(f"Schema evolution migration failed: {e}")
+            # TODO(#migration-schema-evolution): narrow once evolution path is exercised
+            pytest.xfail(f"Schema evolution migration failed: {e}")
         finally:
             db_for_migration.close()
 
@@ -693,7 +701,8 @@ class TestMigrationEdgeCases:
             assert len(folders) == 0
 
         except Exception as e:
-            pytest.skip(f"Empty database migration failed: {e}")
+            # TODO(#migration-empty): narrow once empty-database migration is exercised
+            pytest.xfail(f"Empty database migration failed: {e}")
         finally:
             db_for_migration.close()
 
@@ -802,6 +811,7 @@ class TestMigrationEdgeCases:
             assert len(processed) == 1000
 
         except Exception as e:
-            pytest.skip(f"Large database migration failed: {e}")
+            # TODO(#migration-large): narrow once large-database path is verified
+            pytest.xfail(f"Large database migration failed: {e}")
         finally:
             db_for_migration.close()
