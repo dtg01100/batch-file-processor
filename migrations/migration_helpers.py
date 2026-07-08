@@ -14,7 +14,7 @@ CSV_SORT_ORDER = "upc_number,qty_of_units,unit_cost,description,vendor_item"
 REPLACEME_PLACEHOLDER = "replaceme"
 
 # Current schema version - this is the single source of truth for the database version
-CURRENT_SCHEMA_VERSION = "50"
+CURRENT_SCHEMA_VERSION = "51"
 
 
 def _quote_identifier(name: str) -> str:

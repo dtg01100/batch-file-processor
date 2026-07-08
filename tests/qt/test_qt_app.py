@@ -335,7 +335,7 @@ class TestQtBatchFileSenderApp:
         app._folder_manager.delete_folder_with_related = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
-        app._database_version = "41"
+        app._database_version = CURRENT_DATABASE_VERSION
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._refresh_users_list = MockFactories.qt_pushbutton()
         app._set_main_button_states = MockFactories.database_obj()
@@ -1452,7 +1452,7 @@ class TestQtBatchFileSenderApp:
         app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
-        app._database_version = "42"
+        app._database_version = CURRENT_DATABASE_VERSION
         app._folder_manager = MockFactories.folder_manager()
         app._refresh_users_list = MockFactories.qt_pushbutton()
         app._set_main_button_states = MockFactories.database_obj()
@@ -1841,7 +1841,7 @@ class TestQtAppInteractionWorkflows:
         app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
-        app._database_version = "42"
+        app._database_version = CURRENT_DATABASE_VERSION
         app._folder_manager = MockFactories.folder_manager()
         app._refresh_users_list = MockFactories.qt_pushbutton()
         app._set_main_button_states = MockFactories.database_obj()
@@ -1888,7 +1888,7 @@ class TestQtAppInteractionWorkflows:
         app._folder_manager = MockFactories.folder_manager()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
-        app._database_version = "41"
+        app._database_version = CURRENT_DATABASE_VERSION
         app._progress_service = MagicMock(spec=ProgressServiceProtocol)
         app._refresh_users_list = MockFactories.qt_pushbutton()
         app._set_main_button_states = MockFactories.database_obj()
@@ -1993,7 +1993,7 @@ class TestQtAppInteractionWorkflows:
         app._window = MockFactories.database_obj()
         app._database_path = "/tmp/folders.db"
         app._running_platform = "Linux"
-        app._database_version = "42"
+        app._database_version = CURRENT_DATABASE_VERSION
         app._folder_manager = MockFactories.folder_manager()
         app._refresh_users_list = MockFactories.qt_pushbutton()
         app._set_main_button_states = MockFactories.database_obj()

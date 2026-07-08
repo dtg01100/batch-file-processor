@@ -1167,6 +1167,17 @@ class TestNoBehavioralChangeAfterUpgrade:
         before_folders = self._snapshot_folders(before_conn)
         before_pf = self._snapshot_processed_files(before_conn)
         before_settings = self._snapshot_settings(before_conn)
+        # Capture pre-migration tweak_edi per folder id — the v44→v45
+        # promotion intentionally flips process_edi False→True for folders
+        # that had tweak_edi=1 (preserves pre-upgrade Tweaked EDI behavior;
+        # see commit 6cfd7c694). Without this, the behavioral diff test
+        # would flag intentional migration-driven changes as regressions.
+        before_tweak_edi = {
+            row[0]: row[1]
+            for row in before_conn.execute(
+                "SELECT id, tweak_edi FROM folders"
+            ).fetchall()
+        }
         before_conn.close()
 
         # Migrate via the wrapper (same path as real app startup)
@@ -1177,7 +1188,7 @@ class TestNoBehavioralChangeAfterUpgrade:
 
         after_conn = sqlite3.connect(legacy_db)
         yield (
-            (before_folders, before_pf, before_settings),
+            (before_folders, before_pf, before_settings, before_tweak_edi),
             after_conn,
         )
         after_conn.close()
@@ -1190,15 +1201,26 @@ class TestNoBehavioralChangeAfterUpgrade:
         'True'/'False' to '1'/'0' for type consistency; normalize_bool() treats
         both identically so there is no behavioral change.
         """
-        (before_folders, _, _), after_conn = snapshots_and_migrated
+        (before_folders, _, _, before_tweak_edi), after_conn = snapshots_and_migrated
         after_folders = self._snapshot_folders(after_conn)
 
         assert len(after_folders) == len(before_folders), (
             f"Folder count changed: {len(before_folders)} → {len(after_folders)}"
         )
 
+        # Folders with pre-migration tweak_edi=1 had their process_edi flipped
+        # False→True by the v44→v45 promotion (preserves Tweaked EDI behavior).
+        # process_edi on those folders is exempt from this comparison.
+        promoted_folder_ids = {
+            fid
+            for fid, tweak in before_tweak_edi.items()
+            if normalize_bool(tweak)
+        }
+
         diffs = []
         for before_row, after_row in zip(before_folders, after_folders, strict=False):
+            folder_id = before_row[0]
+            was_tweak_promoted = folder_id in promoted_folder_ids
             for col_idx, col_name in enumerate(self._FOLDER_BEHAVIORAL_COLS):
                 b_val = before_row[col_idx]
                 a_val = after_row[col_idx]
@@ -1206,9 +1228,15 @@ class TestNoBehavioralChangeAfterUpgrade:
                     # Compare boolean meaning, not raw storage representation
                     b_bool = normalize_bool(b_val)
                     a_bool = normalize_bool(a_val)
+                    # process_edi for tweak_edi=1 folders is intentionally flipped
+                    if (
+                        was_tweak_promoted
+                        and col_name == "process_edi"
+                    ):
+                        continue
                     if b_bool != a_bool:
                         diffs.append(
-                            f"folder id={before_row[0]}, col='{col_name}' (bool): "
+                            f"folder id={folder_id}, col='{col_name}' (bool): "
                             f"{b_val!r}→{b_bool} became {a_val!r}→{a_bool}"
                         )
                 else:
@@ -1219,7 +1247,7 @@ class TestNoBehavioralChangeAfterUpgrade:
                         continue
                     if b_val != a_val:
                         diffs.append(
-                            f"folder id={before_row[0]}, col='{col_name}': "
+                            f"folder id={folder_id}, col='{col_name}': "
                             f"{b_val!r} → {a_val!r}"
                         )
 
@@ -1233,7 +1261,7 @@ class TestNoBehavioralChangeAfterUpgrade:
 
         Any change here would cause already-processed files to be re-sent.
         """
-        (_, before_pf, _), after_conn = snapshots_and_migrated
+        (_, before_pf, _, _), after_conn = snapshots_and_migrated
         after_pf = self._snapshot_processed_files(after_conn)
 
         assert len(after_pf) == len(before_pf), (
@@ -1262,7 +1290,7 @@ class TestNoBehavioralChangeAfterUpgrade:
 
     def test_settings_behavioral_values_unchanged(self, snapshots_and_migrated):
         """SMTP settings values in the settings table must be identical after migration."""
-        (_, _, before_settings), after_conn = snapshots_and_migrated
+        (_, _, before_settings, _), after_conn = snapshots_and_migrated
         after_settings = self._snapshot_settings(after_conn)
 
         assert len(after_settings) == len(before_settings)
@@ -1281,7 +1309,7 @@ class TestNoBehavioralChangeAfterUpgrade:
 
     def test_no_folder_ids_renumbered(self, snapshots_and_migrated):
         """Folder IDs must be stable — processed_files.folder_id references them by ID."""
-        (before_folders, _, _), after_conn = snapshots_and_migrated
+        (before_folders, _, _, _), after_conn = snapshots_and_migrated
         after_folders = self._snapshot_folders(after_conn)
 
         before_ids = [r[0] for r in before_folders]
@@ -1295,7 +1323,7 @@ class TestNoBehavioralChangeAfterUpgrade:
         self, snapshots_and_migrated
     ):
         """Every processed_files.folder_id must still refer to a valid folder after migration."""
-        (_, before_pf, _), after_conn = snapshots_and_migrated
+        (_, before_pf, _, _), after_conn = snapshots_and_migrated
 
         after_folder_ids = {
             r[0] for r in after_conn.execute("SELECT id FROM folders").fetchall()

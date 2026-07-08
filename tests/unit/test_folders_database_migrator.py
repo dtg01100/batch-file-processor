@@ -57,7 +57,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         db_conn.close()
 
@@ -75,7 +75,7 @@ class TestUpgradeDatabase:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         db_conn.close()
 
@@ -143,7 +143,7 @@ class TestMigrationEdgeCases:
 
         version_record = db_conn["version"].find_one(id=1)
         # Should be at current version, not incrementing infinitely
-        assert int(version_record["version"]) <= 50
+        assert int(version_record["version"]) <= 51
 
         db_conn.close()
 
@@ -275,7 +275,7 @@ class TestMigrationVersion41:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         db_conn.close()
 
@@ -575,7 +575,7 @@ class TestMigrationVersion48:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         folders = {f["alias"]: f for f in db_conn["folders"].all()}
         # Disabled folders must remain disabled regardless of convert_to_format.
@@ -616,7 +616,7 @@ class TestMigrationVersion48:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
         # process_edi must NOT have been touched (migration skipped)
         folder = db_conn["folders"].find_one(alias="A")
         assert folder["process_edi"] == 0
@@ -643,7 +643,7 @@ class TestMigrationVersion49to50:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         # Verify column exists in folders table
         cursor = db_conn.raw_connection.cursor()
@@ -769,7 +769,7 @@ class TestMigrationVersion49to50:
         folders_database_migrator.upgrade_database(db_conn, str(tmp_path), "Linux")
 
         version_record = db_conn["version"].find_one(id=1)
-        assert version_record["version"] == "50"
+        assert version_record["version"] == "51"
 
         folder = db_conn["folders"].find_one(alias="A")
         assert folder["process_backend_http"] == 0
