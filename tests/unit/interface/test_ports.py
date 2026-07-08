@@ -12,13 +12,14 @@ Tests:
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from interface.ports import (
     NullUIService,
     ProgressServiceProtocol,
     QtUIService,
     UIServiceProtocol,
 )
-import pytest
 
 pytestmark = [pytest.mark.unit]
 

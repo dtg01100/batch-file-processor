@@ -6,7 +6,6 @@ using dependency injection for file system operations.
 import logging
 from io import StringIO
 
-
 from core.constants import (
     EDI_B_RECORD_NO_PRICING_LENGTH,
     EDI_B_RECORD_STANDARD_LENGTH,

@@ -2,7 +2,8 @@
 Unit tests for SqliteFolderRepository.
 
 Uses a mock database_obj (no real DB connection required) to verify
-the repository correctly delegates to the underlying Table API.
+the repository correctly delegates to the underlying Table API and
+maps row dicts to :class:`FolderConfiguration` domain objects.
 """
 
 from unittest.mock import MagicMock
@@ -11,6 +12,7 @@ import pytest
 
 from adapters.sqlite.repositories import SqliteFolderRepository
 from backend.database.database_obj import DatabaseObj, TableProtocol
+from core.domain.models.folder import FolderConfiguration
 from core.ports.repositories import IFolderRepository
 
 # ---------------------------------------------------------------------------
@@ -70,6 +72,8 @@ class TestFindAll:
 
         table.all.assert_called_once()
         assert len(result) == 2
+        assert all(isinstance(f, FolderConfiguration) for f in result)
+        assert {f.folder_name for f in result} == {"/a", "/b"}
 
     def test_find_all_active_only_uses_find(self):
         folders = [{"id": 1, "folder_name": "/a", "folder_is_active": True}]
@@ -80,6 +84,7 @@ class TestFindAll:
 
         table.find.assert_called_once_with(folder_is_active=True)
         assert len(result) == 1
+        assert result[0].folder_name == "/a"
 
     def test_find_all_not_active_only_does_not_call_find(self):
         db, table = _make_db()
@@ -105,7 +110,9 @@ class TestFindById:
         result = repo.find_by_id(7)
 
         table.find_one.assert_called_once_with(id=7)
-        assert result == folder
+        assert isinstance(result, FolderConfiguration)
+        assert result.folder_name == "/x"
+        assert result.id == 7
 
     def test_returns_none_when_not_found(self):
         db, table = _make_db()
@@ -133,8 +140,9 @@ class TestFindByPath:
 
         result = repo.find_by_path("/some/path")
 
-        assert result is not None
-        assert result["id"] == 1
+        assert isinstance(result, FolderConfiguration)
+        assert result.id == 1
+        assert result.folder_name == "/some/path"
 
     def test_normalises_trailing_slash(self):
         folders = [{"id": 1, "folder_name": "/some/path"}]
@@ -144,8 +152,8 @@ class TestFindByPath:
         # os.path.normpath strips trailing slash
         result = repo.find_by_path("/some/path/")
 
-        assert result is not None
-        assert result["id"] == 1
+        assert isinstance(result, FolderConfiguration)
+        assert result.id == 1
 
     def test_returns_none_when_not_found(self):
         db, _table = _make_db()
@@ -171,7 +179,9 @@ class TestFindByAlias:
         result = repo.find_by_alias("MyFolder")
 
         table.find_one.assert_called_once_with(alias="MyFolder")
-        assert result == folder
+        assert isinstance(result, FolderConfiguration)
+        assert result.alias == "MyFolder"
+        assert result.id == 3
 
 
 # ---------------------------------------------------------------------------
@@ -180,24 +190,21 @@ class TestFindByAlias:
 
 
 class TestInsert:
-    def test_strips_id_before_inserting(self):
+    def test_inserts_folderconfiguration_and_returns_pk(self):
         db, table = _make_db()
+        table.insert.return_value = 42
         repo = SqliteFolderRepository(db)
 
-        repo.insert({"id": 99, "folder_name": "/new", "alias": "new"})
+        pk = repo.insert(
+            FolderConfiguration(folder_name="/new", alias="new")
+        )
 
+        assert pk == 42
         call_args = table.insert.call_args[0][0]
+        # FolderConfiguration.to_dict() never includes 'id' (assigned by DB).
         assert "id" not in call_args
         assert call_args["folder_name"] == "/new"
-
-    def test_inserts_without_id_unchanged(self):
-        db, table = _make_db()
-        repo = SqliteFolderRepository(db)
-
-        repo.insert({"folder_name": "/new", "alias": "new"})
-
-        call_args = table.insert.call_args[0][0]
-        assert call_args == {"folder_name": "/new", "alias": "new"}
+        assert call_args["alias"] == "new"
 
 
 # ---------------------------------------------------------------------------
@@ -210,16 +217,25 @@ class TestUpdate:
         db, table = _make_db()
         repo = SqliteFolderRepository(db)
 
-        repo.update({"id": 5, "alias": "Updated"})
+        repo.update(
+            FolderConfiguration(folder_name="/updated", alias="Updated"),
+            folder_id=5,
+        )
 
-        table.update.assert_called_once_with({"id": 5, "alias": "Updated"}, ["id"])
+        call_args = table.update.call_args[0][0]
+        keys = table.update.call_args[0][1]
+        assert call_args["id"] == 5
+        assert call_args["alias"] == "Updated"
+        assert keys == ["id"]
 
-    def test_raises_if_no_id(self):
+    def test_raises_if_folder_id_not_positive(self):
         db, _table = _make_db()
         repo = SqliteFolderRepository(db)
 
-        with pytest.raises(ValueError, match="must contain 'id'"):
-            repo.update({"alias": "NoId"})
+        with pytest.raises(ValueError, match="folder_id"):
+            repo.update(FolderConfiguration(folder_name="/x"), 0)
+        with pytest.raises(ValueError, match="folder_id"):
+            repo.update(FolderConfiguration(folder_name="/x"), -1)
 
 
 # ---------------------------------------------------------------------------

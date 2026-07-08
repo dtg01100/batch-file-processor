@@ -19,8 +19,14 @@ from core.structured_logging import (
     log_with_context,
 )
 from core.utils import normalize_bool
+from core.utils.file_utils import calculate_file_checksum
 from core.utils.folder_utils import build_effective_folder
 from dispatch.error_handler import ErrorHandler
+from dispatch.file_utils import (
+    apply_file_rename,
+    extract_invoice_numbers,
+    write_to_run_log,
+)
 from dispatch.interfaces import DatabaseInterface, RunLog
 from dispatch.results import DispatchConfig, FolderResult
 from dispatch.send_manager import SendManager
@@ -33,13 +39,6 @@ from dispatch.services.folder_discovery import FolderDiscoveryService
 from dispatch.services.progress_reporter import ProgressReporter
 from dispatch.services.progress_reporting import ProgressReportingService
 from dispatch.services.upc_service import UPCLookupService
-
-from core.utils.file_utils import calculate_file_checksum
-from dispatch.file_utils import (
-    apply_file_rename,
-    extract_invoice_numbers,
-    write_to_run_log,
-)
 
 logger = get_logger(__name__)
 

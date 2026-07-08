@@ -19,11 +19,10 @@ from core.structured_logging import (
     log_file_operation,
 )
 from core.utils import normalize_bool
-from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunLog
-from dispatch.send_manager import SendManager
-
 from core.utils.file_utils import calculate_file_checksum
 from dispatch.file_utils import extract_invoice_numbers
+from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface, RunLog
+from dispatch.send_manager import SendManager
 
 logger = get_logger(__name__)
 
@@ -50,15 +49,15 @@ class FileResult:
     errors: list[str] = field(default_factory=list)
 
     def record_validation_outcome(
-        self, is_valid: bool, errors_or_file: Any
+        self, validated: bool, errors_or_file: Any  # noqa: FBT001 - boolean flag is intentional (validation outcome)
     ) -> None:
         """Record validation outcome: set validated flag and append errors.
 
         Mutates self.validated and self.errors. Does NOT log or write to
         run_log — logging is the caller's responsibility.
         """
-        self.validated = is_valid
-        if not is_valid:
+        self.validated = validated
+        if not validated:
             if isinstance(errors_or_file, list):
                 self.errors.extend(errors_or_file)
             else:
@@ -317,29 +316,13 @@ class FileProcessor:
 
         # Run conversion
         convert_start = time.time()
-        current_file, did_convert, conversion_failed = current_file, False, False
-        if self.converter_step and result.validated:
-            try:
-                converted_file = self.converter_step.execute(
-                    current_file,
-                    context.effective_folder,
-                    context.settings,
-                    context.upc_dict,
-                    context=context,
-                )
-                if converted_file:
-                    current_file, did_convert = converted_file, True
-                    logger.debug(
-                        "Conversion completed for %s: %s", file_basename, current_file
-                    )
-                else:
-                    conversion_failed = True
-            except Exception as e:
-                logger.exception("Conversion error for %s: %s", file_basename, e)
-                conversion_failed = True
+        current_file, conversion_failed = self._run_conversion(
+            current_file=current_file,
+            context=context,
+            result=result,
+            file_basename=file_basename,
+        )
         convert_duration = int((time.time() - convert_start) * 1000)
-        if did_convert:
-            result.converted = True
         if self._audit_logger:
             convert_status = "failure" if conversion_failed else "success"
             self._audit_logger.log_step(
@@ -388,6 +371,49 @@ class FileProcessor:
                 duration_ms=send_duration,
                 input_path=current_file,
             )
+
+    def _run_conversion(
+        self,
+        current_file: str,
+        context: ProcessingContext,
+        result: FileResult,
+        file_basename: str,
+    ) -> tuple[str, bool]:
+        """Run conversion step of the pipeline.
+
+        Args:
+            current_file: Current file path
+            context: Processing context
+            result: File result to update
+            file_basename: File basename for logging
+
+        Returns:
+            Tuple of (current_file, conversion_failed)
+
+        """
+        if not self.converter_step or not result.validated:
+            return current_file, False
+
+        try:
+            converted_file = self.converter_step.execute(
+                current_file,
+                context.effective_folder,
+                context.settings,
+                context.upc_dict,
+                context=context,
+            )
+        except Exception as e:
+            logger.exception("Conversion error for %s: %s", file_basename, e)
+            return current_file, True
+
+        if converted_file:
+            logger.debug(
+                "Conversion completed for %s: %s", file_basename, converted_file
+            )
+            result.converted = True
+            return converted_file, False
+
+        return current_file, True
 
     def _run_validation(
         self,

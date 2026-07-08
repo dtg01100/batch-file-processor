@@ -1,11 +1,16 @@
 """
 Unit tests for SqliteProcessedFilesRepository.
+
+Uses a mock database_obj (no real DB connection required) to verify
+the repository correctly delegates to the underlying Table API and
+maps row dicts to :class:`ProcessedFile` domain objects.
 """
 
 from unittest.mock import MagicMock
 
 from adapters.sqlite.repositories import SqliteProcessedFilesRepository
 from backend.database.database_obj import DatabaseObj, TableProtocol
+from core.domain.models.processed_file import ProcessedFile
 from core.ports.repositories import IProcessedFilesRepository
 
 
@@ -39,11 +44,13 @@ class TestIsProcessed:
 
 
 class TestMarkProcessed:
-    def test_inserts_record(self):
+    def test_inserts_processedfile(self):
         db = _make_db()
         repo = SqliteProcessedFilesRepository(db)
 
-        repo.mark_processed("hash1", folder_id=3, filename="file.edi")
+        repo.mark_processed(
+            ProcessedFile(file_hash="hash1", folder_id=3, filename="file.edi")
+        )
 
         db.processed_files.insert.assert_called_once_with(
             {"file_hash": "hash1", "folder_id": 3, "filename": "file.edi"}
@@ -77,16 +84,24 @@ class TestClearForFolder:
 
 
 class TestFindByHash:
-    def test_delegates_to_find_one(self):
+    def test_returns_processedfile_when_found(self):
         db = _make_db()
-        record = {"id": 5, "file_hash": "xyz"}
-        db.processed_files.find_one.return_value = record
+        db.processed_files.find_one.return_value = {
+            "id": 5,
+            "file_hash": "xyz",
+            "folder_id": 7,
+            "filename": "x.edi",
+        }
         repo = SqliteProcessedFilesRepository(db)
 
         result = repo.find_by_hash("xyz")
 
         db.processed_files.find_one.assert_called_once_with(file_hash="xyz")
-        assert result == record
+        assert isinstance(result, ProcessedFile)
+        assert result.id == 5
+        assert result.file_hash == "xyz"
+        assert result.folder_id == 7
+        assert result.filename == "x.edi"
 
     def test_returns_none_when_not_found(self):
         db = _make_db()

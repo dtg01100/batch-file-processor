@@ -125,8 +125,8 @@ class MaintenanceFunctions:
         self._progress.show("Working...")
         if self._folder_repo is not None:
             for row in self._folder_repo.find_all(active_only=True):
-                row["folder_is_active"] = False
-                self._folder_repo.update(row)
+                row["folder_is_active"] = False  # type: ignore[index]
+                self._folder_repo.update(row, row["id"])  # type: ignore[index]
         else:
             for row in self._database_obj.folders_table.find(folder_is_active=True):
                 row["folder_is_active"] = False
@@ -144,9 +144,9 @@ class MaintenanceFunctions:
         self._progress.show("Working...")
         if self._folder_repo is not None:
             for row in self._folder_repo.find_all(active_only=False):
-                if not row.get("folder_is_active", True):
-                    row["folder_is_active"] = True
-                    self._folder_repo.update(row)
+                if not row.get("folder_is_active", True):  # type: ignore[attr-defined]
+                    row["folder_is_active"] = True  # type: ignore[index]
+                    self._folder_repo.update(row, row["id"])  # type: ignore[index]
         else:
             for row in self._database_obj.folders_table.find(folder_is_active=False):
                 row["folder_is_active"] = True

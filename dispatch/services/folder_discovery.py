@@ -164,7 +164,6 @@ class FolderDiscoveryService:
     ) -> list[str]:
         """Discover pending files for a single folder."""
         folder_path = folder.get("folder_name", "")
-        alias = folder.get("alias", folder_path)
 
         if not self._folder_exists(folder_path):
             return []
