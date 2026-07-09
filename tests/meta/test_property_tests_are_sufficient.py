@@ -260,6 +260,9 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      "function docstring '6, 7, or 8 digits' — prose"),
     ("core/edi/upc_utils.py", "int_constant_off_by_one", 6,
      "reference URL fragment in module docstring — prose"),
+    ("core/edi/upc_utils.py", "gt_to_ge", 33,
+     "doctest-style `>>> calc_check_digit(...)` inside the calc_check_digit "
+     "function docstring — tests do not import or render the docstring as code"),
     ("core/edi/upc_utils.py", "ge_to_gt", 141,
      "pad_upc boundary `len(upc) >= target_length`. Mutation to `>` is "
      "equivalent when `len(upc) == target_length` because both branches "

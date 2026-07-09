@@ -309,3 +309,18 @@ def test_fetch_splitted_sales_tax_totals_empty_query_sets_unappended_false() -> 
     gen.fetch_splitted_sales_tax_totals(out)
     assert out.getvalue() == ""
     assert gen.unappended_records is False
+
+
+def test_init_default_config_is_crecord_config_instance() -> None:
+    """When no config is passed, __init__ falls back to a CRecordConfig.
+
+    L73 `self.config = config or CRecordConfig()`. The `or` -> `and`
+    mutation would resolve `None and CRecordConfig()` to `None` when
+    no config is supplied; the contract is that .config must be a
+    CRecordConfig in that case.
+    """
+    runner = MagicMock(spec=QueryRunnerProtocol)
+    gen = CRecGenerator(query_runner=runner)
+    assert isinstance(gen.config, CRecordConfig)
+    assert gen.config.default_uom == "EA"
+    assert gen.config.charge_type == "TAB"
