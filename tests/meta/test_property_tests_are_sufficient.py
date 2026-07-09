@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import pytest
 import re
 import subprocess
 import sys
@@ -337,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
 # ---------------------------------------------------------------------------
 
 DEFAULT_PAIRS: list[tuple[str, str]] = [
+    # Original 9 property-test pairs.
     ("core/edi/edi_parser.py", "tests/unit/core/edi/test_edi_parser_property.py"),
     ("core/edi/edi_splitter.py", "tests/unit/core/edi/test_edi_splitter_property.py"),
     ("core/edi/edi_splitting_utils.py", "tests/unit/core/edi/test_edi_splitting_utils_property.py"),
@@ -346,9 +348,19 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("dispatch/feature_flags.py", "tests/unit/dispatch/test_feature_flags_property.py"),
     ("dispatch/file_utils.py", "tests/unit/dispatch/test_file_utils_property.py"),
     ("dispatch/hash_utils.py", "tests/unit/dispatch/test_hash_utils_property.py"),
+    # Pure-Python core utility modules covered by their non-property tests.
+    ("core/utils/format_utils.py", "tests/unit/core/utils/test_format_utils.py"),
+    ("core/utils/bool_utils.py", "tests/unit/core/utils/test_bool_utils.py"),
+    ("core/utils/date_utils.py", "tests/unit/core/utils/test_date_utils.py"),
+    ("core/utils/safe_parse.py", "tests/unit/core/utils/test_safe_parse.py"),
+    ("core/utils/timing_utils.py", "tests/unit/core/utils/test_timing_utils.py"),
+    # Additional pure-Python EDI helpers covered by their non-property tests.
+    ("core/edi/edi_tweaker.py", "tests/unit/core/edi/test_edi_tweaker.py"),
+    # dispatch sub-modules with focused unit tests.
+    ("core/structured_logging.py", "tests/unit/test_structured_logging.py"),
 ]
 
-
+@pytest.mark.slow
 def test_property_tests_sufficient_for_default_modules(tmp_path_factory) -> None:
     """Run meta-mutation against each default property-test pair and assert no survivors.
 
