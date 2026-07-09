@@ -245,20 +245,13 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
     # ------------------------------------------------------------------
     # core/edi/upc_utils.py (test: test_upc_utils_property.py)
     #
-    # These three entries silence mutations on the calc_check_digit
-    # odd_pos flag. They are REAL TEST BUGS, not equivalent mutations.
-    # See docs/meta-test-findings.md > "upc_utils.py: self-referential
-    # test gap". The test_validate_upc_accepts_check_digit property
-    # builds a valid UPC FROM the function-under-test, so any
-    # consistent mutation to the function still satisfies the test.
-    # The skip here exists so the meta-test stops failing on these;
-    # the underlying test bug is documented separately.
+    # The self-referential-test entries (L38 true_to_false, L40
+    # negate_if_condition, L47 return_none_instead_of_value) used to live
+    # here as REAL TEST BUG entries. They are now killed by the
+    # hardcoded oracle test test_validate_upc_hardcoded_valid_oracle
+    # (input is independent of calc_check_digit), so they have been
+    # removed.
     # ------------------------------------------------------------------
-    ("core/edi/upc_utils.py", "true_to_false", 38,
-     "REAL TEST BUG — see upc_utils.py block comment above; "
-     "self-referential validate_upc property test"),
-    ("core/edi/upc_utils.py", "negate_if_condition", 40,
-     "REAL TEST BUG — same self-referential property test as L38"),
     ("core/edi/upc_utils.py", "false_to_true", 100,
      "function docstring 'True if check digit is valid, False otherwise' — prose"),
     ("core/edi/upc_utils.py", "and_to_or", 3,
@@ -274,15 +267,6 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      "`upc[:target]` and `upc.rjust(target, fill)` both equal `upc` "
      "when upc is already the target length. The mutation only differs "
      "in a meaningless branch selection, not in observable behavior."),
-    ("core/edi/upc_utils.py", "return_none_instead_of_value", 47,
-     "REAL TEST BUG — `return check_digit % 10` mutated to `return None % 10`; "
-     "this is a TypeError that crashes calc_check_digit, but the property tests "
-     "construct valid examples from calc_check_digit itself, so when calc_check_digit "
-     "raises during validate_upc the test would also have raised during construction. "
-     "The mutation only survives because the test_build path implicitly catches the error "
-     "(via Hypothesis example pruning) and only input examples where calc_check_digit does "
-     "not raise happen to survive — net effect: silent kill at construction makes the "
-     "test pass on average. Documented as test bug."),
     # ------------------------------------------------------------------
     # dispatch/feature_flags.py (test: test_feature_flags_property.py)
     # ------------------------------------------------------------------

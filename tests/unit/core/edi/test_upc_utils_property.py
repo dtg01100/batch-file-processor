@@ -35,6 +35,14 @@ def test_validate_upc_accepts_check_digit(d: str) -> None:
     assert validate_upc(full) is True
 
 
+def test_validate_upc_hardcoded_valid_oracle() -> None:
+    """Hardcoded valid UPC values must validate; mutations to calc_check_digit
+    cannot make this test pass because the input is independent of the function.
+    """
+    assert validate_upc("041800000265") is True
+    assert validate_upc("041800000260") is False
+
+
 @settings(max_examples=100)
 @given(
     d=_fixed_digits(11),
