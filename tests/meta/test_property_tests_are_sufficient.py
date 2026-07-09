@@ -268,6 +268,13 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      "function docstring '6, 7, or 8 digits' — prose"),
     ("core/edi/upc_utils.py", "int_constant_off_by_one", 6,
      "reference URL fragment in module docstring — prose"),
+    ("core/edi/upc_utils.py", "ge_to_gt", 141,
+     "pad_upc boundary `len(upc) >= target_length`. Mutation to `>` is "
+     "equivalent when `len(upc) == target_length` because both branches "
+     "return a string of length target with identical content: "
+     "`upc[:target]` and `upc.rjust(target, fill)` both equal `upc` "
+     "when upc is already the target length. The mutation only differs "
+     "in a meaningless branch selection, not in observable behavior."),
     ("core/edi/upc_utils.py", "return_none_instead_of_value", 47,
      "REAL TEST BUG — `return check_digit % 10` mutated to `return None % 10`; "
      "this is a TypeError that crashes calc_check_digit, but the property tests "

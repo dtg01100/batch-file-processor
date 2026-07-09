@@ -135,6 +135,29 @@ class TestRedactionFunctions:
         result = redact_string("abc", visible_chars=4)
         assert "*" in result
 
+    def test_redact_string_at_exact_visible_chars(self):
+        """Length exactly equal to visible_chars must be fully redacted.
+
+        Pins the boundary between the two branches of `redact_string`.
+        The '<=' comparison here is load-bearing: '<=' treats a string
+        of length exactly visible_chars as 'too short to expose any
+        suffix' and returns all stars. '<' would treat that length as
+        long enough and pass the suffix through, leaking the value
+        that redaction is supposed to hide.
+        """
+        result = redact_string("abcd", visible_chars=4)
+        assert "*" in result, (
+            "Length-equal-to-visible_chars must redact the suffix; "
+            f"got {result!r}"
+        )
+        assert "abcd" not in result
+
+    def test_redact_string_just_above_visible_chars(self):
+        """Length one above visible_chars shows only the suffix."""
+        result = redact_string("abcde", visible_chars=4)
+        assert result.endswith("bcde")
+        assert "*" in result
+
     def test_redact_sensitive_data_password_redacted(self):
         """Test redaction of password field."""
         data = {"username": "john", "password": "secret123"}
