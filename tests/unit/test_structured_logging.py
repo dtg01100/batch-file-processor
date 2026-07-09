@@ -498,5 +498,46 @@ class TestIntegration:
         assert "error" in caplog.text.lower()
 
 
+class TestStructuredLogAdapterAutoCorrelation:
+    """The default `auto_correlation=True` injects correlation_id into extras.
+
+    Pins line 523 of core/structured_logging.py: the default `True`
+    must remain `True`. A mutation to `False` would mean no log line
+    carries a correlation_id, breaking distributed-request tracing.
+    """
+
+    def test_default_auto_correlation_injects_into_extras(self, caplog):
+        """A log line emitted via StructuredLogAdapter includes correlation_id."""
+        from core.structured_logging import StructuredLogAdapter
+
+        clear_correlation_id()
+        set_correlation_id("corr-test-123")
+
+        adapter_logger = logging.getLogger("test_adapter_logger")
+        adapter_logger.setLevel(logging.DEBUG)
+        caplog.set_level(logging.DEBUG)
+
+        adapter = StructuredLogAdapter(adapter_logger)
+        assert adapter.auto_correlation is True
+
+        adapter.info("hello", extra={"unrelated": "field"})
+
+        # Pull any LogRecord from caplog; assertions on `extra` carry
+        # the correlation_id we expect.
+        records = [r for r in caplog.records if r.name == "test_adapter_logger"]
+        assert records, "expected at least one log record from the adapter"
+        record = records[-1]
+        # The adapter passes `extra` through to the underlying LogRecord;
+        # pytest's caplog exposes the extras via record.__dict__ or via
+        # record's `extra` attribute set by the adapter.
+        # Specifically, `_inject_context_fields` writes to kwargs['extra'],
+        # which the logging module stores under record.msg + record.args, and
+        # the extras show up via getattr on the record.
+        assert "correlation_id" in (record.__dict__ if hasattr(record, "__dict__") else {}), (
+            "auto_correlation=True default must inject correlation_id; "
+            f"got record={record.__dict__}"
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
