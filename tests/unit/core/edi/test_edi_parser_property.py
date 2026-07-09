@@ -8,6 +8,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from core.constants import EDI_A_RECORD_MIN_LENGTH
 from core.edi.edi_parser import (
     EDIParseError,
     build_a_record,
@@ -19,7 +20,7 @@ from core.edi.edi_parser import (
     parse_c_record,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]
+pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]   
 
 
 def _fixed_text(length: int):
@@ -290,4 +291,51 @@ def test_parse_c_record_raises_on_non_c_input(payload: str) -> None:
     line = payload + "\n"
     with pytest.raises(ValueError, match="Not a C record"):
         parse_c_record(line)
+
+
+_BOUNDARY_CHARS = st.characters(
+    blacklist_categories=("Cs",),
+    blacklist_characters="\n\r",
+)
+
+
+@settings(max_examples=30)
+@given(
+    length=st.integers(min_value=0, max_value=EDI_A_RECORD_MIN_LENGTH - 1),
+)
+def test_parse_a_record_length_below_min_length_raises(length: int) -> None:
+    """Lines strictly shorter than EDI_A_RECORD_MIN_LENGTH must raise.
+
+    Guards against the off-by-one where `<` -> `<=` would treat a line
+    of exactly MIN_LENGTH as too short. A line of length L where L <
+    MIN_LENGTH must always be rejected.
+    """
+    line = "A" + "0" * (length - 1) if length > 0 else ""
+    with pytest.raises((ValueError, EDIParseError)):
+        parse_a_record(line)
+
+
+@settings(max_examples=30)
+@given(
+    body=st.text(
+        alphabet=_BOUNDARY_CHARS,
+        min_size=EDI_A_RECORD_MIN_LENGTH - 1,
+        max_size=EDI_A_RECORD_MIN_LENGTH - 1,
+    ),
+)
+def test_parse_a_record_length_at_min_length_round_trips(body: str) -> None:
+    """A line of exactly MIN_LENGTH prefix-able with 'A' must round-trip.
+
+    The mutation `<` -> `<=` would treat a line of length exactly
+    MIN_LENGTH as too short; this test pins the boundary at the
+    correct side. body has min_size == max_size == MIN_LENGTH-1 so
+    'A' + body is exactly MIN_LENGTH.
+    """
+    line = "A" + body
+    assert len(line) == EDI_A_RECORD_MIN_LENGTH
+    parsed = parse_a_record(line)
+    assert parsed.cust_vendor == line[1:7]
+    assert parsed.invoice_number == line[7:17]
+    assert parsed.invoice_date == line[17:23]
+    assert parsed.invoice_total == line[23:33]    
 

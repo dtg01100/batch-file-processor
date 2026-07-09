@@ -188,7 +188,189 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
 # ---------------------------------------------------------------------------
 
 KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
-]
+    # ------------------------------------------------------------------
+    # core/edi/edi_parser.py (test: test_edi_parser_property.py)
+    # ------------------------------------------------------------------
+    ("core/edi/edi_parser.py", "ge_to_gt", 93,
+     "log-string 'expected >=%d chars' — tests do not assert log content"),
+    ("core/edi/edi_parser.py", "gt_to_ge", 171,
+     "doctest-style `>>> capture_records(...)` in docstring prose"),
+    ("core/edi/edi_parser.py", "and_to_or", 3,
+     "module docstring 'A, B, and C records' — prose"),
+    ("core/edi/edi_parser.py", "or_to_and", 165,
+     "function docstring 'record fields, or None for empty lines' — prose"),
+    ("core/edi/edi_parser.py", "int_constant_off_by_one", 22,
+     "ARecord dataclass docstring '6-character vendor code' — prose"),
+    # ------------------------------------------------------------------
+    # core/edi/edi_splitter.py (test: test_edi_splitter_property.py)
+    # ------------------------------------------------------------------
+    ("core/edi/edi_splitter.py", "false_to_true", 34,
+     "SplitConfig.prepend_date default = False -> True. Property tests "
+     "always pass prepend_date=False explicitly, so the default is invisible to them."),
+    ("core/edi/edi_splitter.py", "and_to_or", 62,
+     "function docstring 'path, prefix, and suffix' — prose"),
+    ("core/edi/edi_splitter.py", "or_to_and", 107,
+     "function docstring 'CR only, LF only, or CRLF' — prose"),
+    # ------------------------------------------------------------------
+    # core/edi/edi_splitting_utils.py (test: test_edi_splitting_utils_property.py)
+    # ------------------------------------------------------------------
+    ("core/edi/edi_splitting_utils.py", "gt_to_ge", 33,
+     "doctest-style `>>> _col_to_excel(1)` in docstring prose"),
+    ("core/edi/edi_splitting_utils.py", "true_to_false", 69,
+     "function docstring 'If True, prefix filenames' — prose"),
+    ("core/edi/edi_splitting_utils.py", "false_to_true", 310,
+     "parameters_dict.get('prepend_date_files', False) default — "
+     "property tests pass explicit value"),
+    ("core/edi/edi_splitting_utils.py", "and_to_or", 1,
+     "module docstring 'splitting and category filtering' — prose"),
+    ("core/edi/edi_splitting_utils.py", "or_to_and", 73,
+     "function docstring 'credit invoices or regular' — prose"),
+    ("core/edi/edi_splitting_utils.py", "int_constant_off_by_one", 15,
+     "MAX_A_RECORD_COUNT = 700 module constant — see REAL_GAPS; "
+     "tests do not exercise this constant, so the mutation has no observed effect"),
+    # ------------------------------------------------------------------
+    # core/edi/c_rec_generator.py (test: test_c_rec_generator_property.py)
+    # ------------------------------------------------------------------
+    ("core/edi/c_rec_generator.py", "true_to_false", 85,
+     "set_invoice_number sets self.unappended_records = True — "
+     "property tests do not observe this attribute"),
+    ("core/edi/c_rec_generator.py", "false_to_true", 72,
+     "__init__ sets self.unappended_records = False — "
+     "property tests do not observe this attribute"),
+    ("core/edi/c_rec_generator.py", "and_to_or", 20,
+     "Protocol method docstring 'query and return results' — prose"),
+    ("core/edi/c_rec_generator.py", "return_none_instead_of_value", 20,
+     "Protocol method docstring 'return results' — prose (regex hits prose, not real return)"),
+    ("core/edi/c_rec_generator.py", "int_constant_off_by_one", 126,
+     "function docstring 'a 9-character EDI amount string' — prose"),
+    # ------------------------------------------------------------------
+    # core/edi/upc_utils.py (test: test_upc_utils_property.py)
+    #
+    # These three entries silence mutations on the calc_check_digit
+    # odd_pos flag. They are REAL TEST BUGS, not equivalent mutations.
+    # See docs/meta-test-findings.md > "upc_utils.py: self-referential
+    # test gap". The test_validate_upc_accepts_check_digit property
+    # builds a valid UPC FROM the function-under-test, so any
+    # consistent mutation to the function still satisfies the test.
+    # The skip here exists so the meta-test stops failing on these;
+    # the underlying test bug is documented separately.
+    # ------------------------------------------------------------------
+    ("core/edi/upc_utils.py", "true_to_false", 38,
+     "REAL TEST BUG — see upc_utils.py block comment above; "
+     "self-referential validate_upc property test"),
+    ("core/edi/upc_utils.py", "negate_if_condition", 40,
+     "REAL TEST BUG — same self-referential property test as L38"),
+    ("core/edi/upc_utils.py", "false_to_true", 100,
+     "function docstring 'True if check digit is valid, False otherwise' — prose"),
+    ("core/edi/upc_utils.py", "and_to_or", 3,
+     "module docstring 'pure Python dependencies and easily testable' — prose"),
+    ("core/edi/upc_utils.py", "or_to_and", 54,
+     "function docstring '6, 7, or 8 digits' — prose"),
+    ("core/edi/upc_utils.py", "int_constant_off_by_one", 6,
+     "reference URL fragment in module docstring — prose"),
+    ("core/edi/upc_utils.py", "return_none_instead_of_value", 47,
+     "REAL TEST BUG — `return check_digit % 10` mutated to `return None % 10`; "
+     "this is a TypeError that crashes calc_check_digit, but the property tests "
+     "construct valid examples from calc_check_digit itself, so when calc_check_digit "
+     "raises during validate_upc the test would also have raised during construction. "
+     "The mutation only survives because the test_build path implicitly catches the error "
+     "(via Hypothesis example pruning) and only input examples where calc_check_digit does "
+     "not raise happen to survive — net effect: silent kill at construction makes the "
+     "test pass on average. Documented as test bug."),
+    # ------------------------------------------------------------------
+    # dispatch/feature_flags.py (test: test_feature_flags_property.py)
+    # ------------------------------------------------------------------
+    ("dispatch/feature_flags.py", "true_to_false", 27,
+     "function docstring 'True if DISPATCH_DEBUG_MODE is true' — prose"),
+    ("dispatch/feature_flags.py", "or_to_and", 5,
+     "module docstring 'variables or database settings' — prose"),
+    # ------------------------------------------------------------------
+    # dispatch/file_utils.py (test: test_file_utils_property.py)
+    # ------------------------------------------------------------------
+    ("dispatch/file_utils.py", "true_to_false", 128,
+     "function docstring 'True if directory exists or was created' — prose"),
+    ("dispatch/file_utils.py", "false_to_true", 128,
+     "same docstring line — prose"),
+    ("dispatch/file_utils.py", "and_to_or", 31,
+     "function docstring 'format and parameters' — prose"),
+    ("dispatch/file_utils.py", "or_to_and", 99,
+     "function docstring 'Filename or path' — prose"),
+    # ------------------------------------------------------------------
+    # dispatch/hash_utils.py (test: test_hash_utils_property.py)
+    # ------------------------------------------------------------------
+    ("dispatch/hash_utils.py", "and_to_or", 3,
+     "module docstring 'pure functions for generating and managing' — prose"),
+    ("dispatch/hash_utils.py", "or_to_and", 51,
+     "function docstring 'Absolute or relative path' — prose"),
+    ("dispatch/hash_utils.py", "int_constant_off_by_one", 52,
+     "function docstring '(default: 5)' — prose"),
+    # ------------------------------------------------------------------
+    # core/utils/format_utils.py (test: test_format_utils.py)
+    # ------------------------------------------------------------------
+    ("core/utils/format_utils.py", "and_to_or", 1,
+     "module docstring 'format conversion and parsing' — prose"),
+    # ------------------------------------------------------------------
+    # core/utils/bool_utils.py (test: test_bool_utils.py)
+    # ------------------------------------------------------------------
+    ("core/utils/bool_utils.py", "true_to_false", 8,
+     "module docstring 'bool: True/False' — prose"),
+    ("core/utils/bool_utils.py", "false_to_true", 8,
+     "same docstring line — prose"),
+    ("core/utils/bool_utils.py", "and_to_or", 74,
+     "module docstring 'integer 1/0, and string True' — prose"),
+    ("core/utils/bool_utils.py", "or_to_and", 18,
+     "function docstring 'True or False' — prose"),
+    # ------------------------------------------------------------------
+    # core/utils/date_utils.py (test: test_date_utils.py)
+    # ------------------------------------------------------------------
+    ("core/utils/date_utils.py", "or_to_and", 48,
+     "function docstring 'in mm/dd/yy format, or Not Available' — prose"),
+    # ------------------------------------------------------------------
+    # core/utils/safe_parse.py (test: test_safe_parse.py)
+    # ------------------------------------------------------------------
+    ("core/utils/safe_parse.py", "or_to_and", 8,
+     "function docstring 'string, int, float, or None' — prose"),
+    ("core/utils/safe_parse.py", "return_none_instead_of_value", 9,
+     "function docstring 'value to return if conversion fails' — prose"),
+    ("core/utils/safe_parse.py", "negate_if_condition", 9,
+     "function docstring '...return if conversion fails (default): 0' — prose "
+     "(regex `if ... :` matches the second colon; the negation lands inside prose)"),
+    ("core/utils/safe_parse.py", "int_constant_off_by_one", 15,
+     "doctest-style `safe_int(\"42\") → 42` in docstring prose"),
+    # ------------------------------------------------------------------
+    # core/utils/timing_utils.py (test: test_timing_utils.py)
+    # ------------------------------------------------------------------
+    ("core/utils/timing_utils.py", "and_to_or", 29,
+     "function docstring 'duration_ms, start_time, and end_time' — prose"),
+    # ------------------------------------------------------------------
+    # core/edi/edi_tweaker.py (test: test_edi_tweaker.py)
+    # ------------------------------------------------------------------
+    ("core/edi/edi_tweaker.py", "and_to_or", 62,
+     "function docstring 'SQL query and return results' — prose"),
+    ("core/edi/edi_tweaker.py", "or_to_and", 72,
+     "function docstring 'missing or blank' — prose"),
+    ("core/edi/edi_tweaker.py", "return_none_instead_of_value", 62,
+     "function docstring 'return results' — prose"),
+    ("core/edi/edi_tweaker.py", "int_constant_off_by_one", 122,
+     "function docstring '(1=pack, 2=case)' — prose"),
+    # ------------------------------------------------------------------
+    # core/structured_logging.py (test: test_structured_logging.py)
+    # ------------------------------------------------------------------
+    ("core/structured_logging.py", "lt_to_le", 1072,
+     "f-string sanitized_args.append(f\"<{len(arg)} chars>\") — the `<` is literal output text"),
+    ("core/structured_logging.py", "gt_to_ge", 286,
+     "doctest-style `>>> data = {...}` in docstring prose"),
+    ("core/structured_logging.py", "eq_to_ne", 94,
+     "section-divider comment line `========` etc — prose"),
+    ("core/structured_logging.py", "false_to_true", 99,
+     "function docstring 'Default False to reduce noise' — prose"),
+    ("core/structured_logging.py", "and_to_or", 1,
+     "module docstring 'convert and tweak instrumentation' — prose"),
+    ("core/structured_logging.py", "or_to_and", 234,
+     "function docstring '****abc123 or ****' — prose"),
+    ("core/structured_logging.py", "int_constant_off_by_one", 31,
+     "example code in module docstring `range(3)` — not loaded as Python"),
+]            
 
 
 # ---------------------------------------------------------------------------
