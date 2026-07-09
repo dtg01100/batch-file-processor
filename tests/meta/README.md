@@ -27,6 +27,36 @@ mutation list. It does NOT use a mutation-testing framework (mutmut, cosmic
 ray, etc.) — those are great, but they come with plugin systems, config
 files, and opinions we do not need. The whole file is one screenful.
 
+### `test_hygiene.py` (added 2026-07-09)
+
+A static AST-based linter that scans every test file under `tests/unit/`
+for violations of the conventions documented in `tests/AGENTS.md` and
+the project root `AGENTS.md`. Unlike the mutation runner it does no
+subprocess, no fixture setup, no module imports — it parses each test
+file with `ast.parse` and runs seven checks:
+
+| Rule | Catches |
+|---|---|
+| `bare_magicmock` | `MagicMock()` without `spec=` (delegates to `conftest_magicmock_plugin.MagicMockVisitor`) |
+| `missing_assert` | `def test_*` with no `assert` / `pytest.raises` / `pytest.warns` / `pytest.fail` |
+| `sleep_call` | actual `time.sleep(...)` call (not `patch("time.sleep")` or string mention) |
+| `skip_no_reason` | `pytest.skip()` with no positional reason and no `reason=` kwarg |
+| `bare_except_pass` | `except: pass` / `except Exception: pass` |
+| `unjustified_noqa` | `# noqa` without `: CODE — reason` justification |
+| `single_item_dispatch_root_import` | `from dispatch import X` (single name) |
+
+The runner is parametrized over `(file, check_name)` so
+`pytest tests/meta/test_hygiene.py -k missing_assert -n auto` narrows
+the run. A `test_hygiene_runner_self_check` asserts the runner file
+itself has no violations of the rules it enforces.
+
+**Headline finding (initial run, 2026-07-09):** 19 violations across
+14 files out of 153 scanned. The bare-MagicMock and time.sleep checks
+are already clean (enforced by `conftest_magicmock_plugin` and
+project-wide conventions respectively); the runner's value is in
+surfacing the remaining 4 rules. See
+`docs/meta-test-findings.md` for per-violation context.
+
 ### `DEFAULT_PAIRS`
 
 The 16 default (module, test) pairs. To extend, add a line to the list

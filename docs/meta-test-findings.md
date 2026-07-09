@@ -220,3 +220,99 @@ equivalent.
 Each item is a 10-30 line test addition following the patterns already
 demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
 `64fb8397e`).
+
+## Test-hygiene meta-test findings (Phase 1, 2026-07-09)
+
+`tests/meta/test_hygiene.py` is a static AST-based linter that scans
+every test file under `tests/unit/` for violations of the conventions
+documented in `tests/AGENTS.md` and the project root `AGENTS.md`. It
+runs in seconds and is safe to parallelize.
+
+### Headline numbers (initial run)
+
+153 test files scanned. **19 real violations across 14 files.**
+
+| Rule | Count | Description |
+|---|---|---|
+| `bare_except_pass` | 14 | `except: pass` / `except Exception: pass` — silent error swallowing |
+| `missing_assert` | 1 | `def test_*` with no `assert` / `pytest.raises` / `pytest.warns` / `pytest.fail` |
+| `skip_no_reason` | 3 | `pytest.skip()` with no positional reason and no `reason=` kwarg |
+| `single_item_dispatch_root_import` | 1 | `from dispatch import X` (single name) — AGENTS.md convention |
+| `bare_magicmock` | 0 | (clean — existing `conftest_magicmock_plugin` enforces) |
+| `sleep_call` | 0 | (clean — `patch("time.sleep")` is the project pattern) |
+| `unjustified_noqa` | 0 | (clean — every `# noqa` cites a reason) |
+
+### Findings (initial)
+
+**`bare_except_pass` (14)**
+
+| File | Line | Pattern | Notes |
+|---|---|---|---|
+| `tests/unit/test_build_configuration.py` | 193 | `except ImportError: pass` | optional-dep probe; should use `pytest.importorskip` |
+| `tests/unit/test_build_configuration.py` | 195 | `except Exception: pass` | AST parse error swallow; needs logging |
+| `tests/unit/test_build_configuration.py` | 298 | `except SyntaxError: pass` | AST parse error swallow |
+| `tests/unit/test_build_configuration.py` | 300 | `except Exception: pass` | broad swallow in nested try |
+| `tests/unit/test_convert_to_scansheet_type_a.py` | 32 | `except ImportError: pass` | pyzbar optional-dep probe |
+| `tests/unit/test_convert_to_simplified_csv.py` | 438 | `except ValueError: pass` | unknown; needs review |
+| `tests/unit/test_estore_null_safety.py` | 74 | `except Exception: pass` | broad swallow; needs review |
+| `tests/unit/test_golden_output.py` | 315 | `except ImportError: pass` | yaml optional-dep probe |
+| `tests/unit/test_golden_output.py` | 324 | `except ImportError: pass` | invoke.vendor.yaml probe |
+| `tests/unit/test_pyinstaller_spec.py` | 79 | `except Exception: pass` | AST parse error swallow — real |
+| `tests/unit/test_scansheet_type_a.py` | 190 | `except zipfile.BadZipFile: pass` | optional-dep probe |
+| `tests/unit/test_scansheet_type_a.py` | 192 | `except Exception: pass` | broad swallow; needs review |
+| `tests/unit/test_utils.py` | 1028 | `except Exception: pass` | unknown; needs review |
+| `tests/unit/core/utils/test_timing_utils.py` | 96 | `except _TestFailed: pass` | sentinel-catch to test `finally` — legitimate, add to `KNOWN_HYGIENE_VIOLATIONS` when implemented |
+
+**`missing_assert` (1)**
+
+| File | Line | Pattern | Notes |
+|---|---|---|---|
+| `tests/unit/test_folder_configuration_pydantic.py` | 6 | `test_folder_configuration_pydantic_valid` calls `validate_with_pydantic()` with no positive assertion | Comment says "should not raise" but no `assert` to confirm |
+
+**`skip_no_reason` (3)**
+
+| File | Line | Pattern | Notes |
+|---|---|---|---|
+| `tests/unit/dispatch_tests/test_legacy_147_routing.py` | 128 | `pytest.skip(` multi-line | needs `reason=` kwarg |
+| `tests/unit/dispatch_tests/test_master_routing_matches_147.py` | 166 | `pytest.skip(` multi-line | needs `reason=` kwarg |
+| `tests/unit/test_plugins/test_plugin_option_combinations.py` | 409 | `pytest.skip(f"Plugin {format_name} not found")` | has f-string positional; check why flagged |
+
+**`single_item_dispatch_root_import` (1)**
+
+| File | Line | Pattern | Notes |
+|---|---|---|---|
+| `tests/unit/dispatch/test_feature_flags_property.py` | 11 | `from dispatch import feature_flags` | should be `from dispatch.feature_flags import feature_flags` per AGENTS.md |
+
+### How the runner is structured
+
+`tests/meta/test_hygiene.py` is ~600 lines, single file, no plugin
+framework. Seven check functions registered in a `CHECKS` dict, each
+returning `list[Violation]`. The pytest wrapper is parametrized over
+`(file, check_name)` so `-k missing_assert` or `-k test_db2ssh_connection`
+narrow the run. A self-check (`test_hygiene_runner_self_check`) asserts
+the runner file itself has no violations of the rules it enforces
+(excluding the rules whose description is a literal pattern the file
+mentions, e.g. `# noqa`, `MagicMock`, `time.sleep`).
+
+The `bare_magicmock` check delegates to `MagicMockVisitor` and
+`_check_file_for_bare_magicmock` from `tests/conftest_magicmock_plugin.py`
+to keep a single source of truth. The plugin's runtime autouse fixture
+remains in place; the meta-test now provides the static check that
+survives the meta-test's subprocess boundary.
+
+### Follow-up work (priority order)
+
+1. **`test_folder_configuration_pydantic_valid:6`** — add
+   `assert config.folder_name == "base"` (or similar) to confirm
+   construction succeeded, not just absence of raise.
+2. **`from dispatch import feature_flags:11`** — change to
+   `from dispatch.feature_flags import feature_flags`.
+3. **`skip_no_reason` entries (3)** — add `reason=` keyword to each.
+4. **`bare_except_pass` `except _TestFailed: pass` in test_timing_utils.py** —
+   add `KNOWN_HYGIENE_VIOLATIONS` allowlist entry citing the sentinel
+   pattern.
+5. **`bare_except_pass` AST/error probes (5)** — convert to
+   `pytest.importorskip()` or `try/except` with `logger.debug(..., exc_info=True)`.
+6. **`bare_except_pass` unknown/optional-dep probes (5)** — review and
+   either convert to `pytest.importorskip()` or justify with
+   `KNOWN_HYGIENE_VIOLATIONS`.
