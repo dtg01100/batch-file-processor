@@ -9,6 +9,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from core.edi.edi_parser import (
+    EDIParseError,
     build_a_record,
     build_b_record,
     build_c_record,
@@ -18,7 +19,7 @@ from core.edi.edi_parser import (
     parse_c_record,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.edi]
+pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]
 
 
 def _fixed_text(length: int):
@@ -193,3 +194,100 @@ def test_capture_records_returns_none_for_unknown_record_prefix(
 ) -> None:
     result = capture_records(prefix + payload)
     assert result is None
+
+
+@settings(max_examples=20)
+@given(
+    s=st.sampled_from(
+        [
+            "",
+            " ",
+            "\t",
+            "  ",
+            "\n",
+            "   \n",
+            "\r\n",
+            "\t \n",
+        ]
+    )
+)
+def test_capture_records_returns_none_for_empty_or_whitespace(s: str) -> None:
+    """Empty input and whitespace-only input both yield None (not an exception)."""
+    assert capture_records(s) is None
+
+
+@settings(max_examples=50)
+@given(prefix=st.sampled_from(["\t", " ", "Z", "1", "?", "a"]))
+def test_capture_records_returns_none_for_non_alphabetic_prefix(prefix: str) -> None:
+    """A prefix that is not A, B, or C yields None (line 193)."""
+    payload = prefix + "rest-of-line-payload-without-newline"
+    assert capture_records(payload) is None
+
+
+class _StubParser:
+    """Minimal stand-in for the optional `parser` arg of capture_records."""
+
+    def __init__(self, return_value):
+        self._return_value = return_value
+        self.calls: list[str] = []
+
+    def parse_line(self, line: str):
+        self.calls.append(line)
+        return self._return_value
+
+
+def test_capture_records_with_parser_returns_parser_result_for_dict() -> None:
+    """When parser returns a dict, capture_records returns it unchanged."""
+    parser = _StubParser({"record_type": "X", "custom": 1})
+    result = capture_records("Xpayload", parser=parser)
+    assert result == {"record_type": "X", "custom": 1}
+    assert parser.calls == ["Xpayload"]
+
+
+def test_capture_records_with_parser_returns_none_for_empty() -> None:
+    """When parser returns None on an empty line, capture_records returns None."""
+    parser = _StubParser(None)
+    assert capture_records("", parser=parser) is None
+    assert capture_records("   \n", parser=parser) is None
+
+
+def test_capture_records_with_parser_raises_on_non_empty_invalid() -> None:
+    """When parser returns None on a non-blank line, EDIParseError is raised."""
+    parser = _StubParser(None)
+    with pytest.raises(EDIParseError):
+        capture_records("Znot-edi-line", parser=parser)
+
+@settings(max_examples=50)
+@given(payload=st.text(
+    alphabet=st.characters(
+        blacklist_categories=("Cs",),
+        blacklist_characters="\n\rABC",
+    ),
+    min_size=1,
+    max_size=80,
+))
+def test_parse_b_record_raises_on_non_b_input(payload: str) -> None:
+    """A non-B-prefixed line fed to parse_b_record raises ValueError."""
+    line = payload + "\n"
+    with pytest.raises(ValueError, match="Not a B record"):
+        parse_b_record(line)
+
+
+@settings(max_examples=50)
+@given(payload=st.text(
+    alphabet=st.characters(
+        blacklist_categories=("Cs",),
+        # Block A, B, and C so the payload cannot accidentally start with
+        # the target record type. The function's `capture_records` only
+        # accepts those three prefixes.
+        blacklist_characters="\n\rABC",
+    ),
+    min_size=1,
+    max_size=80,
+))
+def test_parse_c_record_raises_on_non_c_input(payload: str) -> None:
+    """A non-C-prefixed line fed to parse_c_record raises ValueError."""
+    line = payload + "\n"
+    with pytest.raises(ValueError, match="Not a C record"):
+        parse_c_record(line)
+
