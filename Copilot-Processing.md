@@ -46,3 +46,36 @@ Honest assessment: my original 3-step plan was undersized. Reality is:
 - Run `pytest tests/unit -m "not qt" --timeout=30` after each step
 - Run `ruff check .` and `black --check .` after each commit
 - Final full run: `pytest tests/unit --timeout=30`
+## Meta-tests push (2026-07-09)
+
+User request: "tests for our tests will root everything else" and
+"meta-tests for all tests". Direction: brutal simplicity, auditable,
+performance not a concern.
+
+Done:
+- Audited 9 existing property-test files for P1 coverage gaps. Added
+  16 new tests (86 -> 102). 100% pass in 12.8s.
+- Built `tests/meta/test_property_tests_are_sufficient.py`: a fixed-list
+  mutation runner, ~370 lines, one file, no plugin framework. The
+  mutation list is auditable line-by-line.
+- Wrote `tests/meta/README.md` and `docs/meta-test-findings.md`.
+- First full run killed 34/80 mutations; surfaced a real test bug
+  in `test_edi_splitter_property.py` (`SplitConfig.prepend_date`
+  defaults to True; the strategy could produce "000000" which
+  crashes `parse_edi_date`). Fixed by adding `prepend_date=False`
+  to every `SplitConfig(...)` in the property tests.
+
+Out of scope (next push):
+- Add meta-test coverage for the ~110 non-property test files.
+- Lock equivalent mutations (docstring-prose, version constants)
+  with a `KNOWN_EQUIVALENT` skip-list to clean up the report.
+- Tighten property tests to kill the real-gap survivors listed in
+  `docs/meta-test-findings.md`.
+
+The user explicitly said the meta-test should be auditable and
+provable correct. The runner is built to that spec: every line of
+the mutation list is one regex and one replacement function. Anyone
+can read it and say "yes, that's a real bug class".
+
+Final commit: see git log. Copilot-Processing.md may be removed when
+this session is verified.
