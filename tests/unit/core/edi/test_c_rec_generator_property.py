@@ -7,11 +7,18 @@ Exercises the pure C-record formatting helpers and the public
 requires a real query runner.
 """
 
+import io
+from unittest.mock import MagicMock
+
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.edi.c_rec_generator import CRecGenerator, CRecordConfig
+from core.edi.c_rec_generator import (
+    CRecGenerator,
+    CRecordConfig,
+    QueryRunnerProtocol,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]
 
@@ -256,3 +263,49 @@ def test_generate_c_records_for_invoice_uses_default_charge_type_when_missing(
     for record in records:
         # After 'C', the next 3 chars are the charge type
         assert record[1:4] == "ZZZ"
+
+
+def test_fetch_splitted_sales_tax_totals_skips_zero_amounts() -> None:
+    """A prepaid amount of 0 must NOT produce a 'Prepaid Sales Tax' C record.
+
+    L116 `if qry_ret_prepaid is not None and qry_ret_prepaid != 0:` — a
+    mutation flipping `!=` to `==` would emit a C record for the zero
+    case. Same for the non-prepaid branch at L119.
+    """
+    runner = MagicMock(spec=QueryRunnerProtocol)
+    runner.run_query.return_value = [(100.0, 0.0)]
+    gen = CRecGenerator(query_runner=runner)
+    out = io.StringIO()
+    gen.fetch_splitted_sales_tax_totals(out)
+    output = out.getvalue()
+    assert "Prepaid" not in output
+    assert "CTABSales Tax" in output
+
+
+def test_fetch_splitted_sales_tax_totals_writes_nonzero_prepaid() -> None:
+    """A non-zero prepaid amount produces a 'Prepaid Sales Tax' C record."""
+    runner = MagicMock(spec=QueryRunnerProtocol)
+    runner.run_query.return_value = [(0.0, 50.0)]
+    gen = CRecGenerator(query_runner=runner)
+    out = io.StringIO()
+    gen.fetch_splitted_sales_tax_totals(out)
+    output = out.getvalue()
+    assert "CTABPrepaid" in output
+    assert "CTABSales Tax" not in output
+
+
+def test_fetch_splitted_sales_tax_totals_empty_query_sets_unappended_false() -> None:
+    """An empty query result sets unappended_records=False and writes nothing.
+
+    L110 `if not qry_ret: self.unappended_records = False; return`. A
+    mutation negating the condition would skip the early return and
+    unpack qry_ret[0] (TypeError on empty list).
+    """
+    runner = MagicMock(spec=QueryRunnerProtocol)
+    runner.run_query.return_value = []
+    gen = CRecGenerator(query_runner=runner)
+    gen.set_invoice_number("42")
+    out = io.StringIO()
+    gen.fetch_splitted_sales_tax_totals(out)
+    assert out.getvalue() == ""
+    assert gen.unappended_records is False
