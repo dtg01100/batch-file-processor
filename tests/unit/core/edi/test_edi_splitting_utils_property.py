@@ -12,10 +12,12 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from core.edi.edi_splitting_utils import (
+    _build_split_file_metadata,
     _col_to_excel,
     _group_lines_by_invoice,
     _should_include_b_record,
     _split_invoice_records,
+    _validate_split_counts,
     filter_b_records_by_category,
 )
 
@@ -355,3 +357,55 @@ def test_should_include_b_record_exclude_mode_decision(
     not_in_list = _should_include_b_record(b, upc_dict, ["toys"], "exclude")
     assert in_list is False
     assert not_in_list is True
+
+
+def test_invoice_total_zero_uses_inv_suffix_not_cr() -> None:
+    """invoice_total == 0 is the boundary: not credit, so suffix must be '.inv'.
+
+    A mutation of `<` to `<=` would flip the zero branch to '.cr'.
+    """
+    line_dict = {"invoice_date": "20260101", "invoice_total": "0"}
+    _path, _prefix, suffix = _build_split_file_metadata(
+        line_dict, 1, "foo.edi", "/tmp", prepend_date_files=False
+    )
+    assert suffix == ".inv"
+
+
+def test_invoice_total_negative_uses_cr_suffix() -> None:
+    """A negative invoice_total is a credit memo; suffix must be '.cr'."""
+    line_dict = {"invoice_date": "20260101", "invoice_total": "-100"}
+    _path, _prefix, suffix = _build_split_file_metadata(
+        line_dict, 1, "foo.edi", "/tmp", prepend_date_files=False
+    )
+    assert suffix == ".cr"
+
+
+def test_build_split_file_metadata_raises_when_line_dict_is_none() -> None:
+    """_build_split_file_metadata must reject None line_dict with ValueError.
+
+    A `negate_if_condition` mutation (if not (line_dict is None):) would
+    skip the guard and crash later when indexing line_dict[...] instead.
+    """
+    import pytest
+    with pytest.raises(ValueError, match="capture_records returned None"):
+        _build_split_file_metadata(
+            None, 1, "foo.edi", "/tmp", prepend_date_files=False
+        )
+
+
+def test_validate_split_counts_raises_on_mismatched_line_count(tmp_path) -> None:
+    """Mismatched lines_in_edi vs write_counter must raise DataIntegrityError.
+
+    A `ne_to_eq` mutation (lines_in_edi == write_counter) would let the
+    mismatched case pass silently.
+    """
+    from core.exceptions import DataIntegrityError
+    out_file = tmp_path / "out.txt"
+    out_file.write_text("a\n")
+    with pytest.raises(DataIntegrityError, match="not all lines"):
+        _validate_split_counts(
+            lines_in_edi=10,
+            write_counter=5,
+            edi_send_list=[(str(out_file), "", ".inv")],
+            a_record_count=1,
+        )
