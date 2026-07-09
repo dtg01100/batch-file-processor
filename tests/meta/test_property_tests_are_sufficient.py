@@ -157,7 +157,105 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("core/utils/timing_utils.py", "tests/unit/core/utils/test_timing_utils.py"),
     ("core/edi/edi_tweaker.py", "tests/unit/core/edi/test_edi_tweaker.py"),
     ("core/structured_logging.py", "tests/unit/test_structured_logging.py"),
-]
+    # Plain-unit-test pairs (added 2026-07-09 as part of the meta-test
+    # coverage expansion: "all tests have a meta-test to ensure they are
+    # correct"). These follow the same invariant as property-test pairs:
+    # the test on the right should catch real bugs in the module on the
+    # left. See docs/meta-test-findings.md for per-pair survivor history.
+    #
+    # Pairs are added in batches of plain-unit-tests that have a
+    # healthy baseline (the unmodified-source test passes within the
+    # runner's 20s timeout). Per-pair survivor counts from the initial
+    # run are noted so reviewers know what they're looking at.
+    ("dispatch/observability/alert_queue.py", "tests/unit/dispatch/observability/test_alert_queue.py"),  # 3/4 killed, L34 mkdir(parents=True) survives
+    ("dispatch/observability/alert_dispatcher.py", "tests/unit/dispatch/observability/test_alert_dispatcher.py"),  # 0 mutants apply (small module)
+    ("dispatch/observability/audit_logger.py", "tests/unit/dispatch/observability/test_audit_logger.py"),  # 2/3 killed
+    ("dispatch/observability/background_writer.py", "tests/unit/dispatch/observability/test_background_writer.py"),  # 1/4 killed
+    ("dispatch/pipeline/interfaces.py", "tests/unit/dispatch/pipeline/test_pipeline_interfaces.py"),  # 1/5 killed
+    ("dispatch/converters/registry.py", "tests/unit/dispatch/test_converters_registry.py"),  # 3/7 killed
+    ("dispatch/error_handler.py", "tests/unit/dispatch/test_error_handler_alert_integration.py"),  # 1/7 killed
+    ("core/edi/po_fetcher.py", "tests/unit/core/edi/test_po_fetcher.py"),  # 3/6 killed
+    ("core/edi/inv_fetcher.py", "tests/unit/core/edi/test_inv_fetcher.py"),  # 5/9 killed
+    ("adapters/db2ssh/connection.py", "tests/unit/adapters/db2ssh/test_db2ssh_connection.py"),  # 3/7 killed
+    ("core/edi/edi_parser.py", "tests/unit/core/edi/test_edi_parser.py"),  # 1/10 killed (note: distinct pair from the property test in DEFAULT_PAIRS above)
+    # Batch 2 (also 2026-07-09):
+    ("core/database/query_runner.py", "tests/unit/core/database/test_query_runner.py"),  # 6/10 killed
+    ("backend/copy_backend.py", "tests/unit/backend/test_copy_backend.py"),  # 4/8 killed
+    ("backend/file_operations.py", "tests/unit/backend/test_file_operations.py"),  # 4/9 killed
+    ("backend/ftp_client.py", "tests/unit/backend/test_ftp_client.py"),  # 3/8 killed
+    ("backend/smtp_client.py", "tests/unit/backend/test_smtp_client.py"),  # 4/8 killed
+    ("dispatch/services/database_connector.py", "tests/unit/dispatch/services/test_database_connector.py"),  # 5/5 killed (100% clean)
+    ("dispatch/services/folder_processor.py", "tests/unit/dispatch/services/test_folder_processor.py"),  # 3/8 killed
+    ("interface/validation/email_validator.py", "tests/unit/interface/validation/test_email_validator.py"),  # 5/9 killed
+    ("interface/models/folder_configuration.py", "tests/unit/interface/models/test_folder_config_alert.py"),  # 2/11 killed
+    ("core/edi/upc_utils.py", "tests/unit/core/edi/test_upc_utils.py"),  # 5/11 killed (companion to property test; plain unit test covers different paths)
+    # Batch 3 (also 2026-07-09): plain-unit tests for modules whose
+    # property tests were already in DEFAULT_PAIRS; each plain test
+    # exercises paths the property test does not.
+    ("core/edi/c_rec_generator.py", "tests/unit/core/edi/test_c_rec_generator.py"),  # 4/9 killed
+    ("dispatch/feature_flags.py", "tests/unit/dispatch/test_feature_flags.py"),  # 3/5 killed
+    # Batch 4 (also 2026-07-09): previously-untouched layers (tests/dispatch/,
+    # tests/unit/dispatch_tests/, tests/unit/interface/operations/). Mix of
+    # strong and weak tests; high survivor rates reveal missing-assertion gaps.
+    ("dispatch/converters/customer_queries.py", "tests/dispatch/converters/test_customer_queries.py"),  # 1/3 killed
+    ("dispatch/services/customer_lookup_service.py", "tests/dispatch/services/test_customer_lookup_service.py"),  # 1/3 killed
+    ("dispatch/services/uom_lookup_service.py", "tests/dispatch/services/test_uom_lookup_service.py"),  # 2/5 killed
+    ("dispatch/send_manager.py", "tests/unit/dispatch_tests/test_send_manager.py"),  # 4/6 killed
+    ("dispatch/processed_files_tracker.py", "tests/unit/dispatch_tests/test_processed_files_tracker.py"),  # 7/9 killed
+    ("dispatch/print_service.py", "tests/unit/dispatch_tests/test_print_service.py"),  # 4/9 killed
+    ("dispatch/services/file_filter.py", "tests/unit/dispatch_tests/test_file_filter.py"),  # 2/8 killed
+    ("dispatch/orchestrator.py", "tests/unit/dispatch_tests/test_orchestrator.py"),  # 2/9 killed
+    ("interface/operations/folder_manager.py", "tests/unit/interface/operations/test_folder_manager.py"),  # 3/9 killed
+    ("interface/operations/processed_files.py", "tests/unit/interface/operations/test_processed_files.py"),  # 4/4 killed (100% clean)
+    # Batch 5 (also 2026-07-09): dispatch_tests/ pipeline + services, plus
+    # interface/validation and form/. Includes a 0-N entry on purpose:
+    # 0/8 (dispatch/pipeline/validator.py) means the test runs without
+    # binding to module behavior at all — adding it makes the meta-test
+    # surface that as a test-quality debt. Same for 0/6 on interfaces.py.
+    ("dispatch/pipeline/validator.py", "tests/unit/dispatch_tests/test_pipeline_validator.py"),  # 0/8 — test has no assertions on mutated behavior
+    ("dispatch/pipeline/temp_dir_utils.py", "tests/unit/dispatch_tests/test_pipeline_temp_dir_utils.py"),  # 2/4 killed
+    ("dispatch/edi_validator.py", "tests/unit/dispatch_tests/test_edi_validator.py"),  # 5/10 killed
+    ("dispatch/preflight_validator.py", "tests/unit/dispatch_tests/test_preflight_validator.py"),  # 3/6 killed
+    ("dispatch/log_sender.py", "tests/unit/dispatch_tests/test_log_sender.py"),  # 4/8 killed
+    ("dispatch/error_handler.py", "tests/unit/dispatch_tests/test_error_handler.py"),  # 1/7 — companion to test_error_handler_alert_integration.py
+    ("dispatch/interfaces.py", "tests/unit/dispatch_tests/test_interfaces.py"),  # 0/6 — test has no assertions on mutated behavior
+    ("interface/validation/folder_settings_validator.py", "tests/unit/test_settings_validation.py"),  # 7/11 killed
+    ("interface/form/form_generator.py", "tests/unit/test_form_generator.py"),  # 4/8 killed
+    # Batch 6 (also 2026-07-09): backend/database, dispatch/converters,
+    # dispatch interfaces (companion pair), core EDI fetchers, and
+    # interface/folder_configuration. Several 0-N entries expose tests
+    # that don't bind to module behavior — the meta-test surfaces these
+    # as test-quality debt.
+    ("backend/database/database_obj.py", "tests/unit/interface/database/test_database_obj.py"),  # 4/10 killed
+    ("backend/database/database_obj.py", "tests/unit/interface/database/test_safe_accessors.py"),  # 2/10 killed
+    ("dispatch/converters/convert_base.py", "tests/unit/test_estore_null_safety.py"),  # 1/9 killed
+    ("dispatch/converters/convert_base.py", "tests/unit/test_convert_base.py"),  # 3/9 killed
+    ("dispatch/interfaces.py", "tests/unit/test_dispatch_interfaces.py"),  # 0/6 — test has no assertions on mutated behavior
+    ("core/edi/edi_splitter.py", "tests/unit/test_category_filtering.py"),  # 0/7 — same module as Batch 5 test_edi_splitter_property
+    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_backends.py"),  # 0/9 — test imports inv_fetcher but doesn't exercise it
+    ("interface/models/folder_configuration.py", "tests/unit/test_folder_configuration_pydantic.py"),  # 1/11 killed
+    ("interface/models/folder_configuration.py", "tests/unit/test_folder_db_roundtrip.py"),  # 1/11 killed
+    # Batch 7 (also 2026-07-09): interface/plugins/*, dispatch/converters/*
+    # (concrete converter modules: eStore, simplified CSV, fintech,
+    # scansheet_type_a), and core/edi/inv_fetcher pulled in via converter
+    # tests. High 0/N rates on the converter tests are real test-quality
+    # signals — these tests import the modules but mock around the
+    # behavior, so mutations don't reach the assertions.
+    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_plugin_base.py"),  # 2/9 killed
+    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_plugin_manager_configuration.py"),  # 1/9 killed
+    ("interface/plugins/configuration_plugin.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # 2/3 killed
+    ("interface/plugins/section_registry.py", "tests/unit/test_plugins/test_section_registry.py"),  # 1/7 killed
+    ("interface/operations/plugin_configuration_mapper.py", "tests/unit/test_plugins/test_plugin_configuration_mapper.py"),  # 3/11 killed
+    ("interface/plugins/csv_configuration_plugin.py", "tests/unit/test_plugins/test_plugin_option_combinations.py"),  # 1/3 killed
+    ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_simplified_csv.py"),  # 3/8 killed
+    ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_csv.py"),  # 0/8 — converter tests mock around module behavior
+    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_yellowdog_csv.py"),  # 0/9 — tests mock converter, never reach inv_fetcher
+    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_fintech.py"),  # 0/9 — same pattern as above
+    ("dispatch/converters/convert_to_scansheet_type_a.py", "tests/unit/test_convert_to_scansheet_type_a.py"),  # 0/9
+    ("dispatch/converters/convert_to_estore_einvoice.py", "tests/unit/test_convert_to_estore_einvoice.py"),  # 6/8 killed (strong test)
+    ("dispatch/converters/convert_to_estore_einvoice_generic.py", "tests/unit/test_convert_to_estore_einvoice_generic.py"),  # 6/8 killed (strong test)
+    ("dispatch/converters/registry.py", "tests/unit/dispatch_tests/test_legacy_147_smoke.py"),  # 1/7 killed (companion to test_converters_registry.py)
+]           
 
 
 # ---------------------------------------------------------------------------
