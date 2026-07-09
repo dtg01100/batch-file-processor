@@ -20,7 +20,7 @@ from core.edi.edi_parser import (
     parse_c_record,
 )
 
-pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]   
+pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]
 
 
 def _fixed_text(length: int):
@@ -337,5 +337,5 @@ def test_parse_a_record_length_at_min_length_round_trips(body: str) -> None:
     assert parsed.cust_vendor == line[1:7]
     assert parsed.invoice_number == line[7:17]
     assert parsed.invoice_date == line[17:23]
-    assert parsed.invoice_total == line[23:33]    
+    assert parsed.invoice_total == line[23:33]
 

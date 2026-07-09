@@ -2,33 +2,51 @@
 
 This directory contains meta-tests: tests that probe the test suite itself.
 
-The point is simple. As the property tests in `tests/unit/**/*_property.py` get
-tighter, we expect bugs to surface. The meta-test is what surfaces them.
+The point is simple. As the property tests in `tests/unit/**/*_property.py`
+get tighter, we expect bugs to surface. The meta-test is what surfaces them.
 
 ## What is here
 
 ### `test_property_tests_are_sufficient.py`
 
-A brutally simple mutation runner. For each (production module, property test
-file) pair, it:
+A brutally simple mutation runner. For each (production module, test
+file) pair in `DEFAULT_PAIRS`, it:
 
 1. Applies a small fixed list of mutations to the module source — comparison
    swaps, boolean flips, connector swaps, return-statement changes, integer
    off-by-one, etc.
-2. For each mutation, runs the property test once. If the test still passes,
+2. For each mutation, runs the test once. If the test still passes,
    the mutation **survived**: the test would have missed that real bug.
-3. Prints a per-module report. Survivors are listed by file, line, and
-   mutation name. The runner exits non-zero if any survivor exists.
+3. Prints a per-module report. Survivors are listed by file, line,
+   mutation name, and the original/mutated source lines so a reviewer
+   can audit each one by sight.
+4. The runner exits non-zero if any survivor exists.
 
 The runner is intentionally simple. It uses `subprocess.run` and a fixed
 mutation list. It does NOT use a mutation-testing framework (mutmut, cosmic
 ray, etc.) — those are great, but they come with plugin systems, config
-files, and opinions we do not need. The whole file is < 400 lines.
+files, and opinions we do not need. The whole file is one screenful.
 
 ### `DEFAULT_PAIRS`
 
-The 9 default (module, test) pairs. To extend, add a line to the list and
-the wrapper picks it up.
+The 16 default (module, test) pairs. To extend, add a line to the list
+and the wrapper picks it up.
+
+### `KNOWN_EQUIVALENT`
+
+A list of (module_relpath, mutation_name, line_number, reason) tuples
+that silence mutations which cannot produce observable behavior change
+— typically they land in a docstring, a comment, a default-argument
+value the test overrides, or a version constant.
+
+The reason is the cited source evidence at that line, not a summary.
+A typo fails closed: an unknown (module, mutation, line) tuple does
+NOT match the skip lookup, and the mutation is applied normally.
+
+The runner exposes `--no-skip-known-equivalent` so the list itself is
+auditable: a previously-equivalent mutation that has since become
+observable (because a docstring became code, a constant became used,
+etc.) is detected as a survivor, and the test fails.
 
 ## Running
 
@@ -45,30 +63,40 @@ pytest tests/meta/test_property_tests_are_sufficient.py -n 0 -s
 .venv/bin/python tests/meta/test_property_tests_are_sufficient.py \
     --pair-list core/edi/edi_parser.py:tests/unit/core/edi/test_edi_parser_property.py \
     --pair-list core/edi/upc_utils.py:tests/unit/core/edi/test_upc_utils_property.py
+
+# Audit KNOWN_EQUIVALENT itself: run ALL mutations including silenced.
+.venv/bin/python tests/meta/test_property_tests_are_sufficient.py \
+    --pair-list core/edi/upc_utils.py:tests/unit/core/edi/test_upc_utils_property.py \
+    --no-skip-known-equivalent
 ```
 
-The pytest wrapper prints survivors inline; the CLI prints the same plus an
-overall summary.
+The pytest wrapper prints survivors inline; the CLI prints the same
+plus an overall summary.
 
 ## Interpreting survivors
 
 A surviving mutation is one of:
 
-1. **Real gap.** The test does not exercise the mutated code path. Fix: write
-   a stronger property test that covers the boundary / branch.
-2. **Equivalent mutation.** The change has no observable effect. Document it
-   inline at the test site with a comment, and either (a) extend the
-   mutation list to skip that exact line, or (b) accept the survivor.
-3. **Test bug.** The mutation surfaced a real bug in the test setup, e.g.
-   missing argument, default value clash, or flaky strategy. Fix the test.
+1. **Real gap.** The test does not exercise the mutated code path. Fix:
+   write a stronger test (often a property test using broader strategy
+   alphabets, a hardcoded oracle, or a log-capturing fixture).
+2. **Equivalent mutation.** The change has no observable effect. The
+   `KNOWN_EQUIVALENT` list documents these with cited evidence; the
+   `--no-skip-known-equivalent` flag lets you re-validate the list.
+3. **Test bug.** The mutation surfaced a real bug in the test setup,
+   e.g. missing argument, default value clash, or — more subtly — a
+   self-referential test that uses the function-under-test to build
+   its own oracle. Fix the test (see "Self-referential test bugs"
+   in `docs/meta-test-findings.md`).
 
-When the meta-test first ran, it surfaced a real bug in the splitter
-property tests: the test constructed `SplitConfig(...)` without specifying
-`prepend_date`, which defaults to `True`, and the `_INVOICE_DATE_STRINGS`
-strategy could produce `"000000"` — which crashes `parse_edi_date` inside
-the production code. The test only appeared to pass because the Hypothesis
-example database had cached passing examples from earlier runs. The fix:
-add `prepend_date=False` to every `SplitConfig(...)` in the property tests.
+When the meta-test first ran it surfaced a real bug in the splitter
+property tests: the test constructed `SplitConfig(...)` without
+specifying `prepend_date`, which defaults to `True`, and the
+`_INVOICE_DATE_STRINGS` strategy could produce `"000000"` — which
+crashes `parse_edi_date` inside the production code. The test only
+appeared to pass because the Hypothesis example database had cached
+passing examples from earlier runs. The fix: add `prepend_date=False`
+to every `SplitConfig(...)` in the property tests.
 
 That is exactly the kind of bug this meta-test is for.
 
@@ -76,8 +104,10 @@ That is exactly the kind of bug this meta-test is for.
 
 - After tightening a property test.
 - After a refactor that changes control flow in any module under test.
-- Periodically as a smoke test in CI. Long wall time is acceptable: the
-  runner reports a per-mutation progress line.
+- After any change to a docstring or default value cited in
+  `KNOWN_EQUIVALENT` (re-validate the auditability claim).
+- Periodically as a smoke test in CI. Long wall time is acceptable:
+  the runner reports a per-mutation progress line.
 
 ## Why a hand-rolled runner, not mutmut?
 

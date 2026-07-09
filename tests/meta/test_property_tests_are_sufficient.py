@@ -37,7 +37,6 @@ from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Mutation rules. Each is a (name, find_regex, replace_func) triple.
 #
@@ -377,7 +376,7 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      "function docstring '****abc123 or ****' — prose"),
     ("core/structured_logging.py", "int_constant_off_by_one", 31,
      "example code in module docstring `range(3)` — not loaded as Python"),
-]            
+]
 
 
 # ---------------------------------------------------------------------------
@@ -745,7 +744,7 @@ def test_default_modules_have_sufficient_test_coverage() -> None:
             "Surviving mutants. Either tighten the test, or add the "
             "mutation to KNOWN_EQUIVALENT with a cited reason:"
         ]
-        for fname, name, line, path in overall_survivors:
+        for fname, name, line, _path in overall_survivors:
             msg_lines.append(f"  {fname}:{line}  {name}")
         pytest.fail("\n".join(msg_lines))
 
