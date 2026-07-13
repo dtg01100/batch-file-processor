@@ -247,7 +247,7 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("interface/plugins/section_registry.py", "tests/unit/test_plugins/test_section_registry.py"),  # 1/7 killed
     ("interface/operations/plugin_configuration_mapper.py", "tests/unit/test_plugins/test_plugin_configuration_mapper.py"),  # 3/11 killed
     ("interface/plugins/csv_configuration_plugin.py", "tests/unit/test_plugins/test_plugin_option_combinations.py"),  # 1/3 killed
-    ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_simplified_csv.py"),  # 3/8 killed
+    ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_simplified_csv.py"),  # 5/8 killed
     ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_csv.py"),  # 0/8 — converter tests mock around module behavior
     ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_yellowdog_csv.py"),  # 0/9 — tests mock converter, never reach inv_fetcher
     ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_fintech.py"),  # 0/9 — same pattern as above

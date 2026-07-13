@@ -704,10 +704,94 @@ assertions in this file don't bind to production behavior** —
 same pattern as the 0/N entries in DEFAULT_PAIRS (test imports
 the module but doesn't exercise the mutated code path).
 
-**Status:** deferred. The fix requires investigation of which
-specific mutations survive and adding assertions that bind
-to those code paths. Estimated 30+ minutes of work; deferred
-to a follow-up commit.
+**Status:** fixed in commit pending. The 4 surviving
+mutations were:
+
+1. `lt_to_le` at edi_parser.py:89: `if len(line) < 33:` — the
+   test data used a 34-char line (33 + newline) so the
+   mutation didn't change behavior. Added
+   `test_parse_a_record_minimum_length_exactly_33_chars` with
+   a 33-char line (no newline) — the boundary case.
+2. `eq_to_ne` at edi_parser.py:179: `if line.strip() == "\x1a":`
+   (in the parser= branch). No test exercised the parser
+   parameter. Added
+   `test_capture_records_with_parser_returns_none_for_eof_marker`
+   with a single `\x1a` line and a parser that returns None.
+3. `ne_to_eq` at edi_parser.py:178: `if result is None and line and line.strip() != "":`
+   — the line.strip() == "" case. Added
+   `test_capture_records_with_parser_raises_on_unparseable_nonempty`
+   that asserts EDIParseError is raised for a non-empty
+   non-EOF-marker line.
+4. `return_none_instead_of_value` at edi_parser.py:182:
+   `return result` in the parser branch. Added
+   `test_capture_records_with_parser_returns_parser_result`
+   that asserts the parser's return value is passed through.
+
+**After:** kill rate improved from 1/5 (20%) to 5/5 (100%).
+The 5 KNOWN_EQUIVALENT mutations remain (docstring
+mutations that have no runtime effect).
+
+## 0/N pair follow-up (2026-07-13)
+
+Three of the 0/N pairs documented in DEFAULT_PAIRS were
+investigated further. Two had actionable fixes.
+
+### `(dispatch/converters/convert_to_simplified_csv.py, tests/unit/test_convert_to_simplified_csv.py)` — 3/8 → 5/8
+
+Original: 3/8 (38%). All 5 `TestConvertToSimplifiedCSVColumnLayout`
+tests only asserted `os.path.exists(...)` without reading the
+actual CSV content — the strongest signal you can have for
+"tests don't bind to production behavior".
+
+**Fixes:**
+
+1. Added `test_write_headers_omits_description_when_flag_false`
+   in `tests/unit/test_convert_to_simplified_csv.py`. Uses
+   `inc_item_desc=True, inc_item_numbers=False, column_layout="upc_number,vendor_item,description"`.
+   Reads the CSV and asserts the headers are exactly
+   `["UPC", "Item Description"]` — the vendor_item column
+   must NOT get the description header. Kills the L131
+   `eq_to_ne` mutation (`column == "description"` flipped
+   to `!=`).
+2. Added `test_default_include_headers_when_no_param` that
+   calls `edi_convert` with an EMPTY `parameters_dict` and
+   asserts the default `simple_csv_include_headers=True`
+   produces a header row. Kills the L74 `true_to_false`
+   mutation.
+
+**Remaining survivors:** L64 `false_to_true` (retail_uom
+default) — to kill this we'd need a test with a populated
+`upc_lut` and matching `each_uom_categories`. The retail
+UOM transform is gated by `should_apply_retail_uom` which
+short-circuits when the upc_lut is empty, so the existing
+test with empty `upc_lut` doesn't catch the mutation.
+Documented in DEFAULT_PAIRS as 5/8 (was 3/8).
+
+### `(dispatch/converters/convert_to_scansheet_type_a.py, tests/unit/test_convert_to_scansheet_type_a.py)` — 0/9 → 1/9
+
+Original: 0/9. The 131-line test file only tests 2 of 12+
+private methods. The converter's public `edi_convert`
+interface (which orchestrates the full pipeline) is
+untested.
+
+**Fix:**
+
+- Added
+  `test_extract_invoices_from_edi_filters_to_a_records_only`
+  in `tests/unit/test_convert_to_scansheet_type_a.py`.
+  Uses a real EDI file with one A record, one B record,
+  and one C record. Calls `_extract_invoices_from_edi` and
+  asserts the result is `["0000001"]` (only the A record's
+  invoice number's last 7 digits). Kills the L149 `eq_to_ne`
+  mutation.
+
+**Remaining survivors:** L130 `return_none_instead_of_value`
+(edi_convert's return), L194 `gt_to_ge`, L209 `lt_to_le`,
+L287 `ge_to_gt` (all in DB or barcode handling), L316
+`or_to_and` (in error handling), and 2 docstring mutations.
+The public `edi_convert` requires a database connection,
+which is a much larger refactor. Documented in DEFAULT_PAIRS
+as 1/9 (was 0/9).
 
 ### Pre-existing findings (not fixed, documented)
 

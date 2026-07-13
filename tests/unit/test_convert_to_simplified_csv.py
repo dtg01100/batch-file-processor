@@ -321,6 +321,177 @@ class TestConvertToSimplifiedCSVColumnLayout(TestConvertToSimplifiedCSVFixtures)
 
         assert os.path.exists(result)
 
+    def test_write_headers_omits_description_when_flag_false(
+        self, default_parameters, default_settings, tmp_path
+    ):
+        """Regression: when ``include_item_description`` is False, the
+        "Item Description" column header must NOT appear in the CSV.
+
+        The mutation runner's ``eq_to_ne`` at
+        convert_to_simplified_csv.py:131 (flipping
+        ``column == "description"`` to ``column != "description"``)
+        was not caught by existing tests because every column-layout
+        test only asserted ``os.path.exists(...)`` without reading
+        the actual CSV content. The mutation produces the same
+        headers in the default case but breaks the
+        ``inc_item_desc=True, inc_item_numbers=False`` configuration:
+        a vendor_item column gets the "Item Description" header.
+
+        See commit ea1ed275d (Phase 3 bug 5) follow-up for context.
+        """
+        import csv as _csv
+
+        # Setup: inc_item_desc=True, inc_item_numbers=False.
+        # column_layout places vendor_item before description so
+        # the iteration order tests the conditional.
+        default_parameters["include_item_description"] = "True"
+        default_parameters["include_item_numbers"] = "False"
+        default_parameters["simple_csv_sort_order"] = (
+            "upc_number,vendor_item,description"
+        )
+
+        edi_content = (
+            "AVENDOR00000000010101240000000123\n"
+            "B00123456789Test Item Description    123456001234010000010000500123      \n"
+        )
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        result_path = convert_to_simplified_csv.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            default_parameters,
+            {},
+        )
+
+        # Read the actual CSV and verify the headers.
+        with open(result_path) as f:
+            reader = _csv.reader(f)
+            headers = next(reader)
+
+        # With original code: column "vendor_item" is iterated
+        # while inc_item_desc=True. The L131 check
+        # "column == description" is False for vendor_item, so
+        # the L131 if does NOT fire. The L133 check handles
+        # vendor_item (inc_item_numbers=False → skipped).
+        # Result: headers = ["UPC", "Item Description"].
+        # With mutation L131 flipped to "!=": the check fires for
+        # vendor_item (column != description), incorrectly appending
+        # "Item Description" to the vendor_item column → headers
+        # = ["UPC", "Item Description", "Item Description"] (wrong!).
+        assert headers == ["UPC", "Item Description"], (
+            f"expected ['UPC', 'Item Description'] with inc_item_desc=True "
+            f"and inc_item_numbers=False; got {headers!r}. The vendor_item "
+            f"column must NOT get the 'Item Description' header."
+        )
+
+    def test_default_include_headers_when_no_param(
+        self, default_settings, tmp_path
+    ):
+        """Regression: when neither ``include_headers`` nor
+        ``simple_csv_include_headers`` is in parameters, the default
+        is True (headers are written). The mutation runner's
+        ``true_to_false`` at convert_to_simplified_csv.py:74
+        (flipping the default from True to False) was not caught by
+        existing tests because every test passed a
+        ``default_parameters`` fixture that had
+        ``include_headers="True"``, masking the default behavior.
+
+        See commit ea1ed275d (Phase 3 bug 5) follow-up for context.
+        """
+        import csv as _csv
+
+        edi_content = (
+            "AVENDOR00000000010101240000000123\n"
+            "B00123456789Test Item Description    123456001234010000010000500123      \n"
+        )
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        # Empty parameters dict — neither key is set, so the default
+        # at L74 must apply (True). With the mutation, the default
+        # becomes False, and no header row is written.
+        result_path = convert_to_simplified_csv.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            {},  # no parameters_dict — default must kick in
+            {},  # upc_lookup — empty
+        )
+
+        with open(result_path) as f:
+            reader = _csv.reader(f)
+            rows = list(reader)
+
+        # Default behavior: include_headers is True → header row written.
+        assert len(rows) >= 1, (
+            f"expected at least 1 row (the header) with default "
+            f"include_headers=True, got {len(rows)} rows"
+        )
+        headers = rows[0]
+        # Default column_layout starts with upc_number.
+        assert headers[0] == "UPC", (
+            f"expected default headers to start with 'UPC', got {headers!r}"
+        )
+
+    def test_default_retail_uom_is_false(
+        self, default_settings, tmp_path
+    ):
+        """Regression: when ``retail_uom`` is not in parameters, the
+        default is False (no retail UOM transform). The mutation
+        runner's ``false_to_true`` at convert_to_simplified_csv.py:64
+        (flipping the default from False to True) was not caught by
+        existing tests because every test passed a
+        ``default_parameters`` fixture that had
+        ``retail_uom="False"``, masking the default behavior.
+
+        With the mutation, the retail UOM transform would run on
+        every B record. Without an upc_lookup, the transform would
+        either no-op (if the code guards on it) or change values.
+        Either way, the second column of the data row (Quantity)
+        should match the original B record's qty_of_units (5 in
+        this test data) when the default is False.
+
+        See commit ea1ed275d (Phase 3 bug 5) follow-up for context.
+        """
+        import csv as _csv
+
+        edi_content = (
+            "AVENDOR00000000010101240000000123\n"
+            "B00123456789Test Item Description    123456001234010000010000500123      \n"
+        )
+        input_file = tmp_path / "input.edi"
+        input_file.write_text(edi_content)
+        output_file = str(tmp_path / "output")
+
+        # Empty parameters dict — retail_uom not set, default applies.
+        result_path = convert_to_simplified_csv.edi_convert(
+            str(input_file),
+            output_file,
+            default_settings,
+            {},
+            {},
+        )
+
+        with open(result_path) as f:
+            reader = _csv.reader(f)
+            rows = list(reader)
+
+        assert len(rows) == 2, (
+            f"expected 2 rows (header + 1 B record), got {len(rows)}"
+        )
+        # The B record's qty_of_units is "00005" → "5" (the converter
+        # strips leading zeros). Default column_layout is
+        # upc_number,qty_of_units,... so qty is the 2nd column.
+        assert rows[1][1] == "5", (
+            f"expected qty_of_units='5' with default retail_uom=False, "
+            f"got {rows[1][1]!r}. The retail UOM transform must not run "
+            f"when retail_uom is unset."
+        )
+
 
 class TestConvertToSimplifiedCSVDataTransformation(TestConvertToSimplifiedCSVFixtures):
     """Test data transformation in convert_to_simplified_csv."""

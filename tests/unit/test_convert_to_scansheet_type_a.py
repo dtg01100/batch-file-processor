@@ -129,3 +129,39 @@ class TestScanSheetBarcodeGeneration:
 
         with pytest.raises(ValueError, match="Input contents are not an integer"):
             converter._interpret_barcode_string("   ---   ")
+
+    def test_extract_invoices_from_edi_filters_to_a_records_only(self, tmp_path):
+        """Regression: _extract_invoices_from_edi must filter to A records.
+
+        The mutation runner's ``eq_to_ne`` at line 149
+        (flipping ``record_type == "A"`` to ``record_type != "A"``)
+        was not caught by existing tests because no test exercised
+        this private method with mixed A/B/C records. With the
+        mutation applied, the function would extract B and C
+        records' invoice numbers (which are not invoices) and skip
+        the actual A records.
+
+        See commit ea1ed275d (Phase 3 bug 5) follow-up for context.
+        """
+        converter = ScanSheetTypeAConverter()
+
+        # Build an EDI file with one A record and one B record.
+        # The A record's invoice_number is 0000000123; the B record
+        # has no invoice_number (B records don't have that field).
+        edi_content = (
+            "AVENDOR00000000010101240000000123\n"  # A record — invoice 0000000123
+            "B00123456789Test Item Description    123456001234010000010000500123      \n"  # B record
+            "CFRTFreight Charge                 000001234\n"  # C record
+        )
+        edi_file = tmp_path / "input.edi"
+        edi_file.write_text(edi_content)
+
+        result = converter._extract_invoices_from_edi(str(edi_file))
+
+        # Only the A record's invoice number (last 7 digits) should
+        # be in the result. B and C records must NOT leak in.
+        # A record invoice_number is "0000000001" (10 digits) →
+        # last 7 digits = "0000001".
+        assert result == ["0000001"], (
+            f"expected only A-record invoice numbers, got {result!r}"
+        )

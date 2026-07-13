@@ -158,6 +158,67 @@ class TestCaptureRecords:
         # The total field is 10 chars starting at position 23
         assert result["invoice_total"] == "-000000123"
 
+    def test_capture_records_with_parser_returns_parser_result(self):
+        """Regression: when a parser is provided, capture_records must
+        return whatever the parser returns. The mutation runner's
+        ``return_none_instead_of_value`` at edi_parser.py:182
+        (flipping ``return result`` to ``return None``) was not caught
+        by existing tests because no test exercised the
+        ``parser is not None`` code path with a parser that returned
+        a non-None result.
+        """
+        sentinel = {"record_type": "A", "from": "parser"}
+
+        class _FakeParser:
+            def parse_line(self, _line: str) -> dict:
+                return sentinel
+
+        result = capture_records("ignored\n", parser=_FakeParser())
+        assert result == sentinel, (
+            f"expected parser's return value {sentinel!r}, got {result!r}"
+        )
+
+    def test_capture_records_with_parser_returns_none_for_eof_marker(self):
+        """Regression: when a parser is provided and returns None for a
+        line that is just the EOF marker (``\\x1a`` after strip), the
+        function must return None, NOT raise EDIParseError. The
+        mutation runner's ``eq_to_ne`` at edi_parser.py:179 (flipping
+        ``==`` to ``!=``) would cause the function to raise for the
+        EOF marker line.
+
+        See commit ea1ed275d (Phase 3 bug 5) for the audit trail.
+        """
+        class _FakeParser:
+            def parse_line(self, _line: str) -> dict | None:
+                return None
+
+        # Single Ctrl-Z character (the SUB / EOF marker).
+        result = capture_records("\x1a", parser=_FakeParser())
+        assert result is None, (
+            f"expected None for EOF marker line, got {result!r}"
+        )
+
+    def test_capture_records_with_parser_raises_on_unparseable_nonempty(self):
+        """Regression: when a parser is provided and returns None for a
+        non-empty line that isn't just the EOF marker, the function
+        must raise EDIParseError. The mutation runner's ``ne_to_eq``
+        at edi_parser.py:178 (flipping ``!=`` to ``==`` in
+        ``line.strip() != ""``) would cause the function to
+        short-circuit and silently return None instead of raising.
+
+        See commit ea1ed275d (Phase 3 bug 5) for the audit trail.
+        """
+        from core.edi.edi_parser import EDIParseError
+
+        class _FakeParser:
+            def parse_line(self, _line: str) -> dict | None:
+                return None
+
+        # A non-empty, non-EOF-marker line. Parser returns None.
+        # Expected: capture_records raises EDIParseError.
+        with pytest.raises(EDIParseError, match="Not An EDI"):
+            capture_records("garbage", parser=_FakeParser())
+
 
 class TestParseARecord:
     """Tests for parse_a_record function."""
@@ -182,6 +243,29 @@ class TestParseARecord:
         """Test parsing empty line as A record raises error."""
         with pytest.raises(ValueError):
             parse_a_record("")
+
+    def test_parse_a_record_minimum_length_exactly_33_chars(self):
+        """Regression: a 33-char A record (exactly EDI_A_RECORD_MIN_LENGTH)
+        must parse successfully. The mutation runner's ``lt_to_le`` at
+        edi_parser.py:89 (flipping ``<`` to ``<=``) was not caught by
+        the existing tests because every A-record test used a 34-char
+        line (33 + newline), so both ``<`` and ``<=`` returned False
+        for the length check and the parser succeeded either way.
+        A 33-char line is the boundary; with the mutation applied,
+        the function would short-circuit and return None.
+
+        See commit ea1ed275d (Phase 3 bug 5) for the audit trail.
+        """
+        # Exactly 33 chars, no newline — the boundary case.
+        line_33 = "AVENDOR00000000010101240000000123"
+        assert len(line_33) == 33, "test setup error: line should be exactly 33 chars"
+
+        record = parse_a_record(line_33)
+        assert isinstance(record, ARecord), (
+            f"expected ARecord at boundary len=33, got {record!r}"
+        )
+        assert record.record_type == "A"
+        assert record.cust_vendor == "VENDOR"
 
 
 class TestParseBRecord:
