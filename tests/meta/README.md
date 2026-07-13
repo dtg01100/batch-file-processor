@@ -146,3 +146,42 @@ but it carries a trampoline plugin, a configuration file, a coverage setup,
 a Textual TUI, and a multi-process worker model. For our purposes, a
 `subprocess.run` + regex + a fixed mutation list is enough. We can switch
 later if the hand-rolled runner starts hiding bugs.
+
+### Re-evaluation: 2026-07-13
+
+A pivot attempt to replace this runner with `mutmut` failed. Three
+hard blockers were confirmed by direct experiment — see
+`docs/meta-test-findings.md` § "Mutmut adoption attempt" for the full
+trace logs. The blockers are:
+
+1. **mutmut 3.x + Python 3.11 import-cache bug.** mutmut 3's per-test
+   coverage map depends on `PY_IGNORE_IMPORTMISMATCH=1`, which is a
+   Python 3.12+ env var. On Python 3.11 (project max per AGENTS.md), the
+   first `import core` from project root caches the unmutated module in
+   `sys.modules`; the in-process pytest never re-imports from
+   `mutants/`, so the trampoline is never entered and the coverage map
+   is empty. mutmut reports "could not find any test case for any
+   mutant" and exits 1.
+
+2. **mutmut 2.5.1 baseline-must-be-green.** mutmut 2 spawns a fresh
+   subprocess per mutant, which sidesteps (1), but first runs the FULL
+   test suite as a baseline. The baseline fails on
+   `tests/unit/test_build_configuration.py::TestHiddenImports::test_hook_files_collect_all_submodules`
+   ("No submodules collected for dispatch") in this environment. mutmut
+   2 raises `RuntimeError` and refuses to start. The test is
+   environment-sensitive (likely module-discovery in the venv), not
+   related to mutation testing.
+
+3. **PyQt5 + pytest workers segfault.** Project AGENTS.md requires Qt
+   tests run with `-n0`; the full suite run mutmut needs segfaults in
+   a `resend_dialog` test. Workaround (`-m 'not qt' --ignore=...`) is
+   available but moot given (2).
+
+The hand-rolled runner does not have any of these issues. It runs
+`subprocess.run` per mutation, so each test invocation starts with a
+fresh interpreter and import cache; it runs the paired test file (not
+the full suite) so Qt tests are not exercised unless the pair itself is
+a Qt pair; and it does not require a green baseline. Revisit the
+mutmut pivot if (a) Python is upgraded to 3.12+ (lift AGENTS.md
+constraint and update the toolchain), or (b) the build-configuration
+baseline test is fixed in this environment.

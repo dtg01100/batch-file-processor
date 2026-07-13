@@ -316,3 +316,87 @@ survives the meta-test's subprocess boundary.
 6. **`bare_except_pass` unknown/optional-dep probes (5)** — review and
    either convert to `pytest.importorskip()` or justify with
    `KNOWN_HYGIENE_VIOLATIONS`.
+
+## Mutmut adoption attempt (2026-07-13)
+
+A pivot to replace the hand-rolled mutation runner with the `mutmut`
+package (both 3.6.0 and the 2.5.1 fallback) was attempted and reverted.
+Three hard blockers were confirmed by direct experiment; the hand-rolled
+runner stays. This section records the failure mode so the pivot can
+be revisited when the blockers are resolved.
+
+### Blocker 1: mutmut 3.x + Python 3.11 import-cache bug
+
+mutmut 3.x's per-test coverage map relies on the
+`PY_IGNORE_IMPORTMISMATCH=1` env var, a Python 3.12+ feature. On
+Python 3.11 (project max per AGENTS.md) it is a no-op. The mutmut
+runner sets the env var, but Python's import system still uses the
+cached unmutated module from the first `import core` (which happens
+during mutmut's own startup, before cwd changes to `mutants/`).
+Subsequent in-process pytest invocations from cwd=mutants resolve
+`core.utils.format_utils` via the cache and never load the wrapped
+version in `mutants/core/utils/format_utils.py`. The trampoline is
+correctly injected, but the test never calls it.
+
+**Evidence:** in-process tracing of `mutmut._stats` during `mutmut run`
+showed 0 calls to `record_trampoline_hit` despite 520 tests passing.
+Manually importing the wrapped module outside pytest and calling it
+directly populated `_stats` correctly, confirming the trampoline
+works when reached. Direct pytest invocation from `mutants/` cwd
+also worked. The failure is specifically the in-process
+`pytest.main(...)` call mutmut 3 uses for its stats pass, combined
+with Python 3.11's import cache.
+
+### Blocker 2: mutmut 2.5.1 baseline-must-be-green
+
+mutmut 2.x spawns a fresh subprocess per mutant (sidestepping
+Blocker 1), but first runs the FULL test suite as a baseline to
+measure timing. The baseline fails on:
+
+```
+tests/unit/test_build_configuration.py::TestHiddenImports::test_hook_files_collect_all_submodules
+AssertionError: No submodules collected for dispatch
+```
+
+This is environment-sensitive (likely `import dispatch` failing under
+mutmut 2's runner command — the `dispatch` package is importable in
+the regular venv but the test's PyInstaller-hook discovery hits a
+different module path). It is pre-existing and unrelated to mutation
+testing. mutmut 2's `time_test_suite` raises `RuntimeError` and
+refuses to start, so no mutants are generated.
+
+### Blocker 3: PyQt5 + pytest workers segfault
+
+Even with `-m 'not qt' --ignore=tests/unit/interface/qt` to exclude
+Qt tests, the full suite run mutmut needs is broader than this
+project's Qt-aware test runner. The Qt tests must run with `-n0` per
+AGENTS.md ("PyQt5 + pytest-xdist segfaults from worker thread
+cleanup"). A `resend_dialog` test segfaults the Python process
+(`Fatal Python error: Aborted`) when run via mutmut's runner
+subprocess. This is reproducible and would be hit even if Blocker 2
+were resolved.
+
+### Resolution paths
+
+The hand-rolled runner in
+`tests/meta/test_property_tests_are_sufficient.py` does not have any
+of these problems:
+
+- It runs `subprocess.run` per mutation, so each test invocation
+  starts with a fresh interpreter and import cache (sidesteps
+  Blocker 1).
+- It runs only the paired test file, not the full suite (sidesteps
+  Blockers 2 and 3).
+- It has no baseline requirement.
+
+Revisit the mutmut pivot if **both** of the following become true:
+
+1. Python is upgraded to 3.12+ in the project's supported
+   environment (and AGENTS.md's "Python 3.11 maximum" constraint is
+   lifted).
+2. `test_build_configuration.py::TestHiddenImports::test_hook_files_collect_all_submodules`
+   is fixed in this venv (or `--rerun-all` mode tolerates baseline
+   failures, which mutmut 2 does not support).
+
+Until then, the hand-rolled runner remains the production mutation
+meta-test.
