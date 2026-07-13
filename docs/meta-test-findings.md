@@ -400,3 +400,138 @@ Revisit the mutmut pivot if **both** of the following become true:
 
 Until then, the hand-rolled runner remains the production mutation
 meta-test.
+
+## Phase 2 — assertion-mutation runner (2026-07-13)
+
+`tests/meta/test_assertions_are_meaningful.py` lands as Phase 2 of
+`.kilo/plans/meta-tests-beyond-mutation.md`. It is an AST-based
+runner that mutates every assertion in every `tests/unit/**/test_*.py`
+file and verifies the test still fails. A "survivor" is a test
+where the assertion was load-bearing in name only — a real bug of
+that shape would have slipped past.
+
+### Initial run (scoped)
+
+The plan estimated ~30 minutes for the full run; in practice each
+subprocess (pytest startup + collection + one test) takes 5-10s on
+this venv, so the full run is closer to 8-9 hours serial or ~1-2
+hours with `-n auto`. The initial commit was validated against
+scoped subsets:
+
+| Subset | Cases | Wall time | Survivors |
+|---|---|---|---|
+| `tests/unit/core/utils/` (5 files) | 45 | 295s serial | 0 |
+| `tests/unit/core/edi/` + `core/utils/` + 3 dispatch prop tests | 198 | estimated ~25 min | not run to completion |
+| `tests/unit/dispatch_tests/test_interfaces.py` (1 file, 0/6 in mutation runner) | 9 | 169s serial | 0 |
+
+The zero-survivor result on `core/utils/` is the most informative:
+every assertion in those five files is load-bearing under all 9
+mutation rules. The runner is therefore a **regression catcher**
+(it would catch newly-added weak tests) more than a finding
+generator for the current corpus.
+
+### Why no `delete` rule
+
+The plan listed a tenth rule, `delete` (replace `assert X` with
+`pass`). It was tried and removed: pytest 9 vacuously passes
+tests with zero assertions, so `delete` reported every assertion
+as dead regardless of load-bearing. The `always_fail` rule
+(replace with `assert False`) already answers the same question
+with cleaner signal. Documented in
+`tests/meta/test_assertions_are_meaningful.py` and in the README.
+
+### `KNOWN_ASSERTION_EQUIVALENT` allowlist
+
+Empty at landing. Add entries here as the runner surfaces survivors
+and a reviewer confirms each is equivalent. The auditability
+contract is identical to the existing mutation runner's
+`KNOWN_EQUIVALENT`: each entry cites the source line as evidence,
+not a summary. Reviewer should be able to confirm by reading the
+file at the cited line.
+
+## Phase 3a — property-test oracle enumeration (2026-07-13)
+
+`tests/meta/test_property_oracle_consistency.py` lands as Phase 3a.
+It is a static AST classifier for property-test oracles. The bug
+pattern is the self-referential test: a Hypothesis test that uses
+the function-under-test (directly or transitively) to build its own
+oracle, so any consistent mutation of the function makes the test
+pass vacuously.
+
+### Headline numbers
+
+9 property files, 98 property tests, 159 assertions. **6 tests
+flagged** with real signal across 3 property files.
+
+### Per-file findings
+
+**`tests/unit/core/edi/test_edi_transformer_property.py`** (2 flagged)
+
+- L189 `test_convert_to_price_is_deterministic` (L191):
+  `assert convert_to_price(...) == convert_to_price(...)` —
+  trivially_true. The test verifies determinism, which is
+  intentional. Mark as KNOWN_EQUIVALENT or accept the tautology
+  as documentation.
+- L196 `test_convert_to_price_decimal_is_deterministic` (L198):
+  same pattern.
+
+**`tests/unit/core/edi/test_upc_utils_property.py`** (2 flagged)
+
+- L70 `test_calc_check_digit_is_deterministic` (L72):
+  `assert calc_check_digit(s) == calc_check_digit(s)` —
+  trivially_true, same as above.
+- L77 `test_calc_check_digit_accepts_int_input` (L81):
+  `assert calc_check_digit(s) == calc_check_digit(int(s))` —
+  **self_referential_helper**. The test only validates that
+  int-coercion doesn't change the result, but the result is
+  computed by `calc_check_digit` itself. A consistent mutation
+  to `calc_check_digit` would pass. The fix: add a hardcoded
+  counterpart that asserts `calc_check_digit("12345678901") == 7`
+  (or any other precomputed value), so the test is not
+  self-referential. This is the same pattern as the original
+  `test_validate_upc_*` bug fixed in commit `1a617ec38`.
+
+**`tests/unit/core/edi/test_edi_splitting_utils_property.py`** (2 false-positive candidates)
+
+- L270 `test_filter_b_records_by_category_exclude_mode_removes_match`
+  (L283): `assert result == []` where `result` was assigned via
+  `filter_b_records_by_category(...)` earlier. The classifier's
+  `ast.walk` does not trace variable assignments, so the call to
+  `filter_b_records_by_category` is invisible at the assertion
+  site. Classified as `oracle_independent` even though the
+  assertion does use the function-under-test through a local
+  variable. This is a Phase 3b concern (track local-variable
+  assignments in the classifier).
+- L288 `test_filter_b_records_by_category_exclude_mode_keeps_non_match`:
+  same pattern.
+
+### Classification kinds
+
+The classifier emits five kinds:
+
+| Kind | Meaning |
+|---|---|
+| `trivially_true` | `assert f(x) == f(x)` (identical operands) — deterministic sanity check |
+| `self_referential_helper` | both operands use `f()` with different args — the test only validates that f is invariant under the input transformation |
+| `oracle_uses_f_left` / `oracle_uses_f_right` | one operand uses `f()`, the other is independent (e.g. a hardcoded value) — strongest signal; the test catches real f mutations |
+| `oracle_independent` | neither operand uses `f()` directly at the assertion site — could be a false positive if `f` is reached through a local variable (Phase 3b work) |
+| `other` | non-binary assertion (chained compare, non-Compare) — not classified |
+
+### Phase 3b status
+
+Phase 3b (consistency checks that REPLACE the oracle and verify the
+test still passes) is not yet implemented. The plan flagged Phase
+3 as experimental; the enumeration report in Phase 3a is the
+initial deliverable. Future work:
+
+- Trace local-variable assignments in the classifier to fix the
+  2 `edi_splitting_utils_property.py` false positives.
+- Add a `input_self_referential` flag for tests that build input
+  from a helper that itself calls `f` (the original
+  `test_validate_upc_accepts_check_digit` pattern). This is
+  partially implemented in the runner but not yet wired into the
+  failure path.
+- Cross-file helper analysis (test fixture calls into a helper
+  defined in another test file).
+- Subprocess-based consistency check (run the test with the
+  oracle replaced by a hardcoded value; verify it still passes).

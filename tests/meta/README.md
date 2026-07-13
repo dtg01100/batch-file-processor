@@ -51,11 +51,108 @@ the run. A `test_hygiene_runner_self_check` asserts the runner file
 itself has no violations of the rules it enforces.
 
 **Headline finding (initial run, 2026-07-09):** 19 violations across
-14 files out of 153 scanned. The bare-MagicMock and time.sleep checks
+14 files out of 153 scanned. bare-MagicMock and time.sleep checks
 are already clean (enforced by `conftest_magicmock_plugin` and
 project-wide conventions respectively); the runner's value is in
 surfacing the remaining 4 rules. See
 `docs/meta-test-findings.md` for per-violation context.
+
+### `test_assertions_are_meaningful.py` (added 2026-07-13)
+
+An AST-based assertion-mutation runner. For every test file under
+`tests/unit/`, it parses the file with `ast`, finds every
+`ast.Assert` node, and applies a set of targeted mutations using a
+`NodeTransformer`:
+
+| Rule | Mutation |
+|---|---|
+| `polarity_flip` | `assert X` -> `assert not (X)` |
+| `equality_flip` | `assert X == Y` -> `assert X != Y` |
+| `inequality_flip` | `assert X != Y` -> `assert X == Y` |
+| `membership_flip` | `assert X in Y` -> `assert X not in Y` |
+| `identity_flip` | `assert X is Y` -> `assert X is not Y` |
+| `gt_lt_flip` | `assert X > Y` -> `assert X < Y` |
+| `ge_le_flip` | `assert X >= Y` -> `assert X <= Y` |
+| `bool_literal_flip` | `assert X is True` <-> `assert X is False` |
+| `always_fail` | `assert X` -> `assert False` |
+
+The plan also listed a `delete` rule (replace with `pass`). It was
+tried and removed: in pytest 9, a test with zero assertions vacuously
+passes, so `delete` produced the same "all assertions are dead" signal
+regardless of load-bearing. `always_fail` already answers the same
+question with cleaner signal.
+
+For each mutation, the runner writes a temp copy of the test file to
+`mutants_assertions/`, runs `pytest -x` against it via subprocess, and
+checks that the test now FAILS. If the test still passes, the
+assertion was dead — a real bug of that shape would have slipped past.
+
+**Cost:** 153 files × 9 rules × ~7s per subprocess (pytest startup
+dominates) ≈ 8-9 hours serial. With `-n auto` and a sensible
+subprocess limit, ~1-2 hours. Initial scoped runs on `core/utils/`
+(45 cases) completed in 295s serial. See
+`docs/meta-test-findings.md` for full results.
+
+The runner is parametrized over `(file, rule_name)`. A
+`KNOWN_ASSERTION_EQUIVALENT` allowlist cites the source line as
+evidence when a survivor is judged equivalent. A self-check asserts
+the runner file itself has no dead assertions.
+
+### `test_property_oracle_consistency.py` (added 2026-07-13)
+
+A static AST classifier for property-test oracles. The bug pattern
+this catches is the **self-referential test**: a test that uses the
+function-under-test (directly or transitively) to build its own
+oracle, so any consistent mutation of the function makes the test
+pass vacuously.
+
+The existing mutation runner already caught one such bug
+(`test_validate_upc_accepts_check_digit` constructed its input from
+`calc_check_digit`; the fixed version uses hardcoded oracles). This
+runner automates the hunt.
+
+For every `tests/**/*_property.py` file, the runner:
+
+1. Walks every `@given` test.
+2. Resolves the **function-under-test** by matching the test name
+   against the file's `from X import Y` statements (longest prefix
+   wins).
+3. For each `assert` in the test, classifies the assertion:
+   - `trivially_true` — both operands are the same `f(x)` call
+   - `self_referential_helper` — both operands use `f()` with
+     different args
+   - `oracle_uses_f_left` / `oracle_uses_f_right` — one operand
+     uses `f()`, the other is independent
+   - `oracle_independent` — neither side uses `f()`
+4. Flags tests where the input is built from a call to `f` AND an
+   assertion checks `f` (the "input-construction helper uses f"
+   pattern that hid the original `test_validate_upc_*` bug).
+5. Emits a per-file report; the pytest wrapper fails on
+   `trivially_true`, `self_referential_helper`, or input-construction
+   patterns.
+
+**Initial run (2026-07-13):** 9 property files, 98 property tests,
+159 assertions. **6 tests flagged** with real signal:
+
+- 3 `trivially_true` (`test_calc_check_digit_is_deterministic`,
+  `test_convert_to_price_is_deterministic`,
+  `test_convert_to_price_decimal_is_deterministic`) — these are
+  intentional sanity checks that f is pure; documented but not
+  fixed.
+- 1 `self_referential_helper` (`test_calc_check_digit_accepts_int_input`)
+  — the test only validates that int-coercion doesn't change the
+  result, but the result is computed by f itself; a consistent
+  mutation to f would pass. Real finding; needs a hardcoded oracle
+  counterpart.
+- 2 false-positive candidates (the
+  `test_filter_b_records_by_category_*` tests) — the runner
+  classifies them as `oracle_independent` because the function
+  call is hidden behind a `result =` assignment that the
+  classifier's `ast.walk` doesn't trace. Phase 3b work.
+
+Phase 3b (consistency checks) is not yet implemented; the current
+deliverable is the enumeration report. The plan flagged Phase 3
+as experimental.
 
 ### `DEFAULT_PAIRS`
 
