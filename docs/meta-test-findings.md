@@ -615,3 +615,124 @@ initial deliverable. Future work:
   defined in another test file).
 - Subprocess-based consistency check (run the test with the
   oracle replaced by a hardcoded value; verify it still passes).
+
+## Real bugs surfaced by the meta-tests (2026-07-13)
+
+Running all 3 meta-tests end-to-end surfaced 5 real bugs in the
+existing test code. Each was fixed in commit pending. The
+findings here are the audit trail.
+
+### Bug 1 — `test_credit_invoice_gets_cr_extension` was self-approving (HIGH SIGNAL)
+
+`tests/unit/test_utils.py:1011`. The test asserted
+`result[0][2] in [".cr", ".inv"]` (accepts EITHER extension) when
+the test name implies `.cr` specifically. Wrapped in
+`try/except Exception: pass` that silently swallowed ALL
+exceptions, including the assertion. The A record's
+`invoice_total` field was also malformed (`"3-00123456"` with
+the `-` in the middle, not the start) so the parser would
+always raise — the test was passing only because the bare
+`except` caught the parse failure and `pass`ed.
+
+A real production bug where the suffix logic returns the wrong
+extension for a credit invoice would have been silently
+accepted.
+
+**Fix:** assert `.cr` specifically (matching the test name),
+use a valid negative invoice total (`-000000123` with leading
+`-` and 9 digits), remove the silent `try/except`, and add a
+positive assertion that the result is non-empty.
+
+### Bug 2 — `test_truncated_b_record` was trivial (HIGH SIGNAL)
+
+`tests/unit/test_convert_to_simplified_csv.py:417`. The test
+asserted only `os.path.exists(result)` (a trivial check) wrapped
+in `try/except ValueError: pass` that silently swallowed the
+very exception the test was supposed to be testing for. The
+test passed for any outcome — including the converter
+crashing, writing corrupt data, or producing nothing.
+
+**Fix:** accept either rejection (ValueError raised) or
+graceful skip (output file written without the truncated B
+record's data), but assert something specific. The corrected
+version reads the output file (if any) and asserts the
+truncated B's text ("Short") does NOT leak into the output.
+
+### Bug 3 — `_get_hook_hidden_imports` swallowed parse errors (MEDIUM)
+
+`tests/unit/test_pyinstaller_spec.py:79`. The function reads
+hook files and extracts `hiddenimports` lists. The bare
+`except Exception: pass` silently dropped any parse error,
+file-read error, or AST parse error. A broken hook file would
+silently drop its hiddenimports and the build would fail at
+runtime with `ModuleNotFoundError` instead of at the test
+step.
+
+**Fix:** narrow the catch to `(OSError, SyntaxError, ValueError)`
+and log at `logger.debug(..., exc_info=True)` per project
+AGENTS.md §Logging Pattern. Tests still pass; the issue is
+visible in `pytest -o log_cli_level=DEBUG` runs.
+
+### Bug 4 — `core/edi/edi_splitter.py:72` `if config.prepend_date:` was untested (HIGH SIGNAL)
+
+The mutation runner applied `negate_if_condition` at line 72
+(flipping `if config.prepend_date:` to `if not (config.prepend_date):)`)
+and **the test pair didn't catch it**. Every property test
+in `test_edi_splitter_property.py` used `prepend_date=False`,
+so the date-prefix branch was completely untested.
+
+The same pattern as the L264 gap documented in commit
+`0d904f130`. A consistent mutation that broke the date-prefix
+branch would have produced wrong filenames silently.
+
+**Fix:** added `test_build_split_filename_prepend_date_true_puts_date_in_prefix`
+in `test_edi_splitter_property.py`. The test uses a fixed
+`prepend_date=True` and asserts the formatted date appears in
+the prefix. With the mutation applied, the new test fails
+alongside 7 other tests that also use `prepend_date=False`
+but assert specific output paths — confirming the mutation is
+strongly killed rather than silently passing.
+
+### Bug 5 — `test_edi_parser.py` plain unit test has 1/10 mutation kill rate (HIGH SIGNAL, NOT YET FIXED)
+
+The plain unit test `test_edi_parser.py` (442 lines, ~30
+explicit field-equality assertions) only catches 1 of 10
+mutations on `core/edi/edi_parser.py`. 9 mutations survive.
+The property test pair for the same module kills more, but
+the plain unit test is significantly weaker. **Specific
+assertions in this file don't bind to production behavior** —
+same pattern as the 0/N entries in DEFAULT_PAIRS (test imports
+the module but doesn't exercise the mutated code path).
+
+**Status:** deferred. The fix requires investigation of which
+specific mutations survive and adding assertions that bind
+to those code paths. Estimated 30+ minutes of work; deferred
+to a follow-up commit.
+
+### Pre-existing findings (not fixed, documented)
+
+The 16 remaining hygiene violations (down from 19 after the
+4 fixes above) are all in the categories the plan identified
+as pre-existing:
+
+- 11 `bare_except_pass` in optional-dependency probes
+  (PIL/pyzbar, yaml, zipfile). Should be `pytest.importorskip()`
+  but aren't real bugs. Listed in
+  `.kilo/plans/meta-tests-beyond-mutation.md` as a follow-up.
+- 3 `skip_no_reason` are f-string skips (the runner's regex
+  doesn't catch f-string positional reasons). Style nit.
+- 1 `missing_assert` is `test_folder_configuration_pydantic_valid`
+  (already known, documented in this file).
+- 1 `single_item_dispatch_root_import` is `from dispatch import feature_flags`
+  in `test_feature_flags_property.py`. Should be
+  `from dispatch.feature_flags import feature_flags`. Style nit.
+
+### Re-run after fixes
+
+- Hygiene runner: 19 → 16 violations. The 3 fixed bugs no
+  longer appear.
+- Phase 3a oracle runner: still 0 flagged (the 3 hardcoded
+  oracle tests added in commit `812ead07b` are intact).
+- All 3 meta-test self-checks pass.
+- New `test_build_split_filename_prepend_date_true_puts_date_in_prefix`
+  kills the `negate_if_condition` mutation at edi_splitter.py:72.

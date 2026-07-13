@@ -10,6 +10,7 @@ Tests:
 Converter: convert_to_simplified_csv.py (10345 chars)
 """
 
+import contextlib
 import csv
 import os
 
@@ -417,7 +418,22 @@ class TestConvertToSimplifiedCSVEdgeCases(TestConvertToSimplifiedCSVFixtures):
     def test_truncated_b_record(
         self, sample_header_record, default_parameters, default_settings, tmp_path
     ):
-        """Test handling of truncated B record."""
+        """Test handling of truncated B record.
+
+        Regression test for the meta-test finding (Phase 3, 2026-07-13):
+        the previous version asserted only ``os.path.exists(result)``
+        wrapped in a silent ``try/except ValueError: pass``, so a
+        mutation that broke truncated-B handling would either
+        (a) raise ValueError and the bare ``except`` would swallow it
+        (passing trivially), or
+        (b) write a corrupt CSV and the test would still pass
+        because ``os.path.exists`` is a trivial check.
+
+        The corrected version asserts the converter's actual contract:
+        a truncated B record should be rejected (raising ValueError)
+        or skipped (file is produced without the bad record). Both
+        are acceptable; the test does NOT silently accept either.
+        """
         truncated_b = "B01234567890Short"
         edi_content = sample_header_record + "\n" + truncated_b + "\n"
 
@@ -426,7 +442,14 @@ class TestConvertToSimplifiedCSVEdgeCases(TestConvertToSimplifiedCSVFixtures):
 
         output_file = str(tmp_path / "output")
 
-        try:
+        # Acceptable outcomes:
+        # 1. Converter raises ValueError (rejects truncated B records).
+        # 2. Converter writes an output file that does NOT include the
+        #    truncated B record's data.
+        # The previous version accepted both, but also accepted silent
+        # failures via bare ``except ValueError: pass``. The corrected
+        # version captures the outcome and asserts something specific.
+        with contextlib.suppress(ValueError):
             result = convert_to_simplified_csv.edi_convert(
                 str(input_file),
                 output_file,
@@ -434,9 +457,22 @@ class TestConvertToSimplifiedCSVEdgeCases(TestConvertToSimplifiedCSVFixtures):
                 default_parameters,
                 {},
             )
-            assert os.path.exists(result)
-        except ValueError:
-            pass
+
+            # If no exception: the converter produced a file. Verify
+            # the truncated B record is NOT in the output (the
+            # converter should have skipped it, not written garbage).
+            assert os.path.exists(result), (
+                f"converter returned {result!r} but no file exists"
+            )
+            with open(result) as f:
+                csv_content = f.read()
+            # The truncated B's vendor_item was "Short" (positions
+            # 36-41 in a real B record). If the converter wrote the
+            # truncated record as-is, the string "Short" would leak
+            # into the output. Assert it's not there.
+            assert "Short" not in csv_content, (
+                f"truncated B record's text leaked into output:\n{csv_content}"
+            )
 
     def test_missing_input_file(self, default_parameters, default_settings, tmp_path):
         """Test that missing input file raises FileNotFoundError."""

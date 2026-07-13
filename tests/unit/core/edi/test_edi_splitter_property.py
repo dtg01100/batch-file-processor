@@ -231,3 +231,52 @@ def test_build_split_filename_default_stem_is_split(
     cfg = SplitConfig(output_directory="/tmp/out", prepend_date=False)
     output_path, _prefix, _suffix = _build_split_filename(line_dict, count, cfg)
     assert "split" in output_path
+
+
+def test_build_split_filename_prepend_date_true_puts_date_in_prefix() -> None:
+    """Regression test for the meta-test finding (Phase 3, 2026-07-13).
+
+    The mutation runner's ``negate_if_condition`` at edi_splitter.py:72
+    (flipping ``if config.prepend_date:`` to ``if not (config.prepend_date):``)
+    was not caught by the existing test pair. Every property test used
+    ``prepend_date=False``, so the date-prefix branch was untested.
+
+    This test pins the date-prefix behavior: with ``prepend_date=True``,
+    the file name's prefix segment must contain the formatted date and
+    a different value than the ``prepend_date=False`` prefix. A
+    consistent mutation that swapped the if/else would change which
+    branch fires and this test would fail.
+    """
+    # A fixed valid date: 011226 (Jan 12, 2026) — parse_edi_date uses %m%d%y.
+    line_dict = {
+        "invoice_total": "0000000123",
+        "invoice_date": "011226",
+    }
+    cfg = SplitConfig(
+        output_directory="/tmp/out", filename_stem="inp", prepend_date=True
+    )
+    output_path, prefix, suffix = _build_split_filename(line_dict, 1, cfg)
+    # prefix must contain the formatted date "12 Jan, 2026" (%d %b, %Y)
+    assert "12 Jan, 2026" in prefix, (
+        f"expected date '12 Jan, 2026' in prefix, got {prefix!r}"
+    )
+    # prefix must contain the column-letter segment (count=1 -> "A_")
+    assert prefix.endswith("A_"), (
+        f"expected prefix to end with column-letter 'A_', got {prefix!r}"
+    )
+    # suffix unchanged regardless of prepend_date
+    assert suffix == ".inv"
+    # output_path structure: {output_dir}/{date}_{col_letter}_{stem}{suffix}
+    assert output_path.startswith("/tmp/out/12 Jan, 2026_A_inp")
+    assert output_path.endswith(".inv")
+
+    # Sanity check: with prepend_date=False, the date MUST NOT be in prefix.
+    cfg_no_date = SplitConfig(
+        output_directory="/tmp/out", filename_stem="inp", prepend_date=False
+    )
+    output_path_no_date, prefix_no_date, _ = _build_split_filename(
+        line_dict, 1, cfg_no_date
+    )
+    assert "12 Jan, 2026" not in prefix_no_date
+    assert prefix_no_date == "A_"
+    assert not output_path_no_date.startswith("/tmp/out/12 Jan, 2026")

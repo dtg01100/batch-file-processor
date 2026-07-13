@@ -8,10 +8,13 @@ These tests verify that:
 """
 
 import ast
+import logging
 from pathlib import Path
 from typing import ClassVar
 
 import pytest
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SPEC_FILE = PROJECT_ROOT / "main_interface.spec"
@@ -76,8 +79,22 @@ def _get_hook_hidden_imports() -> set[str]:
                                 for elt in node.value.elts:
                                     if isinstance(elt, ast.Constant):
                                         hidden_imports.add(elt.value)
-        except Exception:
-            pass
+        except (OSError, SyntaxError, ValueError) as exc:
+            # Per project AGENTS.md §Logging Pattern: non-fatal error
+            # paths should use logger.debug(..., exc_info=True), not
+            # bare except: pass. The previous bare except here silently
+            # hid parse errors in hook files — meaning a broken hook
+            # would silently drop its hiddenimports and the build would
+            # fail at runtime with ModuleNotFoundError instead of at
+            # the test step. The corrected version logs at debug
+            # level so the issue is visible in test runs with
+            # ``pytest -o log_cli_level=DEBUG``.
+            logger.debug(
+                "Failed to extract hiddenimports from %s: %s",
+                hook_file,
+                exc,
+                exc_info=True,
+            )
     return hidden_imports
 
 

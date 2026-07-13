@@ -1009,9 +1009,23 @@ class TestDoSplitEdi:
                 raise
 
     def test_credit_invoice_gets_cr_extension(self, tmp_path):
-        """Negative total invoices get .cr extension."""
+        """Negative total invoices get .cr extension.
+
+        Regression test for the meta-test finding (Phase 3, 2026-07-13):
+        the previous version asserted ``result[0][2] in [".cr", ".inv"]``
+        wrapped in a silent ``try/except Exception: pass``, so a
+        non-debit mutation that broke the negative-total branch would
+        pass trivially. The corrected version asserts ``.cr``
+        specifically (matching the test name), uses a valid negative
+        invoice total (the previous A-record had a malformed
+        ``invoice_total`` that always failed to parse, hidden by the
+        bare ``except``), and lets exceptions propagate.
+        """
+        # A record: A(1) + cust_vendor(6) + invoice_number(10)
+        # + invoice_date(6) + invoice_total(10) = 33 chars
+        # Negative total: leading '-' followed by 9 digits.
         edi_content = (
-            "A12345678901234567010123-00123456789\n"
+            "AVENDOR0000000001010124-000000123\n"
             "B01234567890ABCDEFGHIJ0001000001200340567890001234\n"
         )
         edi_file = tmp_path / "test.edi"
@@ -1020,14 +1034,12 @@ class TestDoSplitEdi:
         work_dir = tmp_path / "output"
         params = {"prepend_date_files": False}
 
-        # This may fail if negative handling differs - just check result exists
-        try:
-            result = utils.do_split_edi(str(edi_file), str(work_dir), params)
-            if result:
-                assert result[0][2] in [".cr", ".inv"]
-        except Exception:
-            # May fail on negative total parsing - that's ok for this test
-            pass
+        result = utils.do_split_edi(str(edi_file), str(work_dir), params)
+
+        assert result, f"expected do_split_edi to return at least one file for credit invoice, got {result!r}"
+        assert result[0][2] == ".cr", (
+            f"expected .cr extension for negative-total invoice, got {result[0][2]!r}"
+        )
 
     def test_too_many_invoices_returns_empty(self, tmp_path):
         """More than 700 A records returns empty list."""
