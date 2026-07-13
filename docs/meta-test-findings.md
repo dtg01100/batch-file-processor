@@ -1133,3 +1133,21 @@ masking the default-behavior test. The new test uses a fresh
 parameters dict WITHOUT retail_uom and asserts the cost stays
 at the un-transformed "10.00" (the mutation transforms to
 "1.67"). After: 6/8 killed, 2 docstring KNOWN_EQUIVALENT.
+
+## Test-quality debt fixes — round 4 (2026-07-13)
+
+### pipeline/interfaces.py: 1/5 → 2/5 killed
+
+Added TestErrorRecordingMixin (2 tests) for the
+ErrorRecordingMixin._record_error method:
+
+- L47 negate_if_condition: `if handler is None: return` — kills
+  the mutation that would call None.record_error. The test
+  creates a class with the mixin but no _error_handler attribute
+  and asserts _record_error doesn't raise.
+- L48 return_none_instead_of_value: the actual record_error
+  delegation. Test mocks the handler and verifies it's called
+  with the right kwargs (filename, error wrapped in Exception).
+
+After: 2/5 killed. The 3 remaining are all docstring mutations
+(2 prose + 1 step-count "2" -> "3").
