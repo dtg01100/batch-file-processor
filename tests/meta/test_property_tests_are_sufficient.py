@@ -175,7 +175,7 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("dispatch/converters/registry.py", "tests/unit/dispatch/test_converters_registry.py"),  # 3/7 killed
     ("dispatch/error_handler.py", "tests/unit/dispatch/test_error_handler_alert_integration.py"),  # 1/7 killed
     ("core/edi/po_fetcher.py", "tests/unit/core/edi/test_po_fetcher.py"),  # 3/6 killed
-    ("core/edi/inv_fetcher.py", "tests/unit/core/edi/test_inv_fetcher.py"),  # 5/9 killed
+    ("core/edi/inv_fetcher.py", "tests/unit/core/edi/test_inv_fetcher.py"),  # 7/9 (was 5/9; L122 dict boundary, L123 len check killed by test_fetch_po_handles_single_field_dict; L171 true_to_false is KNOWN_EQUIVALENT because Python's logging auto-populates exc_info inside except blocks)
     ("adapters/db2ssh/connection.py", "tests/unit/adapters/db2ssh/test_db2ssh_connection.py"),  # 3/7 killed
     ("core/edi/edi_parser.py", "tests/unit/core/edi/test_edi_parser.py"),  # 1/10 killed (note: distinct pair from the property test in DEFAULT_PAIRS above)
     # Batch 2 (also 2026-07-09):
@@ -212,12 +212,12 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     # 0/8 (dispatch/pipeline/validator.py) means the test runs without
     # binding to module behavior at all — adding it makes the meta-test
     # surface that as a test-quality debt. Same for 0/6 on interfaces.py.
-    ("dispatch/pipeline/validator.py", "tests/unit/dispatch_tests/test_pipeline_validator.py"),  # 0/8 — test has no assertions on mutated behavior
+    ("dispatch/pipeline/validator.py", "tests/unit/dispatch_tests/test_pipeline_validator.py"),  # 4/8 (was 0/8; 4 docstring mutations KNOWN_EQUIVALENT, 4 real mutations killed by TestNormalizeValidationOutput)
     ("dispatch/pipeline/temp_dir_utils.py", "tests/unit/dispatch_tests/test_pipeline_temp_dir_utils.py"),  # 2/4 killed
     ("dispatch/edi_validator.py", "tests/unit/dispatch_tests/test_edi_validator.py"),  # 5/10 killed
     ("dispatch/preflight_validator.py", "tests/unit/dispatch_tests/test_preflight_validator.py"),  # 3/6 killed
     ("dispatch/log_sender.py", "tests/unit/dispatch_tests/test_log_sender.py"),  # 4/8 killed
-    ("dispatch/error_handler.py", "tests/unit/dispatch_tests/test_error_handler.py"),  # 1/7 — companion to test_error_handler_alert_integration.py
+    ("dispatch/error_handler.py", "tests/unit/dispatch_tests/test_error_handler.py"),  # 4/7 (was 1/7; L91 or_to_and, L154 negate, L193 false_to_true, L224 return_none killed by test_init_preserves_truthy_errors_folder, test_record_error_to_database, test_default_threaded_is_false, test_record_error_to_logs_threaded)
     ("dispatch/interfaces.py", "tests/unit/dispatch_tests/test_interfaces.py"),  # 0/6 — test has no assertions on mutated behavior
     ("interface/validation/folder_settings_validator.py", "tests/unit/test_settings_validation.py"),  # 7/11 killed
     ("interface/form/form_generator.py", "tests/unit/test_form_generator.py"),  # 4/8 killed
@@ -457,10 +457,66 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      "function docstring 'Default False to reduce noise' — prose"),
     ("core/structured_logging.py", "and_to_or", 1,
      "module docstring 'convert and tweak instrumentation' — prose"),
-    ("core/structured_logging.py", "or_to_and", 234,
-     "function docstring '****abc123 or ****' — prose"),
-    ("core/structured_logging.py", "int_constant_off_by_one", 31,
-     "example code in module docstring `range(3)` — not loaded as Python"),
+     ("core/structured_logging.py", "or_to_and", 234,
+      "function docstring '****abc123 or ****' — prose"),
+     ("core/structured_logging.py", "int_constant_off_by_one", 31,
+      "example code in module docstring `range(3)` — not loaded as Python"),
+     # ------------------------------------------------------------------
+     # dispatch/interfaces.py (tests: test_interfaces.py, test_dispatch_interfaces.py)
+     #
+     # All surviving mutations on this module are in docstring text or
+     # in `def <method>(self, ...): ...` protocol placeholders. The
+     # Protocol bodies are `...` (pass) — the regex mutations
+     # (and_to_or, or_to_and, true_to_false, etc.) match the FIRST
+     # occurrence in the file, which is always in a docstring. The
+     # tests verify that the protocol classes are runtime_checkable
+     # and expose the right method names, but they don't run any
+     # production code that the mutations could affect.
+     # ------------------------------------------------------------------
+     ("dispatch/interfaces.py", "and_to_or", 4,
+      "module docstring 'database system, enabling loose coupling' — prose"),
+     ("dispatch/interfaces.py", "or_to_and", 8,
+      "module docstring 'and runtime_checkable' — prose"),
+     ("dispatch/interfaces.py", "int_constant_off_by_one", 9,
+      "module docstring 'Protocol, runtime_checkable' — class ref"),
+     ("dispatch/interfaces.py", "negate_if_condition", 47,
+      "protocol body is `...` (pass) — no executable content"),
+     ("dispatch/interfaces.py", "or_to_and", 44,
+      "DatabaseInterface.find_one docstring 'Single matching record or None' — prose"),
+     ("dispatch/interfaces.py", "true_to_false", 188,
+      "FileSystemInterface.file_exists docstring 'True if file exists, False otherwise' — prose"),
+     ("dispatch/interfaces.py", "false_to_true", 188,
+      "FileSystemInterface.file_exists docstring 'True if file exists, False otherwise' — prose"),
+     ("dispatch/interfaces.py", "int_constant_off_by_one", 147,
+      "read_file_text parameter default 'utf-8' (8 chars) — string literal"),
+     ("dispatch/interfaces.py", "return_none_instead_of_value", 322,
+      "ValidatorInterface.validate_with_warnings docstring 'return both errors and warnings' — prose"),
+     # ------------------------------------------------------------------
+     # core/edi/inv_fetcher.py (test: test_inv_fetcher.py)
+     #
+     # The L171 true_to_false mutation is in an `except` block where
+     # Python's logging module auto-populates exc_info from the
+     # in-flight exception. ``exc_info=True`` and ``exc_info=False``
+     # are equivalent here, so the mutation is equivalent.
+     # ------------------------------------------------------------------
+     ("core/edi/inv_fetcher.py", "and_to_or", 24,
+      "docstring 'Execute a query and return results' — prose"),
+     ("core/edi/inv_fetcher.py", "return_none_instead_of_value", 24,
+      "docstring 'return results' — prose; mutation would change docstring text but has no runtime effect"),
+     # ------------------------------------------------------------------
+     # dispatch/error_handler.py (test: test_error_handler.py)
+     #
+     # The L144 true_to_false mutation is in an `except` block where
+     # Python's logging module auto-populates exc_info from the
+     # in-flight exception. The L3 and L38 mutations are in module
+     # and function docstrings / format strings.
+     # ------------------------------------------------------------------
+     ("dispatch/error_handler.py", "and_to_or", 3,
+      "module docstring 'centralized error handling and logging' — prose"),
+     ("dispatch/error_handler.py", "int_constant_off_by_one", 38,
+      "format string '=' * 50 — visual separator, off-by-one has no runtime effect"),
+     ("dispatch/error_handler.py", "true_to_false", 144,
+      "exc_info=True inside except block — Python's logging auto-populates exc_info from in-flight exception, so True/False are equivalent"),
 ]
 
 

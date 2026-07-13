@@ -14,7 +14,7 @@ from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConver
 # the assertion runs). Adding the skip at module level lets the
 # runner know the assertions are guarded by an external dependency.
 try:
-    import pyzbar  # noqa: F401
+    import pyzbar  # noqa: F401 — import only to check availability for skipif
     _pyzbar_available = True
 except ImportError:
     _pyzbar_available = False

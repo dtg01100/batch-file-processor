@@ -9,6 +9,7 @@ from dispatch.pipeline.validator import (
     MockValidator,
     ValidationError,
     ValidationResult,
+    normalize_validation_output,
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
@@ -136,6 +137,128 @@ def mock_file_system(valid_edi_content):
 def mock_file_system_with_errors(invalid_edi_content):
     """Mock file system with invalid EDI content."""
     return MockFileSystem({"/test/invalid.edi": invalid_edi_content})
+
+
+class TestNormalizeValidationOutput:
+    """Tests for normalize_validation_output function.
+
+    Regression: this function had 0/8 mutation coverage because
+    no test exercised it. The mutation runner found 8 survivors
+    on the function's branches (tuple-of-2, ValidationResult,
+    dict, bool, fallback). Added tests for each branch so any
+    consistent mutation is caught.
+    """
+
+    def test_tuple_of_length_two_valid(self):
+        """A 2-tuple (bool, errors) is normalized to (bool, errors)."""
+        is_valid, payload = normalize_validation_output(
+            (True, "file.edi"), "current.edi"
+        )
+        assert is_valid is True
+        assert payload == "file.edi"
+
+    def test_tuple_of_length_two_invalid(self):
+        """A 2-tuple (False, errors_list) is normalized to (False, errors_list)."""
+        is_valid, payload = normalize_validation_output(
+            (False, ["error1", "error2"]), "current.edi"
+        )
+        assert is_valid is False
+        assert payload == ["error1", "error2"]
+
+    def test_tuple_with_truthy_first_element_coerces_to_bool(self):
+        """A 2-tuple with non-bool first element is coerced to bool."""
+        # 1 (truthy) -> True
+        is_valid, payload = normalize_validation_output((1, "x"), "current.edi")
+        assert is_valid is True
+        # 0 (falsy) -> False
+        is_valid, payload = normalize_validation_output((0, "x"), "current.edi")
+        assert is_valid is False
+
+    def test_validation_result_valid_returns_current_file(self):
+        """A ValidationResult with is_valid=True returns (True, current_file)."""
+        result = ValidationResult(is_valid=True, errors=[], warnings=[])
+        is_valid, payload = normalize_validation_output(result, "current.edi")
+        assert is_valid is True
+        assert payload == "current.edi"
+
+    def test_validation_result_invalid_returns_errors(self):
+        """A ValidationResult with is_valid=False returns (False, errors)."""
+        result = ValidationResult(
+            is_valid=False, errors=["bad record"], warnings=[]
+        )
+        is_valid, payload = normalize_validation_output(result, "current.edi")
+        assert is_valid is False
+        assert payload == ["bad record"]
+
+    def test_dict_with_valid_true_returns_file_path(self):
+        """A dict with valid=True returns (True, file_path or current_file)."""
+        is_valid, payload = normalize_validation_output(
+            {"valid": True, "file_path": "out.edi"}, "current.edi"
+        )
+        assert is_valid is True
+        assert payload == "out.edi"
+
+    def test_dict_with_valid_true_no_file_path_returns_current(self):
+        """A dict with valid=True but no file_path returns (True, current_file)."""
+        is_valid, payload = normalize_validation_output(
+            {"valid": True}, "current.edi"
+        )
+        assert is_valid is True
+        assert payload == "current.edi"
+
+    def test_dict_with_valid_false_returns_errors(self):
+        """A dict with valid=False returns (False, errors or [])."""
+        is_valid, payload = normalize_validation_output(
+            {"valid": False, "errors": ["e1"]}, "current.edi"
+        )
+        assert is_valid is False
+        assert payload == ["e1"]
+
+    def test_dict_with_valid_false_no_errors_returns_empty_list(self):
+        """A dict with valid=False but no errors returns (False, [])."""
+        is_valid, payload = normalize_validation_output(
+            {"valid": False}, "current.edi"
+        )
+        assert is_valid is False
+        assert payload == []
+
+    def test_dict_default_valid_is_true(self):
+        """A dict without a valid key defaults to valid=True."""
+        is_valid, payload = normalize_validation_output({}, "current.edi")
+        assert is_valid is True
+        assert payload == "current.edi"
+
+    def test_bool_true_returns_current_file(self):
+        """A plain bool True returns (True, current_file)."""
+        is_valid, payload = normalize_validation_output(True, "current.edi")
+        assert is_valid is True
+        assert payload == "current.edi"
+
+    def test_bool_false_returns_current_file(self):
+        """A plain bool False returns (False, current_file)."""
+        is_valid, payload = normalize_validation_output(False, "current.edi")
+        assert is_valid is False
+        assert payload == "current.edi"
+
+    def test_unexpected_type_returns_invalid_with_diagnostic(self):
+        """An unexpected input type returns (False, [diagnostic error])."""
+        is_valid, payload = normalize_validation_output(
+            42, "current.edi"  # int is not a valid input type
+        )
+        assert is_valid is False
+        assert isinstance(payload, list)
+        assert len(payload) == 1
+        assert "unexpected type" in payload[0].lower()
+        assert "int" in payload[0].lower()
+
+    def test_string_is_unexpected_type(self):
+        """A string is an unexpected input type — no isinstance matches tuple/Result/dict/bool."""
+        is_valid, payload = normalize_validation_output(
+            "not a valid result", "current.edi"
+        )
+        assert is_valid is False
+        assert isinstance(payload, list)
+        assert "str" in payload[0].lower()
 
 
 class TestValidationResult:

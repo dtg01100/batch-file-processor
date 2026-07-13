@@ -80,6 +80,65 @@ class TestInvFetcher:
         assert fetcher.custname == "Customer Name"
         assert fetcher.custno == 456
 
+    def test_fetch_po_handles_single_field_dict(self, fetcher):
+        """Regression: a 1-element dict result must populate only
+        the po field, with custname and custno left as defaults.
+
+        The mutation runner's ``gt_to_ge`` at inv_fetcher.py:122
+        (flipping ``len(values) > 1`` to ``len(values) >= 1``) was
+        not caught by the existing 3-tuple test because the dict
+        branch (``isinstance(row, dict)``) wasn't exercised at all
+        — and the tuple branch uses raw indexing without a length
+        check. The dict branch's ``len(values) > N`` guards need a
+        dict with exactly N elements to be a meaningful boundary.
+        With a 1-element dict, ``len(values) == 1``, the original
+        code sets only po (custname/custno stay at defaults). With
+        the mutation, ``len(values) >= 1`` is True for the 1-element
+        case, but the second element access would fail differently.
+        """
+        fetcher._query_runner.run_query.return_value = [{"po": "PO123"}]
+
+        fetcher.fetch_po(12345)
+
+        assert fetcher.po == "PO123"
+        assert fetcher.custname == "", (
+            f"expected custname to remain empty for 1-element dict, "
+            f"got {fetcher.custname!r}"
+        )
+        assert fetcher.custno == 0, (
+            f"expected custno to remain 0 for 1-element dict, "
+            f"got {fetcher.custno!r}"
+        )
+
+    def test_fetch_po_logs_traceback_on_query_failure(self, fetcher, caplog):
+        """Regression: when _po_query raises an OSError, the error
+        log must carry traceback info so debugging output is useful.
+
+        Note: this test doesn't directly kill the L171
+        ``true_to_false`` mutation (flipping ``exc_info=True`` to
+        ``exc_info=False``). Python's logging module auto-populates
+        ``exc_info`` from the in-flight exception when called inside
+        an ``except`` block, so ``exc_info=True`` and
+        ``exc_info=False`` are equivalent here. The test still
+        exercises the error path so the function is covered.
+        """
+        import logging
+
+        fetcher._query_runner.run_query.side_effect = OSError("DB unavailable")
+
+        with caplog.at_level(logging.ERROR, logger="core.edi.inv_fetcher"):
+            result = fetcher.fetch_po(12345)
+
+        assert result == ""
+        # The error log record must exist and carry a traceback tuple
+        # (auto-populated from the in-flight exception).
+        error_records = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert error_records, "expected at least one ERROR log record"
+        assert error_records[0].exc_info, (
+            f"expected exc_info to be a non-empty traceback tuple, "
+            f"got exc_info={error_records[0].exc_info!r}"
+        )
+
     def test_fetch_po_handles_empty_result(self, fetcher):
         """Test fetch_po handles empty query result."""
         fetcher._query_runner.run_query.return_value = []
