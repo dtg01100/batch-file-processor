@@ -1106,3 +1106,30 @@ descriptions, "or" in record-type list, "10 backends" count).
 - Phase 3a oracle runner: still 0 flagged
 - Phase 2 assertion-mutation runner: still 9/9 on
   test_folder_configuration_pydantic.py and test_convert_base.py
+
+## Test-quality debt fixes — round 3 (2026-07-13)
+
+### config_schemas.py: 2/9 → 8/8 killed (both pairs)
+
+tests/unit/test_plugins/test_configuration_plugin.py and
+tests/unit/test_plugins/test_form_generator_plugins.py
+exercised schema structure but not validation behavior. Added
+direct tests for FieldDefinition.validate() in both files
+covering required, min/max length boundaries, success
+calculation, and label fallback. After: 8/8 killed, 1
+docstring KNOWN_EQUIVALENT.
+
+Also fixed: DEFAULT_PAIRS mapping bug for config_schemas.py
+(was paired with test_plugin_base.py and
+test_plugin_manager_configuration.py, neither of which imports
+config_schemas; correct pair is test_configuration_plugin.py
+and test_form_generator_plugins.py).
+
+### convert_to_simplified_csv.py: 5/8 → 6/8 killed
+
+Added test_default_retail_uom_is_false. The previous
+retail_uom tests all passed retail_uom="False" explicitly,
+masking the default-behavior test. The new test uses a fresh
+parameters dict WITHOUT retail_uom and asserts the cost stays
+at the un-transformed "10.00" (the mutation transforms to
+"1.67"). After: 6/8 killed, 2 docstring KNOWN_EQUIVALENT.

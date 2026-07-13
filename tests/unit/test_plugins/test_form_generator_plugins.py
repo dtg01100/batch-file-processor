@@ -230,5 +230,83 @@ class TestPluginManagerUIFunctionality(unittest.TestCase):
         self.assertIsNotNone(widget)
 
 
+class TestFieldDefinitionValidationBoundaries:
+    """Tests for FieldDefinition.validate() boundary conditions.
+
+    Regression tests for the end-to-end mutation run (2026-07-13).
+    The form generator tests exercise schema structure but not the
+    validation behavior. These tests directly target the production
+    mutations on FieldDefinition.validate().
+    """
+
+    def test_min_length_boundary(self):
+        """L138: min_length boundary. With mutation to <=, value
+        at exactly min_length would be rejected.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code", field_type=FieldType.STRING, min_length=5
+        )
+        # 5 chars at min — valid
+        assert field.validate("abcde").success is True
+        # 4 chars below min — invalid
+        assert field.validate("abcd").success is False
+
+    def test_max_length_boundary(self):
+        """L143: max_length boundary. With mutation to >=, value
+        at exactly max_length would be rejected.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code", field_type=FieldType.STRING, max_length=5
+        )
+        # 5 chars at max — valid
+        assert field.validate("abcde").success is True
+        # 6 chars above max — invalid
+        assert field.validate("abcdef").success is False
+
+    def test_success_calculation(self):
+        """L113: success=len(errors) == 0. With mutation to !=, the
+        semantics would be inverted.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code", field_type=FieldType.STRING, min_length=100
+        )
+        # Short value → errors → success must be False
+        assert field.validate("short").success is False
+        # Long value → no errors → success must be True
+        assert field.validate("a" * 200).success is True
+
+    def test_none_value_with_no_required_is_valid(self):
+        """L103: value=None with required=False returns success=True.
+        With mutation to success=False, None would be invalid.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="opt", field_type=FieldType.STRING, required=False
+        )
+        result = field.validate(None)
+        assert result.success is True, (
+            f"expected None with required=False to be valid, "
+            f"got {result.success} with errors={result.errors}"
+        )
+
+    def test_label_defaults_to_name(self):
+        """L74: label or name. With mutation to and, label=None
+        with name="x" would give None (None and "x" == None).
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(name="my_field", field_type=FieldType.STRING)
+        assert field.label == "my_field", (
+            f"expected label='my_field' (fallback to name), got {field.label!r}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -241,7 +241,7 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     # tests. High 0/N rates on the converter tests are real test-quality
     # signals — these tests import the modules but mock around the
     # behavior, so mutations don't reach the assertions.
-    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # was mispaired as test_plugin_base (2/9 was a DEFAULT_PAIRS bug; real kill rate 2/9 — test exercises the schema but not the field validation boundaries)
+    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # 8/9 (was 2/9 with wrong pair; now 8/9 with new TestFieldDefinitionValidate tests; 1 docstring survivor KNOWN_EQUIVALENT)
     ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_form_generator_plugins.py"),  # was mispaired as test_plugin_manager_configuration (1/9 was a DEFAULT_PAIRS bug)
     ("interface/plugins/configuration_plugin.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # 2/3 killed
     ("interface/plugins/section_registry.py", "tests/unit/test_plugins/test_section_registry.py"),  # 1/7 killed
@@ -533,6 +533,11 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
       "docstring 'return value' — prose; mutation changes docstring text but has no runtime effect"),
      ("dispatch/pipeline/validator.py", "int_constant_off_by_one", 24,
       "docstring 'Accepts a 2-tuple' — example tuple size, mutation has no runtime effect"),
+     # ------------------------------------------------------------------
+     # interface/plugins/config_schemas.py (test: test_configuration_plugin.py)
+     # ------------------------------------------------------------------
+     ("interface/plugins/config_schemas.py", "and_to_or", 4,
+      "module docstring 'configuration schemas and validation' — prose"),
 ]
 
 

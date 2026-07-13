@@ -300,5 +300,134 @@ class TestCSVConfigurationPlugin(unittest.TestCase):
         self.plugin.deactivate()
 
 
+class TestFieldDefinitionValidate:
+    """Direct tests for FieldDefinition.validate().
+
+    Regression tests for the end-to-end mutation run (2026-07-13):
+    the existing test suite only exercised validate_config() through
+    the plugin (which goes through validators), so the
+    FieldDefinition.validate() body was untested. These tests
+    target the production mutations on that method directly.
+    """
+
+    def test_required_field_rejects_none(self):
+        """L97: required + value=None must return failure."""
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="api_key",
+            field_type=FieldType.STRING,
+            required=True,
+        )
+        result = field.validate(None)
+        assert result.success is False
+        assert any("required" in e for e in result.errors)
+
+    def test_min_length_boundary_at_length_minus_one_is_invalid(self):
+        """L138: len < min_length means at min_length it's valid,
+        at min_length-1 it's invalid.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code",
+            field_type=FieldType.STRING,
+            min_length=5,
+        )
+        # 4 chars < 5 min — invalid
+        result = field.validate("abcd")
+        assert result.success is False
+        # 5 chars == 5 min — valid
+        result = field.validate("abcde")
+        assert result.success is True
+
+    def test_max_length_boundary_at_length_plus_one_is_invalid(self):
+        """L143: len > max_length means at max_length+1 it's invalid,
+        at max_length it's valid.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code",
+            field_type=FieldType.STRING,
+            max_length=5,
+        )
+        # 5 chars == 5 max — valid
+        result = field.validate("abcde")
+        assert result.success is True
+        # 6 chars > 5 max — invalid
+        result = field.validate("abcdef")
+        assert result.success is False
+
+    def test_validation_success_uses_length_equality(self):
+        """L113: success = len(errors) == 0. With mutation to !=,
+        success would be True only when errors are non-empty (the
+        wrong way around).
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="code",
+            field_type=FieldType.STRING,
+            min_length=100,
+        )
+        # Short value → errors non-empty → success must be False
+        result = field.validate("short")
+        assert result.success is False, (
+            f"expected success=False when errors are non-empty, got {result.success}"
+        )
+        # No errors → success must be True
+        result = field.validate("a" * 200)
+        assert result.success is True, (
+            f"expected success=True when no errors, got {result.success}"
+        )
+
+    def test_none_value_returns_success(self):
+        """L103: when value is None and not required, return
+        success=True (the value is implicitly "use the default").
+        With the mutation to success=False, None would be
+        treated as an error.
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="optional_field",
+            field_type=FieldType.STRING,
+            required=False,
+        )
+        result = field.validate(None)
+        assert result.success is True, (
+            f"expected None value with required=False to be valid, "
+            f"got {result.success} with errors={result.errors}"
+        )
+
+    def test_required_field_default_is_false(self):
+        """L46: required: bool = False (default)."""
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="f",
+            field_type=FieldType.STRING,
+        )
+        assert field.required is False, (
+            f"expected default required=False, got {field.required}"
+        )
+
+    def test_label_defaults_to_name_when_none(self):
+        """L74: self.label = label or name. With mutation to and,
+        label=None and name="x" would give label = None and "x"
+        = None (since None and "x" = None).
+        """
+        from interface.plugins.config_schemas import FieldDefinition, FieldType
+
+        field = FieldDefinition(
+            name="my_field",
+            field_type=FieldType.STRING,
+        )
+        assert field.label == "my_field", (
+            f"expected label='my_field' (from name), got {field.label!r}"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

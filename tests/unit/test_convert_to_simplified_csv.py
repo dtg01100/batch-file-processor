@@ -839,3 +839,43 @@ class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures)
         rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
         # Transform should have run: 1000 cents / 6 = 166.66... -> 1.66
         assert rows[0][2] != "10.00"
+
+    def test_default_retail_uom_is_false(
+        self, default_settings, sample_header_record, tmp_path, upc_lookup
+    ):
+        """Regression: when ``retail_uom`` is not in parameters, the
+        default must be False (no retail UOM transform runs).
+
+        The mutation runner's ``false_to_true`` at
+        convert_to_simplified_csv.py:64 (flipping the default
+        from False to True) was not caught by existing tests
+        because every retail_uom test passed the parameter
+        explicitly. With the mutation, the transform would run
+        for every B record that has a category in the upc_lut,
+        silently changing the output.
+        """
+        # IMPORTANT: do NOT use the default_parameters fixture —
+        # it sets retail_uom="False" explicitly, which masks the
+        # default-behavior test. Build a fresh parameters dict
+        # WITHOUT retail_uom so the default applies.
+        params = {
+            "each_uom_categories": "ALL",
+            "include_headers": "True",
+            "include_item_numbers": "True",
+            "include_item_description": "True",
+            "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,vendor_item",
+        }
+        rows = self._run(
+            params, default_settings, sample_header_record,
+            params, upc_lookup, tmp_path,
+        )
+        assert len(rows) == 1
+        # The B record's unit_cost is "001000" (10.00 case cost = $10.00)
+        # and unit_mult is "000006". With retail_uom=False (default),
+        # the cost stays at "10.00". With retail_uom=True (mutation),
+        # the cost would be transformed to each-level
+        # (10.00 / 6 = 1.6666...) and rounded to "1.67", NOT "10.00".
+        assert rows[0][2] == "10.00", (
+            f"expected default retail_uom=False to keep cost at '10.00', "
+            f"got {rows[0][2]!r}. The mutation would transform the cost."
+        )
