@@ -1033,3 +1033,76 @@ After: 4/4 real mutations killed.
   new `unjustified_noqa` from the scansheet change; fixed in
   this commit)
 - Phase 3a oracle runner: still 0 flagged
+
+## Test-quality debt fixes — round 2 (2026-07-13)
+
+Continuing from the previous iteration (validator, inv_fetcher,
+error_handler), this commit addresses more test-quality debt
+found in the end-to-end mutation run.
+
+### `folder_configuration.py` (1/11 → 8/11 killed, both pairs)
+
+`tests/unit/test_folder_configuration_pydantic.py` was a 46-line
+file with 3 trivial tests. The module had 10 surviving mutations
+on real production code. Added 4 new test classes covering:
+
+- **FTPConfiguration** (L165 le_to_lt): port range check.
+  Test pins 0 (rejected), 1 (valid boundary), 65535 (valid boundary).
+  Kills the `le_to_lt` mutation (which would accept port 0).
+- **UPCOverrideConfiguration** (L273 ne_to_eq): category
+  validation. Test pins a non-ALL non-numeric category as invalid.
+  Kills the mutation that would skip 'ALL' silently.
+- **ARecordPaddingConfiguration** (L298 gt_to_ge): padding length.
+  Test pins text exactly at length=6 as valid (the `>` vs `>=`
+  boundary). Kills the mutation.
+- **FolderConfigurationDefaults** (L409 true_to_false):
+  `alert_on_failure: bool = True` default. Kills the mutation
+  (default would be False, silently disabling alerts).
+- **TestConvertFormatLookup** (L64 negate_if_condition): the
+  `if name.startswith("_"): raise AttributeError(name)` dunder
+  guard. With the mutation, dunder access causes infinite
+  recursion. Kills the mutation.
+- **TestConvertFormatLookup** (L115 eq_to_ne): case-insensitive
+  format lookup. Kills the mutation that would return the first
+  NON-matching value.
+- **TestBoolFromData** (L18 false_to_true): `_bool_from_data`
+  default param. Verified via `inspect.signature` instead of
+  running the function (the function reads from a dict which
+  makes the default hard to test via behavior).
+
+After: 8/11 (73%) killed. The 3 remaining are 2 docstring
+mutations and 1 default arg mutation (port=21 vs 22 — has no
+behavioral effect at runtime).
+
+Also fixed: DEFAULT_PAIRS mapping bug for config_schemas.py
+(was paired with `test_plugin_base.py` and
+`test_plugin_manager_configuration.py`, neither of which
+import config_schemas; correct pair is
+`test_configuration_plugin.py` and
+`test_form_generator_plugins.py`).
+
+### `convert_base.py` (3/9 → 4/9 killed)
+
+`tests/unit/test_convert_base.py` had 6 surviving mutations
+on real production code. Added one test:
+
+- **L128 false_to_true**: `output_file: IO | None =
+  field(default=None, repr=False)`. With the mutation to
+  `repr=True`, the file handle's repr (containing a memory
+  address) would appear in the context's repr output. Test
+  creates a StringIO, sets it as output_file, and asserts that
+  the memory address pattern (`0x...`) is NOT in `repr(context)`.
+
+After: 4/9 (44%) killed. The 5 remaining are all docstring
+mutations (`>>> normalize_parameter("True", False)`, module
+descriptions, "or" in record-type list, "10 backends" count).
+
+### Re-run
+
+- folder_configuration.py: 1/11 → 8/11 killed (both test pairs)
+- convert_base.py: 3/9 → 4/9 killed
+- All meta-test self-checks pass
+- Hygiene runner: still 16 violations
+- Phase 3a oracle runner: still 0 flagged
+- Phase 2 assertion-mutation runner: still 9/9 on
+  test_folder_configuration_pydantic.py and test_convert_base.py

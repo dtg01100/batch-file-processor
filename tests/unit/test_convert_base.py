@@ -159,6 +159,45 @@ class TestConversionContext:
         assert context.csv_writer is None
         assert context.user_data == {}
 
+    def test_output_file_excluded_from_repr(self):
+        """Regression: output_file uses ``repr=False`` so the file
+        handle's repr (a long TextIOWrapper description) doesn't
+        appear in repr() output. The mutation runner's
+        ``false_to_true`` at convert_base.py:128 (flipping
+        ``repr=False`` to ``repr=True``) was not caught by existing
+        tests because no test inspected repr() output.
+        """
+        from io import StringIO
+
+        context = ConversionContext(
+            edi_filename="input.edi",
+            output_filename="output",
+            settings_dict={},
+            parameters_dict={},
+            upc_lut={},
+        )
+        # Use a StringIO so the test doesn't depend on file system
+        # state. A StringIO's repr is a long "<_io.StringIO object at 0x...>"
+        # description. With repr=False on output_file, this description
+        # is hidden (only the field name appears with no value).
+        # With the mutation to repr=True, the description IS in the
+        # output.
+        sentinel = StringIO("test content")
+        context.output_file = sentinel
+        try:
+            r = repr(context)
+            # The StringIO object is excluded when repr=False. The
+            # field name MAY appear (with no value). The check is on
+            # the file handle's repr content, which contains "StringIO"
+            # only when repr=True. When repr=False, only the field
+            # name shows (no StringIO object description).
+            assert "0x" not in r, (
+                f"expected file handle address (0x...) to be excluded from repr "
+                f"(the mutation would include it), got {r!r}"
+            )
+        finally:
+            sentinel.close()
+
     def test_get_output_path_default(self):
         """Test get_output_path with default extension."""
         context = ConversionContext(

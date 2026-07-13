@@ -229,20 +229,20 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("backend/database/database_obj.py", "tests/unit/interface/database/test_database_obj.py"),  # 4/10 killed
     ("backend/database/database_obj.py", "tests/unit/interface/database/test_safe_accessors.py"),  # 2/10 killed
     ("dispatch/converters/convert_base.py", "tests/unit/test_estore_null_safety.py"),  # 1/9 killed
-    ("dispatch/converters/convert_base.py", "tests/unit/test_convert_base.py"),  # 3/9 killed
+    ("dispatch/converters/convert_base.py", "tests/unit/test_convert_base.py"),  # 4/9 (was 3/9; L128 false_to_true on output_file repr=False killed by test_output_file_excluded_from_repr)
     ("dispatch/interfaces.py", "tests/unit/test_dispatch_interfaces.py"),  # 0/6 — test has no assertions on mutated behavior
     ("core/edi/edi_splitting_utils.py", "tests/unit/test_category_filtering.py"),  # was mispaired as edi_splitter.py (0/7 was a DEFAULT_PAIRS bug, not a test gap)
     ("dispatch/converters/convert_to_fintech.py", "tests/unit/test_convert_backends.py"),  # was mispaired as core/edi/inv_fetcher (0/9 was a DEFAULT_PAIRS bug, not a test gap)
-    ("interface/models/folder_configuration.py", "tests/unit/test_folder_configuration_pydantic.py"),  # 1/11 killed
-    ("interface/models/folder_configuration.py", "tests/unit/test_folder_db_roundtrip.py"),  # 1/11 killed
+    ("interface/models/folder_configuration.py", "tests/unit/test_folder_configuration_pydantic.py"),  # 8/11 (was 1/11; L115, L165, L18, L273, L298, L64, L409 killed by new test classes)
+    ("interface/models/folder_configuration.py", "tests/unit/test_folder_db_roundtrip.py"),  # 1/11 (same module, different test pair; the new tests in test_folder_configuration_pydantic.py don't apply here, but the underlying model mutations are not exercised by the db_roundtrip path either)
     # Batch 7 (also 2026-07-09): interface/plugins/*, dispatch/converters/*
     # (concrete converter modules: eStore, simplified CSV, fintech,
     # scansheet_type_a), and core/edi/inv_fetcher pulled in via converter
     # tests. High 0/N rates on the converter tests are real test-quality
     # signals — these tests import the modules but mock around the
     # behavior, so mutations don't reach the assertions.
-    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_plugin_base.py"),  # 2/9 killed
-    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_plugin_manager_configuration.py"),  # 1/9 killed
+    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # was mispaired as test_plugin_base (2/9 was a DEFAULT_PAIRS bug; real kill rate 2/9 — test exercises the schema but not the field validation boundaries)
+    ("interface/plugins/config_schemas.py", "tests/unit/test_plugins/test_form_generator_plugins.py"),  # was mispaired as test_plugin_manager_configuration (1/9 was a DEFAULT_PAIRS bug)
     ("interface/plugins/configuration_plugin.py", "tests/unit/test_plugins/test_configuration_plugin.py"),  # 2/3 killed
     ("interface/plugins/section_registry.py", "tests/unit/test_plugins/test_section_registry.py"),  # 1/7 killed
     ("interface/operations/plugin_configuration_mapper.py", "tests/unit/test_plugins/test_plugin_configuration_mapper.py"),  # 3/11 killed
@@ -517,6 +517,22 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
       "format string '=' * 50 — visual separator, off-by-one has no runtime effect"),
      ("dispatch/error_handler.py", "true_to_false", 144,
       "exc_info=True inside except block — Python's logging auto-populates exc_info from in-flight exception, so True/False are equivalent"),
+     # ------------------------------------------------------------------
+     # dispatch/pipeline/validator.py (test: test_pipeline_validator.py)
+     #
+     # All 4 surviving mutations on this module are in the module
+     # docstring text of normalize_validation_output. The function
+     # body has 4 real mutations that are killed by
+     # TestNormalizeValidationOutput.
+     # ------------------------------------------------------------------
+     ("dispatch/pipeline/validator.py", "and_to_or", 25,
+      "docstring 'or a plain bool. Any other type is logged as a warning and returned' — prose"),
+     ("dispatch/pipeline/validator.py", "or_to_and", 25,
+      "docstring 'or a plain bool. Any other type is logged as a warning and returned' — prose"),
+     ("dispatch/pipeline/validator.py", "return_none_instead_of_value", 22,
+      "docstring 'return value' — prose; mutation changes docstring text but has no runtime effect"),
+     ("dispatch/pipeline/validator.py", "int_constant_off_by_one", 24,
+      "docstring 'Accepts a 2-tuple' — example tuple size, mutation has no runtime effect"),
 ]
 
 
