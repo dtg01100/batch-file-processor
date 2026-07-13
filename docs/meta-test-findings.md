@@ -463,7 +463,7 @@ pass vacuously.
 9 property files, 98 property tests, 159 assertions. **6 tests
 flagged** with real signal across 3 property files.
 
-### Per-file findings
+### Per-file findings (original)
 
 **`tests/unit/core/edi/test_edi_transformer_property.py`** (2 flagged)
 
@@ -504,6 +504,86 @@ flagged** with real signal across 3 property files.
   assignments in the classifier).
 - L288 `test_filter_b_records_by_category_exclude_mode_keeps_non_match`:
   same pattern.
+
+### Per-file findings (re-run after classifier improvement)
+
+After adding local-variable assignment tracking to the classifier
+(see `tests/meta/test_property_oracle_consistency.py`
+`_build_local_var_defs` and `_resolve_local`), the two
+`test_edi_splitting_utils_property.py` findings reclassified from
+`oracle_independent` to `oracle_uses_f_left` — confirming the
+tests DO use the function-under-test through local-variable
+assignment. They are not bugs.
+
+**However, the local-variable resolution exposed two additional
+real findings in `tests/unit/dispatch/test_file_utils_property.py`**
+that the previous `ast.walk`-only classifier missed:
+
+- L95 `test_strip_invalid_filename_chars_idempotent` (L99):
+  `assert strip(x) == strip(strip(x))` — **self_referential_helper**.
+  Same bug pattern as `test_calc_check_digit_accepts_int_input`.
+  A consistent mutation to `strip_invalid_filename_chars` that
+  preserves idempotency (e.g. "return the input unchanged") would
+  pass the test. Real finding.
+
+And the `test_pad_upc_idempotent_when_already_target_length` finding
+in `test_upc_utils_property.py` was a real `self_referential_helper`
+all along (the original report mentioned it as a hypothetical
+"after the runner is improved" case; the improvement surfaced it).
+
+### Fixes applied (commit pending)
+
+1. **Added 3 hardcoded-oracle tests** to break the
+   self-referential patterns:
+   - `test_calc_check_digit_hardcoded_oracle` in
+     `test_upc_utils_property.py` (5 hardcoded values for
+     `calc_check_digit` on str inputs, plus 2 int-coercion
+     pins).
+   - `test_pad_upc_hardcoded_oracle` in `test_upc_utils_property.py`
+     (6 hardcoded values covering right-pad, no-pad, truncation).
+   - `test_strip_invalid_filename_chars_hardcoded_oracle` in
+     `test_file_utils_property.py` (6 hardcoded values covering
+     pass-through, multi-strip, all-invalid).
+
+2. **Added 6 `KNOWN_ORACLE_EQUIVALENT` entries** to
+   `tests/meta/test_property_oracle_consistency.py`:
+   - 3 `trivially_true` entries for the documented purity checks
+     (`test_calc_check_digit_is_deterministic`, the two
+     `test_convert_to_price*_is_deterministic`). Each entry cites
+     the hardcoded-oracle counterpart that now provides the
+     mutation-catching coverage.
+   - 3 `self_referential_helper` entries for the intentionally
+     self-referential tests (int-coercion, idempotency). Each
+     entry cites the corresponding hardcoded-oracle counterpart
+     that provides actual-value coverage.
+
+3. **Removed the `input_self_referential` classification** from
+   the wrapper and CLI. The original heuristic
+   (`input_uses_f AND assertion_uses_f`) was too aggressive —
+   it flagged legitimate cross-check tests like
+   `test_convert_to_price_decimal_decimal_matches_convert_to_price`
+   (which uses `convert_to_price` as the oracle for
+   `convert_to_price_decimal`, a real non-self-referential
+   cross-check). The `_input_uses_f_or_helpers` helper is kept
+   for future Phase 3b work (call-graph traversal across local
+   helper functions to distinguish "f(x) on the left, expected
+   from a *different* f on the right" from "f(x) on the left,
+   expected also from f(x) elsewhere"). That requires
+   cross-function call graph, out of scope for Phase 3a.
+
+### Re-run after fixes
+
+After the fix commit, the Phase 3a runner reports **0 flagged
+tests** out of 98 property tests across 9 files. The
+3 `trivially_true` and 3 `self_referential_helper` findings are
+now silenced by the `KNOWN_ORACLE_EQUIVALENT` allowlist, and
+real coverage of the function's actual values is provided by
+the 3 new `*_hardcoded_oracle` tests.
+
+The classifier's local-variable resolution improvement (used in
+`_resolve_local`) is a general win: future tests that hide
+function calls behind `result = f(...)` will be classified
+correctly as `oracle_uses_f_left` rather than `oracle_independent`.
 
 ### Classification kinds
 

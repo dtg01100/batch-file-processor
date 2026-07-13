@@ -99,6 +99,23 @@ def test_strip_invalid_filename_chars_idempotent(name: str) -> None:
     assert once == twice
 
 
+def test_strip_invalid_filename_chars_hardcoded_oracle() -> None:
+    """Hardcoded ``strip_invalid_filename_chars`` output values. The
+    idempotency test above
+    (asserting ``strip(x) == strip(strip(x))``) is self-referential:
+    a consistent mutation to ``strip_invalid_filename_chars`` that
+    returns its input unchanged would still pass. This test pins
+    the actual output for known inputs so any such mutation is
+    caught.
+    """
+    assert strip_invalid_filename_chars("a/b") == "ab"
+    assert strip_invalid_filename_chars("a/b*c") == "abc"
+    assert strip_invalid_filename_chars("a b.c_d") == "a b.c_d"
+    assert strip_invalid_filename_chars("////") == ""
+    assert strip_invalid_filename_chars("hello") == "hello"
+    assert strip_invalid_filename_chars("!@#$%^&*()") == ""
+
+
 @settings(max_examples=100)
 @given(name=_FILENAMES)
 def test_strip_invalid_filename_chars_monotonic_length(name: str) -> None:

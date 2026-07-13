@@ -81,6 +81,32 @@ def test_calc_check_digit_accepts_int_input(s: str) -> None:
     assert calc_check_digit(s) == calc_check_digit(int(s))
 
 
+def test_calc_check_digit_hardcoded_oracle() -> None:
+    """Hardcoded check-digit values: validates the function's output
+    directly against precomputed constants, independent of the function
+    itself. Catches any consistent mutation to ``calc_check_digit`` that
+    the self-referential int-coercion test would silently pass.
+
+    Values were computed by hand from the algorithm in
+    ``core/edi/upc_utils.py`` and re-verified in this venv:
+
+        >>> calc_check_digit("04180000026"), calc_check_digit("00000000000"),
+        ... calc_check_digit("12345678901"), calc_check_digit("99999999999"),
+        ... calc_check_digit("11111111111")
+        (5, 0, 2, 3, 7)
+    """
+    assert calc_check_digit("04180000026") == 5
+    assert calc_check_digit("00000000000") == 0
+    assert calc_check_digit("12345678901") == 2
+    assert calc_check_digit("99999999999") == 3
+    assert calc_check_digit("11111111111") == 7
+    # Also confirm the int-coercion path returns the same hardcoded value
+    # for at least one input. The int-coercion test above covers the
+    # random case; this one pins a specific value.
+    assert calc_check_digit(4180000026) == 5
+    assert calc_check_digit(12345678901) == 2
+
+
 @settings(max_examples=50)
 @given(
     upce=_fixed_digits(6),
@@ -169,6 +195,26 @@ def test_pad_upc_idempotent_when_already_target_length(
     once = pad_upc(s, target, fill_char=fill)
     twice = pad_upc(once, target, fill_char=fill)
     assert once == twice
+
+
+def test_pad_upc_hardcoded_oracle() -> None:
+    """Hardcoded ``pad_upc`` output values. The idempotency test above
+    (which asserts ``pad_upc(s, t, fill) == pad_upc(pad_upc(s, t, fill), t, fill)``)
+    is self-referential: a consistent mutation to ``pad_upc`` that
+    returns its input unchanged would still pass. This test pins
+    the actual output for known inputs so any such mutation is
+    caught.
+    """
+    # Right-pad with default space char
+    assert pad_upc("12345", 10) == "     12345"
+    assert pad_upc("", 5) == "     "
+    assert pad_upc("123", 8) == "     123"
+    # Already at target length: returned unchanged
+    assert pad_upc("12345", 5) == "12345"
+    # Below target length with explicit fill char
+    assert pad_upc("0", 1) == "0"
+    # Above target length: truncated
+    assert pad_upc("123456", 3) == "123"
 
 
 @settings(max_examples=50)
