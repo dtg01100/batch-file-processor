@@ -231,8 +231,8 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("dispatch/converters/convert_base.py", "tests/unit/test_estore_null_safety.py"),  # 1/9 killed
     ("dispatch/converters/convert_base.py", "tests/unit/test_convert_base.py"),  # 3/9 killed
     ("dispatch/interfaces.py", "tests/unit/test_dispatch_interfaces.py"),  # 0/6 — test has no assertions on mutated behavior
-    ("core/edi/edi_splitter.py", "tests/unit/test_category_filtering.py"),  # 0/7 — same module as Batch 5 test_edi_splitter_property
-    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_backends.py"),  # 0/9 — test imports inv_fetcher but doesn't exercise it
+    ("core/edi/edi_splitting_utils.py", "tests/unit/test_category_filtering.py"),  # was mispaired as edi_splitter.py (0/7 was a DEFAULT_PAIRS bug, not a test gap)
+    ("dispatch/converters/convert_to_fintech.py", "tests/unit/test_convert_backends.py"),  # was mispaired as core/edi/inv_fetcher (0/9 was a DEFAULT_PAIRS bug, not a test gap)
     ("interface/models/folder_configuration.py", "tests/unit/test_folder_configuration_pydantic.py"),  # 1/11 killed
     ("interface/models/folder_configuration.py", "tests/unit/test_folder_db_roundtrip.py"),  # 1/11 killed
     # Batch 7 (also 2026-07-09): interface/plugins/*, dispatch/converters/*
@@ -248,10 +248,10 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("interface/operations/plugin_configuration_mapper.py", "tests/unit/test_plugins/test_plugin_configuration_mapper.py"),  # 3/11 killed
     ("interface/plugins/csv_configuration_plugin.py", "tests/unit/test_plugins/test_plugin_option_combinations.py"),  # 1/3 killed
     ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_simplified_csv.py"),  # 5/8 killed
-    ("dispatch/converters/convert_to_simplified_csv.py", "tests/unit/test_convert_to_csv.py"),  # 0/8 — converter tests mock around module behavior
-    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_yellowdog_csv.py"),  # 0/9 — tests mock converter, never reach inv_fetcher
-    ("core/edi/inv_fetcher.py", "tests/unit/test_convert_to_fintech.py"),  # 0/9 — same pattern as above
-    ("dispatch/converters/convert_to_scansheet_type_a.py", "tests/unit/test_convert_to_scansheet_type_a.py"),  # 0/9
+    ("dispatch/converters/convert_to_csv.py", "tests/unit/test_convert_to_csv.py"),  # was mispaired as convert_to_simplified_csv (0/8 was a DEFAULT_PAIRS bug, not a test gap)
+    ("dispatch/converters/convert_to_yellowdog_csv.py", "tests/unit/test_convert_to_yellowdog_csv.py"),  # was mispaired as core/edi/inv_fetcher (0/9 was a DEFAULT_PAIRS bug, not a test gap)
+    ("dispatch/converters/convert_to_fintech.py", "tests/unit/test_convert_to_fintech.py"),  # was mispaired as core/edi/inv_fetcher (0/9 was a DEFAULT_PAIRS bug, not a test gap)
+    ("dispatch/converters/convert_to_scansheet_type_a.py", "tests/unit/test_convert_to_scansheet_type_a.py"),  # 1/9 (commit d14b686d5)
     ("dispatch/converters/convert_to_estore_einvoice.py", "tests/unit/test_convert_to_estore_einvoice.py"),  # 6/8 killed (strong test)
     ("dispatch/converters/convert_to_estore_einvoice_generic.py", "tests/unit/test_convert_to_estore_einvoice_generic.py"),  # 6/8 killed (strong test)
     ("dispatch/converters/registry.py", "tests/unit/dispatch_tests/test_legacy_147_smoke.py"),  # 1/7 killed (companion to test_converters_registry.py)

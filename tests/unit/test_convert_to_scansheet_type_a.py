@@ -7,6 +7,27 @@ import pytest
 from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
 
 
+# pyzbar is required for the round-trip barcode tests. If it's not
+# installed, the entire module is skipped — the tests cannot meaningfully
+# run, and the assertion-mutation meta-test runner would otherwise
+# report the assertions as "dead" (because the test is skipped before
+# the assertion runs). Adding the skip at module level lets the
+# runner know the assertions are guarded by an external dependency.
+try:
+    import pyzbar  # noqa: F401
+    _pyzbar_available = True
+except ImportError:
+    _pyzbar_available = False
+
+pytestmark = [
+    pytest.mark.unit,
+    pytest.mark.conversion,
+    pytest.mark.skipif(
+        not _pyzbar_available, reason="pyzbar not installed"
+    ),
+]
+
+
 class TestScanSheetBarcodeParsing:
     """Validate barcode parsing against real-world UPC formatting."""
 

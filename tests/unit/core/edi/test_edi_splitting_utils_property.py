@@ -409,3 +409,99 @@ def test_validate_split_counts_raises_on_mismatched_line_count(tmp_path) -> None
             edi_send_list=[(str(out_file), "", ".inv")],
             a_record_count=1,
         )
+
+
+# ---------------------------------------------------------------------------
+# Hardcoded counterparts for the property tests above.
+#
+# Three of the @given property tests in this file have assertions that
+# are tautologies or guarded by `if` conditions that fire rarely:
+#
+# - L58: `assert _col_to_excel(n) == "AA"` inside `if n == 27:`. The
+#   `if` guard fires for only 1 of 1000 generated values; the assertion
+#   is otherwise vacuously skipped. The runner sees "test passed" and
+#   reports the assertion as "dead".
+# - L154: `assert a_record.startswith("A")` inside `if a_record is not None:`.
+#   The function only assigns `a_record = line` when `line.startswith("A")`,
+#   so the assertion is a tautology — always True when reached.
+# - L175: `assert rec.startswith("B")` for each rec in b_records.
+#   Same pattern: b_records only contains lines that start with "B".
+# - L196: `assert c_record.startswith("C")` inside `if c_record is not None:`.
+#   Same pattern.
+#
+# The hardcoded tests below pin actual values for known inputs so any
+# consistent mutation of the underlying functions is caught. Same
+# pattern as the Phase 3a hardcoded oracle tests added to
+# test_upc_utils_property.py and test_pad_upc_idempotent_*
+# (commit 812ead07b).
+# ---------------------------------------------------------------------------
+
+
+def test_col_to_excel_hardcoded_oracle() -> None:
+    """Hardcoded Excel column boundaries. The property test
+    ``test_col_to_excel_first_27_match_known_constants`` checks only
+    n=27 inside a guard; this test pins the actual column-letter
+    output for known inputs so any consistent mutation to
+    ``_col_to_excel`` is caught.
+    """
+    assert _col_to_excel(1) == "A"
+    assert _col_to_excel(2) == "B"
+    assert _col_to_excel(26) == "Z"
+    assert _col_to_excel(27) == "AA"
+    assert _col_to_excel(28) == "AB"
+    assert _col_to_excel(52) == "AZ"
+    assert _col_to_excel(53) == "BA"
+    assert _col_to_excel(702) == "ZZ"
+
+
+def test_split_invoice_records_hardcoded_oracle() -> None:
+    """Hardcoded ``_split_invoice_records`` output for known inputs.
+    The property tests assert only that returned records start with
+    the right letter (a tautology, since the function only assigns
+    to a_record/b_records/c_record when the line starts with the
+    matching letter). This test pins the exact record that should
+    be returned for each position so a consistent mutation is
+    caught.
+    """
+    # A single A record, no B, no C.
+    a, b, c = _split_invoice_records(["AVENDOR00000000010101240000000123"])
+    assert a == "AVENDOR00000000010101240000000123"
+    assert b == []
+    assert c is None
+
+    # A, B, C in order.
+    a_line = "AVENDOR00000000010101240000000123"
+    b_line = "B00123456789Test Item Description    123456001234010000010000500123      "
+    c_line = "CFRTFreight Charge                 000001234"
+    a, b, c = _split_invoice_records([a_line, b_line, c_line])
+    assert a == a_line
+    assert b == [b_line]
+    assert c == c_line
+
+    # B records are accumulated in order.
+    a, b, c = _split_invoice_records(
+        [b_line, a_line, b_line, c_line, b_line]
+    )
+    assert a == a_line
+    assert b == [b_line, b_line, b_line]
+    assert c == c_line
+
+    # C record is the LAST 'C'-leading line, not the first.
+    a, b, c = _split_invoice_records(
+        [c_line, b_line, c_line]
+    )
+    assert a is None
+    assert b == [b_line]
+    assert c == c_line  # the second C line wins
+
+    # A record is the LAST 'A'-leading line (current behavior).
+    a, b, c = _split_invoice_records([a_line, a_line, b_line])
+    assert a == a_line  # second A line wins
+    assert b == [b_line]
+    assert c is None
+
+    # Empty input.
+    a, b, c = _split_invoice_records([])
+    assert a is None
+    assert b == []
+    assert c is None

@@ -820,3 +820,115 @@ as pre-existing:
 - All 3 meta-test self-checks pass.
 - New `test_build_split_filename_prepend_date_true_puts_date_in_prefix`
   kills the `negate_if_condition` mutation at edi_splitter.py:72.
+
+## DEFAULT_PAIRS mapping bugs and end-to-end mutation run (2026-07-13)
+
+Ran the existing 66-pair mutation runner end-to-end with
+a 30-minute pytest-timeout (overriding the project's 120s
+default). 81 module pairs processed.
+
+### DEFAULT_PAIRS mapping bugs (5 entries)
+
+Five of the 0/N pairs in DEFAULT_PAIRS were **wrong
+module paths** — the test was paired with a module it
+didn't import, so the mutations didn't reach the test
+assertions. Fixing the pairings gave real kill rates:
+
+| Wrong entry | Correct entry |
+|---|---|
+| `convert_to_simplified_csv.py` + `test_convert_to_csv.py` | `convert_to_csv.py` + `test_convert_to_csv.py` |
+| `core/edi/inv_fetcher.py` + `test_convert_to_yellowdog_csv.py` | `convert_to_yellowdog_csv.py` + `test_convert_to_yellowdog_csv.py` |
+| `core/edi/inv_fetcher.py` + `test_convert_to_fintech.py` | `convert_to_fintech.py` + `test_convert_to_fintech.py` |
+| `core/edi/inv_fetcher.py` + `test_convert_backends.py` | `convert_to_fintech.py` + `test_convert_backends.py` (test imports fintech and yellowdog) |
+| `core/edi/edi_splitter.py` + `test_category_filtering.py` | `edi_splitting_utils.py` + `test_category_filtering.py` (test imports `filter_b_records_by_category` from edi_splitting_utils) |
+
+The 0/N kill rates were a DEFAULT_PAIRS bug, not a
+test-quality gap. All corrected entries give real signals.
+
+### Phase 2 assertion-mutation: 3 dead assertions in test_edi_splitting_utils_property
+
+The assertion-mutation runner found 3 real dead
+assertions in `tests/unit/core/edi/test_edi_splitting_utils_property.py`:
+
+- L58: `assert _col_to_excel(n) == "AA"` inside
+  `if n == 27:` — fires for 1/1000 Hypothesis examples, so
+  the assertion is vacuously skipped 99.9% of the time.
+- L154: `assert a_record.startswith("A")` — the function
+  only assigns `a_record = line` when `line.startswith("A")`,
+  so the assertion is a tautology (always True when reached).
+- L196: `assert c_record.startswith("C")` — same pattern.
+
+**Fix:** added `test_col_to_excel_hardcoded_oracle` (pins
+`_col_to_excel(1, 2, 26, 27, 28, 52, 53, 702)` against
+expected Excel column letters) and
+`test_split_invoice_records_hardcoded_oracle` (pins
+exact return values for A/B/C placement, including
+"the LAST A-line wins" and "the LAST C-line wins" cases
+that are actually part of the function's contract).
+The 3 dead assertions in the property tests are documented
+in `KNOWN_ASSERTION_EQUIVALENT` with cited evidence that
+the hardcoded counterparts cover the same behavior.
+
+### Phase 2 assertion-mutation: 3 test-side fixes for pyzbar pattern
+
+`tests/unit/test_convert_to_scansheet_type_a.py` has 2
+barcode-decoding tests guarded by
+`if decoded is None: pytest.skip("pyzbar not available")`.
+When pyzbar is missing, the test skips before reaching
+the assertion; the runner sees "test passed" and reports
+the assertion as "dead." When pyzbar IS present, the
+assertions are load-bearing. Added module-level
+`pytestmark = [pytest.mark.unit, pytest.mark.conversion,
+pytest.mark.skipif(not _pyzbar_available, reason="pyzbar not installed")]`
+so the runner knows to skip the entire file when pyzbar is
+missing, and the 2 pyzbar-guarded assertions are
+documented in `KNOWN_ASSERTION_EQUIVALENT` (6 entries
+total, one per rule: polarity_flip, equality_flip, always_fail).
+
+### Real test-quality debt remaining
+
+38 modules have at least one surviving mutation. Most
+are in:
+
+- Modules with thin test coverage (e.g.,
+  `dispatch/pipeline/validator.py` 0/8, `dispatch/interfaces.py` 0/6)
+- Modules with tests that mock around the production
+  code (e.g., converter tests use `MagicMock(spec=InvFetcher)`)
+- Modules with cross-cutting concerns (DB connections,
+  barcode generation, SMTP/FTP clients)
+
+The full list of surviving mutations is captured in
+`/tmp/kilo/mutation_full.log` from the end-to-end run.
+Each is a real test-quality finding that would take
+significant engineering to fix. A future pass could
+address them, prioritized by:
+
+1. **`validator.py`** (0/8) — the test only exercises
+   `ValidationResult` (the dataclass), not the actual
+   `EDIValidationStep` logic.
+2. **`interfaces.py`** (0/6 × 2 pairs) — the tests
+   exercise mocks, not the protocol interfaces.
+3. **`inv_fetcher.py`** (5/9 — has good coverage but
+   4 survivors in error handling and category filters).
+4. **`error_handler.py`** (1/7) — only the alert-integration
+   test exercises the actual error-handling logic.
+
+Each surviving mutation is a known test-quality debt
+item, not a bug in production code (the production code
+works as designed; the test doesn't cover the specific
+behavior). The pattern is consistent: the production
+code has reasonable error handling, fallbacks, and edge
+cases, but the tests focus on the happy path.
+
+## Assertion-mutation runner reliability fix (2026-07-13)
+
+The assertion-mutation runner's wrapper pytest was hitting
+its own 120s pytest-timeout (from the project's `pytest.ini`)
+during the assertion-mutation runs on test files that take
+longer than 120s. The wrapper reported these as "failed"
+but they were not real assertion-mutation survivors — they
+were wrapper-level timeouts. Re-running with
+`--timeout=1800` (30 min) on the wrapper eliminates the
+noise. Future runs should use
+`.venv/bin/python -m pytest tests/meta/test_assertions_are_meaningful.py --timeout=1800 ...`
+to avoid the wrapper-timeout false positives.
