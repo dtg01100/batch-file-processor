@@ -8,7 +8,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.edi.edi_splitter import SplitConfig, _build_split_filename, _ensure_crlf
+from core.edi.edi_splitter import EDISplitter, SplitConfig, _build_split_filename, _ensure_crlf
 
 pytestmark = [pytest.mark.unit, pytest.mark.edi, pytest.mark.property]
 
@@ -280,3 +280,72 @@ def test_build_split_filename_prepend_date_true_puts_date_in_prefix() -> None:
     assert "12 Jan, 2026" not in prefix_no_date
     assert prefix_no_date == "A_"
     assert not output_path_no_date.startswith("/tmp/out/12 Jan, 2026")
+
+
+def test_split_edi_max_invoices_zero_means_no_limit() -> None:
+    """Regression test for gt_to_ge mutation at L264.
+
+    When max_invoices=0, the condition ``max_invoices > 0`` is False,
+    so the limit check is skipped and all invoices are processed.
+    """
+    class MockFS:
+        def __init__(self):
+            self.written = []
+            self.dirs = set()
+
+        def write_file(self, path, data):
+            self.written.append((path, data))
+
+        def write_file_text(self, path, data, encoding="utf-8"):
+            self.written.append((path, data.encode()))
+
+        def read_file(self, path):
+            return b""
+
+        def read_file_text(self, path, encoding="utf-8"):
+            return ""
+
+        def file_exists(self, path):
+            return False
+
+        def dir_exists(self, path):
+            return path in self.dirs
+
+        def mkdir(self, path):
+            self.dirs.add(path)
+
+        def makedirs(self, path):
+            self.dirs.add(path)
+
+        def list_files(self, path):
+            return []
+
+        def copy_file(self, src, dst):
+            pass
+
+        def remove_file(self, path):
+            pass
+
+        def get_absolute_path(self, path):
+            return path
+
+    fs = MockFS()
+    splitter = EDISplitter(fs)
+    config = SplitConfig(output_directory="/tmp/out", prepend_date=False)
+    config.max_invoices = 0  # 0 means no limit
+
+    # 3 invoices
+    content = (
+        "AINVOICE1  00000101012026000000010000\r\n"
+        "B12345678901Item 1                     001234010000010000010000500123      \r\n"
+        "AINVOICE2  00000201012026000000020000\r\n"
+        "B12345678901Item 2                     001234010000010000010000500123      \r\n"
+        "AINVOICE3  00000301012026000000030000\r\n"
+        "B12345678901Item 3                     001234010000010000010000500123      \r\n"
+    )
+
+    result = splitter.split_edi(content, config)
+
+    # All 3 invoices should be processed
+    assert len(result.output_files) == 3
+    assert len(fs.written) == 3

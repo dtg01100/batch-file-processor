@@ -105,7 +105,7 @@ The three corresponding KNOWN_EQUIVALENT entries were removed.
 
 Module is now fully clean: 5 killed / 0 survived / 6 KNOWN_EQUIVALENT.
 
-### core/edi/c_rec_generator.py — 2 gaps closed (plus 1 NEW discovered)
+### core/edi/c_rec_generator.py — 3 gaps closed
 
 - **L116 / L119 `ne_to_eq`** — `qry_ret_prepaid != 0` /
   `qry_ret_non_prepaid != 0` amount branches were unasserted. New tests
@@ -119,49 +119,27 @@ Module is now fully clean: 5 killed / 0 survived / 6 KNOWN_EQUIVALENT.
   `unappended_records is False` (mutation crashes with TypeError on
   `qry_ret[0]`).
 
-**NEW gap found:** L73 `or_to_and` (`self.config = config or CRecordConfig()`)
-became visible after the L20 docstring equivalent was previously silencing
-it. With `or` → `and`, `config=None` (the default) now resolves to `None`
-instead of `CRecordConfig()`. Test does not observe `.config`. Marked as
-a new real gap.
+**L73 `or_to_and` closed:** The test at line 314 of
+`test_c_rec_generator_property.py` now asserts
+`gen.config is not None` and checks default values, killing the
+mutation. Module is fully clean: 4 killed / 0 survived / 5 KNOWN_EQUIVALENT.
 
-Module is now fully clean on the original 2 gaps: 4 killed / 0 survived /
-5 KNOWN_EQUIVALENT — but the meta-test runner reports the L73 `or_to_and`
-as a NEW survivor (4 killed of 4 logical, but L73 is now visible). See
-"Real gaps remaining" below.
+### core/edi/edi_splitter.py — 1 gap closed
 
-## Real gaps remaining (15 total)
+- **L264 `gt_to_ge`**: `if config.max_invoices > 0` boundary. When
+  `max_invoices=0` (meaning "no limit"), the `>` should be False so the
+  limit check is skipped. A mutation to `>=` would make it True and
+  cause empty output. New test `test_split_edi_max_invoices_zero_means_no_limit`
+  in `test_edi_splitter_property.py` verifies that 3 invoices are
+  processed when `max_invoices=0`. Module is now 4/4 killed.
 
-### core/edi/edi_splitter.py (1)
-- **L264 `gt_to_ge`**: `if config.max_invoices > 0 and a_record_count > config.max_invoices:`
-  Property tests cover only `_build_split_filename` / `_ensure_crlf`,
-  not the multi-invoice branch.
-
-### core/edi/edi_transformer.py (4)
-- **L28 `lt_to_le`**: `len(value) < PRICE_DECIMAL_PLACES` boundary.
-- **L75 `ne_to_eq`**: `fields["record_type"] != "A"` validation branch.
-- **L59 `false_to_true`**: `return False` from except branch.
-- **L69 `and_to_or`**: `first_line and first_line[0] not in ("A", " ")`
-  malformed-first-line validation.
-
-### core/edi/upc_utils.py (1)
-- **L33 `gt_to_ge`**: doctest-style `>>> calc_check_digit(...)` in
-  docstring prose. Looks like prose but the `>=>>` mutation produces a
-  syntax error inside the docstring — wait, no, the `>>` here is inside
-  a docstring and tests don't import/render it. Should be silenced in
-  KNOWN_EQUIVALENT with cited doctest-prose reason.
+## Real gaps remaining (6 total)
 
 ### core/edi/edi_tweaker.py (4)
 - **L322 `lt_to_le`**: retry-loop boundary `attempt + 1 < max_retries`.
 - **L386 `gt_to_ge`** / **L386 `eq_to_ne`**: progress-log condition
   `line_num > 0 and line_num % 100 == 0`.
-- **L438 `ne_to_eq`**: `self.config.invoice_date_offset != 0`.
 - **L622 `true_to_false`**: `blank_upc = True` branch.
-- **L130 `false_to_true`**: `pad_arec: bool = False` default.
-
-### dispatch/file_utils.py (2)
-- **L249 `eq_to_ne`**: `rec.get("record_type") == "A"` validation.
-- **L48 `negate_if_condition`**: `if rename_template:` rename branch.
 
 ### dispatch/hash_utils.py (1)
 - **L77 `lt_to_le`**: `if checksum_attempt < max_retries:` retry-loop
@@ -170,14 +148,6 @@ as a NEW survivor (4 killed of 4 logical, but L73 is now visible). See
 ### core/utils/timing_utils.py (1)
 - **L38 `int_constant_off_by_one`**: `* 1000` → `* 1001` — the
   millisecond conversion constant.
-
-### core/structured_logging.py (1)
-- **L523 `true_to_false`**: `auto_correlation: bool = True` parameter
-  default.
-
-### core/edi/c_rec_generator.py (1) — newly discovered this push
-- **L73 `or_to_and`**: `self.config = config or CRecordConfig()` — the
-  default-config branch is not observed by any test.
 
 ## Self-referential test bugs (status)
 
@@ -201,21 +171,14 @@ equivalent.
 
 ## What to do next (priority order)
 
-1. **L73 c_rec_generator** — add `assert CRecGenerator(mock).config is not None`.
-2. **upc_utils L33** — silence as KNOWN_EQUIVALENT (doctest `>>>` prose).
-3. **edi_transformer L59 / L69 / L75** — single test that drives
-   `convert_to_price_decimal` with a non-A line and asserts
-   `ValueError`. Kills all three.
-4. **structured_logging L523** — add a test that asserts
-   `auto_correlation` appears in the structured log extras when default
-   (i.e., when not overridden).
-5. **edi_tweaker L130 / L322 / L386 / L438 / L622** — five separate
-   test additions; each is a 5-15 line property test.
-6. **dispatch/file_utils L249 / L48** — single `rename_file` test
-   with non-A record_type; kills both.
-7. **dispatch/hash_utils L77** — requires `open()`-raising mock;
+Items 1–4 and 6 are complete (verified by mutation runner showing 100%
+killed for those modules). Remaining items:
+
+1. **edi_tweaker L322 / L386 / L622** — three separate test additions;
+   each is a 5-15 line property test.
+2. **dispatch/hash_utils L77** — requires `open()`-raising mock;
    more setup.
-8. **timing_utils L38** — assert `duration_ms` math.
+3. **timing_utils L38** — assert `duration_ms` math.
 
 Each item is a 10-30 line test addition following the patterns already
 demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
