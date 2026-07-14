@@ -293,6 +293,20 @@ class TestEDISplitter:
         # Should return empty result if over limit
         assert len(result.output_files) == 0
 
+    def test_split_edi_max_invoices_zero_means_no_limit(self, splitter, mock_filesystem, config):
+        """Test that max_invoices=0 means no limit (not zero invoices allowed)."""
+        content = (
+            "AVENDOR00000000010101240000000123\n"
+            "B00123456789Test Item Description    123456001234010000010000500123      \n"
+        ) * 3  # 3 invoices
+
+        config.max_invoices = 0  # 0 means no limit
+
+        result = splitter.split_edi(content, config)
+
+        # Should process all invoices when max_invoices=0 (no limit)
+        assert len(result.output_files) == 3
+
     def test_split_edi_with_filtering(self, splitter, mock_filesystem, config):
         """Test EDI splitting with category filtering."""
         content = (
