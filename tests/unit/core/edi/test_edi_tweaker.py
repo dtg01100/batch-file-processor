@@ -163,6 +163,25 @@ class TestEDITweaker:
             f"Expected 1 progress-log call at line 100, got {len(progress_calls)}"
         )
 
+    def test_apply_upc_calc_pads_non_numeric_upc(self, mock_query_runner):
+        """Regression test for true_to_false mutation at L622.
+
+        When ``int(fields['upc_number'])`` raises ValueError (non-numeric
+        UPC), the code sets ``blank_upc = True`` and pads the UPC with
+        ``upc_padding_pattern[:upc_target_length]`` (default: 11 spaces).
+        A mutation to ``blank_upc = False`` would skip padding and leave
+        the non-numeric UPC unchanged, or crash on a later int() call.
+        """
+        config = TweakerConfig()
+        t = EDITweaker(mock_query_runner, config)
+        fields = {"upc_number": "ABC123XYZ"}  # non-numeric -> ValueError
+
+        result = t._apply_upc_calc(fields)
+
+        # The non-numeric UPC must be replaced with the padding pattern
+        assert result["upc_number"] == "           "  # 11 spaces
+        assert result["upc_number"] != "ABC123XYZ"
+
     def test_tweak_force_txt_extension(self, tweaker, edi_file, tmp_path):
         output = str(tmp_path / "output")
         result = tweaker.tweak(
