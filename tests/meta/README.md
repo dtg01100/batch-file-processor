@@ -57,6 +57,17 @@ project-wide conventions respectively); the runner's value is in
 surfacing the remaining 4 rules. See
 `docs/meta-test-findings.md` for per-violation context.
 
+**Headline finding (2026-07-14, layer expansion):** 208 files scanned
+(unit + integration + qt, see ``_layers.py``). 16 entries in
+``KNOWN_HYGIENE_VIOLATIONS`` silence intentional exceptions
+(sentinel catches, optional-dep probes, polling-helper sleep calls).
+The runner reports **9 real findings across 6 files** in production
+test code; all are tracked in ``docs/meta-test-findings.md`.
+
+Re-validate the allowlist with::
+
+    python tests/meta/test_hygiene.py --no-skip-known-hygiene-violations
+
 ### `test_assertions_are_meaningful.py` (added 2026-07-13)
 
 An AST-based assertion-mutation runner. For every test file under
