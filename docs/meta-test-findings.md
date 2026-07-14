@@ -1176,3 +1176,21 @@ the mutation.
 Also added 4 KNOWN_EQUIVALENT entries for the 4 docstring/comment
 mutations (L45 default param, L83 has_errors = True in
 early-return path, L72 and L233 comments).
+
+## Test-quality debt fixes — round 6 (2026-07-13)
+
+### orchestrator.py: 2/9 → 3/6 killed (3 KNOWN_EQUIVALENT)
+
+Added TestOrchestratorFinalize (3 tests) targeting
+`_finalize_folder_result`:
+
+- L334 eq_to_ne: `result.success = result.files_failed == 0` —
+  test pins the success flag at the boundary (no failures →
+  True, failures → False, zero/zero → True).
+- The other 2 real survivors (L244 `success=True` default in
+  the "no files" early return, L184 `if progress_reporter
+  is not None:`) are hard to test in isolation.
+
+3 of the 6 remaining survivors are docstring/comment
+mutations (L4 'and', L381 'False', L249 '2') and are now
+KNOWN_EQUIVALENT.

@@ -130,6 +130,58 @@ class TestFolderResult:
         assert result.success is False
 
 
+class TestOrchestratorFinalize:
+    """Tests for _finalize_folder_result.
+
+    Regression: the orchestrator's _finalize_folder_result method
+    had L334 (eq_to_ne) surviving because no test exercised it.
+    The method sets ``result.success = result.files_failed == 0``
+    based on the count of failed files. A test that creates a
+    FolderResult with failures and then calls _finalize_folder_result
+    verifies the success flag is computed correctly.
+
+    See commit ea1ed275d/9d06c0130 in the meta-test history.
+    """
+
+    def _make_orchestrator(self):
+        from dispatch.orchestrator import DispatchOrchestrator
+        config = DispatchConfig()
+        return DispatchOrchestrator(config)
+
+    def test_finalize_sets_success_true_when_no_failures(self):
+        result = FolderResult(
+            folder_name="/data/input", alias="Input",
+            files_processed=10, files_failed=0,
+            errors=[], success=True,
+        )
+        # Set success=False to verify the finalize method resets it.
+        result.success = False
+        orch = self._make_orchestrator()
+        orch._finalize_folder_result(result)
+        assert result.success is True
+
+    def test_finalize_sets_success_false_when_failures(self):
+        result = FolderResult(
+            folder_name="/data/input", alias="Input",
+            files_processed=10, files_failed=2,
+            errors=["err1", "err2"], success=True,
+        )
+        orch = self._make_orchestrator()
+        orch._finalize_folder_result(result)
+        assert result.success is False
+
+    def test_finalize_with_zero_processed_zero_failed(self):
+        """Boundary: 0 files processed, 0 files failed → success."""
+        result = FolderResult(
+            folder_name="/data/input", alias="Input",
+            files_processed=0, files_failed=0,
+            errors=[], success=False,
+        )
+        orch = self._make_orchestrator()
+        orch._finalize_folder_result(result)
+        assert result.success is True
+
+
 class TestFileResult:
     """Tests for FileResult dataclass."""
 

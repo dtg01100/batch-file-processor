@@ -566,6 +566,15 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
       "function docstring 'Display name for the format, or the format_name' — prose"),
      ("dispatch/converters/registry.py", "int_constant_off_by_one", 9,
       "module docstring '2. No duplication' — count reference, mutation has no runtime effect"),
+     # ------------------------------------------------------------------
+     # dispatch/orchestrator.py (test: test_orchestrator.py)
+     # ------------------------------------------------------------------
+     ("dispatch/orchestrator.py", "and_to_or", 4,
+      "module docstring 'coordinating validation, conversion, and sending' — prose"),
+     ("dispatch/orchestrator.py", "false_to_true", 381,
+      "function docstring 'The updated FolderResult with success=False' — prose"),
+     ("dispatch/orchestrator.py", "int_constant_off_by_one", 249,
+      "comment 'Step 2: Initialize progress for this folder' — step count, mutation has no runtime effect"),
 ]
 
 
