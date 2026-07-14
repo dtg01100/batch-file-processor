@@ -87,7 +87,10 @@ def _iter_unit_test_files() -> list[Path]:
       - anything under tests/unit/scripts/ (helper scripts, not tests)
     """
     unit_dir = Path("tests/unit")
-    return sorted(p for p in unit_dir.rglob("test_*.py"))
+    return sorted(
+        p for p in unit_dir.rglob("test_*.py")
+        if not p.is_relative_to(unit_dir / "scripts")
+    )
 
 
 def _iter_meta_test_files() -> list[Path]:
@@ -105,13 +108,27 @@ def _iter_meta_test_files() -> list[Path]:
     return sorted(p for p in meta_dir.rglob("test_*.py"))
 
 
-# ---------------------------------------------------------------------------
-# ALL_LAYERS — the single source of truth for what the runners cover.
-#
-# Order matters: it's the order the runners report findings in, and the
-# order the test IDs use. Unit is first because it's the largest and
-# historically the most-tested layer.
-# ---------------------------------------------------------------------------
+def _iter_dispatch_test_files() -> list[Path]:
+    """test_*.py under tests/dispatch/.
+
+    These are acceptance/integration-style tests that exercise the dispatch
+    service tree end-to-end (customer_queries, customer_lookup_service,
+    uom_lookup_service, item_processing). They live outside tests/integration/
+    because they target the dispatch package directly, not the full pipeline.
+    """
+    dispatch_dir = Path("tests/dispatch")
+    return sorted(p for p in dispatch_dir.rglob("test_*.py"))
+
+
+def _iter_interface_test_files() -> list[Path]:
+    """test_*.py under tests/interface/.
+
+    Interface-layer tests (e.g. plugins/test_interfaces.py) live here.
+    Currently thin coverage: only plugins/test_interfaces.py.
+    """
+    interface_dir = Path("tests/interface")
+    return sorted(p for p in interface_dir.rglob("test_*.py"))
+
 
 ALL_LAYERS: list[Layer] = [
     Layer(
@@ -131,6 +148,25 @@ ALL_LAYERS: list[Layer] = [
         path=Path("tests/qt"),
         description="PyQt5 UI tests (single-threaded per AGENTS.md).",
         iter_files=lambda: _glob_test_files(Path("tests/qt")),
+    ),
+    Layer(
+        name="dispatch",
+        path=Path("tests/dispatch"),
+        description=(
+            "Dispatch-acceptance tests under tests/dispatch/ "
+            "(customer_queries, lookup services, item_processing). "
+            "Targets the dispatch package directly."
+        ),
+        iter_files=_iter_dispatch_test_files,
+    ),
+    Layer(
+        name="interface",
+        path=Path("tests/interface"),
+        description=(
+            "Interface-layer tests under tests/interface/ "
+            "(e.g. plugins/test_interfaces.py)."
+        ),
+        iter_files=_iter_interface_test_files,
     ),
     Layer(
         name="meta",
