@@ -175,7 +175,7 @@ class TestPluginBaseImplementsAllInterfaces:
 
     def test_concrete_plugin_is_compatible(self):
         """Test that concrete plugin is compatible by default."""
-        assert ConcreteTestPlugin.is_compatible() is True
+        assert ConcreteTestPlugin.is_compatible()
 
     def test_concrete_plugin_get_dependencies(self):
         """Test that concrete plugin returns empty dependencies by default."""
@@ -193,7 +193,7 @@ class TestPluginBaseDefaultMethods:
         """Test that validate_configuration returns success with no schema."""
         plugin = ConcreteTestPlugin()
         result = plugin.validate_configuration({})
-        assert result.success is True
+        assert result.success
         assert result.errors == []
 
     def test_validate_configuration_with_schema(self):
@@ -214,16 +214,16 @@ class TestPluginBaseDefaultMethods:
 
         plugin = PluginWithSchema()
         result = plugin.validate_configuration({"setting": "value"})
-        assert result.success is True
+        assert result.success
 
         result_fail = plugin.validate_configuration({})
-        assert result_fail.success is False
+        assert not result_fail.success
 
     def test_update_configuration_with_valid_config(self):
         """Test that update_configuration works with valid config."""
         plugin = ConcreteTestPlugin()
         result = plugin.update_configuration({})
-        assert result.success is True
+        assert result.success
 
     def test_get_default_configuration(self):
         """Test that get_default_configuration returns defaults."""
