@@ -8,7 +8,8 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from dispatch import feature_flags
+from dispatch import get_debug_mode, get_feature_flags, set_feature_flag
+from dispatch.feature_flags import get_strict_testing_mode
 
 pytestmark = [pytest.mark.unit, pytest.mark.property]
 
@@ -30,7 +31,7 @@ _RANDOM = st.text(
 def test_get_debug_mode_true_when_env_is_true(monkeypatch, value: str) -> None:
     """Case-insensitive 'true' -> True."""
     monkeypatch.setenv("DISPATCH_DEBUG_MODE", value)
-    assert feature_flags.get_debug_mode() is True
+    assert get_debug_mode() is True
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -38,7 +39,7 @@ def test_get_debug_mode_true_when_env_is_true(monkeypatch, value: str) -> None:
 def test_get_debug_mode_false_for_non_true(monkeypatch, value: str) -> None:
     """Any value other than case-insensitive 'true' -> False."""
     monkeypatch.setenv("DISPATCH_DEBUG_MODE", value)
-    assert feature_flags.get_debug_mode() is False
+    assert get_debug_mode() is False
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -47,7 +48,7 @@ def test_get_strict_testing_mode_true_when_env_is_true(
     monkeypatch, value: str
 ) -> None:
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
-    assert feature_flags.get_strict_testing_mode() is True
+    assert get_strict_testing_mode() is True
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -56,7 +57,7 @@ def test_get_strict_testing_mode_false_for_non_true(
     monkeypatch, value: str
 ) -> None:
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
-    assert feature_flags.get_strict_testing_mode() is False
+    assert get_strict_testing_mode() is False
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -64,7 +65,7 @@ def test_get_strict_testing_mode_false_for_non_true(
 def test_get_debug_mode_default_false_when_unset(monkeypatch, value: str) -> None:
     """When the env var is unset, the default is False."""
     monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
-    assert feature_flags.get_debug_mode() is False
+    assert get_debug_mode() is False
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
@@ -73,7 +74,7 @@ def test_set_feature_flag_true_sets_env_to_true(monkeypatch, name: str) -> None:
     """set_feature_flag(name, value=True) sets the env var to 'true'."""
     env_var = "DISPATCH_DEBUG_MODE" if name == "debug_mode" else "DISPATCH_STRICT_TESTING_MODE"
     monkeypatch.delenv(env_var, raising=False)
-    feature_flags.set_feature_flag(name, value=True)
+    set_feature_flag(name, value=True)
     import os
 
     assert os.environ[env_var].lower() == "true"
@@ -85,7 +86,7 @@ def test_set_feature_flag_false_sets_env_to_false(monkeypatch, name: str) -> Non
     """set_feature_flag(name, value=False) sets the env var to 'false'."""
     env_var = "DISPATCH_DEBUG_MODE" if name == "debug_mode" else "DISPATCH_STRICT_TESTING_MODE"
     monkeypatch.delenv(env_var, raising=False)
-    feature_flags.set_feature_flag(name, value=False)
+    set_feature_flag(name, value=False)
     import os
 
     assert os.environ[env_var].lower() == "false"
@@ -97,11 +98,11 @@ def test_set_feature_flag_round_trip(monkeypatch, name: str) -> None:
     """Setting a flag is observable via the corresponding getter."""
     monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
     monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
-    feature_flags.set_feature_flag(name, value=True)
-    flags = feature_flags.get_feature_flags()
+    set_feature_flag(name, value=True)
+    flags = get_feature_flags()
     assert flags[name] is True
-    feature_flags.set_feature_flag(name, value=False)
-    flags = feature_flags.get_feature_flags()
+    set_feature_flag(name, value=False)
+    flags = get_feature_flags()
     assert flags[name] is False
 
 
@@ -118,7 +119,7 @@ def test_set_feature_flag_round_trip(monkeypatch, name: str) -> None:
 def test_set_feature_flag_unknown_name_raises(name: str) -> None:
     """An unknown flag name raises ValueError and the message names the bad flag."""
     with pytest.raises(ValueError) as exc_info:
-        feature_flags.set_feature_flag(name, value=True)
+        set_feature_flag(name, value=True)
     # The error message must (a) name the bad flag and (b) list valid flags
     # so callers can self-correct without reading source.
     assert "Unknown feature flag" in str(exc_info.value)
@@ -131,6 +132,6 @@ def test_get_feature_flags_returns_both_keys(monkeypatch) -> None:
     """get_feature_flags always returns both known flag names."""
     monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
     monkeypatch.delenv("DISPATCH_STRICT_TESTING_MODE", raising=False)
-    flags = feature_flags.get_feature_flags()
+    flags = get_feature_flags()
     assert "debug_mode" in flags
     assert "strict_testing_mode" in flags

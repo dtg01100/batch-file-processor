@@ -17,7 +17,7 @@ def test_run_mock_automatic_creates_expected_artifacts(tmp_path: Path) -> None:
     assert result.database_path.exists()
     assert result.input_dir.exists()
     assert result.logs_dir.exists()
-    assert len(result.run_log_files) >= 1
+    assert len(result.run_log_files) > 0
 
     run_log_text = result.run_log_files[0].read_text(encoding="utf-8")
     assert (
