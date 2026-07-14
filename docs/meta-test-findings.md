@@ -151,45 +151,27 @@ mutation. Module is fully clean: 4 killed / 0 survived / 5 KNOWN_EQUIVALENT.
   to `<=` would allow a 4th attempt (which succeeds), failing the
   `pytest.raises(OSError)` assertion. Module is now 1/1 killed.
 
-## Real gaps remaining (4 total)
+### core/edi/edi_tweaker.py — 4 gaps closed
 
-### core/edi/edi_tweaker.py (4)
-- **L322 `lt_to_le`**: retry-loop boundary `attempt + 1 < max_retries`.
-- **L386 `gt_to_ge`** / **L386 `eq_to_ne`**: progress-log condition
-  `line_num > 0 and line_num % 100 == 0`.
-- **L622 `true_to_false`**: `blank_upc = True` branch.
-## Self-referential test bugs (status)
+- **L386 `gt_to_ge` / `eq_to_ne`**: `line_num > 0 and line_num % 100 == 0`
+  progress-log condition. New test processes 101 B records and patches
+  `StructuredLogger.log_debug`. Asserts exactly 1 progress call.
+  `gt_to_ge` → fires at line 0 (2 calls). `eq_to_ne` → fires at every
+  non-multiple (100 calls). Both fail.
+- **L622 `true_to_false`**: `blank_upc = True` branch. New test passes
+  a non-numeric UPC and asserts the result is padded (11 spaces).
+  A `false` mutation skips padding, leaving the non-numeric string.
+- **L322 `lt_to_le`**: `if attempt + 1 < max_retries:` retry boundary
+  in `_open_input_with_retry`. New test calls the helper on a missing
+  file and asserts OSError is raised (not RuntimeError). A `<=` mutation
+  retries on the 5th attempt, exhausting the loop and hitting the
+  unreachable `RuntimeError` fallback.
 
+Module is now 7/7 killed. **All 15 original gaps are closed.**
 
-The only self-referential test bug found (upc_utils) is now fixed. The
-pattern in other modules was checked and none have the same issue.
+## Real gaps remaining (0 total)
 
-## What the auditability contract guarantees
-
-Every entry in `KNOWN_EQUIVALENT` was added by:
-
-1. Reading the cited source line.
-2. Confirming the mutation lands in docstring prose, a doctest `>>>`,
-   a default argument the test overrides explicitly, a version
-   constant, or a comment.
-3. Confirming the test pair (the right-hand side of DEFAULT_PAIRS)
-   cannot observe the change via any assertion path.
-
-`--no-skip-known-equivalent` re-applies all silenced mutations. The
-runner will fail loud if any silenced mutation turns out NOT to be
-equivalent.
-
-## What to do next (priority order)
-
-Items 1–4, 6, timing_utils L38, and hash_utils L77 are complete.
-Remaining:
-
-1. **edi_tweaker L322 / L386 / L622** — three separate test additions;
-   each is a 5-15 line property test.
-
-Each item is a 10-30 line test addition following the patterns already
-demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
-`64fb8397e`).
+No surviving mutation targets.
 
 ## Test-hygiene meta-test findings (Phase 1, 2026-07-09)
 
@@ -197,17 +179,19 @@ demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
 every test file under `tests/unit/` for violations of the conventions
 documented in `tests/AGENTS.md` and the project root `AGENTS.md`. It
 runs in seconds and is safe to parallelize.
+## What to do next
 
-### Headline numbers (initial run)
+All 15 original gaps are closed. The mutation runner reports 0 survivors
+across the 8 modules in the original finding list.
 
-153 test files scanned. **19 real violations across 14 files.**
+Possible future work (not in scope for this push):
 
-| Rule | Count | Description |
-|---|---|---|
-| `bare_except_pass` | 14 | `except: pass` / `except Exception: pass` — silent error swallowing |
-| `missing_assert` | 1 | `def test_*` with no `assert` / `pytest.raises` / `pytest.warns` / `pytest.fail` |
-| `skip_no_reason` | 3 | `pytest.skip()` with no positional reason and no `reason=` kwarg |
-| `single_item_dispatch_root_import` | 1 | `from dispatch import X` (single name) — AGENTS.md convention |
+- **Full assertion sweep** — run the assertion-mutation runner across
+  all 208 test files (the in-process runner makes this tractable in
+  ~3-5 min serial). May surface findings in the remaining 200 files
+  not covered by the focused mutation sweep.
+- **Phase 3b consistency checks** — run the property-oracle runner
+  against the full test suite.
 | `bare_magicmock` | 0 | (clean — existing `conftest_magicmock_plugin` enforces) |
 | `sleep_call` | 0 | (clean — `patch("time.sleep")` is the project pattern) |
 | `unjustified_noqa` | 0 | (clean — every `# noqa` cites a reason) |
