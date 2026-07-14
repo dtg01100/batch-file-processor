@@ -130,6 +130,17 @@ def _iter_interface_test_files() -> list[Path]:
     return sorted(p for p in interface_dir.rglob("test_*.py"))
 
 
+def _iter_drift_test_files() -> list[Path]:
+    """test_no_drift.py under tests/fixtures/legacy_147/.
+
+    A single CI guard that detects drift between vendored 1.47 files
+    and their git source. Lives outside tests/unit/ because it is a
+    fixture-integrity check, not a behavioral test.
+    """
+    drift_dir = Path("tests/fixtures/legacy_147")
+    return sorted(p for p in drift_dir.glob("test_*.py"))
+
+
 ALL_LAYERS: list[Layer] = [
     Layer(
         name="unit",
@@ -167,6 +178,15 @@ ALL_LAYERS: list[Layer] = [
             "(e.g. plugins/test_interfaces.py)."
         ),
         iter_files=_iter_interface_test_files,
+    ),
+    Layer(
+        name="drift",
+        path=Path("tests/fixtures/legacy_147"),
+        description=(
+            "Drift guard: tests/fixtures/legacy_147/test_no_drift.py "
+            "verifies vendored 1.47 fixture files match git source."
+        ),
+        iter_files=_iter_drift_test_files,
     ),
     Layer(
         name="meta",
