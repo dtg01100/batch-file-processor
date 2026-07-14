@@ -71,7 +71,9 @@ class TestEstoreNullSafety:
             pytest.fail(
                 f"_initialize_output raised KeyError with missing estore params: {e}"
             )
-        except Exception:
-            # ValueError from missing DB settings (as400_username etc.) is expected;
-            # any other non-KeyError exception is also acceptable here.
+        except ValueError:
+            # ValueError from missing DB settings (as400_username etc.)
+            # is expected when estore params are absent. Other exception
+            # types are NOT swallowed — they propagate so the runner
+            # surfaces real bugs instead of silently passing.
             pass

@@ -150,7 +150,11 @@ def migrated_db_session(tmp_path_factory):
                             yield sqlite_wrapper.Database.connect(_MIGRATED_DB_CACHE)
                             return
                     db.close()
-                except Exception:
+                except sqlite3.DatabaseError:
+                    # Cached DB is corrupt (or the schema doesn't
+                    # match). Fall through to re-migrate from
+                    # LEGACY_DB_PATH. Narrow to DatabaseError so
+                    # unexpected errors propagate and surface bugs.
                     pass
 
             shutil.copy2(LEGACY_DB_PATH, dest)

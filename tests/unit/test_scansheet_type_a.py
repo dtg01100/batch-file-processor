@@ -189,7 +189,11 @@ def extract_sheet_data(xlsx_path: str) -> dict[str, Any]:
 
     except zipfile.BadZipFile:
         pass
-    except Exception:
+    except (KeyError, AttributeError, ET.ParseError, OSError):
+        # Best-effort extraction: any failure to parse a specific
+        # field leaves the result partial. The narrower exception
+        # list is intentional — unexpected errors propagate so
+        # the runner surfaces real bugs.
         pass
 
     return result

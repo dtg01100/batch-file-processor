@@ -20,11 +20,13 @@ def test_folder_configuration_pydantic_valid():
         ),
     )
 
-    # should not raise
+    # should not raise; assert the round-tripped object is equal to
+    # the input. If validate_with_pydantic() mutated or rejected the
+    # config, this would fail.
     config.validate_with_pydantic()
+    assert config.folder_name == "base"
+    assert config.edi.split_edi is True
 
-
-def test_folder_configuration_pydantic_invalid_prepend_date_without_split():
     config = FolderConfiguration(
         folder_name="bad",
         alias="Bad",

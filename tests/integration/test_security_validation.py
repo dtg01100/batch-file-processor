@@ -12,6 +12,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.security, pytest.mark.e2e]
 
+import sqlite3
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -335,8 +336,11 @@ class TestDatabaseSecurity:
 
                 # Clean up
                 db.folders_table.delete(id=last_folder["id"])
-            except Exception:
-                # Exception is acceptable - better to reject than execute
+            except sqlite3.IntegrityError:
+                # SQL rejection of the injection is the expected path
+                # (proves the value is treated as data, not executed).
+                # Other exception types are NOT swallowed — they
+                # propagate so the runner surfaces real bugs.
                 pass
 
         # Database should still be functional
