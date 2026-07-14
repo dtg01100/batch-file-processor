@@ -114,6 +114,15 @@ class TestEDIValidator:
         # Blank UPC is a minor error (warning), file is still valid
         assert is_valid is True
         assert any("Blank UPC" in w for w in warnings)
+        # Regression: a blank UPC (len 0 after strip) must NOT also be
+        # flagged as "Truncated UPC" — the two checks are independent.
+        # The mutation runner's ``lt_to_le`` at edi_validator.py:304
+        # (changing ``0 < len(stripped_upc) < 11`` to ``<= 11``) would
+        # erroneously fire "Truncated UPC" for blank UPCs because
+        # ``0 <= 0 < 11`` is True while ``0 < 0 < 11`` is False.
+        assert not any("Truncated UPC" in w for w in warnings), (
+            f"blank UPC must not trigger Truncated UPC warning, got {warnings}"
+        )
 
     def test_validate_missing_pricing(self):
         """Test validation detects missing pricing (70 char line)."""
@@ -472,3 +481,4 @@ class TestEDIValidatorEdgeCases:
 
         # Should handle unicode without error
         assert isinstance(is_valid, bool)
+

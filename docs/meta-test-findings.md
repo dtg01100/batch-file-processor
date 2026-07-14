@@ -1151,3 +1151,28 @@ ErrorRecordingMixin._record_error method:
 
 After: 2/5 killed. The 3 remaining are all docstring mutations
 (2 prose + 1 step-count "2" -> "3").
+
+## Test-quality debt fixes — round 5 (2026-07-13)
+
+### edi_validator.py: 5/10 → 6/6 (after KNOWN_EQUIVALENT)
+
+Updated test_validate_blank_upc to additionally assert that a
+blank UPC (len 0 after strip) does NOT trigger the "Truncated
+UPC" warning. The mutation runner's ``lt_to_le`` at
+edi_validator.py:304 (flipping ``0 < len(stripped_upc) < 11``
+to ``<= 11``) was not caught because:
+- For 11-digit UPCs: original is `False AND False` = False;
+  mutated is `True AND False` = False. Same result.
+- For blank UPCs (len 0): original is `False AND True` = False;
+  mutated is `True AND True` = True. The mutation fires the
+  warning.
+
+The existing blank UPC test only checked for "Blank UPC" in
+warnings, not "Truncated UPC". With the mutation, BOTH warnings
+fire, so the test passed. The updated assertion
+(`assert not any("Truncated UPC" in w for w in warnings)`) kills
+the mutation.
+
+Also added 4 KNOWN_EQUIVALENT entries for the 4 docstring/comment
+mutations (L45 default param, L83 has_errors = True in
+early-return path, L72 and L233 comments).

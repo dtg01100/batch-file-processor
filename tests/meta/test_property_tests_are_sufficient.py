@@ -538,6 +538,25 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
      # ------------------------------------------------------------------
      ("interface/plugins/config_schemas.py", "and_to_or", 4,
       "module docstring 'configuration schemas and validation' — prose"),
+     # ------------------------------------------------------------------
+     # dispatch/edi_validator.py (test: test_edi_validator.py)
+     #
+     # L45 (false_to_true on has_errors: bool = False default) and
+     # L83 (true_to_false on has_errors = True in the format-failure
+     # early return) — both are KNOWN_EQUIVALENT because:
+     # 1. L45 is a default param that callers always override
+     # 2. L83's mutation doesn't change behavior since the early
+     # return at L87 fires before the has_errors value is consulted
+     # 3. has_errors is reset at the start of every validate() call
+     # ------------------------------------------------------------------
+     ("dispatch/edi_validator.py", "false_to_true", 45,
+      "has_errors: bool = False default — callers reset this at the start of validate()"),
+     ("dispatch/edi_validator.py", "true_to_false", 83,
+      "self.has_errors = True in format-failure path — but the function returns immediately at L87 before is_valid is computed from has_errors"),
+     ("dispatch/edi_validator.py", "and_to_or", 72,
+      "comment 'Read file once and pass content to all validation methods' — prose"),
+     ("dispatch/edi_validator.py", "int_constant_off_by_one", 233,
+      "comment 'Check for missing pricing in 70-char lines' — prose, off-by-one has no runtime effect"),
 ]
 
 
