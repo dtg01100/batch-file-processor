@@ -340,7 +340,7 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, errors = validator.validate("/test/file.edi")
 
-        assert is_valid is True, "Non-numeric UPC should not be a fatal error"
+        assert is_valid, "Non-numeric UPC should not be a fatal error"
         assert validator.has_minor_errors is True
         assert any("Non-numeric UPC" in e for e in errors)
 

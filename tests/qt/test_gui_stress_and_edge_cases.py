@@ -197,7 +197,7 @@ class TestEditSettingsDialogStress:
             dialog._email_smtp_port.setText("587")
 
             result = dialog.validate()
-            assert result is False, f"Email '{email}' should be invalid"
+            assert not result, f"Email '{email}' should be invalid"
 
         # NOTE: These emails pass validation but are technically invalid
         # This documents potential gaps in email validation:
@@ -278,7 +278,7 @@ class TestEditSettingsDialogStress:
         dialog._backup_interval_spin.setValue(0)
         assert dialog._backup_interval_spin.value() == 1  # SpinBox enforces minimum
         result = dialog.validate()
-        assert result is True  # Valid because spinbox enforces minimum
+        assert result  # Valid because spinbox enforces minimum
 
         # Test maximum boundary - spinbox enforces max of 5000
         dialog._backup_interval_spin.setValue(5001)

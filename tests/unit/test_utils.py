@@ -1202,7 +1202,7 @@ class TestFilterEdiFileByCategory:
             str(input_file), str(output_file), upc_dict, "ALL", "include"
         )
 
-        assert result is False  # No filtering occurred
+        assert not result  # No filtering occurred
         assert output_file.read_text() == input_file.read_text()
 
     def test_filter_include_removes_non_matching(self, tmp_path):
@@ -1287,6 +1287,6 @@ class TestFilterEdiFileByCategory:
             str(input_file), str(output_file), upc_dict, "GROCERY", "include"
         )
 
-        assert result is False  # No filtering
+        assert not result  # No filtering
         output = output_file.read_text()
         assert "C001" in output

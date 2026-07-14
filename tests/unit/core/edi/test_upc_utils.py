@@ -215,7 +215,7 @@ class TestValidateUpc:
         # calc_check_digit("041800000265") = 5, not 0
         # So this should be False
         result = validate_upc("0418000002650")
-        assert result is False  # The 13th digit '0' is not the check digit
+        assert not result  # The 13th digit '0' is not the check digit
 
         # Test with correct check digit at position 12
         result = validate_upc("041800000265")  # 12 digits, check digit is 5

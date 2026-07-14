@@ -77,7 +77,7 @@ def _send_via_ftp_mock(
     filepath = _make_file(tmp_path, filename, content)
     params = _default_ftp_params(folder)
     result = ftp_backend.do(params, {}, filepath, ftp_client=mock)
-    assert result is True, "ftp_backend.do() returned False"
+    assert result, "ftp_backend.do() returned False"
     return mock
 
 
@@ -88,7 +88,7 @@ def _send_via_smtp_mock(tmp_path, filename: str, content: bytes) -> MockSMTPClie
     params = _default_email_params()
     settings = _default_smtp_settings()
     result = email_backend.do(params, settings, filepath, smtp_client=mock)
-    assert result is True, "email_backend.do() returned False"
+    assert result, "email_backend.do() returned False"
     return mock
 
 

@@ -1498,7 +1498,7 @@ class TestEDINegativeValuesAndSpecialChars:
         edi_file.write_text(credit_memo_header + "\n")
 
         is_credit = detect_invoice_is_credit(str(edi_file))
-        assert is_credit is True, "Negative invoice total should be detected as credit"
+        assert is_credit, "Negative invoice total should be detected as credit"
 
     def test_detect_invoice_is_not_credit(self, tmp_path):
         """Test that regular invoices are not detected as credits."""
@@ -1510,7 +1510,7 @@ class TestEDINegativeValuesAndSpecialChars:
         edi_file.write_text(header + "\n")
 
         is_credit = detect_invoice_is_credit(str(edi_file))
-        assert is_credit is False, (
+        assert not is_credit, (
             "Positive invoice total should not be detected as credit"
         )
 

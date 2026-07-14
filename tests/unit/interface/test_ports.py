@@ -504,7 +504,7 @@ class TestNullUIServiceUseCases:
         result = service.ask_yes_no("Continue", "Continue processing?")
 
         # All operations complete without errors
-        assert result is False  # Default safe response
+        assert not result  # Default safe response
 
     def test_testing_environment_no_ui_interactions(self):
         """Test that NullUIService is suitable for testing."""

@@ -242,7 +242,7 @@ class TestBoolFromData:
 
         sig = inspect.signature(_bool_from_data)
         default = sig.parameters["default"].default
-        assert default is False, (
+        assert not default, (
             f"expected _bool_from_data default=False, got {default}"
         )
 
