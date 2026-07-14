@@ -227,9 +227,12 @@ def test_update_with_missing_columns_creates_columns():
 
 def test_insert_many_empty_no_error():
     db = connect("sqlite:///")
-    t = db["empties"]
-    # should simply return without raising
+    _create_table(db, "empty_test", {"x": "INTEGER"})
+    t = db["empty_test"]
+    # Inserting an empty list is a no-op; verify no rows are created.
     t.insert_many([])
+    assert t.count() == 0
+
 
 
 def test_query_raw_sql_and_commit():
