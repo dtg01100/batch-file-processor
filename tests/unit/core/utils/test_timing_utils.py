@@ -67,6 +67,24 @@ class TestContextTimer:
         assert timer.duration_ms >= 5  # 5ms tolerance
         assert timer.end_time >= timer.start_time
 
+    def test_duration_ms_uses_correct_millisecond_conversion(self):
+        """Regression test for int_constant_off_by_one mutation at L38.
+
+        The conversion constant must be exactly 1000, not 1001.
+        Asserts the ratio duration_ms / elapsed_seconds is ~1000
+        (within floating-point tolerance). A mutation to * 1001 would
+        produce a ratio of ~1001, detectable.
+        """
+        with context_timer() as timer:
+            _busy_wait(0.05)  # 50ms
+        elapsed = timer.end_time - timer.start_time
+        ratio = timer.duration_ms / elapsed
+        # Ratio should be ~1000 (ms per second). Tolerance of 0.5
+        # handles floating-point rounding but rejects 1001.
+        assert abs(ratio - 1000) < 0.5, (
+            f"duration_ms/seconds ratio {ratio} deviates from 1000"
+        )
+
     def test_measures_zero_duration_for_empty_block(self):
         with context_timer() as timer:
             pass

@@ -133,7 +133,16 @@ mutation. Module is fully clean: 4 killed / 0 survived / 5 KNOWN_EQUIVALENT.
   in `test_edi_splitter_property.py` verifies that 3 invoices are
   processed when `max_invoices=0`. Module is now 4/4 killed.
 
-## Real gaps remaining (6 total)
+### core/utils/timing_utils.py — 1 gap closed
+
+- **L38 `int_constant_off_by_one`**: `* 1000` → `* 1001` — the
+  millisecond conversion constant. New test
+  `test_duration_ms_uses_correct_millisecond_conversion` asserts
+  `duration_ms / elapsed ≈ 1000` (tolerance 0.5). A mutation to
+  `* 1001` produces ratio ≈ 1001, which fails the assertion.
+  Module is now 1/1 killed.
+
+## Real gaps remaining (5 total)
 
 ### core/edi/edi_tweaker.py (4)
 - **L322 `lt_to_le`**: retry-loop boundary `attempt + 1 < max_retries`.
@@ -145,11 +154,8 @@ mutation. Module is fully clean: 4 killed / 0 survived / 5 KNOWN_EQUIVALENT.
 - **L77 `lt_to_le`**: `if checksum_attempt < max_retries:` retry-loop
   boundary.
 
-### core/utils/timing_utils.py (1)
-- **L38 `int_constant_off_by_one`**: `* 1000` → `* 1001` — the
-  millisecond conversion constant.
-
 ## Self-referential test bugs (status)
+
 
 The only self-referential test bug found (upc_utils) is now fixed. The
 pattern in other modules was checked and none have the same issue.
@@ -171,14 +177,12 @@ equivalent.
 
 ## What to do next (priority order)
 
-Items 1–4 and 6 are complete (verified by mutation runner showing 100%
-killed for those modules). Remaining items:
+Items 1–4, 6, and timing_utils L38 are complete. Remaining items:
 
 1. **edi_tweaker L322 / L386 / L622** — three separate test additions;
    each is a 5-15 line property test.
 2. **dispatch/hash_utils L77** — requires `open()`-raising mock;
    more setup.
-3. **timing_utils L38** — assert `duration_ms` math.
 
 Each item is a 10-30 line test addition following the patterns already
 demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
