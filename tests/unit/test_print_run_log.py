@@ -183,7 +183,7 @@ class TestPrintRunLogWindows:
 
         # This would trigger the Windows branch in the actual code
         is_windows = platform.system() == "Windows"
-        assert is_windows is True
+        assert is_windows
 
     def test_raw_data_encoding_python3(self):
         """Test that data is encoded as bytes for Python 3."""
@@ -247,4 +247,4 @@ class TestPrintRunLogUnix:
 
         # This would trigger the Unix branch in the code
         is_unix = platform.system() != "Windows"
-        assert is_unix is True
+        assert is_unix

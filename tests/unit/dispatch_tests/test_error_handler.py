@@ -267,7 +267,7 @@ class TestErrorHandler:
 
         result = handler.write_error_log_file("/var/log/error.log", version="1.0.0")
 
-        assert result is True
+        assert result
         assert "/var/log/error.log" in mock_fs.files
         assert "1.0.0" in mock_fs.files["/var/log/error.log"]
         assert "Test error" in mock_fs.files["/var/log/error.log"]
@@ -281,7 +281,7 @@ class TestErrorHandler:
 
         result = handler.write_error_log_file("/var/log/subdir/error.log")
 
-        assert result is True
+        assert result
         assert "/var/log/subdir" in mock_fs.dirs
 
 

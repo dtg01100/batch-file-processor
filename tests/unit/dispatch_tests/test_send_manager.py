@@ -336,7 +336,7 @@ class TestSendManagerModuleBackends:
 
         result = manager._send_via_module("copy", "/test/file.edi", params, {})
 
-        assert result is False
+        assert not result
 
     def test_send_via_unknown_module(self):
         """Test sending via unknown module raises error."""

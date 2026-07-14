@@ -24,7 +24,7 @@ class TestSMTPService:
                 password="pass",
             )
 
-        assert success is True
+        assert success
         assert error is None
         smtp_cls.assert_called_once_with("smtp.example.com", 587, timeout=15)
         smtp_instance.ehlo.assert_called_once()
@@ -42,7 +42,7 @@ class TestSMTPService:
                 smtp_port="587",
             )
 
-        assert success is False
+        assert not success
         assert error is not None
         assert "Network is unreachable" in error
         assert "Errno 101" in error

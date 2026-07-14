@@ -665,7 +665,7 @@ class TestQtUIServiceComprehensive:
 
         result = service.ask_yes_no("Test Title", "Test Question")
 
-        assert result is True
+        assert result
         mock_question.assert_called_once()
 
     def test_ui_service_ask_yes_no_no(self, qtbot, monkeypatch):
@@ -677,7 +677,7 @@ class TestQtUIServiceComprehensive:
 
         result = service.ask_yes_no("Test Title", "Test Question")
 
-        assert result is False
+        assert not result
         mock_question.assert_called_once()
 
     def test_ui_service_ask_open_filename(self, qtbot, monkeypatch):
@@ -868,7 +868,7 @@ class TestDialogStateValidation:
 
         # Validation should fail
         result = dialog.validate()
-        assert result is False
+        assert not result
 
     def test_maintenance_dialog_operations(self, qtbot, temp_database):
         """Test maintenance dialog operations."""

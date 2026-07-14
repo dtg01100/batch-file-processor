@@ -848,13 +848,13 @@ class TestValidatorInterface:
 
         validator = MockValidator()
         is_valid, errors = validator.validate("/path/to/valid.txt")
-        assert is_valid is True
+        assert is_valid
         assert errors == []
 
         is_valid, errors, warnings = validator.validate_with_warnings(
             "/path/to/valid.txt"
         )
-        assert is_valid is True
+        assert is_valid
         assert errors == []
         assert warnings == []
 

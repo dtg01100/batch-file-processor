@@ -455,7 +455,7 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
         with patch("interface.qt.dialogs.edit_folders_dialog.QMessageBox.critical"):
             is_valid = dialog.validate()
 
-        assert is_valid is False
+        assert not is_valid
         assert focused["widget"] is dialog._fields["ftp_server_field"]
 
     def test_validation_error_text_is_grouped(self, qtbot):
@@ -479,7 +479,7 @@ class TestEditFoldersDialogWave3FocusAndAccessibility:
         ) as mock_critical:
             is_valid = dialog.validate()
 
-        assert is_valid is False
+        assert not is_valid
         message = mock_critical.call_args[0][2]
         assert "FTP:" in message
         assert "Email:" in message
