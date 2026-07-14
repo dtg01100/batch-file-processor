@@ -62,6 +62,7 @@ Usage::
 from __future__ import annotations
 
 import ast
+import sys
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -69,9 +70,13 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-TESTS_DIR = PROJECT_ROOT / "tests"
-UNIT_TESTS_DIR = TESTS_DIR / "unit"
-
+# Layer registry. The runner walks every scanned layer but the
+# enumerator filters to ``*_property.py`` files; see
+# ``_iter_property_test_files``.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _layers import (  # type: ignore[import-not-found]
+    iter_scanned_test_files,
+)
 
 # ---------------------------------------------------------------------------
 # Classification. Each test gets a list of AssertionClassification, one
@@ -97,7 +102,9 @@ class PropertyTestReport:
     line: int
     classifications: list[AssertionClassification] = field(default_factory=list)
 
-    def flagged(self, allowlist: list[tuple[str, str, int, str, str]] | None = None) -> bool:
+    def flagged(
+        self, allowlist: list[tuple[str, str, int, str, str]] | None = None
+    ) -> bool:
         """True if this test has a flagged pattern not silenced by the allowlist.
 
         ``allowlist`` is a list of (relpath, test_name, line, kind, reason)
@@ -190,9 +197,7 @@ def _build_local_var_defs(test: ast.FunctionDef) -> dict[str, ast.AST]:
     return defs
 
 
-def _resolve_local(
-    node: ast.AST, local_defs: dict[str, ast.AST]
-) -> ast.AST:
+def _resolve_local(node: ast.AST, local_defs: dict[str, ast.AST]) -> ast.AST:
     """If ``node`` is a local variable in ``local_defs``, return its RHS.
 
     Otherwise return ``node`` unchanged. Used by the classifier to
@@ -223,7 +228,7 @@ def _module_under_test(file: Path, test_name: str, imports: set[str]) -> str:
     """
     stripped = test_name
     if stripped.startswith("test_"):
-        stripped = stripped[len("test_"):]
+        stripped = stripped[len("test_") :]
     best = ""
     for imported in imports:
         if stripped.startswith(imported) and len(imported) > len(best):
@@ -384,7 +389,9 @@ def _input_uses_f_or_helpers(
                 if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name):
                     if sub.func.id == function_under_test:
                         uses_f_in_input = True
-                    elif sub.func.id.startswith("_") and not sub.func.id.startswith("__"):
+                    elif sub.func.id.startswith("_") and not sub.func.id.startswith(
+                        "__"
+                    ):
                         helper_calls.add(sub.func.id)
     return uses_f_in_input, sorted(helper_calls)
 
@@ -434,7 +441,19 @@ def _analyze_test(
 
 
 def _iter_property_test_files() -> list[Path]:
-    return sorted(p for p in UNIT_TESTS_DIR.rglob("*_property.py"))
+    """Return every ``*_property.py`` in the scanned layers.
+
+    Walks every layer except ``meta`` and ``convert_backends`` (see
+    ``_layers.py``) and filters to files whose name ends in
+    ``_property.py``. The filter keeps the runner scoped to property
+    tests; non-property test files are not part of this runner's
+    contract.
+    """
+    return sorted(
+        (PROJECT_ROOT / rel).resolve()
+        for rel, _layer in iter_scanned_test_files()
+        if rel.name.endswith("_property.py")
+    )
 
 
 def analyze_all() -> dict[Path, list[PropertyTestReport]]:
@@ -594,9 +613,7 @@ def test_property_oracle_classification(file: Path) -> None:
         ]
         for c in classifications:
             if c.kind in {"trivially_true", "self_referential_helper"}:
-                if _is_known_oracle_equivalent(
-                    file, test.name, c.line, c.kind
-                ):
+                if _is_known_oracle_equivalent(file, test.name, c.line, c.kind):
                     continue
                 flagged_lines.append(
                     f"  {test.name} ({function_under_test}): {c.format()}"

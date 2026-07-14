@@ -3,7 +3,7 @@
 This meta-test asks: are the assertions in each test file actually doing
 work, or would the test pass if every assertion were deleted / inverted?
 
-For every test file under ``tests/unit/``, the runner:
+For every test file in the project's scanned layers, the runner:
 
 1. Parses the file with ``ast`` and enumerates every ``Assert`` node.
 2. For each assertion, applies a set of targeted mutations using a
@@ -35,8 +35,10 @@ Subprocess isolation matters: we are deliberately breaking tests, so a
 ``SyntaxError`` or import-time error from a bad mutation must not
 poison the runner process.
 
-Pair list: every ``tests/unit/**/test_*.py`` file. 153 files at the
-time of writing. Wall time is dominated by subprocess startup and the
+Pair list: every test file in the project's scanned layers
+(``unit``, ``integration``, ``qt``) — see ``tests/meta/_layers.py``.
+At the time of writing: 208 files (153 unit + 41 integration + 14 qt).
+Wall time is dominated by subprocess startup and the
 number of assertions per file; each mutation spawns a fresh
 ``pytest -x`` against the file. Safe to run with ``-n auto`` (each
 (file, line, mutation_name) is independent).
@@ -68,11 +70,8 @@ Usage::
 from __future__ import annotations
 
 import ast
-import re
 import subprocess
 import sys
-import textwrap
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -80,10 +79,17 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TESTS_DIR = PROJECT_ROOT / "tests"
-UNIT_TESTS_DIR = TESTS_DIR / "unit"
 MUTANTS_DIR = PROJECT_ROOT / "mutants_assertions"
 PER_FILE_TIMEOUT = 30
 
+
+# Layer registry. Single source of truth for which test files the
+# runner walks. Defined in ``tests/meta/_layers.py`` so this runner
+# and the others share the same scope.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _layers import (  # type: ignore[import-not-found]
+    iter_scanned_test_files,
+)
 
 # ---------------------------------------------------------------------------
 # Mutation rules. Each rule is a function that takes an ast.Assert node
@@ -180,9 +186,7 @@ class EqualityFlip(MutationRule):
     def apply(self, node: ast.Assert) -> ast.AST | None:
         if not isinstance(node.test, ast.Compare):
             return None
-        new_compare = _flip_compare_op(
-            node.test, {ast.Eq: ast.NotEq}
-        )
+        new_compare = _flip_compare_op(node.test, {ast.Eq: ast.NotEq})
         if new_compare is None:
             return None
         new_assert = ast.Assert(test=new_compare)
@@ -197,9 +201,7 @@ class InequalityFlip(MutationRule):
     def apply(self, node: ast.Assert) -> ast.AST | None:
         if not isinstance(node.test, ast.Compare):
             return None
-        new_compare = _flip_compare_op(
-            node.test, {ast.NotEq: ast.Eq}
-        )
+        new_compare = _flip_compare_op(node.test, {ast.NotEq: ast.Eq})
         if new_compare is None:
             return None
         new_assert = ast.Assert(test=new_compare)
@@ -585,7 +587,13 @@ def _run_file(file: Path) -> FileReport:
 
 
 def _iter_unit_test_files() -> list[Path]:
-    return sorted(UNIT_TESTS_DIR.rglob("test_*.py"))
+    """Return absolute test file paths the runner should walk.
+
+    Walks every layer except ``meta`` and ``convert_backends`` (see
+    ``tests/meta/_layers.py``). The name is kept for compatibility
+    with the existing parametrize IDs.
+    """
+    return [(PROJECT_ROOT / rel).resolve() for rel, _layer in iter_scanned_test_files()]
 
 
 def _id_for(file: Path) -> str:
@@ -699,9 +707,7 @@ KNOWN_ASSERTION_EQUIVALENT: list[tuple[str, str, int, str]] = [
 ]
 
 
-def _is_known_equivalent(
-    file: Path, rule_name: str, line: int
-) -> bool:
+def _is_known_equivalent(file: Path, rule_name: str, line: int) -> bool:
     rel = str(file.relative_to(PROJECT_ROOT))
     for f, r, l, _reason in KNOWN_ASSERTION_EQUIVALENT:
         if f == rel and r == rule_name and l == line:
@@ -759,13 +765,10 @@ def test_assertions_are_meaningful(file: Path, rule_name: str) -> None:
     formatted_lines: list[str] = []
     for s in survivors:
         original = _source_line(source, s.line)
-        formatted_lines.append(
-            f"  {rel}:{s.line} [{s.rule_name}] assert: {original!r}"
-        )
+        formatted_lines.append(f"  {rel}:{s.line} [{s.rule_name}] assert: {original!r}")
     pytest.fail(
         f"{rel}: {len(survivors)} dead assertion(s) under rule "
-        f"{rule_name!r}.\n"
-        + "\n".join(formatted_lines)
+        f"{rule_name!r}.\n" + "\n".join(formatted_lines)
     )
 
 
@@ -795,9 +798,7 @@ def test_assertion_runner_self_check() -> None:
             if outcome.failure_message == "(rule not applicable to this assertion)":
                 continue
             if not outcome.killed:
-                survivors.append(
-                    f"  L{line} [{rule.name}]"
-                )
+                survivors.append(f"  L{line} [{rule.name}]")
     if survivors:
         pytest.fail(
             "tests/meta/test_assertions_are_meaningful.py has dead "
@@ -822,7 +823,7 @@ def main() -> int:
     for file in files:
         try:
             report = _run_file(file)
-        except Exception as exc:  # noqa: BLE001 - runner must not crash
+        except Exception as exc:
             print(
                 f"FATAL: {file.relative_to(PROJECT_ROOT)}: "
                 f"{type(exc).__name__}: {exc}",

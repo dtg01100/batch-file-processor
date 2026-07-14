@@ -1,12 +1,12 @@
 """Test-hygiene meta-test.
 
-This meta-test asks: do the test files in ``tests/unit/**`` conform to the
+This meta-test asks: do the test files in the project conform to the
 project's testing conventions documented in ``tests/AGENTS.md`` and the
 broader project ``AGENTS.md``?
 
-Unlike the mutation runner, this runner is purely static — no subprocess,
-no fixture setup, no module imports beyond ``ast`` and stdlib. It runs in
-seconds and is safe to run in parallel with ``-n auto``.
+The runner walks every test layer except ``meta`` (the runners
+themselves) and ``convert_backends`` (no test files yet) — see
+``tests/meta/_layers.py`` for the source of truth.
 
 Principles (carried forward from ``test_property_tests_are_sufficient.py``):
 
@@ -38,15 +38,16 @@ Checks implemented:
   a single name. AGENTS.md prefers ``from dispatch.module import X``;
   multiple items from ``dispatch`` root is acceptable.
 
-Out of scope for Phase 1:
+Coverage scope (current):
 
-- Test marker enforcement (146 of 153 unit files have no marker — the
-  project relies on directory conventions. This would generate massive
-  noise; defer to a separate check that validates directory
-  placement instead.)
-- Test framework imports (would require CWD-relative resolution).
-- Integration / Qt / convert_backends layers (Phase 1 is scoped to
-  ``tests/unit/**`` per plan approval).
+- Walks every layer except ``meta`` and ``convert_backends`` (see
+  ``tests/meta/_layers.py``). ``meta`` is excluded because each
+  runner's own self-check covers it; ``convert_backends`` has no
+  test files yet.
+- Test marker enforcement is out of scope: the project relies on
+  directory conventions (146 of 153 unit files have no marker), and
+  marker drift is not a bug. A future check that validates directory
+  placement is a separate concern.
 
 Usage::
 
@@ -79,9 +80,16 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TESTS_DIR = PROJECT_ROOT / "tests"
-UNIT_TESTS_DIR = TESTS_DIR / "unit"
-META_TESTS_DIR = TESTS_DIR / "meta"
 
+# Layer registry. The single source of truth for which directories under
+# ``tests/`` the meta-test runners walk. Defined in ``_layers.py`` so the
+# runners, the report, and the layer-aware CLI summary all stay in sync.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _layers import (  # type: ignore[import-not-found]
+    Layer,
+    iter_scanned_test_files,
+    scanned_layers,
+)
 
 # ---------------------------------------------------------------------------
 # Imports from the existing MagicMock plugin. Single source of truth for
@@ -122,10 +130,7 @@ class Violation:
 
     def format(self) -> str:
         rel = self.file.relative_to(PROJECT_ROOT)
-        return (
-            f"{rel}:{self.line} [{self.rule}] {self.message}\n"
-            f"    {self.source}"
-        )
+        return f"{rel}:{self.line} [{self.rule}] {self.message}\n" f"    {self.source}"
 
 
 # ---------------------------------------------------------------------------
@@ -133,12 +138,16 @@ class Violation:
 # ---------------------------------------------------------------------------
 
 
-def _iter_unit_test_files() -> list[Path]:
-    """Yield every test file under tests/unit/ that matches the project's
-    pytest discovery pattern. Excludes conftest.py, this meta-test, and
-    any other non-test modules under tests/.
+def _iter_scanned_test_paths() -> list[Path]:
+    """Return every absolute test file path the runner should walk.
+
+    Walks every layer except ``meta`` (the runners themselves) and
+    ``convert_backends`` (no test files yet). See ``_layers.py`` for
+    the source of truth and the rationale for each exclusion. Paths
+    are returned as absolute paths relative to ``PROJECT_ROOT`` so
+    callers can ``relative_to(PROJECT_ROOT)`` for display.
     """
-    return sorted(UNIT_TESTS_DIR.rglob("test_*.py"))
+    return [(PROJECT_ROOT / rel).resolve() for rel, _layer in iter_scanned_test_files()]
 
 
 # ---------------------------------------------------------------------------
@@ -363,12 +372,14 @@ def _check_skip_no_reason(file: Path) -> list[Violation]:
         has_reason_kwarg = any(kw.arg == "reason" for kw in node.keywords)
         has_positional_reason = (
             len(node.args) >= 1
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
+            and isinstance(node.args[0], (ast.Constant, ast.JoinedStr))
+            and (
+                not isinstance(node.args[0], ast.Constant)
+                or isinstance(node.args[0].value, str)
+            )
         )
         if has_reason_kwarg or has_positional_reason:
             continue
-
         if 1 <= node.lineno <= len(source_lines):
             src = source_lines[node.lineno - 1].strip()
         else:
@@ -436,13 +447,11 @@ def _check_bare_except_pass(file: Path) -> list[Violation]:
 
 
 # ---------------------------------------------------------------------------
-# Check: # noqa without justification.
+# Check:
 # ---------------------------------------------------------------------------
 
 NOQA_PATTERN = "# noqa"
-NOQA_JUSTIFIED_RE = re.compile(
-    r"#\s*noqa\s*:\s*[A-Z]+\d*\s*[—-]+\s*\S"
-)
+NOQA_JUSTIFIED_RE = re.compile(r"#\s*noqa\s*:\s*[A-Z]+\d*\s*[—-]+\s*\S")
 
 
 def _check_unjustified_noqa(file: Path) -> list[Violation]:
@@ -545,6 +554,186 @@ CHECKS: dict[str, callable] = {
 
 
 # ---------------------------------------------------------------------------
+# Auditability allowlist. An entry is
+# (relpath, rule, line, reason). It silences a violation that has been
+# manually verified to be intentional. Each entry cites the source line
+# as evidence. A typo fails closed: an unknown (file, rule, line) tuple
+# does NOT match the lookup and the violation is reported normally.
+# ---------------------------------------------------------------------------
+
+
+KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
+    # Sentinel-class catch in a try/finally test. The test deliberately
+    # raises an internal `_TestFailed` exception to verify that the
+    # `finally` block in `context_timer()` runs. Catching it with `pass`
+    # is the only way to inspect `timer.duration_ms` after the raise.
+    # The flag (silent error swallowing) is the test's mechanism, not
+    # a real bug.
+    (
+        "tests/unit/core/utils/test_timing_utils.py",
+        "bare_except_pass",
+        96,
+        "sentinel catch of internal `_TestFailed` in try/finally test; "
+        "the only way to assert the `finally` block ran",
+    ),
+    # Optional-dependency probe in build-configuration importability
+    # test. `__import__(module)` may raise ImportError when an optional
+    # dep is absent; we collect and report these as a separate list
+    # (the test only fails if errors is non-empty at the end). The
+    # `pass` is intentional: the goal is "can be imported", not
+    # "imports cleanly".
+    (
+        "tests/unit/test_build_configuration.py",
+        "bare_except_pass",
+        193,
+        "optional-dep ImportError probe in __import__(module); "
+        "collected and reported as `errors` list, not silently lost",
+    ),
+    (
+        "tests/unit/test_build_configuration.py",
+        "bare_except_pass",
+        195,
+        "same try/except as L193 — broad Exception catch is the "
+        "outer guard for the optional-dep import probe",
+    ),
+    # AST parse failure on `py_file` content. SyntaxError on a vendored
+    # .py file is not a test failure; the test continues and the AST
+    # walk skips the file. The `pass` is the documented behaviour.
+    (
+        "tests/unit/test_build_configuration.py",
+        "bare_except_pass",
+        298,
+        "SyntaxError swallow in AST parse of vendored .py file; "
+        "documented as 'not a test failure' in the loop comment",
+    ),
+    (
+        "tests/unit/test_build_configuration.py",
+        "bare_except_pass",
+        300,
+        "outer Exception catch in the same open()+ast.parse() block; "
+        "guards against OSError on unreadable vendored files",
+    ),
+    # Optional PIL/Pillow + zxing dep probe. The test runs only if
+    # pyzbar is available; if not, the helper returns None and the
+    # caller asserts a skip. ImportError is the documented
+    # opt-dep-missing case.
+    (
+        "tests/unit/test_convert_to_scansheet_type_a.py",
+        "bare_except_pass",
+        53,
+        "optional PIL/zxing ImportError probe; helper returns None "
+        "and the caller pytest.skip()s the test",
+    ),
+    # Optional yaml dep probe. The helper tries stdlib yaml first,
+    # then invoke's vendored yaml. Both ImportError catches are
+    # documented fallbacks; if both fail, the helper returns {}.
+    (
+        "tests/unit/test_golden_output.py",
+        "bare_except_pass",
+        315,
+        "stdlib yaml ImportError probe; falls through to invoke's "
+        "vendored yaml, then returns {} if both absent",
+    ),
+    (
+        "tests/unit/test_golden_output.py",
+        "bare_except_pass",
+        324,
+        "invoke.vendor.yaml ImportError probe; same fallback chain " "as L315",
+    ),
+    # Integration-layer sleep calls. All four are in explicit polling
+    # helpers whose entire job is "wait for a real external thing to
+    # become ready, with a deadline". The pattern is the same as the
+    # unit test_timing_utils.SlowBackend test fixture: bounded by a
+    # timeout, polling a real signal, fail-fast on deadline. The
+    # ``time.sleep`` is the only way to do this without busy-waiting
+    # the CPU; the helper docstring documents the contract.
+    (
+        "tests/integration/test_edi_sample_files.py",
+        "sleep_call",
+        95,
+        "_wait_for_server: bounded poll for a real socket connect, "
+        "raises RuntimeError on timeout; helper is the documented "
+        "pattern for waiting on real servers",
+    ),
+    (
+        "tests/integration/test_edi_sample_files.py",
+        "sleep_call",
+        108,
+        "_wait_for_messages: bounded poll for handler.messages to "
+        "reach count; same pattern as _wait_for_server",
+    ),
+    (
+        "tests/integration/test_ftp_smtp_live_servers.py",
+        "sleep_call",
+        70,
+        "_wait_for_server: bounded poll for a real socket connect; "
+        "same pattern as test_edi_sample_files L95",
+    ),
+    (
+        "tests/integration/test_ftp_smtp_live_servers.py",
+        "sleep_call",
+        83,
+        "_wait_for_messages: bounded poll for handler.messages; "
+        "same pattern as test_edi_sample_files L108",
+    ),
+    (
+        "tests/integration/test_log_email_comprehensive.py",
+        "sleep_call",
+        110,
+        "_wait_until: bounded poll with deadline; helper docstring "
+        "states it replaces fixed time.sleep() with a deterministic "
+        "deadline, so a faster handler doesn't slow the suite and a "
+        "slower one fails fast",
+    ),
+    (
+        "tests/integration/test_multi_folder_edge_cases.py",
+        "sleep_call",
+        93,
+        "SlowBackend.send: explicit artificial-delay class for "
+        "testing concurrency/race conditions; class name and "
+        "docstring declare the intent",
+    ),
+    (
+        "tests/integration/test_multi_folder_edge_cases.py",
+        "sleep_call",
+        420,
+        "same SlowBackend.send pattern as L93",
+    ),
+    (
+        "tests/integration/test_multi_folder_edge_cases.py",
+        "sleep_call",
+        430,
+        "same SlowBackend.send pattern as L93",
+    ),
+]
+
+
+def _is_known_hygiene_violation(file: Path, rule: str, line: int) -> bool:
+    """Return True if (file, rule, line) is in the allowlist.
+
+    ``file`` is matched by relative path string. The runner's caller
+    passes the path the check function was invoked with; this helper
+    resolves it the same way for the lookup.
+    """
+    try:
+        rel = str(file.relative_to(PROJECT_ROOT))
+    except ValueError:
+        rel = str(file)
+    for f, r, l, _reason in KNOWN_HYGIENE_VIOLATIONS:
+        if f == rel and r == rule and l == line:
+            return True
+    return False
+
+
+# Audit-mode flag. When True, KNOWN_HYGIENE_VIOLATIONS is NOT applied:
+# every violation is reported, so the allowlist is re-validated
+# end-to-end. Mirrors the ``--no-skip-known-equivalent`` flag on the
+# mutation runner (``test_property_tests_are_sufficient.py``) and
+# ``KNOWN_ASSERTION_EQUIVALENT`` on the assertion runner
+# (``test_assertions_are_meaningful.py``).
+_AUDIT_HYGIENE_VIOLATIONS: bool = "--no-skip-known-hygiene-violations" in sys.argv
+
+# ---------------------------------------------------------------------------
 # Pytest test functions.
 # ---------------------------------------------------------------------------
 
@@ -562,7 +751,7 @@ def _violation_ids(violations: Iterable[Violation]) -> list[str]:
     "file,check_name",
     [
         pytest.param(f, name, id=f"{_id_for(f)}::{name}")
-        for f in _iter_unit_test_files()
+        for f in _iter_scanned_test_paths()
         for name in CHECKS
     ],
 )
@@ -580,7 +769,7 @@ def test_hygiene_violations(file: Path, check_name: str) -> None:
     check_fn = CHECKS[check_name]
     try:
         violations = check_fn(file)
-    except Exception as exc:  # noqa: BLE001 - runner must not crash
+    except Exception as exc:
         violations = [
             Violation(
                 file=file,
@@ -589,6 +778,17 @@ def test_hygiene_violations(file: Path, check_name: str) -> None:
                 message=f"check raised: {type(exc).__name__}: {exc}",
                 source="",
             )
+        ]
+
+    # Filter allowlist. A violation matching an entry in
+    # KNOWN_HYGIENE_VIOLATIONS is intentional and not reported as a
+    # failure. The entry's reason is the audit trail; re-validate
+    # periodically with --no-skip-known-hygiene-violations.
+    if not _AUDIT_HYGIENE_VIOLATIONS:
+        violations = [
+            v
+            for v in violations
+            if not _is_known_hygiene_violation(v.file, v.rule, v.line)
         ]
 
     if not violations:
@@ -630,9 +830,7 @@ def test_hygiene_runner_self_check() -> None:
         return
 
     formatted = "\n".join(v.format() for v in self_violations)
-    pytest.fail(
-        "tests/meta/test_hygiene.py violates its own checks:\n" + formatted
-    )
+    pytest.fail("tests/meta/test_hygiene.py violates its own checks:\n" + formatted)
 
 
 # ---------------------------------------------------------------------------
@@ -645,15 +843,48 @@ def main() -> int:
     violation. Useful for CI integration or local auditing without
     pytest overhead.
     """
-    files = _iter_unit_test_files()
+    files = _iter_scanned_test_paths()
+    # Build a (path -> layer) map for the per-file layer attribution in
+    # the layer_summary line. Paths are absolute, so we use the layer's
+    # path (also absolute) for the lookup.
+    layer_by_path: dict[Path, Layer] = {}
+    for layer in scanned_layers():
+        for f in layer.iter_files():
+            layer_by_path[(PROJECT_ROOT / f).resolve()] = layer
     all_violations: list[Violation] = []
     for file in files:
         for check_fn in CHECKS.values():
             all_violations.extend(check_fn(file))
-
-    print(f"Scanned {len(files)} test file(s) under tests/unit/")
-    print(f"Found {len(all_violations)} violation(s) across "
-          f"{len({v.file for v in all_violations})} file(s).")
+    if not _AUDIT_HYGIENE_VIOLATIONS:
+        # Drop allowlisted violations (intentional exceptions, cited in
+        # KNOWN_HYGIENE_VIOLATIONS). Run with
+        # ``--no-skip-known-hygiene-violations`` to re-validate.
+        before = len(all_violations)
+        all_violations = [
+            v
+            for v in all_violations
+            if not _is_known_hygiene_violation(v.file, v.rule, v.line)
+        ]
+        suppressed = before - len(all_violations)
+    else:
+        suppressed = 0
+    by_layer: dict[str, int] = {}
+    for path in files:
+        layer = layer_by_path.get(path)
+        if layer is not None:
+            by_layer[layer.name] = by_layer.get(layer.name, 0) + 1
+    layer_summary = ", ".join(f"{name}={n}" for name, n in sorted(by_layer.items()))
+    print(f"Scanned {len(files)} test file(s) across layers: {layer_summary}")
+    if suppressed:
+        print(
+            f"Suppressed {suppressed} allowlisted violation(s) "
+            f"(see KNOWN_HYGIENE_VIOLATIONS; re-validate with "
+            f"--no-skip-known-hygiene-violations)."
+        )
+    print(
+        f"Found {len(all_violations)} violation(s) across "
+        f"{len({v.file for v in all_violations})} file(s)."
+    )
     by_rule: dict[str, int] = {}
     for v in all_violations:
         by_rule[v.rule] = by_rule.get(v.rule, 0) + 1
