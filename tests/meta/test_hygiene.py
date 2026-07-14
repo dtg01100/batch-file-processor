@@ -565,6 +565,13 @@ def _check_assert_is_bool_comparison(file: Path) -> list[Violation]:
         if len(test.comparators) != 1:
             continue
         rhs = test.comparators[0]
+        # Narrow: only flag bare `assert <name> is True/False`. Attribute
+        # access (``assert obj.flag is True``) and chained expressions
+        # document which property is being tested, so dropping ``is True``
+        # would lose signal. Bare ``Name`` is the pure tautology case
+        # where ``assert x`` is strictly clearer than ``assert x is True``.
+        if not isinstance(test.left, ast.Name):
+            continue
         if (
             not isinstance(rhs, ast.Constant)
             or rhs.value is not True
