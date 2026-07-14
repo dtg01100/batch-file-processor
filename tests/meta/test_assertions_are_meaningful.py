@@ -902,7 +902,14 @@ def _iter_unit_test_files() -> list[Path]:
 
 
 def _id_for(file: Path) -> str:
-    return str(file.relative_to(PROJECT_ROOT))
+    """Stable relative-path ID for pytest test parametrization.
+
+    Handles both absolute Paths (from _iter_unit_test_files) and
+    relative Paths (from iter_scanned_test_files).
+    """
+    if file.is_absolute():
+        return str(file.relative_to(PROJECT_ROOT))
+    return str(file)
 
 
 # ---------------------------------------------------------------------------

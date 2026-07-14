@@ -81,7 +81,7 @@ def test_update_and_count_and_delete():
     t.insert({"sku": "A1", "qty": 5})
     t.insert({"sku": "B2", "qty": 3})
 
-    assert t.count() >= 2
+    assert t.count() == 2
 
     # update qty for sku A1
     t.update({"sku": "A1", "qty": 10}, keys=["sku"])
@@ -98,7 +98,7 @@ def test_insert_many_and_upsert():
     _create_table(db, "bulk", {"k": "INTEGER", "v": "TEXT"})
     t = db["bulk"]
     t.insert_many([{"k": 1, "v": "one"}, {"k": 2, "v": "two"}])
-    assert t.count() >= 2
+    assert t.count() == 2
 
     # upsert should update matching row
     t.upsert({"k": 1, "v": "ONE"}, keys=["k"])
