@@ -487,8 +487,6 @@ def _check_bare_except_pass(file: Path) -> list[Violation]:
 
 # ---------------------------------------------------------------------------
 # Check:
-# ---------------------------------------------------------------------------
-
 NOQA_PATTERN = "# noqa"
 NOQA_JUSTIFIED_RE = re.compile(r"#\s*noqa\s*:\s*[A-Z]+\d*\s*[—-]+\s*\S")
 
@@ -506,12 +504,89 @@ def _check_unjustified_noqa(file: Path) -> list[Violation]:
                 file=file,
                 line=lineno,
                 rule="unjustified_noqa",
-                message=(
-                    "# noqa without justification — append ': CODE — reason' "
-                    "(em-dash or hyphen separator) to make the suppression "
-                    "auditable"
-                ),
+                message=NOQA_VIOLATION_MSG,
                 source=line.strip(),
+            )
+        )
+    return violations
+
+
+NOQA_VIOLATION_MSG = (
+    "# noqa without justification - append ': CODE - reason' "
+    "(em-dash or hyphen separator) to make the suppression auditable"
+)
+
+
+# ---------------------------------------------------------------------------
+# Check: assert X is True / assert X is False.
+# ---------------------------------------------------------------------------
+#
+# The ``assert X is True`` pattern is an idiomatic smell: the explicit
+# comparison against a bool literal provides no additional coverage over
+# ``assert X``, and the comparator ``is`` (identity) is technically
+# correct only if X is guaranteed to be exactly ``True`` or ``False``
+# (not just truthy). When X is a numpy scalar, pandas value, or any
+# custom truthy type, ``is True`` silently fails. The fix is one of:
+#
+#   assert X              # when only truthiness matters
+#   assert X == expected  # when equality matters
+#   assert X is True      # when X is guaranteed to be exactly True
+#                         # (rare; cite the invariant)
+#
+# The runner does NOT flag every ``is True`` — it flags those that
+# appear inside assert statements, where the smell combines with the
+# assert's tautological nature (``assert truthy is True`` is a
+# no-op for any truthy value).
+# ---------------------------------------------------------------------------
+
+
+def _check_assert_is_bool_comparison(file: Path) -> list[Violation]:
+    try:
+        source = file.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    violations: list[Violation] = []
+    source_lines = source.splitlines()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assert):
+            continue
+        test = node.test
+        # Detect: assert <expr> is True / is False
+        if not isinstance(test, ast.Compare):
+            continue
+        if len(test.ops) != 1:
+            continue
+        op = test.ops[0]
+        if not isinstance(op, ast.Is):
+            continue
+        if len(test.comparators) != 1:
+            continue
+        rhs = test.comparators[0]
+        if (
+            not isinstance(rhs, ast.Constant)
+            or rhs.value is not True
+            and rhs.value is not False
+        ):
+            continue
+        if 1 <= node.lineno <= len(source_lines):
+            src = source_lines[node.lineno - 1].strip()
+        else:
+            src = ""
+        literal = "True" if rhs.value is True else "False"
+        violations.append(
+            Violation(
+                file=file,
+                line=node.lineno,
+                rule="assert_is_bool_comparison",
+                message=(
+                    f"assert X is {literal} is redundant for truthy/falsy "
+                    f"values; prefer 'assert X' or 'assert X == {literal}' "
+                    f"if equality is the contract"
+                ),
+                source=src,
             )
         )
     return violations
@@ -589,6 +664,7 @@ CHECKS: dict[str, callable] = {
     "bare_except_pass": _check_bare_except_pass,
     "unjustified_noqa": _check_unjustified_noqa,
     "single_item_dispatch_root_import": _check_single_item_dispatch_root,
+    "assert_is_bool_comparison": _check_assert_is_bool_comparison,
 }
 
 
