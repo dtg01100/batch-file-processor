@@ -366,6 +366,29 @@ class TestEDITweakerFileHandles:
             assert result is not None
             result.close()
 
+    def test_open_input_with_retry_raises_oserror_after_5_attempts(self, mock_query_runner, tmp_path):
+        """Regression test for lt_to_le mutation at L322.
+
+        The retry boundary ``attempt + 1 < max_retries`` (max_retries=5)
+        determines whether the 5th attempt raises or retries. With
+        ``<``, the 5th attempt (attempt+1=5) raises OSError. With
+        ``<=``, the 5th attempt retries, the loop ends, and the
+        unreachable RuntimeError fires instead.
+        """
+        t = EDITweaker(mock_query_runner)
+        f = tmp_path / "missing.edi"
+        # File doesn't exist -> open() raises FileNotFoundError (OSError subclass)
+
+        with patch("time.sleep"), \
+             pytest.raises(OSError) as exc_info:
+            t._open_input_with_retry(str(f))
+
+        # Original: OSError propagated from the 5th attempt
+        # Mutated (<=): RuntimeError from the unreachable fallback
+        assert not isinstance(exc_info.value, RuntimeError), (
+            "Expected OSError, got RuntimeError — suggests <= mutation"
+        )
+
 
 class TestQueryRunnerAdapter:
     """Tests for _create_query_runner_adapter."""
