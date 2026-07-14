@@ -93,16 +93,28 @@ passes, so `delete` produced the same "all assertions are dead" signal
 regardless of load-bearing. `always_fail` already answers the same
 question with cleaner signal.
 
-For each mutation, the runner writes a temp copy of the test file to
-`mutants_assertions/`, runs `pytest -x` against it via subprocess, and
-checks that the test now FAILS. If the test still passes, the
-assertion was dead — a real bug of that shape would have slipped past.
+For each mutation, the runner loads the mutated source into a fresh
+in-process module namespace, walks every `test_*` function (top-level
+and class methods), and runs each. A mutation "kills" the test if any
+test function raises. **Default execution path is in-process** (see
+`tests/meta/test_assertions_are_meaningful.py`'s `_run_mutated_tests_inprocess`).
 
-**Cost:** 153 files × 9 rules × ~7s per subprocess (pytest startup
-dominates) ≈ 8-9 hours serial. With `-n auto` and a sensible
-subprocess limit, ~1-2 hours. Initial scoped runs on `core/utils/`
-(45 cases) completed in 295s serial. See
-`docs/meta-test-findings.md` for full results.
+**Cost (in-process, default):** 208 files × 9 rules × ~7ms per
+mutation = ~13s serial; ~3min for the full sweep. Measured 145x
+speedup over the legacy subprocess path (1.07s/mutation).
+**Cost (subprocess, opt-in via `TAM_USE_SUBPROCESS=1`):** same as
+prior, ~1.07s per mutation; ~33min for the full sweep on -n auto.
+
+The in-process runner provides minimal stand-ins for the standard
+pytest fixtures the project uses (`tmp_path`, `tmpdir`, `caplog`,
+`capfd`, `capsys`, `monkeypatch`). Tests that depend on other
+fixtures (`qtbot`, real `tmpdir` paths consumed by subprocess) may
+see a `TypeError` from the missing arg, which the runner treats as
+a kill. This is the safer wrong answer for a meta-test (a missing
+fixture always means the assertion is load-bearing, by definition).
+See `docs/meta-test-findings.md` for the parity verification
+(`test_structured_logging.py`: 82/82 kills match; integration
+`test_mock_automatic_run.py`: same finding reproduces).
 
 The runner is parametrized over `(file, rule_name)`. A
 `KNOWN_ASSERTION_EQUIVALENT` allowlist cites the source line as

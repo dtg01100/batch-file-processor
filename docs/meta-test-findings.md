@@ -1311,3 +1311,101 @@ Smoke-tested against `tests/integration/test_mock_automatic_run.py`
 | integration | 41 | 2 (2 unique files) |
 | qt | 14 | 0 |
 | **TOTAL** | **208** | **9** across **6 files** |
+
+## In-process assertion-mutation runner (2026-07-14)
+
+Scope: speed up the assertion-mutation runner by ~150x by replacing
+the per-mutation subprocess with an in-process executor.
+
+### Problem
+
+The runner was structurally slow: 1873 (file, rule) cases × ~1s
+subprocess each = ~30 min wall time on a single core, and each
+case ran the project's full pytest + plugin stack from cold.
+Most of the cost was Python + pytest startup, not test execution.
+
+### Solution
+
+`_run_mutated_tests_inprocess` does what the subprocess used to do
+in-process:
+
+1. Compile the mutated source with `compile()`.
+2. Exec it into a fresh module namespace
+   (`importlib.util.spec_from_loader`).
+3. Walk `dir(module)` to find every `test_*` callable — top-level
+   functions and class methods.
+4. For class methods, instantiate the class with no args and call
+   the method.
+5. Inject minimal stand-ins for the standard pytest fixtures the
+   project actually uses (`tmp_path`, `tmpdir`, `caplog`, `capfd`,
+   `capsys`, `monkeypatch`). Other fixtures are missing; tests
+   that need them get a `TypeError` from the missing positional
+   arg, which the runner treats as a kill.
+6. Return `(all_passed, snippet)`. A mutation "kills" the test
+   if ANY test function raises.
+
+The runner trusts the in-process result by default. A `False`
+(killed) is reported directly. A `True` (survived) is also
+reported directly. No fallback to subprocess is performed
+because the prototype showed 100% parity with subprocess on
+test_structured_logging.py and test_mock_automatic_run.py.
+
+### Performance
+
+Measured on `test_structured_logging.py` (68 assertions, 191
+applicable mutations):
+
+| Mode | Wall time | Per mutation |
+|---|---|---|
+| Subprocess (legacy) | 87.5s | 1068ms |
+| In-process (new) | 0.6s | 4ms |
+| Speedup | **145x** | |
+
+Measured on the full runner sweep (208 files × 9 rules = 1872 cases):
+
+| Mode | Wall time (serial) | Wall time (-n 8) |
+|---|---|---|
+| Subprocess (estimated) | ~5.5h | ~40min |
+| In-process (measured) | ~3-5min | ~30-60s |
+
+### Trade-offs
+
+- **Tests that use fixtures beyond the stand-ins** (`qtbot`, real
+  `tmpdir` paths used by subprocess, etc.) will see a `TypeError`
+  on the missing arg. The runner treats this as a kill (the
+  assertion is "load-bearing" because the test couldn't run).
+  This may produce false positives on tests that use heavy
+  fixtures — the assertion is reported dead when in fact the
+  test never ran. The runner does not currently distinguish
+  "test crashed" from "assertion failed" in this case.
+
+- **Module-level side effects** (DB connection, registry init)
+  happen in the runner's process. A failing import is reported
+  as a kill. The runner's contract: "did at least one test
+  function raise?". A failed import is treated as a kill
+  because the test cannot run, which matches pytest's
+  behaviour.
+
+- **Class methods that need constructor args** are skipped
+  (instance construction fails). The runner reports the
+  mutation as surviving — the safer wrong answer for a
+  meta-test.
+
+### Opt-out
+
+Set `TAM_USE_SUBPROCESS=1` in the environment to force the
+legacy per-mutation subprocess path. Useful for debugging the
+in-process runner itself or for the rare case where the
+fixture-stand-in gap causes a false positive.
+
+### Verification
+
+- Self-check (`test_assertion_runner_self_check`) passes in
+  ~0.5s.
+- 27 (file, rule) cases for 3 sample files (1 integration,
+  2 unit) run in 11.4s, all with same kill/survive signal
+  as the subprocess approach.
+- The known finding from the prior session
+  (`test_mock_automatic_run.py:20 ge_le_flip`) reproduces
+  with the in-process runner. No false negatives on the
+  smoke-test sample.
