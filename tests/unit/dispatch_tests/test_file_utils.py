@@ -222,7 +222,7 @@ class TestEnsureDirectoryExists:
         """Test with existing directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             result = ensure_directory_exists(tmpdir)
-            assert result is True
+            assert result
 
     def test_creates_new_directory(self):
         """Test creating new directory."""
@@ -231,7 +231,7 @@ class TestEnsureDirectoryExists:
 
             result = ensure_directory_exists(new_dir)
 
-            assert result is True
+            assert result
             assert os.path.isdir(new_dir)
 
     def test_creates_nested_directories(self):
@@ -241,7 +241,7 @@ class TestEnsureDirectoryExists:
 
             result = ensure_directory_exists(nested_dir)
 
-            assert result is True
+            assert result
             assert os.path.isdir(nested_dir)
 
 

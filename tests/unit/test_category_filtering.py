@@ -469,7 +469,7 @@ class TestFilterEDICategoryDropInvoices:
             filter_mode="include",
         )
 
-        assert result is True
+        assert result
 
         # Read output and verify only invoice 1 remains
         output_content = output_file.read_text()
@@ -508,7 +508,7 @@ class TestFilterEDICategoryDropInvoices:
             filter_mode="include",
         )
 
-        assert result is True
+        assert result
 
         # Read output and verify invoice is present with only 1 B record
         output_content = output_file.read_text()
@@ -546,7 +546,7 @@ class TestFilterEDICategoryDropInvoices:
         )
 
         # Should return False indicating no filtering was applied
-        assert result is False
+        assert not result
 
 
 class TestFilterBRecordsByCategoryEdgeCases:

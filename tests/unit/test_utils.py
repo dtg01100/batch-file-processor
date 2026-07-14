@@ -365,7 +365,7 @@ class TestApplyRetailUomTransform:
         )
         upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
         result = utils.apply_retail_uom_transform(record, upc_dict)
-        assert result is True
+        assert result
 
     def test_basic_transformation_modifies_unit_multiplier(self):
         """After transformation, unit_multiplier should be '000001'."""
@@ -415,7 +415,7 @@ class TestApplyRetailUomTransform:
         upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
         result = utils.apply_retail_uom_transform(record, upc_dict)
         # No match → blank UPC, but transformation still proceeds
-        assert result is True
+        assert result
         assert record["upc_number"] == "           "  # 11 spaces
 
     def test_zero_multiplier_returns_false(self):
@@ -428,21 +428,21 @@ class TestApplyRetailUomTransform:
         )
         upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
         result = utils.apply_retail_uom_transform(record, upc_dict)
-        assert result is False
+        assert not result
 
     def test_unparseable_vendor_item_returns_false(self):
         """Non-numeric vendor_item should cause the function to return False."""
         record = self._make_record(vendor_item="ABCDEF")
         upc_dict = {}
         result = utils.apply_retail_uom_transform(record, upc_dict)
-        assert result is False
+        assert not result
 
     def test_unparseable_unit_cost_returns_false(self):
         """Non-numeric unit_cost should cause the function to return False."""
         record = self._make_record(unit_cost="XXXXXX")
         upc_dict = {}
         result = utils.apply_retail_uom_transform(record, upc_dict)
-        assert result is False
+        assert not result
 
     def test_empty_upc_dict_uses_blank_upc(self):
         """Empty upc_dict should result in blank UPC but successful transform."""
@@ -453,7 +453,7 @@ class TestApplyRetailUomTransform:
             qty_of_units="00005",
         )
         result = utils.apply_retail_uom_transform(record, {})
-        assert result is True
+        assert result
         assert record["upc_number"] == "           "  # 11 spaces
 
 
@@ -475,7 +475,7 @@ class TestApplyUpcOverride:
         result = utils.apply_upc_override(
             record, upc_dict, override_level=1, category_filter="ALL"
         )
-        assert result is True
+        assert result
         assert record["upc_number"] == "12345678901"
 
     def test_override_with_specific_category_match(self):
@@ -485,7 +485,7 @@ class TestApplyUpcOverride:
         result = utils.apply_upc_override(
             record, upc_dict, override_level=1, category_filter="GROCERY,DAIRY"
         )
-        assert result is True
+        assert result
         assert record["upc_number"] == "12345678901"
 
     def test_override_with_category_filter_no_match(self):
@@ -495,7 +495,7 @@ class TestApplyUpcOverride:
         result = utils.apply_upc_override(
             record, upc_dict, override_level=1, category_filter="DAIRY,FROZEN"
         )
-        assert result is False
+        assert not result
         # upc_number should remain unchanged when no override applied
         assert record["upc_number"] == "00000000000"
 
@@ -506,7 +506,7 @@ class TestApplyUpcOverride:
         result = utils.apply_upc_override(
             record, upc_dict, override_level=1, category_filter="ALL"
         )
-        assert result is False
+        assert not result
         assert record["upc_number"] == ""
 
     def test_empty_upc_dict_returns_false(self):
@@ -515,7 +515,7 @@ class TestApplyUpcOverride:
         result = utils.apply_upc_override(
             record, {}, override_level=1, category_filter="ALL"
         )
-        assert result is False
+        assert not result
 
     def test_override_level_selects_correct_upc(self):
         """override_level should select the correct index from the lookup list."""
@@ -538,14 +538,14 @@ class TestApplyUpcOverride:
         record = self._make_record(vendor_item="000123")
         upc_dict = {123: ["GROCERY", "11111111111"]}
         result = utils.apply_upc_override(record, upc_dict)
-        assert result is True
+        assert result
 
     def test_non_numeric_vendor_item_returns_false(self):
         """Non-numeric vendor_item should be handled gracefully."""
         record = self._make_record(vendor_item="ABCDEF")
         upc_dict = {123: ["GROCERY", "12345678901"]}
         result = utils.apply_upc_override(record, upc_dict, category_filter="ALL")
-        assert result is False
+        assert not result
 
 
 # =============================================================================
@@ -927,7 +927,7 @@ class TestDetectInvoiceIsCredit:
         edi_file = tmp_path / "test.edi"
         edi_file.write_text("A12345678901234567010123000123456789\n")
         result = utils.detect_invoice_is_credit(str(edi_file))
-        assert result is False
+        assert not result
 
     def test_negative_invoice_total_returns_true(self, tmp_path):
         """Negative invoice total is a credit."""
@@ -939,14 +939,14 @@ class TestDetectInvoiceIsCredit:
         edi_file.write_text("A1234567890123456010123-001234567\n")
         result = utils.detect_invoice_is_credit(str(edi_file))
         # The function uses utils.dac_str_int_to_int which should detect negative
-        assert result is True
+        assert result
 
     def test_zero_invoice_total_returns_false(self, tmp_path):
         """Zero invoice total is not a credit."""
         edi_file = tmp_path / "test.edi"
         edi_file.write_text("A12345678901234567010123000000000000\n")
         result = utils.detect_invoice_is_credit(str(edi_file))
-        assert result is False
+        assert not result
 
     def test_raises_if_not_at_start_of_file(self, tmp_path):
         """Should raise if not starting at A record."""
@@ -1253,7 +1253,7 @@ class TestFilterEdiFileByCategory:
             str(input_file), str(output_file), upc_dict, "SOME_CAT", "include"
         )
 
-        assert result is False
+        assert not result
         assert output_file.read_text() == ""
 
     def test_invoice_dropped_when_all_b_records_filtered(self, tmp_path):

@@ -67,7 +67,7 @@ def test_detect_invoice_is_credit_returns_bool_for_a_record(tmp_path) -> None:
     edi_path = _write_edi(tmp_path, _POS_A_LINE)
     result = detect_invoice_is_credit(edi_path)
     assert isinstance(result, bool)
-    assert result is False
+    assert not result
 
 
 def test_detect_invoice_is_credit_raises_on_non_a_first_line(tmp_path) -> None:
@@ -100,7 +100,7 @@ def test_detect_invoice_is_credit_returns_false_on_missing_file(tmp_path) -> Non
     missing = tmp_path / "does-not-exist.edi"
     assert not missing.exists()  # sanity: test assumes tmp_path did not create it
     result = detect_invoice_is_credit(str(missing))
-    assert result is False
+    assert not result
 
 
 def test_detect_invoice_is_credit_blank_first_line_returns_false(tmp_path) -> None:
@@ -114,7 +114,7 @@ def test_detect_invoice_is_credit_blank_first_line_returns_false(tmp_path) -> No
     """
     edi_path = _write_edi(tmp_path, "   \n")
     result = detect_invoice_is_credit(edi_path)
-    assert result is False
+    assert not result
 
 
 @settings(max_examples=100)

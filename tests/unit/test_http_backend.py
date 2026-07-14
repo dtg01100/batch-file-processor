@@ -59,7 +59,7 @@ class TestHTTPBackendOperations:
             process_parameters, settings_dict, source_file, http_client=mock_client
         )
 
-        assert result is True
+        assert result
         assert len(mock_client.posts) > 0
 
     def test_http_backend_sends_file(
@@ -376,7 +376,7 @@ class TestHTTPBackendClass:
             source_file,
         )
 
-        assert result is True
+        assert result
 
     def test_http_backend_class_with_bearer_auth(self, source_file):
         """Test HTTPBackend with Bearer auth."""
@@ -398,7 +398,7 @@ class TestHTTPBackendClass:
             source_file,
         )
 
-        assert result is True
+        assert result
 
     def test_http_backend_class_cleanup(self):
         """Test HTTPBackend cleanup closes client."""

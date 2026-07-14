@@ -173,37 +173,37 @@ class TestValidateUpc:
         """Test validation of valid UPC."""
         # UPC 041800000265 is valid (from convert_upce_to_upca example)
         result = validate_upc("041800000265")
-        assert result is True
+        assert result
 
     def test_validate_upc_invalid_check_digit(self):
         """Test validation of UPC with wrong check digit."""
         result = validate_upc("041800000260")  # Wrong check digit
-        assert result is False
+        assert not result
 
     def test_validate_upc_too_short(self):
         """Test validation of too short UPC."""
         result = validate_upc("12345678901")  # 11 digits
-        assert result is False
+        assert not result
 
     def test_validate_upc_empty(self):
         """Test validation of empty string."""
         result = validate_upc("")
-        assert result is False
+        assert not result
 
     def test_validate_upc_non_numeric(self):
         """Test validation of non-numeric string."""
         result = validate_upc("ABCDEFGHIJKL")
-        assert result is False
+        assert not result
 
     def test_validate_upc_with_spaces(self):
         """Test validation of UPC with spaces."""
         result = validate_upc("04180000026 ")
-        assert result is False
+        assert not result
 
     def test_validate_upc_none(self):
         """Test validation of None."""
         result = validate_upc(None)  # type: ignore
-        assert result is False
+        assert not result
 
     def test_validate_upc_longer_valid(self):
         """Test validation of longer UPC (13+ digits)."""
@@ -219,7 +219,7 @@ class TestValidateUpc:
 
         # Test with correct check digit at position 12
         result = validate_upc("041800000265")  # 12 digits, check digit is 5
-        assert result is True
+        assert result
 
 
 class TestUpcIntegration:

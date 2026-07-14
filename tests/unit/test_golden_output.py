@@ -714,7 +714,7 @@ class TestCompareBytesFunction:
         data = b"Hello, World!"
         match, info = compare_bytes(data, data)
 
-        assert match is True
+        assert match
         assert info["match"] is True
 
     def test_different_single_byte(self):
@@ -724,7 +724,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is False
+        assert not match
         assert info["match"] is False
         assert info["expected_size"] == len(expected)
         assert info["actual_size"] == len(actual)
@@ -739,7 +739,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is False
+        assert not match
         assert info["truncated"] is True
         assert info["missing_at_end"] == len(expected) - len(actual)
 
@@ -750,7 +750,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is False
+        assert not match
         assert info["extra_at_end"] == len(actual) - len(expected)
 
     def test_case_difference(self):
@@ -760,7 +760,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is False
+        assert not match
         assert info["first_difference_index"] == 0
 
     def test_empty_vs_content(self):
@@ -770,7 +770,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is False
+        assert not match
         assert info["expected_size"] == 0
         assert info["actual_size"] == 5
 
@@ -781,7 +781,7 @@ class TestCompareBytesFunction:
 
         match, info = compare_bytes(expected, actual)
 
-        assert match is True
+        assert match
         assert info["match"] is True
 
 

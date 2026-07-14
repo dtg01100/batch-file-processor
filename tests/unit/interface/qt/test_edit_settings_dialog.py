@@ -531,7 +531,7 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Email Address Is A Required Field" in args[2]
@@ -558,7 +558,7 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Invalid Email Origin Address" in args[2]
@@ -580,7 +580,7 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is True
+            assert result
             mock_critical.assert_not_called()
         mock_smtp.test_connection.assert_not_called()
 
@@ -607,7 +607,7 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical"):
             result = dialog.validate()
-        assert result is False
+        assert not result
         assert dialog.focusWidget() is dialog._email_address
 
     def test_validation_uses_grouped_error_text(
@@ -632,7 +632,7 @@ class TestEditSettingsDialogValidation:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-        assert result is False
+        assert not result
         message_text = mock_critical.call_args[0][2]
         assert "Email Settings:" in message_text
         assert "- Email Address Is A Required Field" in message_text
@@ -701,7 +701,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "SMTP Server Address Is A Required Field" in args[2]
@@ -728,7 +728,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "SMTP Port Is A Required Field" in args[2]
@@ -755,7 +755,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Email Username Required If Password Is Set" in args[2]
@@ -782,7 +782,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Email Username Without Password Is Not Supported" in args[2]
@@ -809,7 +809,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Reporting Email Destination Is A Required Field" in args[2]
@@ -837,7 +837,7 @@ class TestEditSettingsDialogSMTPTesting:
 
         with patch.object(QMessageBox, "critical") as mock_critical:
             result = dialog.validate()
-            assert result is False
+            assert not result
             mock_critical.assert_called_once()
             args = mock_critical.call_args[0]
             assert "Invalid Email Destination Address" in args[2]
@@ -1151,14 +1151,14 @@ class TestEditSettingsDialogApply:
             QMessageBox, "question", return_value=QMessageBox.StandardButton.Cancel
         ):
             result = dialog.validate()
-            assert result is False
+            assert not result
 
         # Mock confirmation to return Ok
         with patch.object(
             QMessageBox, "question", return_value=QMessageBox.StandardButton.Ok
         ):
             result = dialog.validate()
-            assert result is True
+            assert result
 
 
 class TestEditSettingsDialogEdgeCases:

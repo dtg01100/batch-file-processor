@@ -186,7 +186,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         # Only the successful connect is recorded; 2 failed attempts are not.
         assert len(mock_client.connections) == 1
 
@@ -200,7 +200,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         # At least one successful login after the failure
         assert len(mock_client.logins) >= 1
 
@@ -215,7 +215,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         assert len(mock_client.files_sent) == 1
         sent_cmd, sent_data = mock_client.files_sent[0]
         assert (
@@ -246,7 +246,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         mock_sleep.assert_not_called()
 
     def test_ftp_sleep_called_on_retry(self, temporary_test_file):
@@ -260,7 +260,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         mock_sleep.assert_called_once_with(2)
 
     def test_ftp_file_content_preserved_after_retry(self, temporary_test_file):
@@ -273,7 +273,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
         assert len(mock_client.files_sent) == 1
         _, data = mock_client.files_sent[0]
         assert data == b"batch file processor test data\n"
@@ -294,8 +294,8 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client_b
             )
 
-        assert result_a is True
-        assert result_b is True
+        assert result_a
+        assert result_b
 
     def test_ftp_exactly_10_retries_succeeds(self, temporary_test_file):
         """Exactly 10 failures followed by success should still complete."""
@@ -308,7 +308,7 @@ class TestFTPRetryLogic:
                 FTP_PARAMS, {}, temporary_test_file, ftp_client=mock_client
             )
 
-        assert result is True
+        assert result
 
     def test_ftp_storbinary_called_with_filename(self, temporary_test_file):
         """storbinary command must contain the base filename."""
@@ -343,7 +343,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
         # First connect raised (not recorded), second connect succeeded (recorded)
         assert len(mock_client.connections) == 1
 
@@ -360,7 +360,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
         assert len(mock_client.emails_sent) == 1
 
     def test_email_gives_up_after_10_retries(self, temporary_test_file):
@@ -395,7 +395,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
         mock_sleep.assert_not_called()
 
     def test_email_sleep_exponential_backoff(self, temporary_test_file):
@@ -411,7 +411,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
         # counter is 1 after first failure → sleep(2**1) = sleep(2)
         mock_sleep.assert_called_once_with(2)
 
@@ -428,7 +428,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
         last = mock_client.emails_sent[-1]
         # The EmailMessage object carries the attachment
         msg = last["msg"]
@@ -448,7 +448,7 @@ class TestEmailRetryLogic:
                 params, EMAIL_SETTINGS, temporary_test_file, smtp_client=mock_client
             )
 
-        assert result is True
+        assert result
         msg = mock_client.emails_sent[-1]["msg"]
         assert msg["Subject"] == "My Fixed Subject"
 
@@ -466,7 +466,7 @@ class TestEmailRetryLogic:
                 smtp_client=mock_client,
             )
 
-        assert result is True
+        assert result
 
     def test_email_network_unreachable_fails_fast(self, temporary_test_file):
         """Errno 101 should fail immediately without retry backoff."""

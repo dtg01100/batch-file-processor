@@ -355,7 +355,7 @@ class TestFolderDataExtractor:
         """Test _get_bool returns False for missing field."""
         result = extractor._get_bool("nonexistent_field")
 
-        assert result is False
+        assert not result
 
     def test_get_bool_with_true_value(self, extractor):
         """Test _get_bool returns True for truthy value."""
@@ -365,7 +365,7 @@ class TestFolderDataExtractor:
         extractor.fields["test_field"] = mock_widget
         result = extractor._get_bool("test_field")
 
-        assert result is True
+        assert result
 
     def test_get_bool_with_false_value(self, extractor):
         """Test _get_bool returns False for falsy value."""
@@ -375,7 +375,7 @@ class TestFolderDataExtractor:
         extractor.fields["test_field"] = mock_widget
         result = extractor._get_bool("test_field")
 
-        assert result is False
+        assert not result
 
     def test_get_bool_with_string_false_value(self, extractor):
         """Test _get_bool returns False for string 'False'."""
@@ -385,7 +385,7 @@ class TestFolderDataExtractor:
         extractor.fields["test_field"] = mock_widget
         result = extractor._get_bool("test_field")
 
-        assert result is False
+        assert not result
 
     def test_get_value_with_missing_field(self, extractor):
         """Test _get_value returns empty string for missing field."""

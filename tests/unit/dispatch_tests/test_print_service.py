@@ -32,7 +32,7 @@ class TestMockPrintService:
 
         result = service.print_file(target)
 
-        assert result is True
+        assert result
         assert target in service.printed_files
         assert service.get_last_printed_file() == target
 
@@ -42,7 +42,7 @@ class TestMockPrintService:
 
         result = service.print_content("Test log content")
 
-        assert result is True
+        assert result
         assert "Test log content" in service.printed_content
         assert service.get_last_printed_content() == "Test log content"
 
@@ -52,7 +52,7 @@ class TestMockPrintService:
 
         result = service.print_file(str(tmp_path / "test.log"))
 
-        assert result is False
+        assert not result
         assert len(service.printed_files) == 0
 
     def test_print_content_can_fail(self):
@@ -61,7 +61,7 @@ class TestMockPrintService:
 
         result = service.print_content("Test content")
 
-        assert result is False
+        assert not result
         assert len(service.printed_content) == 0
 
     def test_is_available_always_true(self):
@@ -119,7 +119,7 @@ class TestNullPrintService:
 
         result = service.print_file(str(tmp_path / "test.log"))
 
-        assert result is True
+        assert result
 
     def test_print_content_returns_true(self):
         """Test that print_content always returns True."""
@@ -127,7 +127,7 @@ class TestNullPrintService:
 
         result = service.print_content("Test content")
 
-        assert result is True
+        assert result
 
     def test_is_available_returns_true(self):
         """Test that null service is always available."""
@@ -177,7 +177,7 @@ class TestWindowsPrintService:
                 # Force re-evaluation
                 service._win32print = None
                 result = service.is_available()
-                assert result is True
+                assert result
 
     def test_is_available_on_non_windows(self):
         """Test is_available returns False on non-Windows."""
@@ -186,7 +186,7 @@ class TestWindowsPrintService:
         with patch.object(sys, "platform", "linux"):
             service._win32print = None
             result = service.is_available()
-            assert result is False
+            assert not result
 
     def test_print_content_returns_false_without_win32print(self):
         """Test print_content returns False if win32print unavailable."""
@@ -195,14 +195,14 @@ class TestWindowsPrintService:
 
         with patch.object(sys, "platform", "win32"):
             result = service.print_content("Test content")
-            assert result is False
+            assert not result
 
     def test_print_file_returns_false_for_missing_file(self):
         """Test print_file returns False for missing file."""
         service = WindowsPrintService()
 
         result = service.print_file("/nonexistent/file.txt")
-        assert result is False
+        assert not result
 
 
 class TestUnixPrintService:
@@ -218,7 +218,7 @@ class TestUnixPrintService:
 
         with patch.object(sys, "platform", "linux"):
             result = service.is_available()
-            assert result is True
+            assert result
 
     def test_is_available_on_windows(self):
         """Test is_available returns False on Windows."""
@@ -226,7 +226,7 @@ class TestUnixPrintService:
 
         with patch.object(sys, "platform", "win32"):
             result = service.is_available()
-            assert result is False
+            assert not result
 
     def test_is_available_without_lpr(self):
         """Test is_available returns False if lpr doesn't exist."""
@@ -234,14 +234,14 @@ class TestUnixPrintService:
 
         with patch.object(sys, "platform", "linux"):
             result = service.is_available()
-            assert result is False
+            assert not result
 
     def test_print_file_returns_false_for_missing_file(self):
         """Test print_file returns False for missing file."""
         service = UnixPrintService()
 
         result = service.print_file("/nonexistent/file.txt")
-        assert result is False
+        assert not result
 
     def test_print_content_with_subprocess(self, tmp_path):
         """Test print_content uses subprocess for printing."""
@@ -254,7 +254,7 @@ class TestUnixPrintService:
         with patch.object(sys, "platform", "linux"):
             result = service.print_content("Test content")
             # Should succeed since we have a valid lpr
-            assert result is True
+            assert result
 
 
 class TestRunLogPrinter:
@@ -270,7 +270,7 @@ class TestRunLogPrinter:
 
         result = printer.print_run_log(str(log_file))
 
-        assert result is True
+        assert result
         assert str(log_file) in mock_service.printed_files
 
     def test_print_run_log_content(self):
@@ -280,7 +280,7 @@ class TestRunLogPrinter:
 
         result = printer.print_run_log_content("Log content here")
 
-        assert result is True
+        assert result
         assert "Log content here" in mock_service.printed_content
 
     def test_print_run_log_unavailable_service(self, tmp_path):
@@ -301,7 +301,7 @@ class TestRunLogPrinter:
 
         result = printer.print_run_log(str(tmp_path / "test.log"))
 
-        assert result is False
+        assert not result
 
     def test_print_run_log_content_unavailable_service(self):
         """Test printing content when service is unavailable."""
@@ -320,7 +320,7 @@ class TestRunLogPrinter:
 
         result = printer.print_run_log_content("Content")
 
-        assert result is False
+        assert not result
 
     def test_custom_line_width(self):
         """Test RunLogPrinter with custom line width."""

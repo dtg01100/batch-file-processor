@@ -990,7 +990,7 @@ class TestSendPipelineFile:
             str(input_folder / "test.edi"), folder
         )
 
-        assert result is True
+        assert result
         assert len(backend.received) == 1
 
     def test_send_pipeline_file_no_backends(self, input_folder: Path):
@@ -1004,7 +1004,7 @@ class TestSendPipelineFile:
             str(input_folder / "test.edi"), folder
         )
 
-        assert result is False
+        assert not result
 
     def test_send_pipeline_file_partial_failure(self, input_folder: Path):
         """Test sending with partial backend failure."""
@@ -1022,7 +1022,7 @@ class TestSendPipelineFile:
             str(input_folder / "test.edi"), folder
         )
 
-        assert result is False
+        assert not result
 
 
 # =============================================================================

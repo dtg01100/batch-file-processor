@@ -62,7 +62,7 @@ class TestMockEmailService:
             to=["recipient@example.com"], subject="Test Subject", body="Test Body"
         )
 
-        assert result is True
+        assert result
         assert len(service.sent_emails) == 1
 
         email = service.sent_emails[0]
@@ -81,7 +81,7 @@ class TestMockEmailService:
             attachments=[{"path": "/tmp/log.txt", "name": "log.txt"}],
         )
 
-        assert result is True
+        assert result
         assert len(service.sent_emails[0]["attachments"]) == 1
 
     def test_send_email_can_fail(self):
@@ -93,7 +93,7 @@ class TestMockEmailService:
             to=["recipient@example.com"], subject="Test", body="Body"
         )
 
-        assert result is False
+        assert not result
         assert len(service.sent_emails) == 0
 
     def test_reset_clears_emails(self):
@@ -220,7 +220,7 @@ class TestLogSender:
             subject="Test Log",
         )
 
-        assert result is True
+        assert result
         assert len(email_service.sent_emails) == 1
 
     def test_send_log_with_mock_ui(self):
@@ -346,7 +346,7 @@ class TestLogSender:
             log_path=str(log_file), recipients=["admin@example.com"], subject="Log File"
         )
 
-        assert result is True
+        assert result
         email = email_service.get_last_email()
         assert len(email["attachments"]) == 1
         assert email["attachments"][0]["name"] == "test.log"
@@ -381,7 +381,7 @@ class TestLogSender:
                 ],
             )
 
-            assert success is True
+            assert success
             server.send_message.assert_called_once()
 
             message_sent = server.send_message.call_args[0][0]

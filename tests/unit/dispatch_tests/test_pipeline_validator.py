@@ -154,7 +154,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             (True, "file.edi"), "current.edi"
         )
-        assert is_valid is True
+        assert is_valid
         assert payload == "file.edi"
 
     def test_tuple_of_length_two_invalid(self):
@@ -162,23 +162,23 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             (False, ["error1", "error2"]), "current.edi"
         )
-        assert is_valid is False
+        assert not is_valid
         assert payload == ["error1", "error2"]
 
     def test_tuple_with_truthy_first_element_coerces_to_bool(self):
         """A 2-tuple with non-bool first element is coerced to bool."""
         # 1 (truthy) -> True
         is_valid, payload = normalize_validation_output((1, "x"), "current.edi")
-        assert is_valid is True
+        assert is_valid
         # 0 (falsy) -> False
         is_valid, payload = normalize_validation_output((0, "x"), "current.edi")
-        assert is_valid is False
+        assert not is_valid
 
     def test_validation_result_valid_returns_current_file(self):
         """A ValidationResult with is_valid=True returns (True, current_file)."""
         result = ValidationResult(is_valid=True, errors=[], warnings=[])
         is_valid, payload = normalize_validation_output(result, "current.edi")
-        assert is_valid is True
+        assert is_valid
         assert payload == "current.edi"
 
     def test_validation_result_invalid_returns_errors(self):
@@ -187,7 +187,7 @@ class TestNormalizeValidationOutput:
             is_valid=False, errors=["bad record"], warnings=[]
         )
         is_valid, payload = normalize_validation_output(result, "current.edi")
-        assert is_valid is False
+        assert not is_valid
         assert payload == ["bad record"]
 
     def test_dict_with_valid_true_returns_file_path(self):
@@ -195,7 +195,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             {"valid": True, "file_path": "out.edi"}, "current.edi"
         )
-        assert is_valid is True
+        assert is_valid
         assert payload == "out.edi"
 
     def test_dict_with_valid_true_no_file_path_returns_current(self):
@@ -203,7 +203,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             {"valid": True}, "current.edi"
         )
-        assert is_valid is True
+        assert is_valid
         assert payload == "current.edi"
 
     def test_dict_with_valid_false_returns_errors(self):
@@ -211,7 +211,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             {"valid": False, "errors": ["e1"]}, "current.edi"
         )
-        assert is_valid is False
+        assert not is_valid
         assert payload == ["e1"]
 
     def test_dict_with_valid_false_no_errors_returns_empty_list(self):
@@ -219,25 +219,25 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             {"valid": False}, "current.edi"
         )
-        assert is_valid is False
+        assert not is_valid
         assert payload == []
 
     def test_dict_default_valid_is_true(self):
         """A dict without a valid key defaults to valid=True."""
         is_valid, payload = normalize_validation_output({}, "current.edi")
-        assert is_valid is True
+        assert is_valid
         assert payload == "current.edi"
 
     def test_bool_true_returns_current_file(self):
         """A plain bool True returns (True, current_file)."""
         is_valid, payload = normalize_validation_output(True, "current.edi")
-        assert is_valid is True
+        assert is_valid
         assert payload == "current.edi"
 
     def test_bool_false_returns_current_file(self):
         """A plain bool False returns (False, current_file)."""
         is_valid, payload = normalize_validation_output(False, "current.edi")
-        assert is_valid is False
+        assert not is_valid
         assert payload == "current.edi"
 
     def test_unexpected_type_returns_invalid_with_diagnostic(self):
@@ -245,7 +245,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             42, "current.edi"  # int is not a valid input type
         )
-        assert is_valid is False
+        assert not is_valid
         assert isinstance(payload, list)
         assert len(payload) == 1
         assert "unexpected type" in payload[0].lower()
@@ -256,7 +256,7 @@ class TestNormalizeValidationOutput:
         is_valid, payload = normalize_validation_output(
             "not a valid result", "current.edi"
         )
-        assert is_valid is False
+        assert not is_valid
         assert isinstance(payload, list)
         assert "str" in payload[0].lower()
 
@@ -599,7 +599,7 @@ class TestEDIValidationStep:
 
         result = step.should_block_processing({"report_edi_errors": True})
 
-        assert result is True
+        assert result
 
     def test_should_block_processing_with_report_disabled(self):
         """Test should_block_processing with report_edi_errors False."""
@@ -607,7 +607,7 @@ class TestEDIValidationStep:
 
         result = step.should_block_processing({"report_edi_errors": False})
 
-        assert result is False
+        assert not result
 
     def test_should_block_processing_default(self):
         """Test should_block_processing with missing key defaults to False."""
@@ -615,7 +615,7 @@ class TestEDIValidationStep:
 
         result = step.should_block_processing({})
 
-        assert result is False
+        assert not result
 
     def test_get_error_log_empty(self):
         """Test get_error_log() returns empty string initially."""
@@ -733,7 +733,7 @@ class TestEDIValidationStep:
             "/test/input.edi", {"filename_for_log": "input.edi"}
         )
 
-        assert is_valid is True
+        assert is_valid
         assert path_or_errors == "/test/input.edi"
 
     def test_execute_returns_false_and_errors_for_invalid_result(self):
@@ -743,7 +743,7 @@ class TestEDIValidationStep:
 
         is_valid, path_or_errors = step.execute("/test/input.edi", {})
 
-        assert is_valid is False
+        assert not is_valid
         assert path_or_errors == ["bad data"]
 
     def test_build_log_output_empty_when_no_errors_or_warnings(self):
@@ -869,7 +869,7 @@ class TestIntegration:
 
         result = mock_validator.should_block_processing(params)
 
-        assert result is True
+        assert result
 
     def test_multiple_files_validation(
         self, valid_edi_content, edi_content_with_minor_errors
@@ -913,7 +913,7 @@ class TestIntegration:
 
         processing_blocked = bool(not result.is_valid and should_block)
 
-        assert processing_blocked is True
+        assert processing_blocked
 
     def test_error_handler_context_preserved(self):
         """Test that error handler receives correct context."""

@@ -356,21 +356,21 @@ class TestValidatorInterface:
         """Test ValidatorInterface.validate() when valid."""
         mock = MockValidator(should_pass=True)
         is_valid, errors = mock.validate("/path/to/file.edi")
-        assert is_valid is True
+        assert is_valid
         assert errors == []
 
     def test_validator_validate_fails(self):
         """Test ValidatorInterface.validate() when invalid."""
         mock = MockValidator(should_pass=False)
         is_valid, errors = mock.validate("/path/to/file.edi")
-        assert is_valid is False
+        assert not is_valid
         assert "Validation failed" in errors
 
     def test_validator_validate_with_warnings_passes(self):
         """Test ValidatorInterface.validate_with_warnings() when valid."""
         mock = MockValidator(should_pass=True)
         is_valid, errors, warnings = mock.validate_with_warnings("/path/to/file.edi")
-        assert is_valid is True
+        assert is_valid
         assert errors == []
         assert warnings == []
 
@@ -378,7 +378,7 @@ class TestValidatorInterface:
         """Test ValidatorInterface.validate_with_warnings() when invalid."""
         mock = MockValidator(should_pass=False)
         is_valid, errors, _warnings = mock.validate_with_warnings("/path/to/file.edi")
-        assert is_valid is False
+        assert not is_valid
         assert "Validation failed" in errors
 
 

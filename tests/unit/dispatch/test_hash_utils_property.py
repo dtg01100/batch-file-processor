@@ -161,8 +161,8 @@ def test_check_file_against_processed_new_file_should_send(name: str, checksum: 
     """A checksum that is not in name_dict and not in resend_set has
     should_send == True (it is a new file to send)."""
     match, should_send = check_file_against_processed(name, checksum, {}, set())
-    assert match is False
-    assert should_send is True
+    assert not match
+    assert should_send
 
 
 @settings(max_examples=50)
@@ -181,8 +181,8 @@ def test_check_file_against_processed_known_not_resend_should_not_send(
     match, should_send = check_file_against_processed(
         name, checksum, {checksum: name}, set()
     )
-    assert match is True
-    assert should_send is False
+    assert match
+    assert not should_send
 
 
 def test_generate_file_hash_retries_then_succeeds() -> None:

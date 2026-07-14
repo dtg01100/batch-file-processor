@@ -463,7 +463,7 @@ class TestProcessedFilesTable:
             is not None
         )
 
-        assert is_processed is True
+        assert is_processed
 
         is_processed = (
             database_with_processed_files["processed_files"].find_one(
@@ -472,7 +472,7 @@ class TestProcessedFilesTable:
             is not None
         )
 
-        assert is_processed is False
+        assert not is_processed
 
 
 class TestDatabaseMigrations:
@@ -508,7 +508,7 @@ class TestDatabaseMigrations:
 
         needs_migration = current_version > old_version
 
-        assert needs_migration is True
+        assert needs_migration
 
     def test_migration_no_op_for_current_version(self, tmp_path):
         """Test that no migration is needed for current version."""
@@ -517,7 +517,7 @@ class TestDatabaseMigrations:
 
         needs_migration = current_version > old_version
 
-        assert needs_migration is False
+        assert not needs_migration
 
 
 class TestDatabaseIntegrity:

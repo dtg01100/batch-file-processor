@@ -198,7 +198,7 @@ class TestGraphicalProcessDirectories:
                 if not os.path.exists(folder_test["folder_name"]):
                     missing_folder = True
 
-            assert missing_folder is True
+            assert missing_folder
 
     def test_checks_for_active_folders(self):
         """Should check if there are active folders before processing."""
@@ -208,7 +208,7 @@ class TestGraphicalProcessDirectories:
         # Simulate the check in graphical_process_directories
         has_active = mock_folders_table.count(folder_is_active="True") > 0
 
-        assert has_active is False
+        assert not has_active
 
     def test_processes_when_folders_exist_and_active(self):
         """Should process when folders exist and are active."""
@@ -227,8 +227,8 @@ class TestGraphicalProcessDirectories:
 
             has_active = mock_folders_table.count(folder_is_active="True") > 0
 
-            assert missing_folder is False
-            assert has_active is True
+            assert not missing_folder
+            assert has_active
 
 
 class TestProcessDirectoriesLogic:
@@ -372,7 +372,7 @@ class TestErrorHandling:
                 except OSError:
                     log_folder_creation_error = True
 
-            assert log_folder_creation_error is True
+            assert log_folder_creation_error
 
     def test_automatic_mode_logs_errors_to_critical_log(self):
         """Automatic mode should log errors to critical_error.log."""
@@ -534,8 +534,8 @@ class TestPostProcessingRefresh:
         has_folders = mock_folders_table.count() > 0
         has_active = mock_folders_table.count(folder_is_active="True") > 0
 
-        assert has_folders is False
-        assert has_active is False
+        assert not has_folders
+        assert not has_active
 
         # Test with active folders
         mock_folders_table.count.return_value = 5
@@ -544,8 +544,8 @@ class TestPostProcessingRefresh:
         has_folders = mock_folders_table.count() > 0
         has_active = mock_folders_table.count(folder_is_active="True") > 0
 
-        assert has_folders is True
-        assert has_active is True
+        assert has_folders
+        assert has_active
 
 
 class TestBackendVariations:
@@ -656,7 +656,7 @@ class TestBackendVariations:
         )
 
         # The actual code shows error if no backend selected but folder is active
-        assert has_backend is False
+        assert not has_backend
 
     def test_folder_backend_count(self, multi_backend_config):
         """Should count number of enabled backends."""
@@ -688,7 +688,7 @@ class TestBackupIncrementLogic:
             and settings["backup_counter"] >= settings["backup_counter_maximum"]
         )
 
-        assert should_backup is True
+        assert should_backup
 
     def test_backup_not_triggered_below_threshold(self):
         """Backup should not trigger when counter is below maximum."""
@@ -703,7 +703,7 @@ class TestBackupIncrementLogic:
             and settings["backup_counter"] >= settings["backup_counter_maximum"]
         )
 
-        assert should_backup is False
+        assert not should_backup
 
     def test_backup_disabled_when_flag_off(self):
         """Backup should not trigger when interval backups are disabled."""
@@ -718,7 +718,7 @@ class TestBackupIncrementLogic:
             and settings["backup_counter"] >= settings["backup_counter_maximum"]
         )
 
-        assert should_backup is False
+        assert not should_backup
 
     def test_counter_reset_after_backup(self):
         """Counter should be reset to 0 after backup is triggered."""

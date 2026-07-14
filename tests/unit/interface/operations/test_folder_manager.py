@@ -184,7 +184,7 @@ class TestFolderManager:
 
         result = manager.disable_folder(1)
 
-        assert result is True
+        assert result
         mock_db.folder_repo.update.assert_called_once()
         call_args = mock_db.folder_repo.update.call_args
         assert call_args[0][0].to_dict()["folder_is_active"] is False
@@ -195,7 +195,7 @@ class TestFolderManager:
 
         result = manager.disable_folder(999)
 
-        assert result is False
+        assert not result
 
     def test_enable_folder(self, manager, mock_db):
         """Test enabling a folder."""
@@ -206,7 +206,7 @@ class TestFolderManager:
 
         result = manager.enable_folder(1)
 
-        assert result is True
+        assert result
         mock_db.folder_repo.update.assert_called_once()
         call_args = mock_db.folder_repo.update.call_args
         assert call_args[0][0].to_dict()["folder_is_active"] is True
@@ -217,7 +217,7 @@ class TestFolderManager:
 
         result = manager.enable_folder(999)
 
-        assert result is False
+        assert not result
 
     def test_delete_folder(self, manager, mock_db):
         """Test deleting a folder."""
@@ -225,7 +225,7 @@ class TestFolderManager:
 
         result = manager.delete_folder(1)
 
-        assert result is True
+        assert result
         mock_db.folder_repo.delete.assert_called_once_with(1)
 
     def test_delete_folder_not_found(self, manager, mock_db):
@@ -234,7 +234,7 @@ class TestFolderManager:
 
         result = manager.delete_folder(999)
 
-        assert result is False
+        assert not result
 
     def test_get_active_folders(self, manager, mock_db):
         """Test getting active folders."""
@@ -331,14 +331,14 @@ class TestFolderManager:
 
         result = manager.update_folder({"id": 1, "alias": "new"})
 
-        assert result is True
+        assert result
         mock_db.folder_repo.update.assert_called_once()
 
     def test_update_folder_no_id(self, manager, mock_db):
         """Test updating folder without ID fails."""
         result = manager.update_folder({"alias": "new"})
 
-        assert result is False
+        assert not result
 
     def test_update_folder_not_found(self, manager, mock_db):
         """Test updating non-existent folder."""
@@ -346,7 +346,7 @@ class TestFolderManager:
 
         result = manager.update_folder({"id": 999, "alias": "new"})
 
-        assert result is False
+        assert not result
 
     def test_update_folder_by_name(self, manager, mock_db):
         """Test updating folder by name."""
@@ -357,7 +357,7 @@ class TestFolderManager:
 
         result = manager.update_folder_by_name({"folder_name": "/path", "alias": "new"})
 
-        assert result is True
+        assert result
 
     def test_update_folder_by_name_not_found(self, manager, mock_db):
         """Test updating non-existent folder by name."""
@@ -367,7 +367,7 @@ class TestFolderManager:
             {"folder_name": "/nonexistent", "alias": "new"}
         )
 
-        assert result is False
+        assert not result
 
 
 class TestFolderManagerBatchOperations:
@@ -507,7 +507,7 @@ class TestFolderManagerCommunicationWiring:
 
         result = manager.delete_folder_with_related(21)
 
-        assert result is True
+        assert result
         mock_db.folder_repo.delete.assert_called_once_with(21)
         mock_db.processed_files_repo.clear_for_folder.assert_called_once_with(21)
 
@@ -519,7 +519,7 @@ class TestFolderManagerCommunicationWiring:
 
         result = manager.delete_folder_with_related(404)
 
-        assert result is False
+        assert not result
         mock_db.folder_repo.delete.assert_not_called()
         mock_db.processed_files_repo.clear_for_folder.assert_not_called()
 
@@ -535,7 +535,7 @@ class TestFolderManagerCommunicationWiring:
         payload = {"folder_name": "/tmp/original", "alias": "renamed"}
         result = manager.update_folder_by_name(payload)
 
-        assert result is True
+        assert result
         mock_db.folder_repo.update.assert_called_once()
         updated_config = mock_db.folder_repo.update.call_args[0][0]
         assert updated_config.id == 5

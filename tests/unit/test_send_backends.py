@@ -66,7 +66,7 @@ class TestFTPBackend:
             ftp_client=mock_client,
         )
 
-        assert result is True
+        assert result
         assert len(mock_client.connections) > 0
         assert len(mock_client.logins) > 0
 
@@ -299,7 +299,7 @@ class TestCopyBackend:
         params = {"copy_to_directory": sample_destination_dir}
         result = copy_backend.do(params, {}, sample_source_file)
 
-        assert result is True
+        assert result
         expected = os.path.join(
             sample_destination_dir, os.path.basename(sample_source_file)
         )
@@ -347,7 +347,7 @@ class TestHTTPBackend:
             http_client=mock_client,
         )
 
-        assert result is True
+        assert result
         assert len(mock_client.posts) > 0
         url, _data, _files, _headers = mock_client.posts[0]
         assert url == "https://example.com/upload"
@@ -496,7 +496,7 @@ class TestHTTPBackend:
             sample_file,
         )
 
-        assert result is True
+        assert result
         assert len(mock_client.posts) > 0
 
     def test_http_backend_class_create_client(self):

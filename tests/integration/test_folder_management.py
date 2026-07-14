@@ -199,7 +199,7 @@ class TestBasicFolderOperations:
         }
 
         result = folder_manager.update_folder(updated_data)
-        assert result is True
+        assert result
 
         # Verify update
         updated = db.folders_table.find_one(id=folder_id)
@@ -225,7 +225,7 @@ class TestBasicFolderOperations:
         }
 
         result = folder_manager.update_folder_by_name(updated_data)
-        assert result is True
+        assert result
 
         # Verify update
         updated = db.folders_table.find_one(folder_name=folder_path)
@@ -248,7 +248,7 @@ class TestBasicFolderOperations:
 
         # Delete folder
         result = folder_manager.delete_folder(folder_id)
-        assert result is True
+        assert result
 
         # Verify deletion
         folder_after = db.folders_table.find_one(id=folder_id)
@@ -339,7 +339,7 @@ class TestEnableDisableOperations:
 
         # Disable folder
         result = folder_manager.disable_folder(folder_id)
-        assert result is True
+        assert result
 
         # Verify disabled
         folder_after = db.folders_table.find_one(id=folder_id)
@@ -370,7 +370,7 @@ class TestEnableDisableOperations:
 
         # Enable folder
         result = folder_manager.enable_folder(folder_id)
-        assert result is True
+        assert result
 
         # Verify enabled
         folder_after = db.folders_table.find_one(id=folder_id)
@@ -385,7 +385,7 @@ class TestEnableDisableOperations:
         )
 
         result = folder_manager.disable_folder(99999)
-        assert result is False
+        assert not result
 
     def test_enable_nonexistent_folder(self, workspace):
         """Test enabling non-existent folder returns False."""
@@ -396,7 +396,7 @@ class TestEnableDisableOperations:
         )
 
         result = folder_manager.enable_folder(99999)
-        assert result is False
+        assert not result
 
 
 class TestUniqueAliasGeneration:
@@ -737,7 +737,7 @@ class TestDeleteWithRelated:
 
         # Delete folder with related data
         result = folder_manager.delete_folder_with_related(folder_id)
-        assert result is True
+        assert result
 
         # Verify folder is deleted
         folder_after = db.folders_table.find_one(id=folder_id)
@@ -777,7 +777,7 @@ class TestDeleteWithRelated:
 
         # Use basic delete
         result = folder_manager.delete_folder(folder_id)
-        assert result is True
+        assert result
 
         # Verify folder is deleted
         folder_after = db.folders_table.find_one(id=folder_id)
@@ -800,7 +800,7 @@ class TestEdgeCases:
         )
 
         result = folder_manager.update_folder({"folder_is_active": "False"})
-        assert result is False
+        assert not result
 
     def test_update_folder_nonexistent(self, workspace):
         """Test updating non-existent folder returns False."""
@@ -813,7 +813,7 @@ class TestEdgeCases:
         result = folder_manager.update_folder(
             {"id": 99999, "folder_is_active": "False"}
         )
-        assert result is False
+        assert not result
 
     def test_update_folder_by_name_without_name(self, workspace):
         """Test that updating by name without folder_name returns False."""
@@ -824,7 +824,7 @@ class TestEdgeCases:
         )
 
         result = folder_manager.update_folder_by_name({"folder_is_active": "False"})
-        assert result is False
+        assert not result
 
     def test_update_folder_by_name_nonexistent(self, workspace):
         """Test updating non-existent folder by name returns False."""
@@ -837,7 +837,7 @@ class TestEdgeCases:
         result = folder_manager.update_folder_by_name(
             {"folder_name": "/nonexistent/path", "folder_is_active": "False"}
         )
-        assert result is False
+        assert not result
 
     def test_get_folder_by_id_nonexistent(self, workspace):
         """Test getting non-existent folder by ID returns None."""
@@ -881,7 +881,7 @@ class TestEdgeCases:
         )
 
         result = folder_manager.delete_folder(99999)
-        assert result is False
+        assert not result
 
     def test_delete_with_related_nonexistent(self, workspace):
         """Test deleting non-existent folder with related returns False."""
@@ -892,7 +892,7 @@ class TestEdgeCases:
         )
 
         result = folder_manager.delete_folder_with_related(99999)
-        assert result is False
+        assert not result
 
 
 class TestDefaultsInheritance:
@@ -1229,7 +1229,7 @@ class TestComplexStateTransitions:
             folder_id = folder_ids[vendor_name]
             update_data = {"id": folder_id, **config}
             result = folder_manager.update_folder(update_data)
-            assert result is True
+            assert result
 
             # Verify update
             folder = db.folders_table.find_one(id=folder_id)
@@ -1256,7 +1256,7 @@ class TestComplexStateTransitions:
 
         for update in updates:
             result = folder_manager.update_folder(update)
-            assert result is True
+            assert result
 
             folder = db.folders_table.find_one(id=folder_id)
             for key, value in update.items():

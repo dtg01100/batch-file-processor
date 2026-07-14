@@ -331,7 +331,7 @@ class TestProcessedFilesTracker:
 
         result = tracker.mark_for_resend("resend.txt", 1)
 
-        assert result is True
+        assert result
         files = tracker.get_files_for_resend()
         assert len(files) == 1
         assert files[0].file_name == "resend.txt"
@@ -340,7 +340,7 @@ class TestProcessedFilesTracker:
         """Test marking non-existent file for resend."""
         result = tracker.mark_for_resend("nonexistent.txt", 999)
 
-        assert result is False
+        assert not result
 
     def test_clear_resend_flag(self, tracker):
         """Test clearing resend flag."""
@@ -349,7 +349,7 @@ class TestProcessedFilesTracker:
 
         result = tracker.clear_resend_flag("clear.txt", 1)
 
-        assert result is True
+        assert result
         files = tracker.get_files_for_resend()
         assert len(files) == 0
 
@@ -357,7 +357,7 @@ class TestProcessedFilesTracker:
         """Test clearing flag on non-existent file."""
         result = tracker.clear_resend_flag("nonexistent.txt", 999)
 
-        assert result is False
+        assert not result
 
     def test_get_files_for_resend_by_folder(self, tracker):
         """Test getting files for resend filtered by folder."""

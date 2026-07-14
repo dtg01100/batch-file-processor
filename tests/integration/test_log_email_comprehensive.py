@@ -129,7 +129,7 @@ class TestLogSenderWithMock:
             "Batch Run Log",
         )
 
-        assert result is True
+        assert result
         assert len(email_service.sent_emails) == 1
         email = email_service.sent_emails[0]
         assert email["to"] == ["recipient@test.com"]
@@ -144,7 +144,7 @@ class TestLogSenderWithMock:
 
         result = sender.send_log_file(log_path, ["dev@test.com"], "Log File")
 
-        assert result is True
+        assert result
         assert len(email_service.sent_emails) == 1
         email = email_service.sent_emails[0]
         assert len(email["attachments"]) == 1
@@ -195,7 +195,7 @@ class TestLogSenderWithMock:
 
         result = sender.send_log("Log content", ["a@b.com"], "Subject")
 
-        assert result is False
+        assert not result
         assert len(email_service.sent_emails) == 0
 
     def test_batch_logs_all_attached(self, tmp_path):
@@ -253,7 +253,7 @@ class TestLogSenderWithMock:
 
         result = sender.send_log_file(log_path, ["dev@test.com"], "NullUI Test")
 
-        assert result is True
+        assert result
 
     def test_log_sender_multiple_recipients(self):
         """send_log should pass all recipients to the email service."""
@@ -263,7 +263,7 @@ class TestLogSenderWithMock:
 
         result = sender.send_log("Content", recipients, "Multi-Recipient Test")
 
-        assert result is True
+        assert result
         assert email_service.sent_emails[0]["to"] == recipients
 
     def test_batch_logs_partial_missing_files(self, tmp_path):
@@ -290,7 +290,7 @@ class TestLogSenderWithMock:
 
         result = sender.send_log("Content", [], "Subject")
 
-        assert result is True
+        assert result
         assert email_service.sent_emails[0]["to"] == []
 
     def test_log_sender_empty_batch_no_email_sent(self, tmp_path):
@@ -348,7 +348,7 @@ class TestLogSenderWithRealSMTP:
             "Integration Test Subject",
         )
 
-        assert result is True
+        assert result
         # Deterministic wait: handler should record exactly one message.
         assert _wait_until(lambda: len(handler.messages) == 1), (
             f"handler.messages={handler.messages!r}"
@@ -377,7 +377,7 @@ class TestLogSenderWithRealSMTP:
 
         result = sender.send_log_file(log_path, ["recv@test.local"], "File Test")
 
-        assert result is True
+        assert result
         assert _wait_until(lambda: len(handler.messages) >= 1), (
             f"handler.messages={handler.messages!r}"
         )
@@ -401,7 +401,7 @@ class TestLogSenderWithRealSMTP:
             subject="Should Fail",
             body="body",
         )
-        assert result is False
+        assert not result
 
     @pytest.mark.skipif(not AIOSMTPD_AVAILABLE, reason="aiosmtpd not installed")
     def test_smtp_auth_failure_graceful(self, smtp_server):
@@ -425,7 +425,7 @@ class TestLogSenderWithRealSMTP:
             body="body",
         )
         # The server accepts the message
-        assert result is True
+        assert result
 
 
 # ---------------------------------------------------------------------------

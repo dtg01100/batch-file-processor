@@ -340,8 +340,8 @@ def test_should_include_b_record_include_mode_decision(
     upc_dict = {vendor_item: ["candy", "u1", "u2", "u3", "u4"]}
     in_list = _should_include_b_record(b, upc_dict, ["candy"], "include")
     not_in_list = _should_include_b_record(b, upc_dict, ["toys"], "include")
-    assert in_list is True
-    assert not_in_list is False
+    assert in_list
+    assert not not_in_list
 
 
 @settings(max_examples=30)
@@ -355,8 +355,8 @@ def test_should_include_b_record_exclude_mode_decision(
     upc_dict = {vendor_item: ["candy", "u1", "u2", "u3", "u4"]}
     in_list = _should_include_b_record(b, upc_dict, ["candy"], "exclude")
     not_in_list = _should_include_b_record(b, upc_dict, ["toys"], "exclude")
-    assert in_list is False
-    assert not_in_list is True
+    assert not in_list
+    assert not_in_list
 
 
 def test_invoice_total_zero_uses_inv_suffix_not_cr() -> None:

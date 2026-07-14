@@ -325,7 +325,7 @@ class TestRunValidation:
             file_basename="file.edi",
         )
 
-        assert continue_processing is True
+        assert continue_processing
         assert result.validated is True
 
     def test_validation_success(self):
@@ -353,7 +353,7 @@ class TestRunValidation:
             file_basename="file.edi",
         )
 
-        assert continue_processing is True
+        assert continue_processing
         assert result.validated is True
         assert current_file == "/path/to/validated.edi"
 
@@ -382,7 +382,7 @@ class TestRunValidation:
             file_basename="file.edi",
         )
 
-        assert continue_processing is False
+        assert not continue_processing
         assert result.validated is False
         assert "Validation error message" in result.errors[0]
 
@@ -411,7 +411,7 @@ class TestRunValidation:
             file_basename="file.edi",
         )
 
-        assert continue_processing is False
+        assert not continue_processing
         assert result.validated is False
 
 
@@ -441,7 +441,7 @@ class TestRunSplitting:
             _run_log=None,
         )
 
-        assert was_split is False
+        assert not was_split
 
     def test_splitting_no_output(self):
         """Test splitting with no output returns False."""
@@ -469,7 +469,7 @@ class TestRunSplitting:
             _run_log=None,
         )
 
-        assert was_split is False
+        assert not was_split
 
     def test_splitting_with_output(self):
         """Test splitting with output returns True."""
@@ -497,7 +497,7 @@ class TestRunSplitting:
             _run_log=None,
         )
 
-        assert was_split is True
+        assert was_split
 
 
 
@@ -695,7 +695,7 @@ class TestSendToBackends:
             settings={},
         )
 
-        assert result is False
+        assert not result
 
     def test_send_to_backends_success(self):
         """Test send_to_backends with success."""
@@ -713,7 +713,7 @@ class TestSendToBackends:
             settings={},
         )
 
-        assert result is True
+        assert result
 
 
 if __name__ == "__main__":

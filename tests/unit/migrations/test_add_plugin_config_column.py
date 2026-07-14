@@ -20,7 +20,7 @@ def test_apply_migration_success_executes_expected_sql():
 
     result = migration.apply_migration(db)
 
-    assert result is True
+    assert result
     assert db.queries == [
         "ALTER TABLE 'folders' ADD COLUMN 'plugin_config' TEXT",
         "UPDATE 'folders' SET plugin_config = '{}' WHERE plugin_config IS NULL",
@@ -48,7 +48,7 @@ def test_apply_migration_tolerates_runtime_errors_for_idempotency():
 
     result = migration.apply_migration(db)
 
-    assert result is True
+    assert result
     assert "ALTER TABLE 'administrative' ADD COLUMN 'plugin_config' TEXT" in db.queries
     assert (
         "UPDATE 'administrative' SET plugin_config = '{}' WHERE plugin_config IS NULL"
@@ -70,6 +70,6 @@ def test_apply_migration_returns_false_and_prints_on_unexpected_failure(capsys):
     result = migration.apply_migration(db)
     captured = capsys.readouterr()
 
-    assert result is False
+    assert not result
     assert "Migration failed:" in captured.out
     assert "unexpected failure" in captured.out

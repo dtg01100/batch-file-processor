@@ -117,7 +117,7 @@ class TestCopyBackendOperations:
                 process_parameters, settings_dict, source_file, file_ops=mock_ops
             )
 
-        assert result is True
+        assert result
 
     def test_copy_backend_creates_directory(self, temp_dir, source_file):
         """Test that copy_backend creates destination directory if it doesn't exist."""
@@ -127,7 +127,7 @@ class TestCopyBackendOperations:
         # Use real file operations for this test
         result = copy_backend.do(process_parameters, {}, source_file)
 
-        assert result is True
+        assert result
         assert new_dest.exists()
 
     def test_copy_backend_missing_file_raises(
@@ -194,7 +194,7 @@ class TestCopyBackendOperations:
                 process_parameters, settings_dict, source_file, file_ops=mock_ops
             )
 
-        assert result is True
+        assert result
         assert len(mock_ops.files_copied) > 0
 
     def test_copy_backend_class_usage(self, dest_dir, source_file):
@@ -206,7 +206,7 @@ class TestCopyBackendOperations:
 
         result = backend.send(process_parameters, settings_dict, source_file)
 
-        assert result is True
+        assert result
 
 
 class TestFTPBackendOperations:
@@ -253,7 +253,7 @@ class TestFTPBackendOperations:
             process_parameters, settings_dict, source_file, ftp_client=mock_client
         )
 
-        assert result is True
+        assert result
         assert len(mock_client.connections) > 0
         assert len(mock_client.logins) > 0
 
@@ -369,7 +369,7 @@ class TestEmailBackendOperations:
             process_parameters, settings, source_file, smtp_client=mock_client
         )
 
-        assert result is True
+        assert result
         assert mock_client.ehlo_calls > 0
 
     def test_email_backend_sends_message(
@@ -417,7 +417,7 @@ class TestEmailBackendOperations:
             process_parameters, settings, source_file, smtp_client=mock_client
         )
 
-        assert result is True
+        assert result
 
     def test_email_backend_empty_subject(self, source_file, settings):
         """Test email with empty subject line."""
@@ -434,7 +434,7 @@ class TestEmailBackendOperations:
             process_parameters, settings, source_file, smtp_client=mock_client
         )
 
-        assert result is True
+        assert result
 
     def test_email_backend_missing_file_raises(
         self, process_parameters, settings, temp_dir
@@ -508,8 +508,8 @@ class TestBackendIntegration:
             email_params, email_settings, sample_file, smtp_client=mock_smtp
         )
 
-        assert copy_result is True
-        assert email_result is True
+        assert copy_result
+        assert email_result
 
     def test_all_backends_with_same_file(self, temp_dir, sample_file):
         """Test running all backends with the same file."""
@@ -546,9 +546,9 @@ class TestBackendIntegration:
             email_params, email_settings, sample_file, smtp_client=MockSMTPClient()
         )
 
-        assert copy_result is True
-        assert ftp_result is True
-        assert email_result is True
+        assert copy_result
+        assert ftp_result
+        assert email_result
 
 
 class TestBackendErrorScenarios:

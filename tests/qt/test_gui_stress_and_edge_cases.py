@@ -232,7 +232,7 @@ class TestEditSettingsDialogStress:
             "valid@example.com, invalid-email, another@example.com"
         )
         result = dialog.validate()
-        assert result is False
+        assert not result
 
     def test_unicode_in_email_fields(self, qtbot, sample_folder_config, monkeypatch):
         """Test Unicode characters in email fields."""
@@ -284,16 +284,16 @@ class TestEditSettingsDialogStress:
         dialog._backup_interval_spin.setValue(5001)
         assert dialog._backup_interval_spin.value() == 5000  # SpinBox enforces maximum
         result = dialog.validate()
-        assert result is True
+        assert result
 
         # Test valid values
         dialog._backup_interval_spin.setValue(1)
         result = dialog.validate()
-        assert result is True
+        assert result
 
         dialog._backup_interval_spin.setValue(5000)
         result = dialog.validate()
-        assert result is True
+        assert result
 
     def test_apply_with_none_callbacks(self, qtbot, sample_folder_config):
         """Test apply() when callback functions are None."""

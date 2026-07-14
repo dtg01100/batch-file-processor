@@ -86,43 +86,43 @@ class TestValidateEmailList:
     def test_valid_list(self):
         """Test valid email list."""
         valid, invalid = validate_email_list("a@test.com, b@test.com")
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_valid_list_semicolon_separator(self):
         """Test valid email list with semicolon separator."""
         valid, invalid = validate_email_list("a@test.com; b@test.com", separator="; ")
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_mixed_list(self):
         """Test mixed valid/invalid list."""
         valid, invalid = validate_email_list("a@test.com, invalid")
-        assert valid is False
+        assert not valid
         assert "invalid" in invalid
 
     def test_empty_list(self):
         """Test empty list."""
         valid, invalid = validate_email_list("")
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_none_list(self):
         """Test None list."""
         valid, invalid = validate_email_list(None)
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_all_invalid(self):
         """Test all invalid emails."""
         valid, invalid = validate_email_list("invalid1, invalid2, invalid3")
-        assert valid is False
+        assert not valid
         assert len(invalid) == 3
 
     def test_whitespace_handling(self):
         """Test whitespace is stripped."""
         valid, invalid = validate_email_list("  a@test.com  ,  b@test.com  ")
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_custom_pattern(self):
@@ -133,7 +133,7 @@ class TestValidateEmailList:
             "test@example.org, test@example.com", pattern=pattern
         )
 
-        assert valid is False
+        assert not valid
         assert "test@example.com" in invalid
 
 
@@ -188,13 +188,13 @@ class TestEmailValidator:
     def test_validate_list_valid(self, validator):
         """Test validate_list with valid emails."""
         valid, invalid = validator.validate_list("a@test.com; b@test.com")
-        assert valid is True
+        assert valid
         assert len(invalid) == 0
 
     def test_validate_list_invalid(self, validator):
         """Test validate_list with invalid emails."""
         valid, invalid = validator.validate_list("a@test.com; invalid")
-        assert valid is False
+        assert not valid
         assert "invalid" in invalid
 
     def test_normalize(self, validator):
@@ -204,13 +204,13 @@ class TestEmailValidator:
     def test_validate_and_normalize_valid(self, validator):
         """Test validate_and_normalize with valid email."""
         is_valid, normalized = validator.validate_and_normalize("  TEST@TEST.COM  ")
-        assert is_valid is True
+        assert is_valid
         assert normalized == "test@test.com"
 
     def test_validate_and_normalize_invalid(self, validator):
         """Test validate_and_normalize with invalid email."""
         is_valid, normalized = validator.validate_and_normalize("invalid")
-        assert is_valid is False
+        assert not is_valid
         assert normalized == "invalid"
 
     def test_filter_valid(self, validator):
@@ -276,7 +276,7 @@ class TestEmailValidatorEdgeCases:
     def test_single_email_list(self, validator):
         """Test list with single email."""
         valid, _invalid = validator.validate_list("a@test.com")
-        assert valid is True
+        assert valid
 
     def test_trailing_separator(self, validator):
         """Test list with trailing separator."""

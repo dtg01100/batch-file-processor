@@ -582,7 +582,7 @@ class TestEditSettingsDialog:
             MagicMock(),
         )
         result = dialog.validate()
-        assert result is False
+        assert not result
 
     def test_apply_disables_email_backends_when_email_off(
         self, qtbot, sample_folder_config

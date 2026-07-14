@@ -231,8 +231,8 @@ class TestSplitEDIIntegration:
             include_credits = False
 
         assert output_mode == "split"
-        assert include_invoices is True
-        assert include_credits is True
+        assert include_invoices
+        assert include_credits
 
     def test_no_split_edi_settings(self, no_split_edi_config):
         """Test settings when split_EDI is disabled."""
@@ -320,7 +320,7 @@ class TestUPCOverrideIntegration:
             filter_str.split(",")
             apply_to_all = False
 
-        assert apply_to_all is True
+        assert apply_to_all
 
     def test_upc_padding_pattern(self, upc_override_enabled):
         """Test UPC padding pattern is correctly set."""
@@ -393,8 +393,8 @@ class TestARecordPaddingIntegration:
 
         assert padding_text == "PREFIX"
         assert padding_length == 6
-        assert has_append is True
-        assert force_ext is True
+        assert has_append
+        assert force_ext
 
     def test_a_record_append_text(self, a_record_padding_enabled):
         """Test A-record append text is correctly set."""
@@ -480,7 +480,7 @@ class TestInvoiceDateOffsetIntegration:
 
         retail_uom = config_dict["retail_uom"]
 
-        assert retail_uom is False
+        assert not retail_uom
 
     def test_invoice_date_all_offsets_in_range(self):
         """Test all valid invoice date offsets are accepted."""

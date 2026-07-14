@@ -14,7 +14,7 @@ def test_copy_backend_copies_to_expected_destination_file():
 
     result = do({"copy_to_directory": dest_dir}, {}, src_file, file_ops=file_ops)
 
-    assert result is True
+    assert result
     assert file_ops.files_copied == [(src_file, "/dest/example.csv")]
     assert file_ops.exists("/dest/example.csv")
 
@@ -31,7 +31,7 @@ def test_copy_backend_routes_duplicate_name_into_unique_subdirectory():
 
     result = do({"copy_to_directory": dest_dir}, {}, src_file, file_ops=file_ops)
 
-    assert result is True
+    assert result
     assert ("/dest/edi_converter_abcd", True) in file_ops.directories_created
     assert file_ops.files_copied == [
         (src_file, "/dest/edi_converter_abcd/eInvVendor.20260320201715.csv")
@@ -51,7 +51,7 @@ def test_copy_backend_uses_numbered_collision_directory_when_needed():
 
     result = do({"copy_to_directory": dest_dir}, {}, src_file, file_ops=file_ops)
 
-    assert result is True
+    assert result
     assert ("/dest/edi_converter_abcd.1", True) in file_ops.directories_created
     assert file_ops.files_copied == [
         (src_file, "/dest/edi_converter_abcd.1/eInvVendor.20260320201715.csv")

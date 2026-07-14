@@ -45,7 +45,7 @@ class TestEDIValidator:
 
         # This test validates the format check logic
         # If the B record is exactly 76 chars with valid UPC, it should pass format check
-        assert is_valid is True
+        assert is_valid
         assert errors == []
         assert "validation passed" in caplog.text
 
@@ -59,7 +59,7 @@ class TestEDIValidator:
         with caplog.at_level(logging.DEBUG, logger="dispatch.edi_validator"):
             is_valid, errors = validator.validate("/test/file.edi")
 
-        assert is_valid is False
+        assert not is_valid
         assert len(errors) > 0
         assert "line number" in errors[0].lower()
         assert "failed" in caplog.text
@@ -73,7 +73,7 @@ class TestEDIValidator:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors = validator.validate("/test/file.edi")
 
-        assert is_valid is False
+        assert not is_valid
 
     def test_validate_b_record_wrong_length(self):
         """Test validation fails with B record of wrong length."""
@@ -84,7 +84,7 @@ class TestEDIValidator:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors = validator.validate("/test/file.edi")
 
-        assert is_valid is False
+        assert not is_valid
 
     def test_validate_with_warnings(self):
         """Test validation with warnings (minor errors)."""
@@ -97,7 +97,7 @@ class TestEDIValidator:
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         # Should be valid but have warnings
-        assert is_valid is True
+        assert is_valid
         assert len(warnings) > 0
         assert "Suppressed UPC" in warnings[0]
 
@@ -112,7 +112,7 @@ class TestEDIValidator:
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
         # Blank UPC is a minor error (warning), file is still valid
-        assert is_valid is True
+        assert is_valid
         assert any("Blank UPC" in w for w in warnings)
         # Regression: a blank UPC (len 0 after strip) must NOT also be
         # flagged as "Truncated UPC" — the two checks are independent.
@@ -134,7 +134,7 @@ class TestEDIValidator:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
-        assert is_valid is True
+        assert is_valid
         assert any("Missing pricing" in w for w in warnings)
 
     def test_validate_file_not_found(self):
@@ -144,7 +144,7 @@ class TestEDIValidator:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, errors = validator.validate("/nonexistent/file.edi")
 
-        assert is_valid is False
+        assert not is_valid
         assert len(errors) > 0
 
     def test_get_error_log(self):
@@ -185,11 +185,11 @@ class TestEDIValidator:
 
         # First validation (invalid)
         is_valid1, _ = validator.validate("/test/invalid.edi")
-        assert is_valid1 is False
+        assert not is_valid1
 
         # Second validation (valid) should reset state
         is_valid2, _ = validator.validate("/test/valid.edi")
-        assert is_valid2 is True
+        assert is_valid2
 
 class TestRealFileSystem:
     """Tests for RealFileSystem class."""
@@ -379,7 +379,7 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
-        assert is_valid is True
+        assert is_valid
         assert errors == []
         assert any("Non-numeric UPC" in w for w in warnings)
         assert any("N4143303084" in w for w in warnings)
@@ -394,7 +394,7 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
-        assert is_valid is True
+        assert is_valid
         assert any("Suppressed UPC" in w for w in warnings)
         assert any("12345678" in w for w in warnings)
         assert any("SUPPRESSED ITEM" in w for w in warnings)
@@ -408,7 +408,7 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
-        assert is_valid is True
+        assert is_valid
         assert any("Blank UPC" in w for w in warnings)
         assert any("BLANK UPC ITEM" in w for w in warnings)
 
@@ -421,7 +421,7 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors, warnings = validator.validate_with_warnings("/test/file.edi")
 
-        assert is_valid is True
+        assert is_valid
         assert any("Missing pricing" in w for w in warnings)
         assert any("12345678901" in w for w in warnings)
         assert any("MISSING PRICE" in w for w in warnings)
@@ -450,7 +450,7 @@ class TestEDIValidatorEdgeCases:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors = validator.validate("/test/empty.edi")
 
-        assert is_valid is False
+        assert not is_valid
 
     def test_single_line_file(self):
         """Test validation of single line file."""
@@ -459,7 +459,7 @@ class TestEDIValidatorEdgeCases:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors = validator.validate("/test/single.edi")
 
-        assert is_valid is True
+        assert is_valid
 
     def test_file_with_only_whitespace(self):
         """Test validation of file with only whitespace."""
@@ -468,7 +468,7 @@ class TestEDIValidatorEdgeCases:
         validator = EDIValidator(file_system=mock_fs)
         is_valid, _errors = validator.validate("/test/whitespace.edi")
 
-        assert is_valid is False
+        assert not is_valid
 
     def test_unicode_content(self):
         """Test validation with unicode content."""

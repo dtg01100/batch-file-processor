@@ -80,13 +80,13 @@ class TestNullUIService:
         """Test that ask_yes_no() returns False (safe default)."""
         service = NullUIService()
         result = service.ask_yes_no("Title", "Question?")
-        assert result is False
+        assert not result
 
     def test_ask_ok_cancel_returns_false(self):
         """Test that ask_ok_cancel() returns False (safe default)."""
         service = NullUIService()
         result = service.ask_ok_cancel("Title", "Message")
-        assert result is False
+        assert not result
 
     def test_ask_three_choices_returns_minus_one(self):
         """Test that ask_three_choices() returns -1 (safe default)."""
@@ -198,7 +198,7 @@ class TestQtUIService:
         service = QtUIService()
         result = service.ask_yes_no("Test Title", "Test Question")
 
-        assert result is True
+        assert result
         mock_qmessagebox.question.assert_called_once()
 
     @patch("interface.ports.QMessageBox")
@@ -212,7 +212,7 @@ class TestQtUIService:
         service = QtUIService()
         result = service.ask_yes_no("Test Title", "Test Question")
 
-        assert result is False
+        assert not result
 
     @patch("interface.ports.QMessageBox")
     def test_ask_ok_cancel_returns_true_when_ok_clicked(self, mock_qmessagebox):
@@ -225,7 +225,7 @@ class TestQtUIService:
         service = QtUIService()
         result = service.ask_ok_cancel("Test Title", "Test Message")
 
-        assert result is True
+        assert result
 
     @patch("interface.ports.QMessageBox")
     def test_ask_ok_cancel_returns_false_when_cancel_clicked(self, mock_qmessagebox):
@@ -238,7 +238,7 @@ class TestQtUIService:
         service = QtUIService()
         result = service.ask_ok_cancel("Test Title", "Test Message")
 
-        assert result is False
+        assert not result
 
     @patch("interface.ports.QMessageBox")
     def test_ask_three_choices_returns_0_when_first_clicked(self, mock_qmessagebox):

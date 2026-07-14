@@ -259,7 +259,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath)
 
-        assert result is True
+        assert result
         files = srv.list_uploaded_files("upload")
         assert "hello.txt" in files
         received = srv.read_uploaded_file("hello.txt", "upload")
@@ -273,7 +273,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath)
 
-        assert result is True
+        assert result
         files = srv.list_uploaded_files("upload")
         assert "data.csv" in files
         received = srv.read_uploaded_file("data.csv", "upload")
@@ -288,7 +288,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath)
 
-        assert result is True
+        assert result
         received = srv.read_uploaded_file("blob.bin", "upload")
         assert received == content
         assert _md5(received) == _md5(content)
@@ -305,7 +305,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath)
 
-        assert result is True
+        assert result
         received = srv.read_uploaded_file("archive.zip", "upload")
         assert received == content
         # Verify the zip is still a valid archive
@@ -329,7 +329,7 @@ class TestFTPLiveServer:
 
         for filepath in local_paths:
             result = ftp_backend.do(params, {}, filepath)
-            assert result is True
+            assert result
 
         uploaded = srv.list_uploaded_files("upload")
         for name in files_to_send:
@@ -348,7 +348,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(nested_params, {}, filepath)
 
-        assert result is True
+        assert result
         files = srv.list_uploaded_files("subdir/nested")
         assert "nested.txt" in files
         received = srv.read_uploaded_file("nested.txt", "subdir/nested")
@@ -405,7 +405,7 @@ class TestFTPLiveServer:
             params, {}, filepath, ftp_client=mock, disable_retry=True
         )
 
-        assert result is True
+        assert result
         assert mock.connect_count == 3, (
             f"Expected 3 connect attempts, got {mock.connect_count}"
         )
@@ -422,7 +422,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath)
 
-        assert result is True
+        assert result
         received = srv.read_uploaded_file("large.bin", "upload")
         assert len(received) == len(content)
         assert _md5(received) == expected_md5
@@ -475,7 +475,7 @@ class TestFTPLiveServer:
 
         result = ftp_backend.do(params, {}, filepath, ftp_client=mock)
 
-        assert result is True
+        assert result
         assert len(mock.logins) == 1
         user, password = mock.logins[0]
         assert user == "super_user"
@@ -503,7 +503,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         msg_data = handler.messages[0]
@@ -530,7 +530,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
@@ -562,7 +562,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
@@ -589,7 +589,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
@@ -614,7 +614,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
 
@@ -642,7 +642,7 @@ class TestSMTPLiveServer:
             result = email_backend.do(
                 params, settings, filepath, smtp_client=_NoTLSSMTPClient()
             )
-            assert result is True
+            assert result
 
         _wait_for_messages(handler, 3)
         assert len(handler.messages) == 3
@@ -666,7 +666,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         parsed = message_from_bytes(handler.messages[0]["data"])
@@ -692,7 +692,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1)
         assert len(handler.messages) == 1
         msg_data = handler.messages[0]
@@ -723,7 +723,7 @@ class TestSMTPLiveServer:
         monkeypatch.setattr(email_backend.time, "sleep", lambda _: None)
         result = email_backend.do(params, settings, filepath, smtp_client=mock)
 
-        assert result is True
+        assert result
         assert len(mock.connections) == 1  # second attempt succeeded
         assert len(mock.emails_sent) == 1
 
@@ -738,7 +738,7 @@ class TestSMTPLiveServer:
             params, settings, filepath, smtp_client=_NoTLSSMTPClient()
         )
 
-        assert result is True
+        assert result
         _wait_for_messages(handler, 1, timeout=10)
         assert len(handler.messages) == 1
 
