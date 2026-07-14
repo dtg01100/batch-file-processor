@@ -142,18 +142,22 @@ mutation. Module is fully clean: 4 killed / 0 survived / 5 KNOWN_EQUIVALENT.
   `* 1001` produces ratio ≈ 1001, which fails the assertion.
   Module is now 1/1 killed.
 
-## Real gaps remaining (5 total)
+### dispatch/hash_utils.py — 1 gap closed
+
+- **L77 `lt_to_le`**: `if checksum_attempt < max_retries:` retry-loop
+  boundary. New test `test_generate_file_hash_retries_then_succeeds`
+  patches `builtins.open` to fail 3 times then succeed on the 4th,
+  and asserts the function raises after exactly 3 calls. A mutation
+  to `<=` would allow a 4th attempt (which succeeds), failing the
+  `pytest.raises(OSError)` assertion. Module is now 1/1 killed.
+
+## Real gaps remaining (4 total)
 
 ### core/edi/edi_tweaker.py (4)
 - **L322 `lt_to_le`**: retry-loop boundary `attempt + 1 < max_retries`.
 - **L386 `gt_to_ge`** / **L386 `eq_to_ne`**: progress-log condition
   `line_num > 0 and line_num % 100 == 0`.
 - **L622 `true_to_false`**: `blank_upc = True` branch.
-
-### dispatch/hash_utils.py (1)
-- **L77 `lt_to_le`**: `if checksum_attempt < max_retries:` retry-loop
-  boundary.
-
 ## Self-referential test bugs (status)
 
 

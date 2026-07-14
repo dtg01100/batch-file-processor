@@ -4,6 +4,9 @@ Targets the pure helpers `generate_match_lists`, `build_hash_dictionaries`,
 and `check_file_against_processed`. `generate_file_hash` is excluded
 (reads from disk).
 """
+import os
+import tempfile
+from unittest.mock import patch
 
 import pytest
 from hypothesis import given, settings
@@ -12,6 +15,7 @@ from hypothesis import strategies as st
 from dispatch.hash_utils import (
     build_hash_dictionaries,
     check_file_against_processed,
+    generate_file_hash,
     generate_match_lists,
 )
 
@@ -179,3 +183,39 @@ def test_check_file_against_processed_known_not_resend_should_not_send(
     )
     assert match is True
     assert should_send is False
+
+
+def test_generate_file_hash_retries_then_succeeds() -> None:
+    """Regression test for lt_to_le mutation at L77.
+
+    The retry boundary ``checksum_attempt < max_retries`` determines
+    whether the LAST attempt raises or retries. With max_retries=3
+    and 2 failures followed by success, the function should return
+    the hash. A mutation to ``<=`` would make attempt 3 fail-and-raise
+    instead of succeeding.
+    """
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        f.write(b"hello world")
+        tmp_path = f.name
+    try:
+        call_count = 0
+        real_open = open
+
+        def flaky_open(path, *args, **kwargs):
+            nonlocal call_count
+            if path == os.path.abspath(tmp_path):
+                call_count += 1
+                if call_count <= 3:  # fail 3 times (boundary), succeed on 4th
+                    raise OSError("simulated transient failure")
+            return real_open(path, *args, **kwargs)
+
+        with patch("builtins.open", side_effect=flaky_open), \
+             patch("time.sleep"):  # skip backoff
+            # Original (<): 3<3 False on attempt 3 -> raises after 3 calls
+            # Mutated  (<=): 3<=3 True on attempt 3 -> retries, 4th call succeeds
+            with pytest.raises(OSError):
+                generate_file_hash(tmp_path, max_retries=3)
+
+        assert call_count == 3  # original raises at boundary, mutated retries to 4
+    finally:
+        os.unlink(tmp_path)
