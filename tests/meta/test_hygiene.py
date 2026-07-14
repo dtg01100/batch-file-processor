@@ -401,6 +401,41 @@ def _check_skip_no_reason(file: Path) -> list[Violation]:
 # ---------------------------------------------------------------------------
 
 
+def _is_bare_except(handler: ast.ExceptHandler) -> bool:
+    """True for ``except:`` or ``except Exception:``-style handlers.
+
+    Narrow handlers (``except ValueError:``,
+    ``except (KeyError, TypeError):``) are NOT considered bare;
+    they catch a specific exception class and the developer's
+    intent is documented by the class name.
+    """
+    # No exception type at all: `except:`
+    if handler.type is None:
+        return True
+    # Multiple names: `except (A, B):` — at least one must be the
+    # generic ``Exception`` or ``BaseException`` for it to be bare.
+    if isinstance(handler.type, ast.Tuple):
+        for elt in handler.type.elts:
+            if _is_generic_exception(elt):
+                return True
+        return False
+    return _is_generic_exception(handler.type)
+
+
+def _is_generic_exception(node: ast.expr) -> bool:
+    """True if the node is ``Exception`` or ``BaseException``.
+
+    Catches both ``Exception`` and ``BaseException`` as bare-style
+    handlers. Anything else (``ValueError``, ``OSError``, etc.)
+    is a narrow handler.
+    """
+    if isinstance(node, ast.Name) and node.id in {"Exception", "BaseException"}:
+        return True
+    if isinstance(node, ast.Attribute) and node.attr in {"Exception", "BaseException"}:
+        return True
+    return False
+
+
 def _is_pass_only(body: list[ast.stmt]) -> bool:
     if len(body) != 1:
         return False
@@ -426,6 +461,10 @@ def _check_bare_except_pass(file: Path) -> list[Violation]:
         if not isinstance(node, ast.ExceptHandler):
             continue
         if not _is_pass_only(node.body):
+            continue
+        # Skip narrow handlers — they're documented intent, not
+        # silent error swallowing.
+        if not _is_bare_except(node):
             continue
         if 1 <= node.lineno <= len(source_lines):
             src = source_lines[node.lineno - 1].strip()
