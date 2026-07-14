@@ -134,6 +134,35 @@ class TestEDITweaker:
         assert "A" in content
         assert "B" in content
 
+    def test_tweak_progress_log_fires_only_at_multiples_of_100(self, mock_query_runner, tmp_path):
+        """Regression test for gt_to_ge + eq_to_ne mutations at L386.
+
+        The progress-log condition ``line_num > 0 and line_num % 100 == 0``
+        fires exactly at line 100 (0-indexed: the 101st line). With
+        101 B records, expect exactly 1 progress-log call.
+        - gt_to_ge mutation (>= 0): fires at line 0 too -> 2 calls
+        - eq_to_ne mutation (!= 0): fires at every non-multiple -> 100 calls
+        """
+        # Create EDI with 101 B records so line_num=100 triggers the log
+        lines = [make_b_record() for _ in range(101)]
+        content = "\n".join(lines) + "\n"
+        input_path = tmp_path / "in.edi"
+        input_path.write_text(content, encoding="utf-8")
+        output_path = str(tmp_path / "out.edi")
+
+        tweaker = EDITweaker(mock_query_runner)
+        with patch("core.edi.edi_tweaker.StructuredLogger.log_debug") as mock_log:
+            tweaker.tweak(str(input_path), output_path, {}, {}, {})
+
+        # Filter to progress-log calls (the "Processing: N/M lines" message)
+        progress_calls = [
+            call for call in mock_log.call_args_list
+            if "Processing:" in str(call)
+        ]
+        assert len(progress_calls) == 1, (
+            f"Expected 1 progress-log call at line 100, got {len(progress_calls)}"
+        )
+
     def test_tweak_force_txt_extension(self, tweaker, edi_file, tmp_path):
         output = str(tmp_path / "output")
         result = tweaker.tweak(
