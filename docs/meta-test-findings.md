@@ -181,12 +181,11 @@ equivalent.
 
 ## What to do next (priority order)
 
-Items 1–4, 6, and timing_utils L38 are complete. Remaining items:
+Items 1–4, 6, timing_utils L38, and hash_utils L77 are complete.
+Remaining:
 
 1. **edi_tweaker L322 / L386 / L622** — three separate test additions;
    each is a 5-15 line property test.
-2. **dispatch/hash_utils L77** — requires `open()`-raising mock;
-   more setup.
 
 Each item is a 10-30 line test addition following the patterns already
 demonstrated in the closed-gap commits (`1a617ec38`, `3ca64056c`,
