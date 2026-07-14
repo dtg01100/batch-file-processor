@@ -557,6 +557,15 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
       "comment 'Read file once and pass content to all validation methods' — prose"),
      ("dispatch/edi_validator.py", "int_constant_off_by_one", 233,
       "comment 'Check for missing pricing in 70-char lines' — prose, off-by-one has no runtime effect"),
+     # ------------------------------------------------------------------
+     # dispatch/converters/registry.py (test: test_converters_registry.py)
+     # ------------------------------------------------------------------
+     ("dispatch/converters/registry.py", "and_to_or", 5,
+      "module docstring 'and this registry provides functions' — prose"),
+     ("dispatch/converters/registry.py", "or_to_and", 215,
+      "function docstring 'Display name for the format, or the format_name' — prose"),
+     ("dispatch/converters/registry.py", "int_constant_off_by_one", 9,
+      "module docstring '2. No duplication' — count reference, mutation has no runtime effect"),
 ]
 
 
