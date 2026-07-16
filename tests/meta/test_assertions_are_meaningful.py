@@ -72,6 +72,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -817,67 +818,43 @@ def _write_mutant(mutant_path: Path, mutated_source: str) -> None:
 # runner itself).
 _USE_SUBPROCESS = os.environ.get("TAM_USE_SUBPROCESS") == "1"
 
+# Regex matching Python's argument-shape TypeError messages. Used by
+# the in-process -> subprocess fallback in ``_run_assertion_mutation``
+# to detect when a test couldn't run at all because the runner's
+# fixture stand-ins don't cover the test's argument list.
+#
+# The pattern covers all three message shapes Python 3.11+ emits for
+# argument-mismatch errors:
+#   - ``f() missing N required positional argument(s): 'name'``
+#   - ``f() missing N required keyword-only argument: 'name'``
+#   - ``f() takes N positional arguments but M (was|were) given``
+#   - ``f() got an unexpected keyword argument 'name'``
+#
+# A real assertion failure producing one of these message shapes is
+# essentially impossible: a normal test failure is AssertionError
+# or a domain exception, and Python's "unsupported operand" /
+# "object has no len()" / "is not callable" TypeErrors have
+# entirely different message shapes. See ``_is_arg_shape_typeerror``.
+_ARG_SHAPE_TYPEERROR_RE = re.compile(
+    r"missing \d+ required (?:positional|keyword-only) argument"
+    r"|takes \d+ positional argument[s]? but \d+ (?:was|were) given"
+    r"|got an unexpected keyword argument"
+)
 
-def _run_assertion_mutation(
-    file: Path, line: int, rule: MutationRule
+def _run_subprocess_mutant(
+    file: Path, line: int, rule: MutationRule, mutated_source: str
 ) -> AssertionOutcome:
-    """Run a single assertion-mutation check.
+    """Run the mutated source through pytest in a fresh subprocess.
 
-    Returns an AssertionOutcome recording whether the mutation killed
-    the test. A killed mutation is one that made the test fail (i.e.,
-    the original assertion was load-bearing). A surviving mutation is
-    one that the test still passed despite the mutation (i.e., the
-    assertion was dead or self-referential).
+    Used both as the primary path (when ``TAM_USE_SUBPROCESS=1``) and
+    as the fallback for the in-process runner when it hits a
+    fixture-missing ``TypeError`` it can't evaluate.
 
-    Execution path:
-    1. In-process runner (default): exec the mutated source, walk
-       every test_* function (top-level + class methods), and check
-       whether any raises. Returns (all_passed, snippet).
-    2. Subprocess runner (fallback): write the mutated source to
-       ``mutants_assertions/`` and run pytest against it. The
-       subprocess runner is ~150x slower but isolates the runner
-       from any module-level side effects in the mutated file.
-
-    The in-process runner is trusted: 100% parity with subprocess
-    on the smoke-test sample (test_structured_logging.py, 82/82
-    matches; test_mock_automatic_run.py, parity confirmed). It is
-    used by default since 2026-07-14.
+    Returns an ``AssertionOutcome`` whose ``killed`` field reflects
+    pytest's exit code, ``skipped`` reflects the subprocess output
+    parsing (see ``_output_is_all_skipped``), and ``failure_message``
+    holds the last ~400 chars of pytest output for debugging.
     """
-    source = file.read_text(encoding="utf-8", errors="replace")
-    mutated_source = _mutate_assertion(source, line, rule)
-    if mutated_source is None:
-        # Rule does not apply to this assertion (e.g. equality_flip on
-        # a polarity assertion). Record as a "killed" placeholder so
-        # the runner does not count it as a survivor.
-        return AssertionOutcome(
-            rule_name=rule.name,
-            line=line,
-            killed=True,
-            failure_message="(rule not applicable to this assertion)",
-        )
-
-    if not _USE_SUBPROCESS:
-        all_passed, snippet, all_skipped_or_empty = _run_mutated_tests_inprocess(
-            mutated_source
-        )
-        # In-process killed ⇒ killed. In-process survived ⇒ trust it.
-        # We do NOT fall back to subprocess on survival; the prototype
-        # showed 100% parity and the in-process runner sees every test
-        # function in the file. The fallback is reserved for
-        # import-time failures, which the in-process runner reports
-        # as ``IMPORT_ERROR: ...`` in the snippet.
-        # If every test that ran was skipped (e.g. an optional
-        # dependency is missing), the mutation cannot be evaluated —
-        # report it as skipped, not as a survivor.
-        return AssertionOutcome(
-            rule_name=rule.name,
-            line=line,
-            killed=not all_passed,
-            failure_message=snippet,
-            skipped=all_skipped_or_empty and all_passed,
-        )
-
-    # Subprocess path (legacy / opt-in via TAM_USE_SUBPROCESS=1).
     mutant_path = _mutant_path(file, line, rule.name)
     _write_mutant(mutant_path, mutated_source)
     try:
@@ -901,6 +878,111 @@ def _run_assertion_mutation(
         failure_message=snippet,
         skipped=skipped and not killed,
     )
+
+
+def _is_arg_shape_typeerror(snippet: str) -> bool:
+    """True if the in-process failure message matches a Python
+    argument-shape TypeError (``missing N required positional
+    argument``, ``takes N positional arguments but M were given``,
+    ``got an unexpected keyword argument``, etc.).
+
+    These errors mean the test could not run at all because the
+    in-process executor's fixture stand-ins don't cover the test's
+    argument list. A real assertion failure producing one of these
+    message shapes is essentially impossible: a normal test failure
+    is ``AssertionError`` or a domain exception, and Python's
+    "unsupported operand" / "object has no len()" / "is not
+    callable" TypeErrors have entirely different message shapes.
+
+    Detection drives the in-process -> subprocess fallback in
+    ``_run_assertion_mutation`` so the runner gives the right
+    answer for tests with custom fixtures.
+    """
+    return bool(_ARG_SHAPE_TYPEERROR_RE.search(snippet))
+
+
+def _run_assertion_mutation(
+    file: Path, line: int, rule: MutationRule
+) -> AssertionOutcome:
+    """Run a single assertion-mutation check.
+
+    Returns an ``AssertionOutcome`` recording whether the mutation
+    killed the test. A killed mutation is one that made the test
+    fail (i.e., the original assertion was load-bearing). A
+    surviving mutation is one that the test still passed despite
+    the mutation (i.e., the assertion was dead or self-referential).
+    A skipped outcome means every test in the file was skipped
+    (optional dependency missing) — neither kill nor survivor.
+
+    Execution path:
+    1. In-process runner (default): exec the mutated source, walk
+       every test_* function (top-level + class methods), and check
+       whether any raises. ~7ms/mutation. Trusted for the easy
+       case (no custom fixtures).
+    2. Subprocess runner, when ``TAM_USE_SUBPROCESS=1``: write the
+       mutated source to ``mutants_assertions/`` and run pytest
+       against it. ~1s/mutation. Used for debugging the in-process
+       runner or when the in-process result is untrustworthy.
+    3. Subprocess fallback, when the in-process runner hits a
+       fixture-missing ``TypeError`` (a test uses a custom fixture
+       the runner's stand-in set doesn't cover): the in-process
+       result is untrustworthy (the test never actually ran, but
+       the runner can't tell that from a real kill), so re-run
+       via subprocess. Cost: ~1s per fixture-using test file
+       affected; ~7ms for everything else.
+
+    The 100% in-process/subprocess parity claim from 2026-07-14
+    (see git history) was measured on a 1-2 file sample without
+    custom fixtures. The fallback closes the gap for the ~1,740
+    test functions in the corpus that use custom fixtures.
+    """
+    source = file.read_text(encoding="utf-8", errors="replace")
+    mutated_source = _mutate_assertion(source, line, rule)
+    if mutated_source is None:
+        # Rule does not apply to this assertion (e.g. equality_flip on
+        # a polarity assertion). Record as a "killed" placeholder so
+        # the runner does not count it as a survivor.
+        return AssertionOutcome(
+            rule_name=rule.name,
+            line=line,
+            killed=True,
+            failure_message="(rule not applicable to this assertion)",
+        )
+
+    if not _USE_SUBPROCESS:
+        all_passed, snippet, all_skipped_or_empty = _run_mutated_tests_inprocess(
+            mutated_source
+        )
+        if all_passed:
+            # In-process says every test passed.
+            # - If every test was skipped (optional dep missing), report
+            #   as skipped — the mutation cannot be evaluated.
+            # - Otherwise, the mutation is a real survivor.
+            return AssertionOutcome(
+                rule_name=rule.name,
+                line=line,
+                killed=False,
+                failure_message=snippet,
+                skipped=all_skipped_or_empty,
+            )
+        # In-process says at least one test failed. The failure could be
+        # a real assertion failure (mutation killed the test) OR a
+        # fixture-missing TypeError (the test never ran, and the runner
+        # can't tell the difference from a kill). If the failure matches
+        # a Python argument-shape TypeError, fall back to subprocess
+        # for the right answer. Otherwise, trust the in-process result
+        # (real kills never produce that message shape).
+        if _is_arg_shape_typeerror(snippet):
+            return _run_subprocess_mutant(file, line, rule, mutated_source)
+        return AssertionOutcome(
+            rule_name=rule.name,
+            line=line,
+            killed=True,
+            failure_message=snippet,
+        )
+
+    # Subprocess path (legacy / opt-in via TAM_USE_SUBPROCESS=1).
+    return _run_subprocess_mutant(file, line, rule, mutated_source)
 
 
 # ---------------------------------------------------------------------------
@@ -1151,6 +1233,144 @@ def test_assertion_runner_self_check() -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# Fallback heuristic regression test.
+#
+# The in-process -> subprocess fallback in ``_run_assertion_mutation``
+# depends on ``_is_arg_shape_typeerror`` matching exactly the Python
+# argument-shape TypeError messages and NOT matching other common
+# TypeError messages from real test failures. A regression in the
+# regex would either:
+#   - Under-match: in-process reports a fixture-missing TypeError as
+#     killed without falling back. Result: false positives (the
+#     runner thinks the mutation killed a test that never ran).
+#   - Over-match: in-process reports a real assertion-related TypeError
+#     as fixture-missing and falls back unnecessarily. Result: every
+#     affected mutation costs an extra ~1s subprocess.
+#
+# Both modes are bad but under-matching is the silent bug we care
+# about. The test pins the exact message shapes Python 3.11+
+# emits for argument-mismatch errors.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.meta_assertions
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        # Argument-shape TypeErrors — MUST match (fallback fires).
+        ("f() missing 1 required positional argument: 'x'", True),
+        ("f() missing 2 required positional arguments: 'x' and 'y'", True),
+        ("f() missing 1 required keyword-only argument: 'x'", True),
+        ("f() takes 1 positional argument but 2 were given", True),
+        ("f() takes 2 positional arguments but 3 were given", True),
+        ("f() got an unexpected keyword argument 'x'", True),
+        # Real TypeErrors from test failures — MUST NOT match.
+        (
+            "unsupported operand type(s) for +: 'NoneType' and 'int'",
+            False,
+        ),
+        (
+            "'<=' not supported between instances of 'str' and 'NoneType'",
+            False,
+        ),
+        ("'NoneType' object is not callable", False),
+        ("object of type 'NoneType' has no len()", False),
+        ("can only concatenate str (not 'int') to str", False),
+        # AssertionError / ValueError / generic exceptions — MUST NOT
+        # match (we only test the failure_message snippet, which is
+        # never the bare exception type, but defensive).
+        ("assert 1 == 2", False),
+        ("invalid literal for int() with base 10: 'x'", False),
+        # Empty / unrelated snippets.
+        ("", False),
+        ("SUBPROCESS TIMED OUT (treated as kill)", False),
+        ("SYNTAX_ERROR: invalid syntax", False),
+        # The runner's own IMPORT_ERROR / SYNTAX_ERROR labels — these
+        # also mean the test didn't run, but they're handled
+        # separately at the call site and should not trigger the
+        # fallback (the fallback is specifically for fixture-arg
+        # mismatches, not import-time failures).
+        ("IMPORT_ERROR: ModuleNotFoundError: No module named 'foo'", False),
+    ],
+)
+def test_is_arg_shape_typeerror(message: str, expected: bool) -> None:
+    assert _is_arg_shape_typeerror(message) is expected
+
+
+@pytest.mark.meta_assertions
+def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End-to-end: a test file that uses a custom fixture triggers
+    the in-process -> subprocess fallback.
+
+    This pins the behavior at the system level: if a future change
+    removes the fallback or breaks the heuristic, this test fails.
+    The cost is one subprocess invocation (the file has one
+    trivial assertion; the mutation is a no-op; the subprocess
+    path's purpose here is just to confirm the fallback was
+    exercised, not to evaluate mutation kill rate).
+    """
+    test_file = (
+        PROJECT_ROOT
+        / "tests"
+        / "meta"
+        / "_fixture_fallback_test_tmp.py"
+    )
+    if test_file.exists():
+        test_file.unlink()
+    test_file.write_text(
+        "def custom_fixture():\n"
+        "    return 1\n"
+        "def test_uses_fixture(custom_fixture):\n"
+        "    assert custom_fixture == 1\n",
+        encoding="utf-8",
+    )
+    try:
+        # AlwaysFail rule replaces the assert with assert False. The
+        # in-process runner will hit ``TypeError: test_uses_fixture()
+        # missing 1 required positional argument: 'custom_fixture'``
+        # (because the runner's fixture stand-ins don't cover
+        # ``custom_fixture``) and the fallback should fire.
+        rule = next(r for r in ALL_RULES if r.name == "always_fail")
+        source = test_file.read_text(encoding="utf-8")
+        line_no = source.splitlines().index(
+            "    assert custom_fixture == 1"
+        ) + 1
+        # The subprocess path writes a mutant file to MUTANTS_DIR. We
+        # verify the fallback was *invoked* by patching
+        # ``_run_pytest_on_mutant`` to a sentinel that records the
+        # call. The fake subprocess returns exit 0 so the fallback
+        # returns killed=False, skipped=False.
+        invoked: list[bool] = []
+        def fake_subprocess(
+            *args: object, **kwargs: object
+        ) -> tuple[int, str, bool]:
+            invoked.append(True)
+            return 0, "", False
+        # Patch the module's ``_run_pytest_on_mutant`` so the
+        # subprocess fallback can be observed without actually
+        # spawning pytest. The dotted-string form
+        # ``monkeypatch.setattr("tests.meta.test_assertions_are_…")``
+        # does NOT work here because ``tests.meta`` is a namespace
+        # package (no ``__init__.py``) and pytest's
+        # ``derive_importpath`` resolves the parent module to the
+        # namespace package, not the actual module. Patching the
+        # module object directly avoids the resolution.
+        import sys
+        _runner_mod = sys.modules[__name__]
+        monkeypatch.setattr(_runner_mod, "_run_pytest_on_mutant", fake_subprocess)
+        outcome = _run_assertion_mutation(test_file, line_no, rule)
+        assert invoked, (
+            "subprocess fallback did not fire for a TypeError that "
+            "matches the fixture-missing pattern"
+        )
+        assert outcome.killed is False
+        assert outcome.skipped is False
+    finally:
+        if test_file.exists():
+            test_file.unlink()
 # ---------------------------------------------------------------------------
 # CLI summary entry point. Runs the same checks as the pytest wrapper
 # and prints a per-file + per-rule summary, then exits 1 if any
