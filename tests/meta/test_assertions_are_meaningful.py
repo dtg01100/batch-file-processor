@@ -444,9 +444,27 @@ def _mutant_path(file: Path, line: int, rule_name: str) -> Path:
     The path includes the line and rule so multiple mutants of the same
     file don't collide. Files are written to ``mutants_assertions/`` to
     keep them out of the source tree.
+
+    For test files under ``PROJECT_ROOT`` (the common case), the
+    relative path is used so the mutant's location matches the
+    file's logical position. For files outside the project root
+    (the rare case — a test that materialises a temp file at
+    ``/tmp/...`` and runs the runner against it), the absolute path
+    is used with ``/`` replaced by ``_`` to keep the path flat.
+    Without the fallback, ``file.relative_to(PROJECT_ROOT)`` would
+    raise ``ValueError`` and the runner would crash instead of
+    reporting a real result.
     """
-    rel = file.relative_to(PROJECT_ROOT)
-    safe = str(rel).replace("/", "_").replace(".py", "")
+    try:
+        rel = file.relative_to(PROJECT_ROOT)
+        safe = str(rel).replace("/", "_").replace(".py", "")
+    except ValueError:
+        # File is outside PROJECT_ROOT. Use the absolute path
+        # with separators flattened.
+        safe = str(file.resolve()).replace("/", "_").replace(".py", "")
+        # Prefix with a marker so relative-path and absolute-path
+        # mutants don't collide in the same dir.
+        safe = f"abs_{safe}"
     return MUTANTS_DIR / f"{safe}__L{line}__{rule_name}.py"
 
 def _run_pytest_on_mutant(mutant_path: Path) -> tuple[int, str, bool]:
@@ -1311,7 +1329,7 @@ def test_is_arg_shape_typeerror(message: str, expected: bool) -> None:
 
 @pytest.mark.meta_assertions
 def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
-    monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """End-to-end: a test file that uses a custom fixture triggers
     the in-process -> subprocess fallback.
@@ -1323,14 +1341,7 @@ def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
     path's purpose here is just to confirm the fallback was
     exercised, not to evaluate mutation kill rate).
     """
-    test_file = (
-        PROJECT_ROOT
-        / "tests"
-        / "meta"
-        / "_fixture_fallback_test_tmp.py"
-    )
-    if test_file.exists():
-        test_file.unlink()
+    test_file = tmp_path / "test_uses_custom_fixture.py"
     test_file.write_text(
         "def custom_fixture():\n"
         "    return 1\n"
@@ -1338,55 +1349,86 @@ def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
         "    assert custom_fixture == 1\n",
         encoding="utf-8",
     )
-    try:
-        # AlwaysFail rule replaces the assert with assert False. The
-        # in-process runner will hit ``TypeError: test_uses_fixture()
-        # missing 1 required positional argument: 'custom_fixture'``
-        # (because the runner's fixture stand-ins don't cover
-        # ``custom_fixture``) and the fallback should fire.
-        rule = next(r for r in ALL_RULES if r.name == "always_fail")
-        source = test_file.read_text(encoding="utf-8")
-        line_no = source.splitlines().index(
-            "    assert custom_fixture == 1"
-        ) + 1
-        # The subprocess path writes a mutant file to MUTANTS_DIR. We
-        # verify the fallback was *invoked* by patching
-        # ``_run_pytest_on_mutant`` to a sentinel that records the
-        # call. The fake subprocess returns exit 0 so the fallback
-        # returns killed=False, skipped=False.
-        invoked: list[bool] = []
-        def fake_subprocess(
-            *args: object, **kwargs: object
-        ) -> tuple[int, str, bool]:
-            invoked.append(True)
-            return 0, "", False
-        # Patch the module's ``_run_pytest_on_mutant`` so the
-        # subprocess fallback can be observed without actually
-        # spawning pytest. The dotted-string form
-        # ``monkeypatch.setattr("tests.meta.test_assertions_are_…")``
-        # does NOT work here because ``tests.meta`` is a namespace
-        # package (no ``__init__.py``) and pytest's
-        # ``derive_importpath`` resolves the parent module to the
-        # namespace package, not the actual module. Patching the
-        # module object directly avoids the resolution.
-        import sys
-        _runner_mod = sys.modules[__name__]
-        monkeypatch.setattr(_runner_mod, "_run_pytest_on_mutant", fake_subprocess)
-        outcome = _run_assertion_mutation(test_file, line_no, rule)
-        assert invoked, (
-            "subprocess fallback did not fire for a TypeError that "
-            "matches the fixture-missing pattern"
-        )
-        assert outcome.killed is False
-        assert outcome.skipped is False
-    finally:
-        if test_file.exists():
-            test_file.unlink()
+    # AlwaysFail rule replaces the assert with assert False. The
+    # in-process runner will hit ``TypeError: test_uses_fixture()
+    # missing 1 required positional argument: 'custom_fixture'``
+    # (because the runner's fixture stand-ins don't cover
+    # ``custom_fixture``) and the fallback should fire.
+    rule = next(r for r in ALL_RULES if r.name == "always_fail")
+    source = test_file.read_text(encoding="utf-8")
+    line_no = source.splitlines().index(
+        "    assert custom_fixture == 1"
+    ) + 1
+    # Patch the module's ``_run_pytest_on_mutant`` so the subprocess
+    # fallback can be observed without actually spawning pytest.
+    # The dotted-string form ``monkeypatch.setattr("tests.meta.…")``
+    # does NOT work here because ``tests.meta`` is a namespace
+    # package (no ``__init__.py``); pytest's ``derive_importpath``
+    # resolves the parent to the namespace package, not the
+    # actual module. Patching the module object directly avoids
+    # the resolution.
+    invoked: list[bool] = []
+    def fake_subprocess(
+        *args: object, **kwargs: object
+    ) -> tuple[int, str, bool]:
+        invoked.append(True)
+        return 0, "", False
+    import sys
+    _runner_mod = sys.modules[__name__]
+    monkeypatch.setattr(_runner_mod, "_run_pytest_on_mutant", fake_subprocess)
+    outcome = _run_assertion_mutation(test_file, line_no, rule)
+    assert invoked, (
+        "subprocess fallback did not fire for a TypeError that "
+        "matches the fixture-missing pattern"
+    )
+    assert outcome.killed is False
+    assert outcome.skipped is False
 
 
 @pytest.mark.meta_assertions
-def test_class_init_typeerror_is_silently_dropped(
-) -> None:
+def test_mutant_path_under_project_root() -> None:
+    """``_mutant_path`` produces a path under ``MUTANTS_DIR`` for
+    a test file that lives under ``PROJECT_ROOT`` (the common
+    case). Pins the relative-path logic against regression.
+    """
+    file = PROJECT_ROOT / "tests" / "unit" / "test_foo.py"
+    path = _mutant_path(file, 42, "polarity_flip")
+    assert path.parent == MUTANTS_DIR
+    # The rule_name and line are part of the filename so multiple
+    # mutants of the same file don't collide.
+    assert "L42" in path.name
+    assert "polarity_flip" in path.name
+    # The path encodes the source-file's relative path with
+    # separators flattened.
+    assert "tests_unit_test_foo" in path.name
+
+
+
+@pytest.mark.meta_assertions
+def test_mutant_path_outside_project_root() -> None:
+    """``_mutant_path`` produces a path under ``MUTANTS_DIR`` for
+    a test file that lives OUTSIDE ``PROJECT_ROOT`` (the rare
+    case — a test that materialises a temp file at ``tmp_path``
+    and runs the runner against it).
+
+    Before the fix, ``file.relative_to(PROJECT_ROOT)`` raised
+    ``ValueError`` and the runner crashed. The fix encodes the
+    absolute path with separators flattened and prefixes ``abs_``
+    to avoid collision with relative-path mutants in the same
+    directory.
+    """
+    file = Path("/tmp/external_test_for_mutant_path.py")
+    path = _mutant_path(file, 7, "always_fail")
+    assert path.parent == MUTANTS_DIR
+    # The prefix and the absolute path encoding distinguish this
+    # from a relative-path mutant.
+    assert "abs_" in path.name
+    assert "external_test" in path.name
+    assert "L7" in path.name
+    assert "always_fail" in path.name
+
+@pytest.mark.meta_assertions
+def test_class_init_typeerror_is_silently_dropped() -> None:
     """A class whose ``__init__`` raises ``TypeError`` (e.g. needs
     constructor args the in-process runner can't supply) is silently
     dropped. The class's test methods don't run, but the runner
