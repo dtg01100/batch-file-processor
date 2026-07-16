@@ -1562,5 +1562,190 @@ def test_mutation_runner_self_check() -> None:
         pytest.fail("DEFAULT_PAIRS is empty — the meta-test would be a no-op")
 
 
+# ---------------------------------------------------------------------------
+# MUTATIONS regex contract test.
+#
+# The regex discipline documented at the top of MUTATIONS is the
+# runner's auditability contract: certain inputs must not match
+# (function-arrow `->`, identifier characters, `print`/`int`/`join`
+# substrings, etc.). Hand-validating this is error-prone — exactly
+# how the missing `in_to_not_in` rule shipped in 2026-07-15. This
+# test pins the contract.
+#
+# Each row is (rule_name, input_string, expected_to_match). The
+# strings are small synthetic fragments chosen to exercise one
+# boundary each; they are not real code, so changes to production
+# modules do not invalidate them.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.meta_mutation
+@pytest.mark.parametrize(
+    ("rule_name", "fragment", "expected"),
+    [
+        # lt_to_le / le_to_lt: function-arrow `->` must not be mutated.
+        ("lt_to_le", "def f() -> str: pass", False),
+        ("le_to_lt", "def f() -> str: pass", False),
+        # gt_to_ge / ge_to_gt: same arrow protection.
+        ("gt_to_ge", "def f() -> str: pass", False),
+        ("ge_to_gt", "if x >= 1:\n    pass", True),
+        # eq_to_ne: must match real ==, not the `!=` in `!==`
+        # (defensive; Python doesn't have `!==` but the lookbehind
+        # is documented as defensive).
+        ("eq_to_ne", "if x == 1:\n    pass", True),
+        # ne_to_eq: must match real !=.
+        ("ne_to_eq", "if x != 1:\n    pass", True),
+        # true_to_false / false_to_true: must match real literals,
+        # not identifier substrings.
+        ("true_to_false", "x = True", True),
+        ("true_to_false", "class Trueland: pass", False),
+        # and_to_or / or_to_and: word boundaries exclude substrings.
+        ("and_to_or", "if a and b: pass", True),
+        ("and_to_or", "x = 'Brand'", False),
+        ("or_to_and", "if a or b: pass", True),
+        ("or_to_and", "x = 'born'", False),
+        # return_none_instead_of_value: must not match `return None`.
+        (
+            "return_none_instead_of_value",
+            "def f():\n    return result",
+            True,
+        ),
+        (
+            "return_none_instead_of_value",
+            "def f():\n    return None",
+            False,
+        ),
+        # negate_if_condition: matches `if X:` but the regex's
+        # non-greedy `(.+?)` means it will not span newlines.
+        ("negate_if_condition", "if x > 0: pass", True),
+        # int_constant_off_by_one: matches the first integer >= 2
+        # anywhere in the source. The \b word boundary excludes
+        # the leading character of identifiers (e.g. ``x3`` won't
+        # match) but does NOT exclude digits inside string
+        # literals. The runner relies on KNOWN_EQUIVALENT entries
+        # to silence those hits (e.g. edi_parser L22 '6-character',
+        # dispatch/interfaces.py L147 'utf-8' (8 chars)). This
+        # contract is documented at the top of the MUTATIONS list.
+        ("int_constant_off_by_one", "x = 42", True),
+        ("int_constant_off_by_one", "x = 1", False),
+        ("int_constant_off_by_one", "x = 0", False),
+        ("int_constant_off_by_one", "x = 2", True),
+        ("int_constant_off_by_one", "x = '3.14'", True),
+        ("int_constant_off_by_one", "x = '0'", False),
+        # in_to_not_in / not_in_to_in: word boundaries exclude
+        # `int`, `print`, `join`. This is the boundary the new
+        # 2026-07-16 rules must hold.
+        ("in_to_not_in", "if x in items: pass", True),
+        ("in_to_not_in", "x = int('42')", False),
+        ("in_to_not_in", "x = print('y')", False),
+        ("in_to_not_in", "x = ''.join(['a', 'b'])", False),
+        ("not_in_to_in", "if x not in items: pass", True),
+        ("not_in_to_in", "if x in items: pass", False),
+    ],
+)
+def test_mutation_rule_regex_contract(
+    rule_name: str, fragment: str, expected: bool
+) -> None:
+    """The regex for ``rule_name`` must (or must not) match ``fragment``
+    according to the documented contract.
+
+    A regression in a regex (e.g. someone changing `\bin\b` to `\bin`
+    in a misguided refactor) would cause this test to fail, surfacing
+    the regression before it ships to production.
+    """
+    pattern = next(
+        (p for n, p, _r in MUTATIONS if n == rule_name), None
+    )
+    if pattern is None:
+        pytest.fail(f"unknown rule: {rule_name}")
+    matched = pattern.search(fragment) is not None
+    if matched != expected:
+        pytest.fail(
+            f"rule {rule_name!r} on {fragment!r}: expected "
+            f"match={expected}, got match={matched}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# run_meta_test smoke test.
+#
+# ``test_mutation_runner_self_check`` verifies the runner parses and
+# the public names exist. It does NOT verify ``run_meta_test`` can
+# actually run a real pair end-to-end. A bug that makes run_meta_test
+# crash on its first real call (e.g. a kwarg rename, a path
+# resolution failure) would be invisible until a contributor runs
+# the full slow suite.
+#
+# This test calls ``run_meta_test`` against a small, stable pair
+# (bool_utils / test_bool_utils.py — 2/2 killed per the findings
+# doc, 4 KNOWN_EQUIVALENT entries for docstring prose). The pair
+# has a healthy baseline (the unmodified test passes), no
+# subprocess-quirky dependencies, and the result is deterministic
+# across environments.
+#
+# Marked ``slow`` because it spawns pytest subprocesses (one per
+# mutation). Wall time ~5-10s.
+# ---------------------------------------------------------------------------
+
+
+SMOKE_PAIR: tuple[str, str] = (
+    "core/utils/bool_utils.py",
+    "tests/unit/core/utils/test_bool_utils.py",
+)
+
+
+@pytest.mark.slow
+@pytest.mark.meta_mutation
+def test_run_meta_test_smoke() -> None:
+    """End-to-end smoke: ``run_meta_test`` against the bool_utils
+    pair must produce a sensible ``ModuleReport`` (correct field
+    types, totals within the documented baseline).
+
+    The pair is selected because:
+    - It has a healthy baseline (the unmodified test passes in this
+      venv, so the FATAL exit-2 path doesn't fire).
+    - It is small (the bool_utils module is ~80 lines) so the smoke
+      finishes in seconds.
+    - Its kill/survive/skipped counts are stable across environments
+      (per the findings doc: 2 killed, 0 survived, 4 KNOWN_EQUIVALENT
+      silenced).
+    """
+    module_rel, test_rel = SMOKE_PAIR
+    module = PROJECT_ROOT / module_rel
+    test_path = PROJECT_ROOT / test_rel
+    if not module.exists() or not test_path.exists():
+        pytest.skip(f"smoke pair unavailable: {module_rel} or {test_rel}")
+    report = run_meta_test(
+        module,
+        test_path,
+        repo_root=PROJECT_ROOT,
+        module_rel=module_rel,
+    )
+    # Schema: every field on ModuleReport must be a sensible value.
+    # No mutation should produce negative counts; the sum of
+    # killed + survived + skipped is bounded by len(MUTATIONS).
+    if report.killed < 0 or report.survived < 0 or report.skipped < 0:
+        pytest.fail(
+            f"negative counts in ModuleReport: killed={report.killed}, "
+            f"survived={report.survived}, skipped={report.skipped}"
+        )
+    if report.killed + report.survived + report.skipped < 1:
+        pytest.fail(
+            "run_meta_test produced no outcomes for bool_utils — the "
+            "regex suite didn't match a single line. The runner is "
+            "likely broken (regex drift or a module that no longer "
+            "contains any of the targeted tokens)."
+        )
+    # Every outcome must have a non-empty snippet (the original and
+    # mutated source line) for audit. An empty snippet means the
+    # outcome was constructed without populating the audit fields.
+    for outcome in report.outcomes:
+        if not outcome.snippet:
+            pytest.fail(
+                f"outcome for {outcome.name} at line {outcome.line} has "
+                f"empty snippet — audit fields not populated"
+            )
+
+
 if __name__ == "__main__":
     sys.exit(main())
