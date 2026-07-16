@@ -272,9 +272,20 @@ def _classify_assertion(
         #  - trivially_true: both sides are the SAME f call
         #  - self_referential_helper: both sides use f but with
         #    different args (e.g. f(s) == f(int(s)))
+        # Use ``ast.dump`` for the identity check (not the
+        # string ``ast.unparse``). Whitespace differences in the
+        # source — e.g. ``f([1,2])`` vs ``f([1, 2])`` — would
+        # make unparse-based comparison report two semantically
+        # identical expressions as different. ``ast.dump`` is
+        # the canonical AST serialization and is stable across
+        # whitespace variations. The detail message still uses
+        # the unparse for human-readable display.
+        # Compute the unparse once; both branches use it for
+        # the human-readable detail message. The identity check
+        # itself uses ``ast.dump`` (whitespace-stable).
         left_text = _unparse(left)
         right_text = _unparse(right)
-        if left_text == right_text:
+        if ast.dump(left) == ast.dump(right):
             return AssertionClassification(
                 line=assert_node.lineno,
                 kind="trivially_true",
@@ -599,6 +610,58 @@ def test_oracle_runner_self_check() -> None:
         ast.parse(source)
     except SyntaxError as exc:
         pytest.fail(f"self-parse failed: {exc}")
+
+
+@pytest.mark.meta_oracle
+@pytest.mark.parametrize(
+    ("source", "function_under_test", "expected_kind"),
+    [
+        # Whitespace-different but semantically identical: the
+        # old string-based comparison would have reported
+        # ``self_referential_helper`` (different text); the new
+        # ``ast.dump``-based comparison correctly reports
+        # ``trivially_true``.
+        (
+            "def test_x(s):\n"
+            "    assert f([1, 2]) == f([1,2])\n",
+            "f",
+            "trivially_true",
+        ),
+        # Same text, identical operands.
+        (
+            "def test_x(s):\n"
+            "    assert f(s) == f(s)\n",
+            "f",
+            "trivially_true",
+        ),
+        # Different arg forms: f(s) vs f(int(s)). The classifier
+        # should report ``self_referential_helper``.
+        (
+            "def test_x(s):\n"
+            "    assert f(s) == f(int(s))\n",
+            "f",
+            "self_referential_helper",
+        ),
+    ],
+)
+def test_classify_trivially_true_whitespace_stable(
+    source: str, function_under_test: str, expected_kind: str
+) -> None:
+    """``_classify_assertion`` uses ``ast.dump`` (not
+    ``ast.unparse``) to detect ``trivially_true`` so whitespace
+    differences in the source don't change the classification.
+    """
+    tree = ast.parse(source)
+    test_node = tree.body[0]
+    assert_node = test_node.body[0]
+    local_defs = _build_local_var_defs(test_node)
+    classification = _classify_assertion(
+        assert_node, function_under_test, local_defs
+    )
+    assert classification.kind == expected_kind, (
+        f"expected {expected_kind!r}, got {classification.kind!r}: "
+        f"{classification.detail}"
+    )
 
 
 # ---------------------------------------------------------------------------
