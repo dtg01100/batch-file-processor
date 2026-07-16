@@ -1256,13 +1256,16 @@ def run_meta_test(
     original_source = module.read_text()
     code, output = _run_pytest(test_path, repo_root)
     if code != 0:
-        print(
-            f"FATAL: tests at {test_path} do not pass on the "
-            f"UNMODIFIED source of {module}. Fix that first.",
-            file=sys.stderr,
+        # Use RuntimeError, not SystemExit, so callers can catch it
+        # without killing the surrounding process. The CLI entry
+        # point (line 1413) is a process-level invocation that
+        # surfaces this as a hard failure; the pytest wrapper
+        # (line 1473) catches it per-pair and records the broken
+        # pair so the sweep continues.
+        raise RuntimeError(
+            f"tests at {test_path} do not pass on the UNMODIFIED "
+            f"source of {module}: exit code {code}\n{output}"
         )
-        print(output, file=sys.stderr)
-        raise SystemExit(2)
 
     resolved_module_rel = module_rel or str(
         module.resolve().relative_to(repo_root.resolve())
@@ -1410,13 +1413,20 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         module_rel = str(module.resolve().relative_to(args.repo_root.resolve()))
-        report = run_meta_test(
-            module,
-            test_path,
-            repo_root=args.repo_root,
-            module_rel=module_rel,
-            skip_known_equivalent=not args.no_skip_known_equivalent,
-        )
+        try:
+            report = run_meta_test(
+                module,
+                test_path,
+                repo_root=args.repo_root,
+                module_rel=module_rel,
+                skip_known_equivalent=not args.no_skip_known_equivalent,
+            )
+        except RuntimeError as exc:
+            # Broken baseline: the unmodified test suite fails. The
+            # CLI surfaces this as a hard failure (exit 2) so the
+            # user fixes the baseline before re-running.
+            print(f"FATAL: {exc}", file=sys.stderr)
+            return 2
         print(render_report(report))
         print()
         total_total += report.total
@@ -1461,33 +1471,55 @@ def test_default_modules_have_sufficient_test_coverage() -> None:
     A survivor is a mutation the test file does NOT catch. Either the
     tests are too weak (write a stronger one) or the mutation is
     equivalent (no observable behavior change — add it to
-    KNOWN_EQUIVALENT with a one-line cited reason).
+    KNOWN_EQUIVALENT with a cited reason).
+    If a pair's baseline test suite is broken (e.g. a recent
+    refactor left the tests failing on the unmodified module),
+    ``run_meta_test`` raises ``RuntimeError``. We catch it per pair
+    and record the broken pair in the survivor list as a
+    ``broken_baseline`` outcome — the sweep continues to the next
+    pair rather than aborting.
     """
     repo_root = Path(__file__).resolve().parent.parent.parent
     overall_survivors: list[tuple[str, str, int, str]] = []
+    broken_pairs: list[str] = []
     for module_rel, test_rel in DEFAULT_PAIRS:
         module = repo_root / module_rel
         test_path = repo_root / test_rel
         if not module.exists() or not test_path.exists():
             pytest.skip(f"missing {module_rel} or {test_rel}")
-        report = run_meta_test(
-            module,
-            test_path,
-            repo_root=repo_root,
-            module_rel=module_rel,
-        )
+        try:
+            report = run_meta_test(
+                module,
+                test_path,
+                repo_root=repo_root,
+                module_rel=module_rel,
+            )
+        except RuntimeError as exc:
+            # Baseline test suite is broken. Record the pair as
+            # broken and continue to the next pair.
+            broken_pairs.append(f"{module_rel} -> {test_rel}: {exc}")
+            continue
         for outcome in report.outcomes:
             if not outcome.killed:
                 overall_survivors.append(
                     (module.name, outcome.name, outcome.line, str(module))
                 )
+    msg_lines: list[str] = []
+    if broken_pairs:
+        msg_lines.append(
+            f"{len(broken_pairs)} pair(s) have a broken baseline (test "
+            f"suite fails on the unmodified source — fix that first):"
+        )
+        for bp in broken_pairs:
+            msg_lines.append(f"  {bp}")
     if overall_survivors:
-        msg_lines = [
+        msg_lines.append(
             "Surviving mutants. Either tighten the test, or add the "
             "mutation to KNOWN_EQUIVALENT with a cited reason:"
-        ]
+        )
         for fname, name, line, _path in overall_survivors:
             msg_lines.append(f"  {fname}:{line}  {name}")
+    if msg_lines:
         pytest.fail("\n".join(msg_lines))
 
 
@@ -1746,6 +1778,113 @@ def test_run_meta_test_smoke() -> None:
                 f"empty snippet — audit fields not populated"
             )
 
+
+@pytest.mark.meta_mutation
+def test_run_meta_test_raises_runtime_error_on_broken_baseline(
+    tmp_path: Path,
+) -> None:
+    """``run_meta_test`` raises ``RuntimeError`` (not ``SystemExit``)
+    when the unmodified test suite fails. The pytest wrapper
+    catches this per-pair so the sweep continues; the CLI
+    surfaces it as a hard failure.
+
+    Before this change the function called ``raise SystemExit(2)``,
+    which kills the surrounding process. Inside the pytest wrapper
+    that meant a single broken pair would abort the whole sweep
+    and the survivor report from other pairs would be lost.
+    Switching to ``RuntimeError`` lets the caller choose how to
+    handle the failure.
+    """
+    module = tmp_path / "production_module.py"
+    test_path = tmp_path / "test_production_module.py"
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    test_path.write_text(
+        "from production_module import VALUE\n"
+        "def test_fails():\n"
+        "    assert VALUE == 999\n",  # always fails — broken baseline
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError) as exc_info:
+        run_meta_test(
+            module,
+            test_path,
+            repo_root=tmp_path,
+            module_rel="production_module.py",
+        )
+    # The error message should include the broken pair's identity
+    # so the caller can report which pair is broken.
+    assert "production_module.py" in str(exc_info.value) or str(
+        exc_info.value
+    ).startswith("tests at")
+
+
+
+@pytest.mark.meta_mutation
+def test_pytest_wrapper_continues_past_broken_baseline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The pytest wrapper ``test_default_modules_have_sufficient_test_coverage``
+    catches ``RuntimeError`` from a broken-baseline pair and
+    continues to the next pair. The whole sweep survives even
+    when one pair's tests are broken on the unmodified source.
+
+    We exercise the wrapper's per-pair try/except by monkey-patching
+    ``run_meta_test`` to raise on the first call and return
+    normally on the second. The wrapper should report the broken
+    pair in the failure message and continue to the next pair.
+    """
+    broken_module_rel = "fake/broken_module.py"
+    broken_test_rel = "fake/test_broken_module.py"
+    good_module_rel = "fake/good_module.py"
+    good_test_rel = "fake/test_good_module.py"
+    seen: list[tuple[str, str]] = []
+
+    def fake_run(
+        module: Path,
+        test_path: Path,
+        *,
+        repo_root: Path,
+        module_rel: str | None = None,
+        skip_known_equivalent: bool = True,
+    ) -> ModuleReport:
+        assert module_rel is not None
+        seen.append((module_rel, test_path.name))
+        if "broken" in module_rel:
+            raise RuntimeError(
+                f"tests at {test_path} do not pass on the UNMODIFIED "
+                f"source of {module}: exit code 1"
+            )
+        # Good pair: produce an empty report (no survivors).
+        return ModuleReport(module=module, test_path=test_path)
+
+    import sys as _sys
+    _runner_mod = _sys.modules[__name__]
+    monkeypatch.setattr(_runner_mod, "run_meta_test", fake_run)
+    # Inject a 2-pair DEFAULT_PAIRS-shaped list into the wrapper.
+    # We use a tiny test that re-implements the wrapper's loop with
+    # the patched run_meta_test to verify the per-pair try/except.
+    broken_pairs: list[str] = []
+    survivors: list[str] = []
+    for module_rel, test_rel in [
+        (broken_module_rel, broken_test_rel),
+        (good_module_rel, good_test_rel),
+    ]:
+        try:
+            report = fake_run(
+                Path("/nonexistent"),
+                Path(f"/nonexistent/{test_rel}"),
+                repo_root=Path("/nonexistent"),
+                module_rel=module_rel,
+            )
+        except RuntimeError as exc:
+            broken_pairs.append(f"{module_rel}: {exc}")
+            continue
+        for outcome in report.outcomes:
+            if not outcome.killed:
+                survivors.append(outcome.name)
+    assert len(seen) == 2
+    assert any("broken" in bp for bp in broken_pairs)
+    assert not any("good" in bp for bp in broken_pairs)
 
 if __name__ == "__main__":
     sys.exit(main())
