@@ -174,7 +174,9 @@ def _contains_call_to(node: ast.AST, target_name: str) -> bool:
     return False
 
 
-def _build_local_var_defs(test: ast.FunctionDef) -> dict[str, ast.AST]:
+def _build_local_var_defs(
+    test: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> dict[str, ast.AST]:
     """Map local-variable names in ``test`` to their assigned RHS expression.
 
     Only simple single-target assignments are tracked
@@ -336,9 +338,22 @@ def _classify_assertion(
 # ---------------------------------------------------------------------------
 
 
-def _iter_given_tests(tree: ast.Module) -> Iterable[ast.FunctionDef]:
-    """Yield every top-level test function that has a ``@given`` decorator."""
-    for node in tree.body:
+def _iter_given_tests(
+    tree: ast.Module,
+) -> Iterable[ast.FunctionDef | ast.AsyncFunctionDef]:
+    """Yield every test function (top-level OR class-body method)
+    that has a ``@given`` decorator.
+
+    Walks the AST so methods inside ``class TestX:`` blocks are
+    visited, not just top-level functions. Class-based property
+    tests are uncommon in this project (the current corpus has
+    zero), but the runner's contract is "find every @given test"
+    and silently dropping class-body methods would be a real
+    blind spot — a future contributor adding a
+    ``class TestPropertyBased:`` block would have their tests
+    skipped without warning.
+    """
+    for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
         if not node.name.startswith("test_"):
@@ -359,8 +374,9 @@ def _is_given_decorator(dec: ast.AST) -> bool:
         return dec.attr == "given"
     return False
 
-
-def _iter_asserts(test: ast.FunctionDef) -> Iterable[ast.Assert]:
+def _iter_asserts(
+    test: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> Iterable[ast.Assert]:
     for stmt in ast.walk(test):
         if isinstance(stmt, ast.Assert):
             yield stmt
@@ -391,7 +407,9 @@ def _collect_imports(tree: ast.Module) -> set[str]:
 
 
 def _analyze_test(
-    file: Path, test: ast.FunctionDef, imports: set[str]
+    file: Path,
+    test: ast.FunctionDef | ast.AsyncFunctionDef,
+    imports: set[str],
 ) -> PropertyTestReport:
     function_under_test = _module_under_test(file, test.name, imports)
     local_defs = _build_local_var_defs(test)
@@ -662,6 +680,35 @@ def test_classify_trivially_true_whitespace_stable(
         f"expected {expected_kind!r}, got {classification.kind!r}: "
         f"{classification.detail}"
     )
+
+
+@pytest.mark.meta_oracle
+def test_iter_given_tests_walks_class_bodies() -> None:
+    """``_iter_given_tests`` discovers ``@given`` tests that live
+    inside class bodies, not just at the top level. Before the
+    fix, the function iterated ``tree.body`` and silently dropped
+    every class-body method — a latent blind spot because the
+    current corpus has no class-based property tests, but a
+    future contributor adding ``class TestPropertyBased:`` would
+    have their tests silently skipped.
+    """
+    source = (
+        "from hypothesis import given\n"
+        "def f(s):\n"
+        "    return s\n"
+        "class TestClassBasedProperty:\n"
+        "    @given(s=st.text())\n"
+        "    def test_class_method(self, s):\n"
+        "        assert f(s) == f(s)\n"
+    )
+    tree = ast.parse(source)
+    found = list(_iter_given_tests(tree))
+    assert len(found) == 1
+    assert found[0].name == "test_class_method"
+    # Top-level \`f\` is NOT a \`test_*\` function and has no
+    # \`@given\` — make sure the walker correctly excludes it.
+    found_names = {n.name for n in found}
+    assert "f" not in found_names
 
 
 # ---------------------------------------------------------------------------
