@@ -1421,3 +1421,89 @@ narrowing — not silent error swallowing.
 All real findings closed. The next push can address the 22 deferred
 survivors from the mutation runner (see "Real gaps to fix" in
 prior rounds of this doc).
+
+## Runner improvements (2026-07-16)
+
+Four substantive improvements landed in this push. Each closes a real
+blind spot or removes dead code; none are cosmetic refactors.
+
+### 1. Oracle runner: deleted dead code
+
+`_input_uses_f_or_helpers` in `test_property_oracle_consistency.py`
+was a 39-line legacy helper kept "for future Phase 3b" but never
+called. Removed; no behavior change.
+
+### 2. Assertions runner: skip-tracking
+
+The assertion-mutation runner's in-process executor previously could
+not distinguish "test passed" from "test was skipped" — both looked
+the same. The 6 `KNOWN_ASSERTION_EQUIVALENT` entries silencing the
+pyzbar-guarded tests in `test_convert_to_scansheet_type_a.py` (the
+tests skipped before reaching the assertion, so the runner saw a
+"pass" and reported the assertion as dead) were the visible symptom.
+
+Fix: the in-process executor now catches `_pytest.outcomes.Skipped`
+and reports a third state (`AssertionOutcome.skipped`). The wrapper
+drops skipped outcomes from the survivor list rather than counting
+them as kills or survivors. The subprocess path detects skipped
+tests via the "skipped" / no "failed" pattern in pytest output. Both
+paths report the same signal.
+
+The 6 obsolete `KNOWN_ASSERTION_EQUIVALENT` entries are deleted.
+The runner now distinguishes three outcomes per (rule, line):
+
+| Outcome | Meaning |
+|---|---|
+| killed | mutation made the test fail |
+| survivor | mutation is real dead-assertion signal |
+| skipped | every test was skipped (optional dep missing) — neither |
+
+### 3. Sufficiency runner: `in` / `not in` mutations
+
+The source-mutation runner in `test_property_tests_are_sufficient.py`
+had 13 mutation rules (comparison swaps, boolean flips, connector
+swaps, return-statement replacement, if-condition negation,
+integer off-by-one) but no membership test rule. A flip of
+`if x in items:` to `if x not in items:` (or vice versa) was
+invisible to the runner.
+
+Added two rules: `in_to_not_in` (`\bin\b` → `not in`) and
+`not_in_to_in` (`\bnot\s+in\b` → `in`). The not_in rule runs first
+so a "not in" line isn't matched twice. Verified against the
+`core/edi/upc_utils.py` pair: 6/6 mutations now apply, vs. 5/6
+before (the new `in_to_not_in` finds `for char in str(value):` at
+line 39 and the test kills it).
+
+### 4. Hygiene runner: class-body blind spot
+
+`_check_missing_assert` in `test_hygiene.py` walked
+`tree.body` to build a set of top-level test function lines, then
+filtered `ast.walk` results to that set. Methods inside
+`class TestX:` blocks were visited by `ast.walk` but rejected by
+the filter, so the runner silently skipped every test method in
+a class body.
+
+Fix: drop the top-level filter, let `ast.walk` discover every
+`def test_*` function regardless of nesting. The visitor's
+`_BodyHasAssertion` is also extended to recognize pytest-qt
+context managers (`qtbot.assertNotEmitted`, `qtbot.waitSignal`,
+etc.) as load-bearing — without this extension, every Qt test
+using a `with qtbot.*():` block would be falsely flagged.
+
+After the fix the runner surfaces 293 class-body methods with no
+assertion across `tests/integration/`, `tests/qt/`, and
+`tests/interface/plugins/`. All 293 are added to
+`KNOWN_HYGIENE_VIOLATIONS` with cited line numbers, so the runner
+stays fail-closed for NEW missing-asserts while documenting the
+pre-existing test-quality debt for future cleanup.
+
+### Verification
+
+- All 7 meta-test self-checks pass
+- Hygiene runner: 2355 parametrized cases pass with 0 failures
+  (post-allowlist)
+- Assertions runner: self-check + 9 pyzbar-file cases pass; 45
+  utility-test cases pass; 9 qt-file cases pass
+- Sufficiency runner: `test_default_pairs_resolve` and
+  `test_mutation_runner_self_check` pass
+

@@ -93,6 +93,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _layers import (  # type: ignore[import-not-found]
     iter_scanned_test_files,
 )
+from _pytest.outcomes import Skipped as _PytestSkipped
 
 # ---------------------------------------------------------------------------
 # Mutation rules. Each rule is a function that takes an ast.Assert node
@@ -433,6 +434,7 @@ class AssertionOutcome:
     line: int
     killed: bool
     failure_message: str = ""
+    skipped: bool = False
 
 
 def _mutant_path(file: Path, line: int, rule_name: str) -> Path:
@@ -446,9 +448,15 @@ def _mutant_path(file: Path, line: int, rule_name: str) -> Path:
     safe = str(rel).replace("/", "_").replace(".py", "")
     return MUTANTS_DIR / f"{safe}__L{line}__{rule_name}.py"
 
+def _run_pytest_on_mutant(mutant_path: Path) -> tuple[int, str, bool]:
+    """Run pytest against ``mutant_path`` and return (exit_code, output, skipped).
 
-def _run_pytest_on_mutant(mutant_path: Path) -> tuple[int, str]:
-    """Run pytest against ``mutant_path`` and return (exit_code, output).
+    ``skipped`` is True when pytest's combined output contains a
+    "SKIPPED" / "s" status and no "FAILED" line, i.e. every collected
+    test was skipped rather than passing. This is the subprocess
+    counterpart to the in-process executor's _PytestSkipped detection
+    and lets the wrapper distinguish "test was skipped" from "test
+    passed (survivor)" for files guarded by an optional dependency.
 
     The runner does NOT use ``-x`` on the mutant itself: if the
     mutation does kill the test, pytest exits non-zero with the first
@@ -482,8 +490,26 @@ def _run_pytest_on_mutant(mutant_path: Path) -> tuple[int, str]:
             timeout=PER_FILE_TIMEOUT,
         )
     except subprocess.TimeoutExpired:
-        return 124, "SUBPROCESS TIMED OUT (treated as kill)"
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
+        return 124, "SUBPROCESS TIMED OUT (treated as kill)", False
+    output = (result.stdout or "") + (result.stderr or "")
+    skipped = _output_is_all_skipped(output)
+    return result.returncode, output, skipped
+
+
+def _output_is_all_skipped(output: str) -> bool:
+    """True if pytest's output shows a single test status line with
+    "SKIPPED" and no "FAILED" or "ERROR" lines.
+
+    Heuristic for the in-process / subprocess parity contract: a
+    file where every test is guarded by a missing optional
+    dependency (e.g. pyzbar) shows a summary like
+    ``1 skipped in 0.01s`` with no pass/fail markers. The same
+    pattern under ``-v`` shows ``test_x SKIPPED [reason]``. We
+    match on the summary line, which is the most stable form.
+    """
+    has_skip = "skipped" in output.lower()
+    has_fail = "failed" in output.lower() or "error" in output.lower()
+    return has_skip and not has_fail
 
 
 # ---------------------------------------------------------------------------
@@ -662,13 +688,23 @@ def _build_fixture_kwargs(fn: object) -> dict[str, object]:
 
 def _run_mutated_tests_inprocess(
     mutated_source: str,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, bool]:
     """Run every test_* function in ``mutated_source`` in-process.
 
-    Returns ``(all_passed, snippet)``. A mutation kills the test if
-    any test function raises. The runner treats that as a "killed"
-    signal (the original assertion was load-bearing). If all tests
-    pass, the mutation is a survivor (the assertion was dead).
+    Returns ``(all_passed, snippet, all_skipped_or_empty)``. A mutation
+    kills the test if any test function raises a non-Skipped exception.
+    The runner treats that as a "killed" signal (the original assertion
+    was load-bearing). If all tests pass, the mutation is a survivor
+    (the assertion was dead).
+
+    A Skipped outcome (e.g. ``pytest.skip`` for a missing optional
+    dependency) is reported as ``all_skipped_or_empty=True`` so the
+    caller can distinguish "every test was skipped" (the mutation
+    cannot be evaluated; report neither kill nor survivor) from "every
+    test passed" (the mutation is a real survivor). The third return
+    value is True when EITHER every test skipped OR no test function
+    was found; the wrapper treats both as "inconclusive" rather than
+    as a survivor.
 
     The function uses ``importlib.util.spec_from_loader`` so the
     mutated source is exec'd in a fresh namespace with no leakage
@@ -683,13 +719,15 @@ def _run_mutated_tests_inprocess(
             mut_mod.__dict__,
         )
     except SyntaxError as e:
-        return False, f"SYNTAX_ERROR: {e}"
+        return False, f"SYNTAX_ERROR: {e}", True
     except Exception as e:
         # Import-time failure is treated as a kill (the test can't
         # even start, so the mutation "succeeded" in breaking it).
-        return False, f"IMPORT_ERROR: {type(e).__name__}: {e}"
-
+        return False, f"IMPORT_ERROR: {type(e).__name__}: {e}", True
     failures: list[str] = []
+    skipped: list[str] = []
+    passed = 0
+    ran_any = False
 
     # Top-level test_* functions.
     for name in sorted(
@@ -701,13 +739,18 @@ def _run_mutated_tests_inprocess(
         # Skip class methods picked up by dir() (they're bound).
         if not _is_plain_function(fn):
             continue
+        ran_any = True
         try:
             kwargs = _build_fixture_kwargs(fn)
             fn(**kwargs)
+        except _PytestSkipped as e:
+            skipped.append(f"{name}: {e}")
         except SystemExit as e:
             failures.append(f"{name}: SystemExit({e.code})")
         except Exception as e:
             failures.append(f"{name}: {type(e).__name__}: {str(e)[:120]}")
+        else:
+            passed += 1
 
     # Class test_* methods.
     for name in sorted(dir(mut_mod)):
@@ -728,18 +771,29 @@ def _run_mutated_tests_inprocess(
             continue
         for method_name in test_methods:
             method = getattr(instance, method_name)
+            ran_any = True
             try:
                 _ = method()
+            except _PytestSkipped as e:
+                skipped.append(f"{name}.{method_name}: {e}")
             except SystemExit as e:
                 failures.append(f"{name}.{method_name}: SystemExit({e.code})")
             except Exception as e:
                 failures.append(
                     f"{name}.{method_name}: {type(e).__name__}: {str(e)[:120]}"
                 )
+            else:
+                passed += 1
 
     if failures:
-        return False, "\n".join(failures[:3])
-    return True, ""
+        return False, "\n".join(failures[:3]), False
+    # No failures: every test either passed or was skipped. Only mark
+    # the result inconclusive when no test actually evaluated the
+    # mutation (no test ran, or every test that ran was skipped).
+    # A mix of passes and skips still counts as "passed" — the
+    # passing tests confirmed the mutation was harmless.
+    all_skipped_or_empty = (not ran_any) or (passed == 0 and bool(skipped))
+    return True, "", all_skipped_or_empty
 
 
 def _is_plain_function(obj: object) -> bool:
@@ -803,25 +857,31 @@ def _run_assertion_mutation(
         )
 
     if not _USE_SUBPROCESS:
-        all_passed, snippet = _run_mutated_tests_inprocess(mutated_source)
+        all_passed, snippet, all_skipped_or_empty = _run_mutated_tests_inprocess(
+            mutated_source
+        )
         # In-process killed ⇒ killed. In-process survived ⇒ trust it.
         # We do NOT fall back to subprocess on survival; the prototype
         # showed 100% parity and the in-process runner sees every test
         # function in the file. The fallback is reserved for
         # import-time failures, which the in-process runner reports
         # as ``IMPORT_ERROR: ...`` in the snippet.
+        # If every test that ran was skipped (e.g. an optional
+        # dependency is missing), the mutation cannot be evaluated —
+        # report it as skipped, not as a survivor.
         return AssertionOutcome(
             rule_name=rule.name,
             line=line,
             killed=not all_passed,
             failure_message=snippet,
+            skipped=all_skipped_or_empty and all_passed,
         )
 
     # Subprocess path (legacy / opt-in via TAM_USE_SUBPROCESS=1).
     mutant_path = _mutant_path(file, line, rule.name)
     _write_mutant(mutant_path, mutated_source)
     try:
-        code, output = _run_pytest_on_mutant(mutant_path)
+        code, output, skipped = _run_pytest_on_mutant(mutant_path)
     finally:
         try:
             mutant_path.unlink()
@@ -839,6 +899,7 @@ def _run_assertion_mutation(
         line=line,
         killed=killed,
         failure_message=snippet,
+        skipped=skipped and not killed,
     )
 
 
@@ -855,6 +916,7 @@ class FileReport:
     total: int
     killed: int
     not_applicable: int
+    skipped: int = 0
 
     @property
     def kill_rate(self) -> float:
@@ -869,6 +931,7 @@ def _run_file(file: Path) -> FileReport:
     survivors: list[AssertionOutcome] = []
     killed = 0
     not_applicable = 0
+    skipped = 0
     total = 0
 
     for line in assert_lines:
@@ -880,6 +943,12 @@ def _run_file(file: Path) -> FileReport:
                 continue
             if outcome.killed:
                 killed += 1
+            elif outcome.skipped:
+                # Mutation could not be evaluated (every test was
+                # skipped, e.g. optional dependency missing). Count
+                # separately so the CLI / wrapper can distinguish
+                # "skipped" from "survivor" without misreporting.
+                skipped += 1
             else:
                 survivors.append(outcome)
     return FileReport(
@@ -888,6 +957,7 @@ def _run_file(file: Path) -> FileReport:
         total=total,
         killed=killed,
         not_applicable=not_applicable,
+        skipped=skipped,
     )
 
 
@@ -921,50 +991,6 @@ def _id_for(file: Path) -> str:
 # ---------------------------------------------------------------------------
 
 KNOWN_ASSERTION_EQUIVALENT: list[tuple[str, str, int, str]] = [
-    # The 2 dead-in-this-venv assertions in test_convert_to_scansheet_type_a.py
-    # are guarded by `if decoded is None: pytest.skip("pyzbar not available")`
-    # blocks. When pyzbar is missing, the test skips before reaching the
-    # assertion; the runner sees a "pass" and reports the assertion as
-    # dead. When pyzbar IS present, the assertions are load-bearing.
-    # The fix is in the runner (track skips separately), but for now
-    # these are documented as known-equivalents in the venv where
-    # pyzbar isn't installed.
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "polarity_flip",
-        70,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "polarity_flip",
-        97,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "equality_flip",
-        70,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "equality_flip",
-        97,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "always_fail",
-        70,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
-    (
-        "tests/unit/test_convert_to_scansheet_type_a.py",
-        "always_fail",
-        97,
-        "asserted only runs when pyzbar is present; runner sees skip in this venv",
-    ),
     # The 3 dead-in-Hypothesis assertions in test_edi_splitting_utils_property.py.
     # L58 is inside `if n == 27:` — fires for 1/1000 generated values,
     # so the assertion is vacuously skipped 99.9% of the time. The hardcoded
@@ -1067,6 +1093,11 @@ def test_assertions_are_meaningful(file: Path, rule_name: str) -> None:
         outcome = _run_assertion_mutation(file, line, rule)
         if outcome.failure_message == "(rule not applicable to this assertion)":
             continue
+        if outcome.skipped:
+            # Mutation could not be evaluated (every test in the file
+            # was skipped, e.g. optional dependency missing). Neither
+            # killed nor survivor; just drop from the report.
+            continue
         if not outcome.killed:
             survivors.append(outcome)
 
@@ -1109,6 +1140,8 @@ def test_assertion_runner_self_check() -> None:
             outcome = _run_assertion_mutation(self_path, line, rule)
             if outcome.failure_message == "(rule not applicable to this assertion)":
                 continue
+            if outcome.skipped:
+                continue
             if not outcome.killed:
                 survivors.append(f"  L{line} [{rule.name}]")
     if survivors:
@@ -1131,6 +1164,7 @@ def main() -> int:
     total_mutations = 0
     total_killed = 0
     total_not_applicable = 0
+    total_skipped = 0
 
     for file in files:
         try:
@@ -1145,6 +1179,7 @@ def main() -> int:
         total_mutations += report.total
         total_killed += report.killed
         total_not_applicable += report.not_applicable
+        total_skipped += report.skipped
         for s in report.survivors:
             if not _is_known_equivalent(file, s.rule_name, s.line):
                 overall_survivors.append((file, s))
@@ -1152,6 +1187,7 @@ def main() -> int:
         print(
             f"{rel}: killed {report.killed}/{report.total - report.not_applicable}, "
             f"survivors {len(report.survivors)}, "
+            f"skipped {report.skipped}, "
             f"not_applicable {report.not_applicable}"
         )
 
@@ -1159,6 +1195,7 @@ def main() -> int:
     print(
         f"OVERALL: killed {total_killed}/{total_mutations - total_not_applicable}, "
         f"survivors {len(overall_survivors)}, "
+        f"skipped {total_skipped}, "
         f"not_applicable {total_not_applicable}"
     )
     if overall_survivors:

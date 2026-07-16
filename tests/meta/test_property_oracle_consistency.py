@@ -355,45 +355,6 @@ def _iter_asserts(test: ast.FunctionDef) -> Iterable[ast.Assert]:
             yield stmt
 
 
-def _input_uses_f_or_helpers(
-    test: ast.FunctionDef, function_under_test: str
-) -> tuple[bool, list[str]]:
-    """Legacy helper kept for backwards compatibility; not currently
-    used by the wrapper. Returns ``(uses_f_in_input, helper_names)``.
-
-    The previous version of the wrapper used these fields to flag an
-    ``input_self_referential`` pattern where a test used the
-    function-under-test to build its input AND asserted against the
-    same function. That heuristic was too aggressive — it produced
-    false positives on legitimate cross-check tests like
-    ``test_convert_to_price_decimal_decimal_matches_convert_to_price``
-    (which uses ``convert_to_price`` as the oracle for
-    ``convert_to_price_decimal`` — a real, non-self-referential
-    cross-check). Removing the check brings the runner's findings
-    down to the high-signal ``trivially_true`` and
-    ``self_referential_helper`` patterns only.
-
-    The detection code is preserved here for a future Phase 3b
-    improvement that can distinguish "f(x) on the left, expected
-    from a *different* f on the right" (legitimate cross-check)
-    from "f(x) on the left, expected also from f(x) elsewhere"
-    (self-referential). That requires call-graph traversal across
-    the test's local helper functions, which is out of scope for
-    the initial Phase 3a deliverable.
-    """
-    uses_f_in_input = False
-    helper_calls: set[str] = set()
-    for stmt in test.body:
-        if isinstance(stmt, ast.Assign):
-            for sub in ast.walk(stmt.value):
-                if isinstance(sub, ast.Call) and isinstance(sub.func, ast.Name):
-                    if sub.func.id == function_under_test:
-                        uses_f_in_input = True
-                    elif sub.func.id.startswith("_") and not sub.func.id.startswith(
-                        "__"
-                    ):
-                        helper_calls.add(sub.func.id)
-    return uses_f_in_input, sorted(helper_calls)
 
 
 def _collect_imports(tree: ast.Module) -> set[str]:

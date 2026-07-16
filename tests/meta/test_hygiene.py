@@ -223,6 +223,14 @@ class _BodyHasAssertion(ast.NodeVisitor):
                     and ctx.func.attr in {"raises", "warns"}
                 ):
                     self.found = True
+                # pytest-qt qtbot.* context managers (waitSignal,
+                # assertNotEmitted, waitUntil, etc.) are load-bearing:
+                # entering the block asserts the signal/event occurs (or
+                # does not). Without recognizing them, every Qt test
+                # using a qtbot context manager would be flagged as
+                # missing_assert.
+                elif ctx.func.attr.startswith(("assert", "wait")):
+                    self.found = True
         self.generic_visit(node)
 
 
@@ -251,12 +259,14 @@ def _check_missing_assert(file: Path) -> list[Violation]:
     violations: list[Violation] = []
     source_lines = file.read_text(encoding="utf-8", errors="replace").splitlines()
 
-    top_level_test_lines: set[int] = set()
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if node.name.startswith("test_") and not _is_fixture(node):
-                top_level_test_lines.add(node.lineno)
-
+    # Walk every test_* function in the file — top-level OR nested in
+    # a class body. The previous version filtered to top-level only
+    # via ``tree.body``, which silently skipped methods inside
+    # ``class TestX:`` blocks. ``ast.walk`` already recurses into
+    # class bodies, so we just need to drop the filter and let it
+    # find every test_* function. Fixtures are still excluded by
+    # ``_is_fixture``.
+    test_functions: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
@@ -264,9 +274,11 @@ def _check_missing_assert(file: Path) -> list[Violation]:
             continue
         if node.name == "test_":  # bare `def test_(...):` is rare but skip
             continue
-        if node.lineno not in top_level_test_lines:
+        if _is_fixture(node):
             continue
+        test_functions.append(node)
 
+    for node in test_functions:
         visitor = _BodyHasAssertion()
         for stmt in node.body:
             visitor.visit(stmt)
@@ -660,6 +672,209 @@ def _module_for(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Check: magic padding (e.g. "00" + x).
+# ---------------------------------------------------------------------------
+#
+# AGENTS.md anti-patterns table:
+#
+#   Magic padding "00" + x  | Locale-dependent, unreadable
+#                           | Use x.zfill(2) or f"{x:02d}"
+#
+# The smell is concatenating a string of zeros to a variable for
+# zero-padding. The lint fires on ``Add`` where the left operand is a
+# string literal matching ``^[0]+$`` and the right is a Name or
+# Attribute (not another literal — those are normal concatenation).
+# String-repetition ``"0" * 32`` is excluded (different operator: ``Mult``).
+# ---------------------------------------------------------------------------
+
+
+def _check_magic_padding(file: Path) -> list[Violation]:
+    try:
+        source = file.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    violations: list[Violation] = []
+    source_lines = source.splitlines()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.BinOp) or not isinstance(node.op, ast.Add):
+            continue
+        if (
+            not isinstance(node.left, ast.Constant)
+            or not isinstance(node.left.value, str)
+            or not re.fullmatch(r"0+", node.left.value)
+            or not isinstance(node.right, (ast.Name, ast.Attribute))
+        ):
+            continue
+        src = (
+            source_lines[node.lineno - 1].strip()
+            if 1 <= node.lineno <= len(source_lines)
+            else ""
+        )
+        if src.startswith("#"):
+            continue
+        violations.append(
+            Violation(
+                file=file,
+                line=node.lineno,
+                rule="magic_padding",
+                message=(
+                    "'\"00\" + x' is locale-sensitive zero-padding; use "
+                    'f"{x:02d}" for ints or x.zfill(N) for strings '
+                    "(AGENTS.md anti-patterns)"
+                ),
+                source=src,
+            )
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Check: tuple-return lambda trick ((expr, None)[1]).
+# ---------------------------------------------------------------------------
+#
+# AGENTS.md anti-patterns table:
+#
+#   Tuple-return lambda trick (expr, None)[1] | Obfuscatory
+#                                            | Use named helper function
+#
+# The smell is returning a value from a function by stuffing it into a
+# tuple with a None sentinel and then indexing. Detected when a
+# ``Subscript`` has a 2-element ``Tuple`` value containing exactly one
+# ``None`` (literal or Name) and the other element is something else,
+# with the slice being literal ``0`` or ``1``.
+# ---------------------------------------------------------------------------
+
+
+def _check_tuple_subscript_trick(file: Path) -> list[Violation]:
+    try:
+        source = file.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    violations: list[Violation] = []
+    source_lines = source.splitlines()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Subscript):
+            continue
+        if not isinstance(node.value, ast.Tuple) or len(node.value.elts) != 2:
+            continue
+
+        def _is_none(elt: ast.expr) -> bool:
+            return (isinstance(elt, ast.Constant) and elt.value is None) or (
+                isinstance(elt, ast.Name) and elt.id == "None"
+            )
+
+        none_count = sum(1 for e in node.value.elts if _is_none(e))
+        if none_count != 1:
+            continue
+
+        index = node.slice
+        if not isinstance(index, ast.Constant) or index.value not in (0, 1):
+            continue
+
+        src = (
+            source_lines[node.lineno - 1].strip()
+            if 1 <= node.lineno <= len(source_lines)
+            else ""
+        )
+        violations.append(
+            Violation(
+                file=file,
+                line=node.lineno,
+                rule="tuple_subscript_trick",
+                message=(
+                    "(expr, None)[1] trick is obfuscatory; return the value "
+                    "directly from a helper function (AGENTS.md anti-patterns)"
+                ),
+                source=src,
+            )
+        )
+    return violations
+
+
+# ---------------------------------------------------------------------------
+# Check: nested try/except pyramid (3+ levels).
+# ---------------------------------------------------------------------------
+#
+# AGENTS.md anti-patterns table:
+#
+#   Nested try/except pyramid (3+ levels) | Hard to follow
+#                                       | Use 'stage' variable with single
+#                                         try/except
+#
+# Detected by walking the AST and tracking a chain of enclosing
+# ``ast.Try`` nodes. A node is added to the chain only if it has at
+# least one ``except`` handler (a try/finally isn't nesting for this
+# purpose). When the chain reaches length 3, the inner-most node is
+# reported. Skip chains that contain a bare-except-pass anywhere — that
+# is a different anti-pattern already covered by ``bare_except_pass``;
+# the pyramid lint would just double-flag it.
+# ---------------------------------------------------------------------------
+
+
+def _check_nested_try_pyramid(file: Path) -> list[Violation]:
+    try:
+        source = file.read_text(encoding="utf-8", errors="replace")
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    violations: list[Violation] = []
+    source_lines = source.splitlines()
+
+    def _has_bare_except_pass(try_node: ast.Try) -> bool:
+        for handler in try_node.handlers:
+            if handler.type is None:
+                if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass):
+                    return True
+                continue
+            type_node = handler.type
+            if isinstance(type_node, ast.Name) and type_node.id == "Exception":
+                if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass):
+                    return True
+        return False
+
+    def visit(node: ast.AST, chain: list[ast.Try]) -> None:
+        new_chain = chain
+        if isinstance(node, ast.Try) and node.handlers:
+            new_chain = [*chain, node]
+            if len(new_chain) >= 3 and not any(
+                _has_bare_except_pass(t) for t in new_chain
+            ):
+                src = (
+                    source_lines[node.lineno - 1].strip()
+                    if 1 <= node.lineno <= len(source_lines)
+                    else ""
+                )
+                if not any(
+                    v.rule == "nested_try_pyramid" and v.line == node.lineno
+                    for v in violations
+                ):
+                    violations.append(
+                        Violation(
+                            file=file,
+                            line=node.lineno,
+                            rule="nested_try_pyramid",
+                            message=(
+                                "try/except nested 3+ levels deep; flatten "
+                                "with a 'stage' variable (AGENTS.md "
+                                "anti-patterns)"
+                            ),
+                            source=src,
+                        )
+                    )
+        children: list[ast.AST] = list(ast.iter_child_nodes(node))
+        for child in children:
+            visit(child, new_chain)
+
+    visit(tree, [])
+    return violations
+
+
+# ---------------------------------------------------------------------------
 # Check registry.
 # ---------------------------------------------------------------------------
 
@@ -672,6 +887,9 @@ CHECKS: dict[str, callable] = {
     "unjustified_noqa": _check_unjustified_noqa,
     "single_item_dispatch_root_import": _check_single_item_dispatch_root,
     "assert_is_bool_comparison": _check_assert_is_bool_comparison,
+    "magic_padding": _check_magic_padding,
+    "tuple_subscript_trick": _check_tuple_subscript_trick,
+    "nested_try_pyramid": _check_nested_try_pyramid,
 }
 
 
@@ -827,6 +1045,1854 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         430,
         "same SlowBackend.send pattern as L93",
     ),
+    # UPC-A -> EAN-13 conversion. The literal "0" is not zero-padding
+    # to a fixed width — it is a domain-specific prefix that converts
+    # the 12-digit UPC-A into the 13-digit EAN-13 barcode format the
+    # pyzbar decoder expects. ``"0" + upc`` is the canonical,
+    # self-documenting way to express the conversion; ``upc.zfill(13)``
+    # would silently zero-pad shorter UPCs and produce the wrong
+    # barcode for a UPC-A that doesn't already start with "0". The
+    # comment on each line states the conversion explicitly.
+    (
+        "tests/unit/test_convert_to_scansheet_type_a.py",
+        "magic_padding",
+        69,
+        "UPC-A -> EAN-13 prefix conversion (not zero-padding to width); "
+        "see test docstring 'UPC-A is encoded as EAN-13 (12 digits -> "
+        "13 digits with leading zero)'",
+    ),
+    (
+        "tests/unit/test_convert_to_scansheet_type_a.py",
+        "magic_padding",
+        91,
+        "same UPC-A -> EAN-13 conversion as L69",
+    ),
+    (
+        "tests/unit/test_convert_to_scansheet_type_a.py",
+        "magic_padding",
+        96,
+        "same UPC-A -> EAN-13 conversion as L69 (list comprehension)",
+    ),
+    # ---- tests/integration/test_automatic_and_single_mode.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/integration/test_automatic_and_single_mode.py",
+        "missing_assert",
+        400,
+        "class-body method; test_overlay_called_during_processing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_automatic_and_single_mode.py",
+        "missing_assert",
+        417,
+        "class-body method; test_single_folder_overlay_text has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_automatic_and_single_mode.py",
+        "missing_assert",
+        497,
+        "class-body method; test_refresh_called_after_graphical_process has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_automatic_and_single_mode.py",
+        "missing_assert",
+        512,
+        "class-body method; test_refresh_users_list_destroys_and_recreates has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/integration/test_gui_user_workflows.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        251,
+        "class-body method; test_edit_email_settings_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        278,
+        "class-body method; test_edit_backup_settings_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        293,
+        "class-body method; test_process_single_folder_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        310,
+        "class-body method; test_process_all_folders_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        334,
+        "class-body method; test_maintenance_dialog_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        346,
+        "class-body method; test_database_import_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1233,
+        "class-body method; test_view_processed_files_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1290,
+        "class-body method; test_resend_dialog_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1510,
+        "class-body method; test_folder_not_found_workflow has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1589,
+        "class-body method; test_dialog_cleanup has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/integration/test_pipeline_logging_validation.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/integration/test_pipeline_logging_validation.py",
+        "missing_assert",
+        376,
+        "class-body method; test_handler_with_none_run_log_discards_silently has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/interface/plugins/test_interfaces.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/interface/plugins/test_interfaces.py",
+        "missing_assert",
+        169,
+        "class-body method; test_concrete_plugin_lifecycle_methods has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_backend_gui_communication.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_backend_gui_communication.py",
+        "missing_assert",
+        39,
+        "class-body method; test_toggle_active_folder_disables_it has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_backend_gui_communication.py",
+        "missing_assert",
+        57,
+        "class-body method; test_toggle_inactive_folder_without_backends_shows_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_backend_gui_communication.py",
+        "missing_assert",
+        75,
+        "class-body method; test_toggle_inactive_folder_with_backend_enables_it has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_comprehensive_ui.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_comprehensive_ui.py",
+        "missing_assert",
+        626,
+        "class-body method; test_ui_service_show_info has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_comprehensive_ui.py",
+        "missing_assert",
+        637,
+        "class-body method; test_ui_service_show_warning has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_comprehensive_ui.py",
+        "missing_assert",
+        648,
+        "class-body method; test_ui_service_show_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_comprehensive_ui.py",
+        "missing_assert",
+        802,
+        "class-body method; test_app_refresh_folders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_database_import_dialog_extra.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_database_import_dialog_extra.py",
+        "missing_assert",
+        263,
+        "class-body method; test_on_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_database_import_dialog_extra.py",
+        "missing_assert",
+        417,
+        "class-body method; test_import_thread_run_handles_exception has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_database_import_dialog_extra.py",
+        "missing_assert",
+        599,
+        "class-body method; test_migration_job_migrate_folder_no_match_inserts has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_edit_folders_dialog.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_edit_folders_dialog.py",
+        "missing_assert",
+        530,
+        "class-body method; test_select_copy_directory_uses_existing_as_initial has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_edit_folders_dialog.py",
+        "missing_assert",
+        559,
+        "class-body method; test_copy_config_with_no_selection_does_nothing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_edit_folders_helpers.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_edit_folders_helpers.py",
+        "missing_assert",
+        154,
+        "class-body method; test_handle_convert_format_changed_dispatches_fallback_builders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_edit_folders_helpers.py",
+        "missing_assert",
+        205,
+        "class-body method; test_handle_convert_format_changed_uses_plugin_builder has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_edit_folders_helpers.py",
+        "missing_assert",
+        374,
+        "class-body method; test_on_ok_calls_dialog_private_handler_when_present has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_edit_folders_helpers.py",
+        "missing_assert",
+        391,
+        "class-body method; test_on_ok_success_calls_callback_and_accept has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_edit_folders_helpers.py",
+        "missing_assert",
+        445,
+        "class-body method; test_noop_event_handler_methods_are_callable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_gui_stress_and_edge_cases.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_gui_stress_and_edge_cases.py",
+        "missing_assert",
+        298,
+        "class-body method; test_apply_with_none_callbacks has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_gui_stress_and_edge_cases.py",
+        "missing_assert",
+        1257,
+        "class-body method; test_set_defaults_action_no_crash has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_gui_stress_and_edge_cases.py",
+        "missing_assert",
+        1269,
+        "class-body method; test_add_directory_action_no_crash has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_gui_stress_and_edge_cases.py",
+        "missing_assert",
+        1290,
+        "class-body method; test_maintenance_action_no_crash has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_qt_app.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        57,
+        "class-body method; test_shutdown_closes_database has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        65,
+        "class-body method; test_shutdown_no_db_no_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        71,
+        "class-body method; test_set_main_button_states_no_folders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        84,
+        "class-body method; test_set_main_button_states_with_folders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        99,
+        "class-body method; test_disable_folder has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        118,
+        "class-body method; test_delete_folder_confirmed has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        130,
+        "class-body method; test_delete_folder_cancelled has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        153,
+        "class-body method; test_update_reporting has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        164,
+        "class-body method; test_graphical_process_directories_shows_error_for_missing_folder has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        190,
+        "class-body method; test_graphical_process_directories_shows_error_when_no_active_folders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        211,
+        "class-body method; test_graphical_process_directories_processes_active_folders has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        251,
+        "class-body method; test_automatic_process_directories_delegates_to_run_coordinator has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        329,
+        "class-body method; test_mark_active_as_processed_wrapper_calls_maintenance has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        388,
+        "class-body method; test_run_shows_window_and_executes_qapplication has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        403,
+        "class-body method; test_edit_folder_selector_shows_error_when_missing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        487,
+        "class-body method; test_batch_add_folders_returns_when_no_selection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        537,
+        "class-body method; test_select_folder_existing_folder_opens_edit_dialog has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        566,
+        "class-body method; test_automatic_process_directories_calls_process_and_exits has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        594,
+        "class-body method; test_select_folder_adds_new_folder_and_marks_processed has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        622,
+        "class-body method; test_show_dialog_wrappers_create_and_exec has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        773,
+        "class-body method; test_refresh_users_list_no_panel_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1061,
+        "class-body method; test_process_directories_calls_dispatch_and_handles_success has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1091,
+        "class-body method; test_process_directories_shows_info_on_errors_in_graphical_mode has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1196,
+        "class-body method; test_on_folder_edit_applied_updates_database has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1410,
+        "class-body method; test_show_edit_settings_dialog_opens_dialog has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1539,
+        "class-body method; test_open_edit_dialog_apply_success_persists_and_refreshes has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1575,
+        "class-body method; test_open_edit_dialog_cancel_does_not_refresh has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1603,
+        "class-body method; test_edit_folder_selector_existing_opens_dialog has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1621,
+        "class-body method; test_select_folder_existing_user_declines_no_dialog has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1648,
+        "class-body method; test_select_folder_new_user_skips_mark_processed has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1677,
+        "class-body method; test_batch_add_folders_cancelled_confirmation_skips_manager_calls has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1707,
+        "class-body method; test_delete_folder_confirmed_triggers_refresh_and_button_state has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1755,
+        "class-body method; test_show_resend_dialog_skips_exec_when_dialog_not_ready has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        1783,
+        "class-body method; test_show_edit_settings_dialog_callback_wiring has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        2041,
+        "class-body method; test_select_folder_ignores_nonexistent_selection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_qt_dialogs.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        52,
+        "class-body method; test_apply_does_nothing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        424,
+        "class-body method; test_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        474,
+        "class-body method; test_apply_calls_callback has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        546,
+        "class-body method; test_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        554,
+        "class-body method; test_apply_calls_callbacks has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        587,
+        "class-body method; test_apply_disables_email_backends_when_email_off has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        609,
+        "class-body method; test_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        697,
+        "class-body method; test_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        755,
+        "class-body method; test_export_calls_shared_function has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        770,
+        "class-body method; test_export_noop_when_no_folder_selected has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        787,
+        "class-body method; test_export_noop_when_no_output_folder has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        1103,
+        "class-body method; test_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        1168,
+        "class-body method; test_date_range_filter_applies_to_service_calls has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/qt/test_qt_dialogs.py",
+        "missing_assert",
+        1414,
+        "class-body method; test_no_selection_initially has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_qt_widgets.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_qt_widgets.py",
+        "missing_assert",
+        219,
+        "class-body method; test_empty_table has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/qt/test_resend_dialog_extra.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/qt/test_resend_dialog_extra.py",
+        "missing_assert",
+        285,
+        "class-body method; test_apply_resend_flags has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/adapters/db2ssh/test_db2ssh_connection.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/adapters/db2ssh/test_db2ssh_connection.py",
+        "missing_assert",
+        196,
+        "class-body method; test_execute_closes_cursor has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/adapters/sqlite/repositories/test_sqlite_folder_repo.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/adapters/sqlite/repositories/test_sqlite_folder_repo.py",
+        "missing_assert",
+        89,
+        "class-body method; test_find_all_not_active_only_does_not_call_find has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/adapters/sqlite/repositories/test_sqlite_folder_repo.py",
+        "missing_assert",
+        247,
+        "class-body method; test_delegates_to_table_delete has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/adapters/sqlite/repositories/test_sqlite_processed_files_repo.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/adapters/sqlite/repositories/test_sqlite_processed_files_repo.py",
+        "missing_assert",
+        47,
+        "class-body method; test_inserts_processedfile has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/adapters/sqlite/repositories/test_sqlite_settings_repo.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/adapters/sqlite/repositories/test_sqlite_settings_repo.py",
+        "missing_assert",
+        36,
+        "class-body method; test_delegates_to_update_default_settings has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/adapters/sqlite/repositories/test_sqlite_settings_repo.py",
+        "missing_assert",
+        68,
+        "class-body method; test_delegates_to_db_set_setting has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/backend/test_file_operations.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/backend/test_file_operations.py",
+        "missing_assert",
+        75,
+        "class-body method; test_makedirs_exist_ok has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/backend/test_ftp_client.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/backend/test_ftp_client.py",
+        "missing_assert",
+        53,
+        "class-body method; test_connect_creates_ftps_connection_when_tls has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_ftp_client.py",
+        "missing_assert",
+        63,
+        "class-body method; test_connect_with_timeout has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_ftp_client.py",
+        "missing_assert",
+        89,
+        "class-body method; test_cwd_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_ftp_client.py",
+        "missing_assert",
+        103,
+        "class-body method; test_storbinary_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_ftp_client.py",
+        "missing_assert",
+        151,
+        "class-body method; test_set_pasv_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/backend/test_smtp_client.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        49,
+        "class-body method; test_starttls_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        63,
+        "class-body method; test_login_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        99,
+        "class-body method; test_send_message_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        152,
+        "class-body method; test_ehlo_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        166,
+        "class-body method; test_set_debuglevel_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/backend/test_smtp_client.py",
+        "missing_assert",
+        203,
+        "class-body method; test_from_config_without_auth has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/core/database/test_query_runner.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        56,
+        "class-body method; test_close_does_nothing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        99,
+        "class-body method; test_close_delegates_to_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        225,
+        "class-body method; test_assert_read_only_accepts_select has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        229,
+        "class-body method; test_assert_read_only_accepts_with has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        265,
+        "class-body method; test_assert_read_only_accepts_multiple_select_statements has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        269,
+        "class-body method; test_assert_read_only_rejects_semicolon_in_string_literal has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/core/database/test_query_runner.py",
+        "missing_assert",
+        285,
+        "class-body method; test_assert_read_only_rejects_empty_statement_after_semicolon has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/core/edi/test_inv_fetcher.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/core/edi/test_inv_fetcher.py",
+        "missing_assert",
+        190,
+        "class-body method; test_fetch_uom_desc_caches_uom_lut has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch/observability/test_alert_dispatcher.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch/observability/test_alert_dispatcher.py",
+        "missing_assert",
+        41,
+        "class-body method; test_dispatch_never_raises has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch/pipeline/test_pipeline_interfaces.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch/pipeline/test_pipeline_interfaces.py",
+        "missing_assert",
+        41,
+        "class-body method; test_record_error_no_handler_silently_returns has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch/services/test_folder_processor.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch/services/test_folder_processor.py",
+        "missing_assert",
+        344,
+        "class-body method; test_record_processed_file_handles_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch/test_error_handler_alert_integration.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch/test_error_handler_alert_integration.py",
+        "missing_assert",
+        28,
+        "class-body method; test_record_error_skips_alert_when_dispatcher_none has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch/test_error_handler_alert_integration.py",
+        "missing_assert",
+        51,
+        "class-body method; test_record_error_skips_alert_when_alert_on_failure_false has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch_tests/test_interfaces.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        215,
+        "class-body method; test_database_insert_many_method has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        221,
+        "class-body method; test_database_update_method has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        284,
+        "class-body method; test_filesystem_mkdir has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        290,
+        "class-body method; test_filesystem_makedirs has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        296,
+        "class-body method; test_filesystem_copy_file has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        302,
+        "class-body method; test_filesystem_remove_file has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        451,
+        "class-body method; test_log_close has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_interfaces.py",
+        "missing_assert",
+        496,
+        "class-body method; test_incomplete_database_not_instance has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch_tests/test_log_sender.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch_tests/test_log_sender.py",
+        "missing_assert",
+        173,
+        "class-body method; test_null_ui_does_nothing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_log_sender.py",
+        "missing_assert",
+        226,
+        "class-body method; test_send_log_with_mock_ui has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch_tests/test_orchestrator.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch_tests/test_orchestrator.py",
+        "missing_assert",
+        336,
+        "class-body method; test_process_file_with_validation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch_tests/test_send_manager.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch_tests/test_send_manager.py",
+        "missing_assert",
+        283,
+        "class-body method; test_send_via_module_copy has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_send_manager.py",
+        "missing_assert",
+        300,
+        "class-body method; test_send_via_module_ftp has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_send_manager.py",
+        "missing_assert",
+        316,
+        "class-body method; test_send_via_module_email has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/dispatch_tests/test_services.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/dispatch_tests/test_services.py",
+        "missing_assert",
+        212,
+        "class-body method; test_update_does_nothing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_services.py",
+        "missing_assert",
+        225,
+        "class-body method; test_update_with_empty_values has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/database/test_database_obj.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/database/test_database_obj.py",
+        "missing_assert",
+        129,
+        "class-body method; test_set_setting has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/database/test_database_obj.py",
+        "missing_assert",
+        148,
+        "class-body method; test_update_default_settings has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/database/test_database_obj.py",
+        "missing_assert",
+        156,
+        "class-body method; test_close_calls_connection_close has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/database/test_database_obj.py",
+        "missing_assert",
+        162,
+        "class-body method; test_close_with_no_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/operations/test_folder_manager.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/operations/test_folder_manager.py",
+        "missing_assert",
+        272,
+        "class-body method; test_get_all_folders_with_order has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/operations/test_folder_manager.py",
+        "missing_assert",
+        493,
+        "class-body method; test_add_folder_uses_oversight_defaults_provider has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/qt/test_database_import_dialog.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/qt/test_database_import_dialog.py",
+        "missing_assert",
+        208,
+        "class-body method; test_migrate_folder_no_match_skips_update has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/qt/test_dialog_contracts_wave4.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/qt/test_dialog_contracts_wave4.py",
+        "missing_assert",
+        304,
+        "class-body method; test_resend_toggle_error_uses_show_error_helper has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/qt/test_edit_settings_dialog.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        644,
+        "class-body method; test_test_connection_button_invokes_smtp_service has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        990,
+        "class-body method; test_apply_calls_on_apply_callback has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        1011,
+        "class-body method; test_apply_calls_refresh_callback has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        1032,
+        "class-body method; test_ok_button_validates_and_applies has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        1055,
+        "class-body method; test_ok_button_fails_validation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        1080,
+        "class-body method; test_cancel_button_closes_dialog has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_edit_settings_dialog.py",
+        "missing_assert",
+        1103,
+        "class-body method; test_disabling_email_disables_backends has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/qt/test_qt_app.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/qt/test_qt_app.py",
+        "missing_assert",
+        135,
+        "class-body method; test_initialize_creates_window has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_qt_app.py",
+        "missing_assert",
+        696,
+        "class-body method; test_shutdown_closes_database has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/qt/test_qt_app.py",
+        "missing_assert",
+        716,
+        "class-body method; test_shutdown_handles_no_database has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/qt/test_resend_dialog.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/qt/test_resend_dialog.py",
+        "missing_assert",
+        68,
+        "class-body method; test_dialog_initializes_service has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/test_ports.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        61,
+        "class-body method; test_show_info_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        67,
+        "class-body method; test_show_error_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        73,
+        "class-body method; test_show_warning_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        139,
+        "class-body method; test_pump_events_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        164,
+        "class-body method; test_show_info_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        173,
+        "class-body method; test_show_error_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        182,
+        "class-body method; test_show_warning_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/interface/test_ports.py",
+        "missing_assert",
+        412,
+        "class-body method; test_pump_events_delegates_to_process_events has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/interface/validation/test_email_validator.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/interface/validation/test_email_validator.py",
+        "missing_assert",
+        281,
+        "class-body method; test_trailing_separator has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_batch_log_sender.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_batch_log_sender.py",
+        "missing_assert",
+        447,
+        "class-body method; test_attachment_fallback_to_octet_stream has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_batch_log_sender.py",
+        "missing_assert",
+        493,
+        "class-body method; test_attachment_with_encoding_not_none has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_convert_to_estore_einvoice_generic.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_convert_to_estore_einvoice_generic.py",
+        "missing_assert",
+        1134,
+        "class-body method; test_qty_to_int_positive has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_convert_to_estore_einvoice_generic.py",
+        "missing_assert",
+        1140,
+        "class-body method; test_qty_to_int_negative has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_converter_edge_cases.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_converter_edge_cases.py",
+        "missing_assert",
+        345,
+        "class-body method; test_convert_to_yellowdog_csv_empty_file has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_converter_edge_cases.py",
+        "missing_assert",
+        631,
+        "class-body method; test_convert_to_scansheet_type_a_empty_file has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_converter_edge_cases.py",
+        "missing_assert",
+        1198,
+        "class-body method; test_convert_to_fintech_empty_upc_lut_raises_key_error has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_dispatch_interfaces.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        40,
+        "class-body method; test_database_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        254,
+        "class-body method; test_file_system_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        627,
+        "class-body method; test_backend_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        753,
+        "class-body method; test_validator_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        870,
+        "class-body method; test_error_handler_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_dispatch_interfaces.py",
+        "missing_assert",
+        1116,
+        "class-body method; test_log_runtime_checkable has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_edit_dialog/test_edit_settings_dialog.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        109,
+        "class-body method; test_dialog_calls_settings_provider_on_init has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        423,
+        "class-body method; test_apply_calls_update_settings has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        432,
+        "class-body method; test_apply_calls_update_oversight has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        441,
+        "class-body method; test_apply_calls_on_apply has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        450,
+        "class-body method; test_apply_calls_refresh_callback has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        459,
+        "class-body method; test_apply_calls_all_callbacks has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        523,
+        "class-body method; test_apply_disables_email_backends_when_email_off has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_edit_settings_dialog.py",
+        "missing_assert",
+        539,
+        "class-body method; test_apply_does_not_disable_backends_when_email_on has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_edit_dialog/test_field_coverage.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_edit_dialog/test_field_coverage.py",
+        "missing_assert",
+        494,
+        "class-body method; test_all_config_fields_have_extractors has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_field_coverage.py",
+        "missing_assert",
+        658,
+        "class-body method; test_database_columns_match_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_edit_dialog/test_field_coverage.py",
+        "missing_assert",
+        721,
+        "class-body method; test_no_orphan_config_fields has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_folder_db_roundtrip.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_folder_db_roundtrip.py",
+        "missing_assert",
+        45,
+        "class-body method; test_insert_and_read_folder_with_plugin_configs has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_folder_db_roundtrip.py",
+        "missing_assert",
+        61,
+        "class-body method; test_update_folder_plugin_configurations_via_mapper has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_folders_database_migrator.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_folders_database_migrator.py",
+        "missing_assert",
+        86,
+        "class-body method; test_migration_handles_none_config_folder has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_form_generator.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_form_generator.py",
+        "missing_assert",
+        96,
+        "class-body method; test_field_visibility has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_golden_output.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_golden_output.py",
+        "missing_assert",
+        842,
+        "class-body method; test_nested_structure has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_http_backend.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_http_backend.py",
+        "missing_assert",
+        403,
+        "class-body method; test_http_backend_class_cleanup has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_configuration_plugin.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        24,
+        "class-body method; test_interface_exists has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        35,
+        "class-body method; test_get_configuration_schema has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        116,
+        "class-body method; test_plugin_creation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        122,
+        "class-body method; test_static_properties has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        134,
+        "class-body method; test_get_config_fields has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        145,
+        "class-body method; test_configuration_schema has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        160,
+        "class-body method; test_validate_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        176,
+        "class-body method; test_validate_invalid_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        191,
+        "class-body method; test_create_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        221,
+        "class-body method; test_create_config_with_defaults has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        232,
+        "class-body method; test_serialize_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        262,
+        "class-body method; test_deserialize_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_configuration_plugin.py",
+        "missing_assert",
+        292,
+        "class-body method; test_plugin_lifecycle has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_form_generator_plugins.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        22,
+        "class-body method; test_form_generator_with_csv_config_schema has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        31,
+        "class-body method; test_csv_config_schema_completeness has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        54,
+        "class-body method; test_csv_config_field_types has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        74,
+        "class-body method; test_csv_config_default_values has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        90,
+        "class-body method; test_get_default_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        106,
+        "class-body method; test_schema_validation_for_csv_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        124,
+        "class-body method; test_empty_config_validation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        141,
+        "class-body method; test_create_widget_method has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        158,
+        "class-body method; test_create_widget_with_parent has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        181,
+        "class-body method; test_create_widget_with_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_form_generator_plugins.py",
+        "missing_assert",
+        212,
+        "class-body method; test_create_configuration_widget_from_manager has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_plugin_base.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        88,
+        "class-body method; test_plugin_creation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        93,
+        "class-body method; test_plugin_static_properties has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        102,
+        "class-body method; test_plugin_lifecycle has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        117,
+        "class-body method; test_plugin_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        143,
+        "class-body method; test_invalid_configuration_update has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        159,
+        "class-body method; test_compatibility_check has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        163,
+        "class-body method; test_dependencies has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        167,
+        "class-body method; test_validate_configuration_without_schema_succeeds has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        176,
+        "class-body method; test_get_default_configuration_without_schema_returns_empty_dict has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        184,
+        "class-body method; test_update_configuration_invalid_does_not_call_initialize has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_base.py",
+        "missing_assert",
+        194,
+        "class-body method; test_update_configuration_valid_calls_initialize_once has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_plugin_configuration_mapper.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        33,
+        "class-body method; test_initialize_state has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        47,
+        "class-body method; test_update_state has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        64,
+        "class-body method; test_update_state_no_change has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        77,
+        "class-body method; test_undo has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        95,
+        "class-body method; test_redo has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        114,
+        "class-body method; test_undo_empty_stack has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        119,
+        "class-body method; test_redo_empty_stack has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        124,
+        "class-body method; test_mark_saved has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        139,
+        "class-body method; test_reset_to_saved has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        156,
+        "class-body method; test_get_all_configs has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        174,
+        "class-body method; test_get_invalid_sections has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        191,
+        "class-body method; test_get_all_validation_errors has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        213,
+        "class-body method; test_can_undo_property has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        226,
+        "class-body method; test_can_redo_property has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        240,
+        "class-body method; test_clear has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        262,
+        "class-body method; test_init has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        268,
+        "class-body method; test_get_supported_plugin_formats has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        274,
+        "class-body method; test_get_plugin_configuration_fields has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        280,
+        "class-body method; test_serialize_plugin_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        289,
+        "class-body method; test_deserialize_plugin_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        301,
+        "class-body method; test_roundtrip_serialization has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        311,
+        "class-body method; test_validate_plugin_configurations_from_dict has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        323,
+        "class-body method; test_state_manager_integration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        345,
+        "class-body method; test_get_state_manager has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        363,
+        "class-body method; test_populate_plugin_widgets_from_dict has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        380,
+        "class-body method; test_update_folder_configuration_from_dict has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        403,
+        "class-body method; test_creation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        415,
+        "class-body method; test_default_validation_errors has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        425,
+        "class-body method; test_creation has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
+        "missing_assert",
+        435,
+        "class-body method; test_default_values has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_plugin_manager_configuration.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        23,
+        "class-body method; test_initialization has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        36,
+        "class-body method; test_discover_configuration_plugins has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        62,
+        "class-body method; test_get_configuration_plugins has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        70,
+        "class-body method; test_get_configuration_plugin_by_format has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        99,
+        "class-body method; test_get_configuration_plugin_by_format_name has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        132,
+        "class-body method; test_create_configuration_widget has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        146,
+        "class-body method; test_validate_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        163,
+        "class-body method; test_create_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        178,
+        "class-body method; test_serialize_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        194,
+        "class-body method; test_deserialize_configuration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        211,
+        "class-body method; test_get_configuration_fields has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        230,
+        "class-body method; test_unsupported_format_handling has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        257,
+        "class-body method; test_initialize_plugins_is_idempotent has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_manager_configuration.py",
+        "missing_assert",
+        304,
+        "class-body method; test_initialize_order_is_initialize_then_activate_with_config has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_plugin_mapper_form_integration.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        18,
+        "class-body method; test_form_generator_integration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        59,
+        "class-body method; test_state_manager_with_multiple_formats has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        78,
+        "class-body method; test_undo_redo_with_multiple_formats has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        101,
+        "class-body method; test_update_folder_with_multiple_plugins has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        128,
+        "class-body method; test_serialize_deserialize_roundtrip has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        145,
+        "class-body method; test_validation_state_tracking has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        168,
+        "class-body method; test_empty_plugin_configurations has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        180,
+        "class-body method; test_legacy_folder_config_dict has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_plugin_mapper_form_integration.py",
+        "missing_assert",
+        196,
+        "class-body method; test_plugin_config_migration has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_plugins/test_section_registry.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_plugins/test_section_registry.py",
+        "missing_assert",
+        78,
+        "class-body method; test_register_get_and_count has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_section_registry.py",
+        "missing_assert",
+        90,
+        "class-body method; test_get_all_sections_sorted_by_priority has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_section_registry.py",
+        "missing_assert",
+        99,
+        "class-body method; test_unregister_removes_section_and_renderer has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_section_registry.py",
+        "missing_assert",
+        109,
+        "class-body method; test_register_plugin_section_and_filter_after_unregister has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_plugins/test_section_registry.py",
+        "missing_assert",
+        135,
+        "class-body method; test_clear_resets_state has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_print_run_log.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_print_run_log.py",
+        "missing_assert",
+        113,
+        "class-body method; test_unix_printing_uses_lpr has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_print_run_log.py",
+        "missing_assert",
+        197,
+        "class-body method; test_printer_workflow_sequence has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_print_run_log.py",
+        "missing_assert",
+        224,
+        "class-body method; test_lpr_command_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_schema.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_schema.py",
+        "missing_assert",
+        513,
+        "class-body method; test_handles_existing_plugin_configurations_column has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_schema.py",
+        "missing_assert",
+        541,
+        "class-body method; test_handles_query_error_gracefully has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    (
+        "tests/unit/test_schema.py",
+        "missing_assert",
+        564,
+        "class-body method; test_handles_all_errors_silently has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
+    # ---- tests/unit/test_structured_logging.py (class-body methods, surfaced 2026-07-16) ----
+    (
+        "tests/unit/test_structured_logging.py",
+        "missing_assert",
+        365,
+        "class-body method; test_func has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
+    ),
 ]
 
 
@@ -941,6 +3007,9 @@ def test_hygiene_runner_self_check() -> None:
         "bare_magicmock",
         "sleep_call",
         "single_item_dispatch_root_import",
+        "magic_padding",
+        "tuple_subscript_trick",
+        "nested_try_pyramid",
     }
     self_violations: list[Violation] = []
     for check_name, check_fn in CHECKS.items():
