@@ -763,12 +763,23 @@ def _run_mutated_tests_inprocess(
         ]
         if not test_methods:
             continue
-        # Try to construct. If the class needs args, we can't run
-        # its tests in-process; the runner reports the mutation as
-        # surviving (the safer wrong answer for a meta-test).
+        # Try to construct. The in-process runner can't pass
+        # constructor args, so a class that needs them raises
+        # ``TypeError`` at construction. That's a runner limitation,
+        # not a real test failure: silently drop the class (its
+        # methods can't be run in this context). Other exceptions
+        # (ValueError, RuntimeError, etc.) indicate a real bug in
+        # the test's ``__init__`` — record them as a real failure
+        # so the mutation is reported as killed, not silently
+        # dropped.
         try:
             instance = cls()
-        except Exception:
+        except TypeError:
+            continue
+        except Exception as e:
+            failures.append(
+                f"{name}: __init__ raised {type(e).__name__}: {str(e)[:120]}"
+            )
             continue
         for method_name in test_methods:
             method = getattr(instance, method_name)
@@ -1371,6 +1382,55 @@ def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
     finally:
         if test_file.exists():
             test_file.unlink()
+
+
+@pytest.mark.meta_assertions
+def test_class_init_typeerror_is_silently_dropped(
+) -> None:
+    """A class whose ``__init__`` raises ``TypeError`` (e.g. needs
+    constructor args the in-process runner can't supply) is silently
+    dropped. The class's test methods don't run, but the runner
+    doesn't report a real failure for the drop.
+
+    This pins the narrowing from ``except Exception`` (which also
+    caught ``ValueError`` / ``RuntimeError`` from genuinely broken
+    ``__init__``) to ``except TypeError`` (which is the runner
+    limitation signal).
+    """
+    source = (
+        "class TestNeedsArgs:\n"
+        "    def __init__(self, required_arg):\n"
+        "        self.arg = required_arg\n"
+        "    def test_method(self):\n"
+        "        assert True\n"
+    )
+    all_passed, snippet, _skipped = _run_mutated_tests_inprocess(source)
+    # TypeError from __init__ → class is silently dropped, no
+    # failure, no test methods run, no skip either (the runner
+    # only reports skip for ``_PytestSkipped``).
+    assert all_passed is True
+    assert snippet == ""
+
+
+@pytest.mark.meta_assertions
+def test_class_init_valueerror_is_real_failure() -> None:
+    """A class whose ``__init__`` raises ``ValueError`` (a real
+    test bug, not a runner limitation) is recorded as a failure.
+    Before the fix, this was silently dropped by
+    ``except Exception: continue`` and the mutation was
+    misclassified as a survivor.
+    """
+    source = (
+        "class TestBrokenInit:\n"
+        "    def __init__(self):\n"
+        "        raise ValueError('bad setup')\n"
+        "    def test_method(self):\n"
+        "        assert True\n"
+    )
+    all_passed, snippet, _skipped = _run_mutated_tests_inprocess(source)
+    assert all_passed is False
+    assert "ValueError" in snippet
+    assert "__init__" in snippet
 # ---------------------------------------------------------------------------
 # CLI summary entry point. Runs the same checks as the pytest wrapper
 # and prints a per-file + per-rule summary, then exits 1 if any
