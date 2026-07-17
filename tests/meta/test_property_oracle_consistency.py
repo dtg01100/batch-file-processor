@@ -387,13 +387,12 @@ def _iter_asserts(
 def _collect_imports(tree: ast.Module) -> set[str]:
     """Collect the set of function/class names imported in this module.
 
-    We only consider top-level ``from X import Y`` statements — names
-    that the test file explicitly pulls in. ``import X`` aliases are
-    not tracked (they require call-graph traversal to map a call to
-    the original function name).
+    We consider all ``from X import Y`` and ``import X`` statements
+    anywhere in the file (top-level or inside class bodies).
+    ``import X`` aliases are tracked by their alias name if present.
     """
     names: set[str] = set()
-    for node in tree.body:
+    for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 if alias.name == "*":
@@ -709,6 +708,29 @@ def test_iter_given_tests_walks_class_bodies() -> None:
     # \`@given\` — make sure the walker correctly excludes it.
     found_names = {n.name for n in found}
     assert "f" not in found_names
+
+
+@pytest.mark.meta_oracle
+def test_collect_imports_walks_class_bodies() -> None:
+    """``_collect_imports`` discovers imports inside class bodies,
+    not just at the top level. Before the fix, the function iterated
+    ``tree.body`` and silently dropped class-level imports — a latent
+    blind spot because the current corpus has no class-level imports,
+    but a future contributor adding ``class TestX: from foo import bar``
+    would have their imports silently missed.
+    """
+    source = (
+        "from core.top import top_func\n"
+        "class TestClassWithImport:\n"
+        "    from core.class_level import class_func\n"
+        "    def test_something(self):\n"
+        "        pass\n"
+    )
+    tree = ast.parse(source)
+    imports = _collect_imports(tree)
+    assert "top_func" in imports
+    assert "class_func" in imports
+
 
 
 # ---------------------------------------------------------------------------
