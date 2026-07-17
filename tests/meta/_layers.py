@@ -88,7 +88,8 @@ def _iter_unit_test_files() -> list[Path]:
     """
     unit_dir = Path("tests/unit")
     return sorted(
-        p for p in unit_dir.rglob("test_*.py")
+        p
+        for p in unit_dir.rglob("test_*.py")
         if not p.is_relative_to(unit_dir / "scripts")
     )
 
@@ -294,19 +295,3 @@ def iter_all_test_files() -> list[tuple[Path, Layer]]:
     return out
 
 
-def layer_of(file: Path) -> Layer | None:
-    """Return the layer a test file belongs to, or None.
-
-    Used by the runner's CLI summary to group findings by layer.
-    """
-    try:
-        rel = file.relative_to(Path("tests"))
-    except ValueError:
-        return None
-    for layer in ALL_LAYERS:
-        try:
-            rel.relative_to(layer.path)
-            return layer
-        except ValueError:
-            continue
-    return None
