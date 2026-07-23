@@ -9,6 +9,7 @@ from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from core.edi.upc_utils import (
+    apply_retail_uom_transform,
     calc_check_digit,
     convert_upce_to_upca,
     pad_upc,
@@ -230,3 +231,97 @@ def test_pad_upc_uses_fill_char(s: str, target: int, fill: str) -> None:
     result = pad_upc(s, target, fill_char=fill)
     padding_region = result[: target - len(s)]
     assert all(c == fill for c in padding_region)
+
+
+# ---------------------------------------------------------------------------
+# apply_retail_uom_transform — the upc_utils wrapper.
+#
+# The function is a thin passthrough to ``core.edi.retail_uom``. The
+# behavioral surface (record mutation, success/failure return) is exercised
+# in ``tests/unit/test_utils.py::TestApplyRetailUomTransform`` against the
+# ``core.utils.utils`` wrapper. The two wrappers share the same underlying
+# implementation, so the tests below pin the upc_utils-specific surface.
+#
+# The hardcoded-oracle tests are critical: the wrapper is one line of code,
+# so the meaningful mutation risk is ``return None`` / ``return record``
+# mistakes (silently breaking callers that check the return value) and a
+# broken passthrough (returning a different value than the call target).
+# ---------------------------------------------------------------------------
+
+
+def _make_b_record(
+    vendor_item: str = "000123",
+    unit_cost: str = "001200",
+    unit_multiplier: str = "000012",
+    qty_of_units: str = "00010",
+    upc_number: str = "00000000000",
+) -> dict:
+    """Build a minimal B-record dict for apply_retail_uom_transform."""
+    return {
+        "vendor_item": vendor_item,
+        "unit_cost": unit_cost,
+        "unit_multiplier": unit_multiplier,
+        "qty_of_units": qty_of_units,
+        "upc_number": upc_number,
+    }
+
+
+def test_apply_retail_uom_transform_passthrough_returns_true() -> None:
+    """A valid record with a matching UPC must round-trip True and mutate unit_multiplier."""
+    record = _make_b_record()
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    assert apply_retail_uom_transform(record, upc_dict) is True
+    assert record["unit_multiplier"] == "000001"
+
+
+def test_apply_retail_uom_transform_passthrough_returns_false_on_zero_multiplier() -> None:
+    """Zero unit_multiplier is rejected (matches the retail_uom implementation contract)."""
+    record = _make_b_record(unit_multiplier="000000")
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    assert apply_retail_uom_transform(record, upc_dict) is False
+
+
+def test_apply_retail_uom_transform_passthrough_returns_false_on_bad_vendor_item() -> None:
+    """Non-numeric vendor_item must return False; record must be unmodified."""
+    record = _make_b_record(vendor_item="ABCDEF")
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    assert apply_retail_uom_transform(record, upc_dict) is False
+    assert record["unit_multiplier"] == "000012"
+
+
+def test_apply_retail_uom_transform_empty_lookup_uses_blank_upc() -> None:
+    """Empty upc_lookup falls back to the default 11-space UPC string."""
+    record = _make_b_record()
+    assert apply_retail_uom_transform(record, {}) is True
+    assert record["upc_number"] == "           "
+    assert record["unit_multiplier"] == "000001"
+
+
+def test_apply_retail_uom_transform_multiplies_qty() -> None:
+    """qty_of_units becomes unit_multiplier * qty_of_units, zero-padded to 5 chars."""
+    record = _make_b_record(unit_multiplier="000012", qty_of_units="00010")
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    assert apply_retail_uom_transform(record, upc_dict) is True
+    assert record["qty_of_units"] == "00120"
+
+
+def test_apply_retail_uom_transform_unit_cost_divided_by_multiplier() -> None:
+    """unit_cost becomes (cost/100)/multiplier, scaled back to a 6-digit int, zero-padded."""
+    # 1200 cents -> $12.00, /12 = $1.00 -> 100 cents = "000100"
+    record = _make_b_record(unit_cost="001200", unit_multiplier="000012")
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    assert apply_retail_uom_transform(record, upc_dict) is True
+    assert record["unit_cost"] == "000100"
+
+
+def test_apply_retail_uom_transform_passthrough_agrees_with_utils_wrapper() -> None:
+    """The upc_utils wrapper and the core.utils.utils wrapper must return the
+    same bool for the same input. A mutation that breaks only one wrapper
+    (e.g., a stray ``return`` or a swapped default) is caught here.
+    """
+    from core import utils
+
+    record = _make_b_record()
+    upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
+    expected = utils.apply_retail_uom_transform(dict(record), upc_dict)
+    assert apply_retail_uom_transform(record, upc_dict) == expected
