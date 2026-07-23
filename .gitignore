@@ -153,3 +153,7 @@ secrets*.txt
 # AI session handoff files (per .clio/instructions.md)
 ai-assisted/
 .aider*
+
+# Session scratch — long-form plans and AI processing logs
+plans/
+Copilot-Processing.md
