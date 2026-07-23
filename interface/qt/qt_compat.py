@@ -24,6 +24,9 @@ Notable shims applied:
 * Qt6 reorganized some widgets out of ``QtWidgets``. ``QShortcut``
   moved to ``QtGui``. The shim handles this in each branch so call
   sites can keep importing from a single place.
+* ``QtCore`` (and ``QtGui``/``QtWidgets``) module namespaces are
+  re-exported as ``QtCore`` so call sites that do ``QtCore.Qt.X``
+  (or any other module-qualified access) keep working.
 
 Phase 3 will collapse this to a single-binding re-export module.
 """
@@ -34,6 +37,9 @@ import os
 _BINDING = os.environ.get("BATCH_QT_BINDING", "pyside6").strip().lower()
 
 if _BINDING == "pyside6":
+    from PySide6 import QtCore as _QtCore_module
+    from PySide6 import QtGui as _QtGui_module
+    from PySide6 import QtWidgets as _QtWidgets_module
     from PySide6.QtCore import (
         QDate,
         QEasingCurve,
@@ -94,6 +100,9 @@ if _BINDING == "pyside6":
         QWidget,
     )
 elif _BINDING == "pyqt5":
+    from PyQt5 import QtCore as _QtCore_module
+    from PyQt5 import QtGui as _QtGui_module
+    from PyQt5 import QtWidgets as _QtWidgets_module
     from PyQt5.QtCore import (
         QDate,
         QEasingCurve,
@@ -159,6 +168,13 @@ else:
 
 ACTIVE_BINDING = _BINDING
 
+# Re-export module namespaces under the public name so call sites that
+# reference QtCore.Qt / QtGui.X / QtWidgets.Y keep working without
+# reaching for the binding-specific module name.
+QtCore = _QtCore_module
+QtGui = _QtGui_module
+QtWidgets = _QtWidgets_module
+
 __all__ = [
     "ACTIVE_BINDING",
     "QAbstractItemView",
@@ -211,5 +227,9 @@ __all__ = [
     "QVBoxLayout",
     "QWidget",
     "Qt",
+    "QtCore",
+    "QtGui",
+    "QtWidgets",
     "pyqtSignal",
 ]
+

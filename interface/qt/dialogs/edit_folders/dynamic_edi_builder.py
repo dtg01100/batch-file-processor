@@ -18,8 +18,7 @@ from core.structured_logging import (
 
 logger = get_logger(__name__)
 
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import (
+from interface.qt.qt_compat import (
     QCheckBox,
     QComboBox,
     QFormLayout,
@@ -27,6 +26,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QtCore,
     QVBoxLayout,
     QWidget,
 )
@@ -77,7 +77,7 @@ class DynamicEDIBuilder:
         self.configuration_plugins = self.plugin_manager.get_configuration_plugins()
 
         # Widget references
-        from PyQt5.QtWidgets import QCheckBox, QComboBox, QVBoxLayout, QWidget
+        from interface.qt.qt_compat import QCheckBox, QComboBox, QVBoxLayout, QWidget
 
         self.edi_options_check: QCheckBox | None = None
         self.convert_format_combo: QComboBox | None = None
@@ -212,7 +212,7 @@ class DynamicEDIBuilder:
         Called before any clear that would destroy these widgets, so that
         the extractor can still read the last user-chosen values.
         """
-        from PyQt5.QtWidgets import QCheckBox, QComboBox, QLineEdit
+        from interface.qt.qt_compat import QCheckBox, QComboBox, QLineEdit
 
         for key in self._UPC_OVERRIDE_KEYS:
             widget = self.fields.get(key)
@@ -370,7 +370,7 @@ class DynamicEDIBuilder:
             if self.on_dynamic_form_changed:
                 self.on_dynamic_form_changed()
         finally:
-            from PyQt5.QtCore import QTimer
+            from interface.qt.qt_compat import QTimer
 
             QTimer.singleShot(100, self._clear_edi_processing_flag)
 

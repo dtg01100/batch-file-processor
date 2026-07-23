@@ -7,13 +7,13 @@ managing widget container creation, spacing, and scroll area setup.
 from collections.abc import Callable
 from typing import Any, cast
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from interface.qt.qt_compat import (
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
     QPushButton,
     QScrollArea,
+    Qt,
     QVBoxLayout,
     QWidget,
 )

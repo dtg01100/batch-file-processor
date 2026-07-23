@@ -3,10 +3,10 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtWidgets import QDialogButtonBox
 
 from backend.database import DatabaseObj, TableProtocol
 from interface.ports import UIServiceProtocol
+from interface.qt.qt_compat import QDialogButtonBox
 
 
 @pytest.mark.qt

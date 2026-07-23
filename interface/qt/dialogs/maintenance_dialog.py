@@ -8,9 +8,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from interface.qt.qt_compat import (
+    QHBoxLayout,
+    QKeyEvent,
+    QLabel,
+    QPushButton,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+)
 
 from interface.operations.maintenance_functions import (  # Toolkit-agnostic
     MaintenanceFunctions,

@@ -11,19 +11,24 @@ from __future__ import annotations
 import logging
 import os
 
-from PyQt5.QtCore import QEvent, QObject, Qt
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtWidgets import (
+from interface.qt.qt_compat import (
     QApplication,
+    QColor,
+    QEasingCurve,
+    QEvent,
     QFileDialog,
     QFrame,
+    QGraphicsOpacityEffect,
     QLabel,
     QMessageBox,
+    QObject,
+    QPalette,
     QProgressBar,
+    QPropertyAnimation,
+    Qt,
     QVBoxLayout,
     QWidget,
 )
-
 from interface.qt.theme import Theme
 
 logger = logging.getLogger(__name__)
@@ -363,9 +368,6 @@ class QtProgressService(QObject):
 
         # Create pulsing animation for opacity (ping-pong effect)
         # Use QGraphicsOpacityEffect for proper opacity animation support
-        from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
-        from PyQt5.QtWidgets import QGraphicsOpacityEffect
-
         opacity_effect = QGraphicsOpacityEffect(throbber)
         throbber.setGraphicsEffect(opacity_effect)
 
@@ -396,9 +398,8 @@ class QtProgressService(QObject):
     @staticmethod
     def _build_progress_bar(parent: QWidget) -> QProgressBar:
         """Create a QProgressBar for percentage-based progress."""
-        from PyQt5.QtWidgets import QProgressBar
-
         progress_bar = QProgressBar(parent)
+
         progress_bar.setMinimum(0)
         progress_bar.setMaximum(100)
         progress_bar.setValue(0)

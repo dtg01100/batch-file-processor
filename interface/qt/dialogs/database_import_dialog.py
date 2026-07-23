@@ -10,9 +10,11 @@ import os
 import threading
 from typing import Any, cast
 
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtWidgets import (
+from backend.database import sqlite_wrapper
+from core.utils.bool_utils import normalize_bool
+from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.qt_compat import (
+    QCloseEvent,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -21,13 +23,11 @@ from PyQt5.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSizePolicy,
+    QThread,
     QVBoxLayout,
     QWidget,
+    pyqtSignal,
 )
-
-from backend.database import sqlite_wrapper
-from core.utils.bool_utils import normalize_bool
-from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 from migrations import folders_database_migrator
 from scripts import backup_increment

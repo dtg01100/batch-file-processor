@@ -9,7 +9,7 @@ import os
 from collections.abc import Callable
 from typing import Any, ClassVar
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox, QWidget
+from interface.qt.qt_compat import QFileDialog, QMessageBox, QWidget
 
 from core.utils.bool_utils import normalize_bool
 from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper

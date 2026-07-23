@@ -11,24 +11,23 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeyEvent
-from PyQt5.QtWidgets import (
+from interface.operations.processed_files import export_processed_report
+from interface.ports import UIServiceProtocol
+from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.qt_compat import (
     QButtonGroup,
     QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
+    QKeyEvent,
     QLabel,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    Qt,
     QVBoxLayout,
     QWidget,
 )
-
-from interface.operations.processed_files import export_processed_report
-from interface.ports import UIServiceProtocol
-from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 
 

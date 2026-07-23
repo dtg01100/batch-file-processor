@@ -7,7 +7,6 @@ import sys
 from typing import Any
 
 import appdirs
-from PyQt5.QtWidgets import QApplication, QMainWindow
 
 from adapters.sqlite.repositories.sqlite_folder_repo import SqliteFolderRepository
 from adapters.sqlite.repositories.sqlite_processed_files_repo import (
@@ -16,6 +15,7 @@ from adapters.sqlite.repositories.sqlite_processed_files_repo import (
 from adapters.sqlite.repositories.sqlite_settings_repo import SqliteSettingsRepository
 from backend.database.database_obj import DatabaseObj
 from interface.operations.folder_manager import FolderManager
+from interface.qt.qt_compat import QApplication, QMainWindow
 
 
 class QtDiagnosticsService:
@@ -166,7 +166,7 @@ class QtDiagnosticsService:
         return 0
 
     def run_gui_self_test(self) -> int:
-        from PyQt5.QtCore import QTimer
+        from interface.qt.qt_compat import QTimer
 
         print(f"\n{'=' * 50}")
         print("GUI Self-Test")

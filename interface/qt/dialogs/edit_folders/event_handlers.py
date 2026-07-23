@@ -10,7 +10,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from PyQt5.QtWidgets import (
+from interface.qt.qt_compat import (
     QCheckBox,
     QDialog,
     QFileDialog,

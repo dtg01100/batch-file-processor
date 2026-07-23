@@ -9,26 +9,31 @@ import os
 from datetime import datetime
 from typing import Any
 
-from PyQt5.QtCore import QDate, QItemSelectionModel, Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtGui import QCloseEvent, QColor
-from PyQt5.QtWidgets import (
+from core.constants import MAX_DATE, MIN_DATE
+from interface.qt.dialogs.base_dialog import BaseDialog
+from interface.qt.qt_compat import (
     QCheckBox,
+    QCloseEvent,
+    QColor,
     QComboBox,
+    QDate,
     QDateEdit,
     QDialogButtonBox,
     QFrame,
     QHBoxLayout,
+    QItemSelectionModel,
     QLabel,
     QLineEdit,
     QPushButton,
+    Qt,
     QTableWidget,
     QTableWidgetItem,
+    QThread,
+    QTimer,
     QToolButton,
     QWidget,
+    pyqtSignal,
 )
-
-from core.constants import MAX_DATE, MIN_DATE
-from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 from interface.services.resend_service import ResendService
 
