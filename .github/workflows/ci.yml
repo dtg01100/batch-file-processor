@@ -10,8 +10,7 @@ jobs:
   test-and-lint:
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        python-version: ['3.10', '3.11']
+        python-version: ['3.11', '3.13']
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -22,9 +21,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff black pytest pytest-cov pytest-timeout pytest-xdist
+          pip install ruff black pytest pytest-cov pytest-timeout pytest-xdist mypy
       - name: Lint (ruff)
         run: ruff check .
+      - name: Type-check (mypy, interface/qt — non-blocking)
+        run: mypy interface/qt || true
       - name: Format check (black)
         run: black --check .
       - name: Run tests
