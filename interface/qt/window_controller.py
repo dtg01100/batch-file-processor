@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt5.QtWidgets import (
+from interface.qt.qt_compat import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
 from interface.qt.theme import Theme
 
 

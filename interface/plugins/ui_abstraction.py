@@ -409,7 +409,7 @@ class QtLineEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QLineEdit
+        from interface.qt.qt_compat import QLineEdit
 
         self.widget = QLineEdit(parent)
         if field_definition.default:
@@ -436,7 +436,7 @@ class QtSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QSpinBox
+        from interface.qt.qt_compat import QSpinBox
 
         self.widget = QSpinBox(parent)
         if field_definition.min_value is not None:
@@ -467,7 +467,7 @@ class QtDoubleSpinBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QDoubleSpinBox
+        from interface.qt.qt_compat import QDoubleSpinBox
 
         self.widget = QDoubleSpinBox(parent)
         if field_definition.min_value is not None:
@@ -499,7 +499,7 @@ class QtComboBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QComboBox
+        from interface.qt.qt_compat import QComboBox
 
         self.widget = QComboBox(parent)
         for choice in field_definition.choices:
@@ -532,7 +532,7 @@ class QtCheckBoxWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QCheckBox
+        from interface.qt.qt_compat import QCheckBox
 
         self.widget = QCheckBox(field_definition.label, parent)
         if field_definition.default:
@@ -562,8 +562,12 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtWidgets import QAbstractItemView, QListWidget, QListWidgetItem
+        from interface.qt.qt_compat import (
+            QAbstractItemView,
+            QListWidget,
+            QListWidgetItem,
+            Qt,
+        )
 
         self.widget = QListWidget(parent)
         # Use QAbstractItemView.MultiSelection for PyQt5 selection mode
@@ -580,7 +584,7 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def set_value(self, value: Any) -> None:
         if value is not None:
-            from PyQt5.QtCore import Qt
+            from interface.qt.qt_compat import Qt
 
             for i in range(self.widget.count()):
                 item = self.widget.item(i)
@@ -588,7 +592,7 @@ class QtListWidgetWidget(QtWidgetBase):
 
     def get_value(self) -> Any:
         selected = []
-        from PyQt5.QtCore import Qt
+        from interface.qt.qt_compat import Qt
 
         for item in self.widget.selectedItems():
             selected.append(item.data(Qt.ItemDataRole.UserRole))
@@ -608,7 +612,7 @@ class QtTextEditWidget(QtWidgetBase):
 
     def __init__(self, field_definition: FieldDefinition, parent: Any = None) -> None:
         super().__init__(field_definition, parent)
-        from PyQt5.QtWidgets import QTextEdit
+        from interface.qt.qt_compat import QTextEdit
 
         self.widget = QTextEdit(parent)
         if field_definition.default:

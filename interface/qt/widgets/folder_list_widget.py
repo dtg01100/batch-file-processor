@@ -14,20 +14,20 @@ from collections.abc import Callable, Iterator
 from typing import Any, Protocol
 
 import thefuzz.process  # type: ignore[import-untyped]  # thefuzz has no type stubs
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontMetrics
-from PyQt5.QtWidgets import (
+
+from core.utils.bool_utils import normalize_bool
+from interface.qt.qt_compat import (
+    QFontMetrics,
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    Qt,
     QVBoxLayout,
     QWidget,
 )
-
-from core.utils.bool_utils import normalize_bool
 from interface.qt.theme import Theme
 
 

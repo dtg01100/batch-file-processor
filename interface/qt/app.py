@@ -17,8 +17,6 @@ import sys
 from typing import Any
 
 import appdirs
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QWidget
 
 from adapters.sqlite.repositories import (
     SqliteFolderRepository,
@@ -32,6 +30,13 @@ from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.bootstrap import QtAppBootstrapService
 from interface.qt.diagnostics import QtDiagnosticsService
+from interface.qt.qt_compat import (
+    QApplication,
+    QMainWindow,
+    QPushButton,
+    QTimer,
+    QWidget,
+)
 from interface.qt.run_coordinator import QtRunCoordinator
 from interface.qt.window_controller import QtMainWindowController
 from interface.services.reporting_service import ReportingService

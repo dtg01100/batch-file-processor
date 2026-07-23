@@ -24,9 +24,9 @@ Notable shims applied:
 * Qt6 reorganized some widgets out of ``QtWidgets``. ``QShortcut``
   moved to ``QtGui``. The shim handles this in each branch so call
   sites can keep importing from a single place.
-* ``QtCore`` (and ``QtGui``/``QtWidgets``) module namespaces are
-  re-exported as ``QtCore`` so call sites that do ``QtCore.Qt.X``
-  (or any other module-qualified access) keep working.
+* ``QtCore`` / ``QtGui`` / ``QtWidgets`` module namespaces are
+  re-exported so call sites that do ``QtCore.Qt.X`` (or any other
+  module-qualified access) keep working.
 
 Phase 3 will collapse this to a single-binding re-export module.
 """
@@ -89,6 +89,7 @@ if _BINDING == "pyside6":
         QPushButton,
         QScrollArea,
         QSizePolicy,
+        QSpacerItem,
         QSpinBox,
         QStyle,
         QTableWidget,
@@ -150,6 +151,7 @@ elif _BINDING == "pyqt5":
         QPushButton,
         QScrollArea,
         QSizePolicy,
+        QSpacerItem,
         QSpinBox,
         QStyle,
         QTableWidget,
@@ -168,9 +170,6 @@ else:
 
 ACTIVE_BINDING = _BINDING
 
-# Re-export module namespaces under the public name so call sites that
-# reference QtCore.Qt / QtGui.X / QtWidgets.Y keep working without
-# reaching for the binding-specific module name.
 QtCore = _QtCore_module
 QtGui = _QtGui_module
 QtWidgets = _QtWidgets_module
@@ -215,6 +214,7 @@ __all__ = [
     "QScrollArea",
     "QShortcut",
     "QSizePolicy",
+    "QSpacerItem",
     "QSpinBox",
     "QStyle",
     "QTabWidget",
@@ -232,4 +232,3 @@ __all__ = [
     "QtWidgets",
     "pyqtSignal",
 ]
-

@@ -454,7 +454,7 @@ class PluginConfigurationMapper:
             Any: Widget value
 
         """
-        from PyQt5.QtWidgets import (
+        from interface.qt.qt_compat import (
             QCheckBox,
             QComboBox,
             QDoubleSpinBox,
@@ -597,7 +597,7 @@ class PluginConfigurationMapper:
             value: Value to set
 
         """
-        from PyQt5.QtWidgets import (
+        from interface.qt.qt_compat import (
             QCheckBox,
             QComboBox,
             QDoubleSpinBox,

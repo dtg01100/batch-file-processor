@@ -7,6 +7,8 @@ managing widget container creation, spacing, and scroll area setup.
 from collections.abc import Callable
 from typing import Any, cast
 
+from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
+from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
 from interface.qt.qt_compat import (
     QDialog,
     QDialogButtonBox,
@@ -17,9 +19,6 @@ from interface.qt.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
-
-from interface.qt.dialogs.edit_folders.column_builders import ColumnBuilders
-from interface.qt.dialogs.edit_folders.dynamic_edi_builder import DynamicEDIBuilder
 from interface.qt.theme import Theme
 
 
@@ -75,7 +74,7 @@ class UILayoutBuilder:
         self.on_cancel = on_cancel
 
         # Component instances
-        from PyQt5.QtWidgets import QPushButton, QVBoxLayout, QWidget
+        from interface.qt.qt_compat import QPushButton, QVBoxLayout, QWidget
 
         self.column_builders: ColumnBuilders | None = None
         self.dynamic_edi_builder: DynamicEDIBuilder | None = None

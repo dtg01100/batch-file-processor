@@ -15,7 +15,7 @@ import os
 from typing import Any, Protocol, runtime_checkable
 
 try:
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
+    from interface.qt.qt_compat import QApplication, QFileDialog, QMessageBox, QWidget
 except ImportError:
     QApplication = None  # type: ignore[assignment,misc]  # headless: assign None to Qt type
     QFileDialog = None  # type: ignore[assignment,misc]

@@ -365,7 +365,7 @@ class QtFormGenerator(FormGenerator):
             Any: Qt form container widget
 
         """
-        from PyQt5.QtWidgets import QFormLayout, QLabel, QVBoxLayout, QWidget
+        from interface.qt.qt_compat import QFormLayout, QLabel, QVBoxLayout, QWidget
 
         # Create main container widget
         self.form_container = QWidget(parent)

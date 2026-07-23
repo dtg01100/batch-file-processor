@@ -183,7 +183,7 @@ class QtConfigSectionWidget(ConfigSectionWidget):
             Any: Qt widget container
 
         """
-        from PyQt5.QtWidgets import QFormLayout, QGroupBox, QLabel, QVBoxLayout
+        from interface.qt.qt_compat import QFormLayout, QGroupBox, QLabel, QVBoxLayout
 
         self.container = QGroupBox(
             self.schema.title if hasattr(self.schema, "title") else "Configuration"
@@ -305,7 +305,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
             Any: Qt widget container
 
         """
-        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QWidget
+        from interface.qt.qt_compat import QGroupBox, QVBoxLayout, QWidget
 
         self.container = QGroupBox(
             self.schema.title if hasattr(self.schema, "title") else "Configuration"
@@ -331,7 +331,7 @@ class QtCollapsibleSectionWidget(CollapsibleSectionWidget):
             if field.field_type == FieldType.BOOLEAN:
                 self._content_layout.addWidget(widget.get_widget())
             else:
-                from PyQt5.QtWidgets import QFormLayout
+                from interface.qt.qt_compat import QFormLayout
 
                 form_layout = QFormLayout()
                 form_layout.addRow(field.label, widget.get_widget())
@@ -438,7 +438,7 @@ class TabbedSectionWidget(ConfigSectionWidget):
         """
         Render Qt tabbed section widget.
         """
-        from PyQt5.QtWidgets import QTabWidget
+        from interface.qt.qt_compat import QTabWidget
 
         self.container = QTabWidget(self.parent)
 

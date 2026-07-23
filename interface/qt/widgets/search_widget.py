@@ -2,10 +2,17 @@
 
 from collections.abc import Callable
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QShortcut, QStyle, QWidget
-
+from interface.qt.qt_compat import (
+    QHBoxLayout,
+    QKeySequence,
+    QLineEdit,
+    QShortcut,
+    QStyle,
+    Qt,
+    QTimer,
+    QWidget,
+    pyqtSignal,
+)
 from interface.qt.theme import Theme
 
 
