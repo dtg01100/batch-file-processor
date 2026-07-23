@@ -24,6 +24,7 @@ from interface.qt.qt_compat import (
     QItemSelectionModel,
     QLabel,
     QLineEdit,
+    QObject,
     QPushButton,
     Qt,
     QTableWidget,
@@ -33,32 +34,57 @@ from interface.qt.qt_compat import (
     QToolButton,
     QWidget,
     pyqtSignal,
+    pyqtSlot,
 )
 from interface.qt.theme import Theme
 from interface.services.resend_service import ResendService
 
 
-class FileExistenceWorker(QThread):
-    """Background worker for checking file existence on disk."""
+class FileExistenceWorker(QObject):
+    """Background worker for checking file existence on disk.
+
+    Uses the QObject.moveToThread pattern (the Qt-recommended way
+    to do background work). The worker itself is a plain QObject
+    with slots; a separate QThread owns the worker's event loop
+    so signals are emitted on the QThread's thread, not on the
+    QThread subclass's run() method.
+
+    PySide6 6.11.1 has a binding-manager bug where QThread
+    subclasses that emit signals from their run() method crash
+    with a "free(): invalid pointer" abort during event-loop
+    iteration (see FileExistenceWorker history). The
+    QObject.moveToThread pattern avoids the buggy code path
+    entirely: signals are emitted from a slot on a worker
+    whose thread affinity is the background QThread, so
+    Shiboken emits them through the worker's event loop
+    rather than directly from run().
+    """
 
     file_checked = pyqtSignal(dict)
     finished = pyqtSignal(int, int)
 
     def __init__(
-        self, files: list[dict[str, Any]], parent: QWidget | None = None
+        self, files: list[dict[str, Any]], parent: QObject | None = None
     ) -> None:
         """Initialize the worker.
 
         Args:
             files: List of file dictionaries to check.
-            parent: Optional parent widget.
+            parent: Optional parent QObject (typically the
+                QThread that will own this worker's event loop).
         """
         super().__init__(parent)
         self._files = files
         self._is_cancelled = False
 
-    def run(self) -> None:
-        """Check file existence in background thread."""
+    @pyqtSlot()
+    def run_check(self) -> None:
+        """Check file existence; emit file_checked for each, then finished.
+
+        Invoked as a queued slot on the worker's owning thread.
+        Signal emissions are therefore thread-safe: they go
+        through the worker's event loop, not directly.
+        """
         missing_count = 0
         total = len(self._files)
         for file_info in self._files:
@@ -71,7 +97,7 @@ class FileExistenceWorker(QThread):
         self.finished.emit(missing_count, total)
 
     def cancel(self) -> None:
-        """Cancel the worker."""
+        """Cancel the worker (checked at the next iteration boundary)."""
         self._is_cancelled = True
 
 
@@ -106,8 +132,8 @@ class ResendDialog(BaseDialog):
         self._current_offset = 0
         self._total_files = 0
         self._file_check_worker: FileExistenceWorker | None = None
+        self._file_check_thread: QThread | None = None
         self._is_loading = False
-        self._has_more_data = True
         self._search_text = ""
         self._search_offset = 0
 
@@ -443,16 +469,43 @@ class ResendDialog(BaseDialog):
         self._is_updating_selection = False
 
     def _check_files_exist_async(self) -> None:
-        """Check which files exist on disk in background thread."""
+        """Check which files exist on disk in background thread.
+
+        Uses the QObject.moveToThread pattern (the Qt-recommended
+        way to do background work). A QThread owns the worker's
+        event loop; signals emitted by the worker flow through
+        that loop and are delivered to the GUI thread safely.
+
+        PySide6 6.11.1 has a binding bug where QThread subclasses
+        that emit signals from run() crash during event-loop
+        iteration; this pattern avoids that buggy path entirely.
+        """
         if not self._all_files:
             return
 
         self._loading_label.setText("Checking file existence...")
 
-        self._file_check_worker = FileExistenceWorker(self._all_files)
-        self._file_check_worker.file_checked.connect(self._on_file_checked)
-        self._file_check_worker.finished.connect(self._on_file_check_finished)
-        self._file_check_worker.start()
+        # Cancel any prior worker first; we own the lifecycle now.
+        self._cancel_file_check_worker()
+
+        thread = QThread(self)
+        worker = FileExistenceWorker(self._all_files)
+        worker.moveToThread(thread)
+
+        # Wire up: thread start kicks off the work; worker finished
+        # stops the thread; signals deliver progress to the GUI.
+        thread.started.connect(worker.run_check)
+        worker.finished.connect(self._on_file_check_finished)
+        worker.file_checked.connect(self._on_file_checked)
+        worker.finished.connect(thread.quit)
+        # When the thread stops, schedule worker + thread for
+        # deletion so they don't leak. Use QueuedConnection so the
+        # deleteLater() calls land on the right thread.
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        self._file_check_worker = worker
+        thread.start()
 
     def _on_file_checked(self, file_info: dict[str, Any]) -> None:
         """Handle individual file check result."""
@@ -710,11 +763,27 @@ class ResendDialog(BaseDialog):
         self._load_more_button.setEnabled(self._has_more_data and not self._is_loading)
 
     def _cancel_file_check_worker(self) -> None:
-        """Cancel existing file check worker safely."""
-        if self._file_check_worker and self._file_check_worker.isRunning():
-            self._file_check_worker.cancel()
-            self._file_check_worker.wait(5000)
-            self._file_check_worker = None
+        """Cancel existing file check worker and stop its thread.
+
+        With the QObject.moveToThread pattern, the worker and
+        its thread are separate objects; cancelling the worker
+        is still safe (sets _is_cancelled), and we additionally
+        quit the thread's event loop and wait briefly for it to
+        finish so subsequent _check_files_exist_async calls don't
+        overlap.
+        """
+        worker = self._file_check_worker
+        thread = self._file_check_thread
+        self._file_check_worker = None
+        self._file_check_thread = None
+        if worker is None:
+            return
+        worker.cancel()
+        if thread is not None and thread.isRunning():
+            thread.quit()
+            thread.wait(5000)
+        # Worker and thread are auto-deleted via deleteLater() wired
+        # in _check_files_exist_async (thread.finished connections).
 
     def _load_more(self) -> None:
         """Load more results (append to existing list)."""
