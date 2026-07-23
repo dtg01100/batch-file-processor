@@ -33,7 +33,7 @@ A static AST-based linter that scans every test file under `tests/unit/`
 for violations of the conventions documented in `tests/AGENTS.md` and
 the project root `AGENTS.md`. Unlike the mutation runner it does no
 subprocess, no fixture setup, no module imports — it parses each test
-file with `ast.parse` and runs seven checks:
+file with `ast.parse` and runs checks:
 
 | Rule | Catches |
 |---|---|
@@ -44,6 +44,10 @@ file with `ast.parse` and runs seven checks:
 | `bare_except_pass` | `except: pass` / `except Exception: pass` |
 | `unjustified_noqa` | `# noqa` without `: CODE — reason` justification |
 | `single_item_dispatch_root_import` | `from dispatch import X` (single name) |
+| `assert_is_bool_comparison` | `assert X is True` / `assert X is False` (tautology) |
+| `magic_padding` | `"00" + x` zero-padding concatenation (AGENTS.md anti-pattern; use `f"{x:02d}"` or `x.zfill(N)`) |
+| `tuple_subscript_trick` | `(expr, None)[1]` obfuscation (AGENTS.md anti-pattern) |
+| `nested_try_pyramid` | try/except nested 3+ levels deep (AGENTS.md anti-pattern; use a `stage` variable) |
 
 The runner is parametrized over `(file, check_name)` so
 `pytest tests/meta/test_hygiene.py -k missing_assert -n auto` narrows
@@ -176,6 +180,76 @@ For every `tests/**/*_property.py` file, the runner:
 Phase 3b (consistency checks) is not yet implemented; the current
 deliverable is the enumeration report. The plan flagged Phase 3
 as experimental.
+
+### `test_module_coverage.py` (added 2026-07-16)
+
+Surfaces production modules that no test file imports. A module
+without any test reference is a silent refactor risk: a change to
+its behavior can break production without any test failing.
+
+**Detection strategy:**
+1. Walk every production root (`core/`, `dispatch/`, `backend/`,
+   `interface/`, `adapters/`, `batch_file_processor/`, `scripts/`)
+   and build the set of module dotted names.
+2. Walk every test file under `tests/` (excluding `tests/meta/`),
+   parse every `Import` and `ImportFrom`, and also extract dotted
+   module paths from `patch("...")` / `monkeypatch.setattr("...")`
+   string arguments (those are runtime imports that don't show up
+   as AST imports).
+3. A module is "covered" if any test imports its exact dotted path
+   OR a longer path that starts with it (e.g. `from foo.bar.baz
+   import X` covers `foo.bar.baz`).
+
+**Why this rule (no parent-package matching):** Python does not
+auto-load submodules when a parent package is imported. `from
+foo import bar` only loads `foo/bar.py` if `foo/__init__.py` eagerly
+re-exports it. Most `__init__.py` files in this project do not, so
+parent-package matching would over-credit coverage. The strict rule
+(direct or longer-prefix match) accepts false positives (saying
+uncovered when the module is loaded by an eager `__init__.py`) in
+exchange for never missing a real gap.
+
+**Initial run (2026-07-16):** 185 production modules scanned, 37
+uncovered. All 37 are intentional:
+- 4 `adapters/inmemory/*` — in-memory adapter not used in production
+  (db2ssh is the production adapter).
+- 5 `core/*` — utility helpers (CSV, folder-path, generic `utils`).
+- 6 `dispatch/*` — converters imported only via `patch()` string
+  references, and pipeline factory that is constructed inline.
+- 9 `interface/*` — Qt form/window helpers exercised via dialog
+  smoke tests, not direct imports.
+- 13 `scripts/*` — CLI utilities invoked manually, not library code.
+
+The full allowlist is in `KNOWN_UNCOVERED` with one-line citations
+for each entry. Re-validate with::
+
+    python tests/meta/test_module_coverage.py --no-skip-known-uncovered
+
+### `test_marker_placement.py` (added 2026-07-16)
+
+Catches the case where a test file's `@pytest.mark.X` decorator
+doesn't match its directory convention. AGENTS.md says `@unit`
+tests live under `tests/unit/`, `@integration` under
+`tests/integration/`, etc. A marker that conflicts with the
+directory is a layering smell: a `-m unit` selector silently
+excludes an integration test, or vice versa.
+
+**Detection strategy:**
+1. Walk every `test_*.py` under `tests/` (excluding `tests/meta/`).
+2. For each file, extract every `@pytest.mark.<name>` decorator
+   from functions, classes, and module-level `pytestmark = [...]`
+   lists.
+3. Look up each marker in `MARKER_TO_DIRECTORIES` and compare to
+   the file's actual directory.
+
+**Initial run (2026-07-16):** 216 test files scanned, 8
+misplacements detected. All 8 are intentional cross-layer tests
+(Qt-in-integration, integration-in-unit-for-pre-split-tests, etc.)
+and live in `KNOWN_MARKER_MISPLACEMENT` with cited reasons.
+
+Re-validate with::
+
+    python tests/meta/test_marker_placement.py --no-skip-known-marker-misplacement
 
 ### `DEFAULT_PAIRS`
 
