@@ -27,6 +27,7 @@ Notes:
 * Module namespaces ``QtCore`` / ``QtGui`` / ``QtWidgets`` are
   re-exported so call sites that do ``QtCore.Qt.X`` keep working.
 """
+
 from __future__ import annotations
 
 from PySide6 import QtCore as _QtCore_module
