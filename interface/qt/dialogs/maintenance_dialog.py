@@ -8,6 +8,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from interface.operations.maintenance_functions import (  # Toolkit-agnostic
+    MaintenanceFunctions,
+)
+from interface.ports import UIServiceProtocol
+from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.qt_compat import (
     QHBoxLayout,
     QKeyEvent,
@@ -17,12 +22,6 @@ from interface.qt.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
-
-from interface.operations.maintenance_functions import (  # Toolkit-agnostic
-    MaintenanceFunctions,
-)
-from interface.ports import UIServiceProtocol
-from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.theme import Theme
 
 

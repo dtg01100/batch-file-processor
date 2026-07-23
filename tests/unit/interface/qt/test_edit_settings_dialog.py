@@ -16,9 +16,9 @@ from typing import cast
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt5.QtWidgets import QDialogButtonBox, QFormLayout, QLineEdit, QMessageBox
 
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
+from interface.qt.qt_compat import QDialogButtonBox, QFormLayout, QLineEdit, QMessageBox
 from interface.services.smtp_service import SMTPService
 
 pytestmark = [pytest.mark.unit, pytest.mark.qt]

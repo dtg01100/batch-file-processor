@@ -249,7 +249,7 @@ class TestPluginSectionCommunication:
 
         class FakeSection:
             def render(self, config):
-                from PyQt5.QtWidgets import QWidget
+                from interface.qt.qt_compat import QWidget
 
                 captured["render_config"] = config
                 return QWidget()

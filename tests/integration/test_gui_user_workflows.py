@@ -26,14 +26,13 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
-from PyQt5.QtWidgets import QApplication, QDialog, QPushButton
-
 from core.edi.edi_parser import build_a_record, build_b_record, build_c_record
 from interface.qt.app import QtBatchFileSenderApp
 from interface.qt.dialogs.edit_folders_dialog import EditFoldersDialog
 from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
+from interface.qt.qt_compat import QApplication, QDialog, QPushButton
 
 # =============================================================================
 # Test Fixtures

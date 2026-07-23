@@ -10,6 +10,13 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from core.structured_logging import (
+    generate_correlation_id,
+    get_correlation_id,
+    get_logger,
+    log_with_context,
+    set_correlation_id,
+)
 from interface.qt.qt_compat import (
     QCheckBox,
     QDialog,
@@ -17,14 +24,6 @@ from interface.qt.qt_compat import (
     QMessageBox,
     QPushButton,
     QWidget,
-)
-
-from core.structured_logging import (
-    generate_correlation_id,
-    get_correlation_id,
-    get_logger,
-    log_with_context,
-    set_correlation_id,
 )
 from interface.qt.theme import Theme
 

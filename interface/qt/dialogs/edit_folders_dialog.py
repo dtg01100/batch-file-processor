@@ -9,8 +9,6 @@ import os
 from collections.abc import Callable
 from typing import Any, ClassVar
 
-from interface.qt.qt_compat import QFileDialog, QMessageBox, QWidget
-
 from core.utils.bool_utils import normalize_bool
 from interface.operations.plugin_configuration_mapper import PluginConfigurationMapper
 from interface.operations.tweaks_flat_column_sync import (
@@ -22,6 +20,7 @@ from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.edit_folders.data_extractor import QtFolderDataExtractor
 from interface.qt.dialogs.edit_folders.event_handlers import EventHandlers
 from interface.qt.dialogs.edit_folders.layout_builder import UILayoutBuilder
+from interface.qt.qt_compat import QFileDialog, QMessageBox, QWidget
 from interface.services.ftp_service import FTPServiceProtocol
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 

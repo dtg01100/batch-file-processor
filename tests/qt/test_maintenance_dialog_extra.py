@@ -1,10 +1,8 @@
 """Additional tests for MaintenanceDialog to improve coverage."""
 
 import pytest
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QLabel
 
+from interface.qt.qt_compat import QColor, QLabel, Qt
 from interface.qt.theme import Theme
 
 pytestmark = pytest.mark.qt

@@ -4,8 +4,7 @@ Provides functions to test that UI elements have sufficient color contrast
 for accessibility compliance.
 """
 
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtWidgets import QWidget
+from interface.qt.qt_compat import QColor, QPalette, QWidget
 
 
 def get_widget_colors(widget: QWidget, role: int) -> tuple[QColor, QColor]:

@@ -5,10 +5,8 @@ Database operations use real DatabaseObj with temporary SQLite databases.
 """
 
 import pytest
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtWidgets import QLabel, QPushButton, QWidget
 
+from interface.qt.qt_compat import QColor, QLabel, QPalette, QPushButton, Qt, QWidget
 from interface.qt.theme import Theme
 
 pytestmark = pytest.mark.qt

@@ -18,11 +18,10 @@ pytestmark = [pytest.mark.integration, pytest.mark.e2e, pytest.mark.qt, pytest.m
 import tempfile
 from pathlib import Path
 
-from PyQt5.QtWidgets import QApplication
-
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
+from interface.qt.qt_compat import QApplication
 from scripts import create_database
 
 
@@ -297,9 +296,8 @@ class TestMultiDialogWorkflow:
             }
         )
 
-        from PyQt5.QtWidgets import QPushButton, QWidget
-
         from interface.operations.maintenance_functions import MaintenanceFunctions
+        from interface.qt.qt_compat import QPushButton, QWidget
 
         parent = QWidget()
         qtbot.addWidget(parent)

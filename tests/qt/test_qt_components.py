@@ -9,7 +9,8 @@ Tests cover:
 """
 
 import pytest
-from PyQt5.QtWidgets import (
+
+from interface.qt.qt_compat import (
     QCheckBox,
     QDialog,
     QLineEdit,

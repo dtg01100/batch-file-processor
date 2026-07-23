@@ -13,10 +13,15 @@ pytestmark = [pytest.mark.qt, pytest.mark.gui]
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtCore import QDate, QItemSelectionModel, Qt
-from PyQt5.QtWidgets import QPushButton, QTableWidget
 
 from interface.ports import UIServiceProtocol
+from interface.qt.qt_compat import (
+    QDate,
+    QItemSelectionModel,
+    QPushButton,
+    Qt,
+    QTableWidget,
+)
 from interface.services.smtp_service import SMTPServiceProtocol
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 from tests.conftest import MockFactories
@@ -141,9 +146,8 @@ class TestBaseDialog:
         assert dialog._button_box is None
 
     def test_confirm_yes_no_uses_question_box(self, qtbot, monkeypatch):
-        from PyQt5.QtWidgets import QMessageBox
-
         from interface.qt.dialogs.base_dialog import BaseDialog
+        from interface.qt.qt_compat import QMessageBox
 
         monkeypatch.setattr(
             QMessageBox,
@@ -171,9 +175,8 @@ class TestQtFolderDataExtractor:
         assert result.process_backend_ftp is False
 
     def test_reads_line_edit(self, qtbot):
-        from PyQt5.QtWidgets import QLineEdit
-
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.qt_compat import QLineEdit
 
         edit = QLineEdit()
         qtbot.addWidget(edit)
@@ -182,9 +185,8 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().ftp_server == "my_server"
 
     def test_reads_checkbox(self, qtbot):
-        from PyQt5.QtWidgets import QCheckBox
-
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.qt_compat import QCheckBox
 
         cb = QCheckBox()
         qtbot.addWidget(cb)
@@ -193,9 +195,8 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().process_backend_ftp is True
 
     def test_reads_combobox(self, qtbot):
-        from PyQt5.QtWidgets import QComboBox
-
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.qt_compat import QComboBox
 
         combo = QComboBox()
         qtbot.addWidget(combo)
@@ -205,9 +206,8 @@ class TestQtFolderDataExtractor:
         assert extractor.extract_all().convert_to_format == "fintech"
 
     def test_reads_spinbox(self, qtbot):
-        from PyQt5.QtWidgets import QSpinBox
-
         from interface.qt.dialogs.edit_folders_dialog import QtFolderDataExtractor
+        from interface.qt.qt_compat import QSpinBox
 
         spin = QSpinBox()
         qtbot.addWidget(spin)

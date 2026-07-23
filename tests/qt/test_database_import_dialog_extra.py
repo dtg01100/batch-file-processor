@@ -3,11 +3,11 @@
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtCore import Qt
 
 from backend.database.database_obj import TableProtocol
 from core.constants import CURRENT_DATABASE_VERSION
 from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+from interface.qt.qt_compat import Qt
 
 pytestmark = pytest.mark.qt
 
@@ -286,9 +286,8 @@ class TestDatabaseImportDialogConfirm:
         """Test confirmation handler with Yes response."""
         import threading
 
-        from PyQt5.QtWidgets import QMessageBox
-
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+        from interface.qt.qt_compat import QMessageBox
 
         def mock_question(parent, title, message, buttons, default):
             return QMessageBox.StandardButton.Yes
@@ -311,9 +310,8 @@ class TestDatabaseImportDialogConfirm:
         """Test confirmation handler with No response."""
         import threading
 
-        from PyQt5.QtWidgets import QMessageBox
-
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
+        from interface.qt.qt_compat import QMessageBox
 
         def mock_question(parent, title, message, buttons, default):
             return QMessageBox.StandardButton.No

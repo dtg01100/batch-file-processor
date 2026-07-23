@@ -4,7 +4,6 @@ import unittest
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtWidgets import QApplication, QTextEdit
 
 from interface.models.folder_configuration import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
@@ -21,6 +20,7 @@ from interface.plugins.config_schemas import (
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.ui_abstraction import WidgetBase
 from interface.plugins.validation_framework import ValidationResult
+from interface.qt.qt_compat import QApplication, QTextEdit
 
 
 class TestPluginSectionStateManager(unittest.TestCase):

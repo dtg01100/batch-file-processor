@@ -21,7 +21,6 @@ from interface.qt.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
-
 from interface.qt.theme import Theme
 from interface.qt.widgets.search_widget import SearchWidget
 

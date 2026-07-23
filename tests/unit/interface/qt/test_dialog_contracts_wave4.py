@@ -7,8 +7,6 @@ even as internal dialog implementations evolve.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDialogButtonBox
 
 from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
@@ -17,6 +15,7 @@ from interface.qt.dialogs.edit_settings_dialog import EditSettingsDialog
 from interface.qt.dialogs.maintenance_dialog import MaintenanceDialog
 from interface.qt.dialogs.processed_files_dialog import ProcessedFilesDialog
 from interface.qt.dialogs.resend_dialog import ResendDialog
+from interface.qt.qt_compat import QDialogButtonBox, Qt
 from interface.services.resend_service import ResendService
 from interface.validation.folder_settings_validator import (
     FolderSettingsValidator,

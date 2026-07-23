@@ -13,9 +13,9 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt5.QtWidgets import QMessageBox, QPushButton, QWidget
 
 from interface.operations.maintenance_functions import MaintenanceFunctions
+from interface.qt.qt_compat import QMessageBox, QPushButton, QWidget
 from interface.services.smtp_service import SMTPServiceProtocol
 
 pytestmark = pytest.mark.qt
@@ -1276,7 +1276,7 @@ class TestAppSmokeActions:
             lambda *args, **kwargs: str(tmp_path),
         )
         # Mock QMessageBox.question to avoid blocking
-        from PyQt5.QtWidgets import QMessageBox
+        from interface.qt.qt_compat import QMessageBox
 
         monkeypatch.setattr(
             "PyQt5.QtWidgets.QMessageBox.question",

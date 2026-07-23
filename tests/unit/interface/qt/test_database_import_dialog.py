@@ -6,11 +6,10 @@ previously covered only by placeholder assertions.
 
 from unittest.mock import MagicMock
 
-from PyQt5.QtWidgets import QMessageBox
-
 from backend.database import TableProtocol
 from backend.database.sqlite_wrapper import Database as SqliteDatabase
 from interface.qt.dialogs.database_import_dialog import DbMigrationJob, ImportThread
+from interface.qt.qt_compat import QMessageBox
 
 
 class TestImportThread:

@@ -1042,7 +1042,7 @@ class TestWidgetCleanupAndLifecycle:
         self, qtbot, sample_folder_config
     ):
         """When dynamic EDI widgets are cleared, field references should be removed."""
-        from PyQt5.QtWidgets import QComboBox
+        from interface.qt.qt_compat import QComboBox
 
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True
@@ -1223,11 +1223,10 @@ class TestWidgetCleanupAndLifecycle:
 
     def test_data_extractor_handles_deleted_widgets(self, qtbot, sample_folder_config):
         """Data extractor should handle widgets that have been deleted with deleteLater()."""
-        from PyQt5.QtWidgets import QLineEdit
-
         from interface.qt.dialogs.edit_folders.data_extractor import (
             QtFolderDataExtractor,
         )
+        from interface.qt.qt_compat import QLineEdit
 
         sample_folder_config["folder_is_active"] = "True"
         sample_folder_config["process_backend_copy"] = True

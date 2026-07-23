@@ -5,6 +5,8 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from core import utils
+from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.qt.qt_compat import (
     QCheckBox,
     QFileDialog,
@@ -18,9 +20,6 @@ from interface.qt.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
-
-from core import utils
-from interface.qt.dialogs.base_dialog import BaseDialog
 from interface.services.smtp_service import SMTPService, SMTPServiceProtocol
 from interface.validation.email_validator import validate_email as validate_email_format
 

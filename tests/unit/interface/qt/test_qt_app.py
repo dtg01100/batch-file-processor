@@ -14,12 +14,12 @@ from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt5.QtWidgets import QApplication, QPushButton
 
 from backend.database import DatabaseConnectionProtocol, DatabaseObj, TableProtocol
 from interface.operations.folder_manager import FolderManager
 from interface.ports import ProgressServiceProtocol, UIServiceProtocol
 from interface.qt.app import QtBatchFileSenderApp
+from interface.qt.qt_compat import QApplication, QPushButton
 
 
 @pytest.fixture

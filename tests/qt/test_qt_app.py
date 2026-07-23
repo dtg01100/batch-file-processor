@@ -1149,9 +1149,8 @@ class TestQtBatchFileSenderApp:
             app._process_directories(folders_table)
 
     def test_build_main_window_creates_widgets(self, qtbot):
-        from PyQt5.QtWidgets import QMainWindow
-
         from interface.qt.app import QtBatchFileSenderApp
+        from interface.qt.qt_compat import QMainWindow
 
         db = MockFactories.database_obj()
         db.folders_table.count.return_value = 0
@@ -1207,9 +1206,8 @@ class TestQtBatchFileSenderApp:
         db.folders_table.update.assert_called_once_with(folder_config, ["id"])
 
     def test_configure_window(self, qtbot):
-        from PyQt5.QtWidgets import QMainWindow
-
         from interface.qt.app import QtBatchFileSenderApp
+        from interface.qt.qt_compat import QMainWindow
 
         app = QtBatchFileSenderApp()
         window = QMainWindow()

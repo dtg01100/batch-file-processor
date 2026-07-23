@@ -3,9 +3,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt5.QtWidgets import QLineEdit, QTableWidget
 
 from backend.database import DatabaseConnectionProtocol
+from interface.qt.qt_compat import QLineEdit, QTableWidget
 from interface.services.resend_service import ResendService
 
 

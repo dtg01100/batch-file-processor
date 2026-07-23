@@ -1,7 +1,8 @@
 """Additional tests for ResendDialog to improve coverage."""
 
 import pytest
-from PyQt5.QtCore import Qt
+
+from interface.qt.qt_compat import Qt
 
 pytestmark = pytest.mark.qt
 

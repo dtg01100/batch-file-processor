@@ -18,6 +18,11 @@ from core.structured_logging import (
 
 logger = get_logger(__name__)
 
+from core.utils.bool_utils import normalize_bool
+from interface.form.form_generator import FormGeneratorFactory
+from interface.plugins.configuration_plugin import ConfigurationPlugin
+from interface.plugins.plugin_manager import PluginManager
+from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.qt.qt_compat import (
     QCheckBox,
     QComboBox,
@@ -30,12 +35,6 @@ from interface.qt.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
-
-from core.utils.bool_utils import normalize_bool
-from interface.form.form_generator import FormGeneratorFactory
-from interface.plugins.configuration_plugin import ConfigurationPlugin
-from interface.plugins.plugin_manager import PluginManager
-from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 
 
 class DynamicEDIBuilder:
