@@ -98,7 +98,7 @@ class TestHiddenImports:
         # Qt hooks use collect_data_files/collect_dynamic_libs instead of
         # collect_submodules.
         # This is correct for Qt modules which need binary/data collection
-        qt_hooks = {"PyQt5", "PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets"}
+        qt_hooks = {"PySide6", "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets"}
 
         for package in hook_packages:
             hook_file = HOOKS_DIR / f"hook-{package}.py"

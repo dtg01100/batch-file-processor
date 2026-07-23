@@ -55,7 +55,7 @@ class TestDialogLifecycle:
             info_calls["count"] += 1
 
         monkeypatch.setattr(
-            "PyQt5.QtWidgets.QMessageBox.information",
+            "interface.qt.qt_compat.QMessageBox.information",
             fake_information,
         )
 

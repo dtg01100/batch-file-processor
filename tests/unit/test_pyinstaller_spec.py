@@ -3,7 +3,7 @@
 These tests verify that:
 - The spec file is configured correctly
 - All required modules are in hiddenimports
-- PyQt5 (not PyQt6) is used
+- PySide6 (not PyQt5/PyQt6) is used
 - Hook files are properly configured
 """
 
@@ -131,20 +131,21 @@ class TestSpecFileConfiguration:
         assert SPEC_FILE.exists(), f"Spec file {SPEC_FILE} should exist"
 
     @pytest.mark.unit
-    def test_spec_uses_pyqt5_not_pyqt6(self):
+    def test_spec_uses_pyside6_not_pyqt5(self):
         with open(SPEC_FILE, encoding="utf-8") as spec_file:
             spec_source = spec_file.read()
 
-        assert "PyQt5" in spec_source, "Spec must use PyQt5"
-        assert "PyQt6" not in spec_source, "Spec must not use PyQt6"
+        assert "PySide6" in spec_source, "Spec must use PySide6"
+        assert "PyQt5" not in spec_source, "Spec must not use PyQt5"
+        assert "PyQt6" not in spec_source, "Spec must not use PyQt6"  # legacy guard
 
     @pytest.mark.unit
-    def test_spec_collects_pyqt5_runtime_with_pyinstaller_helpers(self):
+    def test_spec_collects_pyside6_runtime_with_pyinstaller_helpers(self):
         with open(SPEC_FILE, encoding="utf-8") as spec_file:
             spec_source = spec_file.read()
 
-        assert 'collect_data_files("PyQt5")' in spec_source
-        assert 'collect_dynamic_libs("PyQt5")' in spec_source
+        assert 'collect_data_files("PySide6")' in spec_source
+        assert 'collect_dynamic_libs("PySide6")' in spec_source
 
     @pytest.mark.unit
     def test_spec_hooks_directory_configured(self):
@@ -164,28 +165,27 @@ class TestSpecFileConfiguration:
         assert not pyqt6_hooks, f"Found PyQt6 hooks: {pyqt6_hooks}"
 
 
-class TestPyQt5Runtime:
-    """PyQt5 runtime modules must be in hiddenimports."""
+class TestPySide6Runtime:
+    """PySide6 runtime modules must be in hiddenimports."""
 
-    REQUIRED_PYQT5: ClassVar[list[str]] = [
-        "PyQt5.sip",
-        "PyQt5.QtCore",
-        "PyQt5.QtGui",
-        "PyQt5.QtWidgets",
-        "PyQt5.QtNetwork",
+    REQUIRED_PYSIDE6: ClassVar[list[str]] = [
+        "PySide6.QtCore",
+        "PySide6.QtGui",
+        "PySide6.QtWidgets",
+        "PySide6.QtNetwork",
     ]
 
     @pytest.mark.unit
-    def test_pyqt5_runtime_in_hiddenimports(self):
+    def test_pyside6_runtime_in_hiddenimports(self):
         spec_hidden = _extract_hidden_imports()
-        missing = [m for m in self.REQUIRED_PYQT5 if m not in spec_hidden]
-        assert not missing, f"Missing PyQt5 hiddenimports: {missing}"
+        missing = [m for m in self.REQUIRED_PYSIDE6 if m not in spec_hidden]
+        assert not missing, f"Missing PySide6 hiddenimports: {missing}"
 
     @pytest.mark.unit
-    def test_no_pyqt6_in_hiddenimports(self):
+    def test_no_legacy_pyqt5_in_hiddenimports(self):
         spec_hidden = _extract_hidden_imports()
-        pyqt6_imports = [h for h in spec_hidden if "PyQt6" in h or "Qt6" in h]
-        assert not pyqt6_imports, f"Found Qt6 in hiddenimports: {pyqt6_imports}"
+        legacy_imports = [h for h in spec_hidden if "PyQt5" in h]
+        assert not legacy_imports, f"Found legacy PyQt5 in hiddenimports: {legacy_imports}"
 
     @pytest.mark.unit
     def test_no_pyi_rth_pyqt6_hook_exists(self):
@@ -222,7 +222,9 @@ class TestHiddenImports:
             "interface.qt.app",
             "interface.qt.dialogs.edit_folders_dialog",
             "interface.qt.dialogs.edit_folders.data_extractor",
-            "PyQt5.sip",
+            "PySide6.QtCore",
+            "PySide6.QtGui",
+            "PySide6.QtWidgets",
         ]
 
         missing = sorted(
@@ -302,7 +304,7 @@ class TestHookFiles:
 
     @pytest.mark.unit
     def test_qt_hooks_use_collect_data_files_or_dynamic_libs(self):
-        qt_hooks = ["hook-PyQt5.py", "hook-PyQt5.QtCore.py", "hook-PyQt5.QtGui.py"]
+        qt_hooks = ["hook-PySide6.py", "hook-PySide6.QtCore.py", "hook-PySide6.QtGui.py"]
         for hook_name in qt_hooks:
             hook_file = HOOKS_DIR / hook_name
             if hook_file.exists():

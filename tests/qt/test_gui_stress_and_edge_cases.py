@@ -1259,7 +1259,7 @@ class TestAppSmokeActions:
         app.initialize([])
 
         # Mock QDialog.exec to avoid blocking
-        monkeypatch.setattr("PyQt5.QtWidgets.QDialog.exec", lambda self: 1)
+        monkeypatch.setattr("interface.qt.qt_compat.QDialog.exec", lambda self: 1)
 
         # This triggered the crash reported by user
         app._set_defaults_popup()
@@ -1272,18 +1272,18 @@ class TestAppSmokeActions:
 
         # Mock QFileDialog
         monkeypatch.setattr(
-            "PyQt5.QtWidgets.QFileDialog.getExistingDirectory",
+            "interface.qt.qt_compat.QFileDialog.getExistingDirectory",
             lambda *args, **kwargs: str(tmp_path),
         )
         # Mock QMessageBox.question to avoid blocking
         from interface.qt.qt_compat import QMessageBox
 
         monkeypatch.setattr(
-            "PyQt5.QtWidgets.QMessageBox.question",
+            "interface.qt.qt_compat.QMessageBox.question",
             lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
         )
         # Mock dialog exec
-        monkeypatch.setattr("PyQt5.QtWidgets.QDialog.exec", lambda self: 1)
+        monkeypatch.setattr("interface.qt.qt_compat.QDialog.exec", lambda self: 1)
 
         app._select_folder()
 

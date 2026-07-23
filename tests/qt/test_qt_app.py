@@ -688,7 +688,7 @@ class TestQtBatchFileSenderApp:
             "email_backend",
             "lxml",
             "lxml.etree",
-            "PyQt5.sip",
+            "PySide6.QtCore",
             "archive",
         }
 

@@ -11,23 +11,22 @@ from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 project_root = Path(SPECPATH).absolute()
 hooks_dir = project_root / "hooks"
 
-pyqt_datas = collect_data_files("PyQt5")
-pyqt_binaries = collect_dynamic_libs("PyQt5")
+pyside6_datas = collect_data_files("PySide6")
+pyside6_binaries = collect_dynamic_libs("PySide6")
 
 a = Analysis(
     ['main_interface.py'],
     pathex=[str(project_root)],
-    binaries=pyqt_binaries,
-    datas=pyqt_datas,
+    binaries=pyside6_binaries,
+    datas=pyside6_datas,
     hiddenimports=[
-        'PyQt5.sip',
-        'PyQt5.QtCore',
-        'PyQt5.QtGui',
-        'PyQt5.QtWidgets',
-        'PyQt5.QtPrintSupport',
-        'PyQt5.QtSvg',
-        'PyQt5.QtXml',
-        'PyQt5.QtNetwork',
+        'PySide6.QtCore',
+        'PySide6.QtGui',
+        'PySide6.QtWidgets',
+        'PySide6.QtPrintSupport',
+        'PySide6.QtSvg',
+        'PySide6.QtXml',
+        'PySide6.QtNetwork',
         'appdirs',
         'lxml',
         'lxml.etree',

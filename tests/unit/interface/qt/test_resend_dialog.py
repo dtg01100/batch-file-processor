@@ -205,7 +205,7 @@ class TestResendDialogEdgeCases:
                 "interface.qt.dialogs.resend_dialog.ResendService",
                 side_effect=Exception("Database error"),
             ),
-            patch("PyQt5.QtWidgets.QMessageBox.critical") as mock_critical,
+            patch("interface.qt.qt_compat.QMessageBox.critical") as mock_critical,
         ):
             dialog = ResendDialog(None, db_conn)
             qtbot.addWidget(dialog)
