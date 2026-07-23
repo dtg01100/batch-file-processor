@@ -428,6 +428,15 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
             return iter(done)
 
     monkeypatch.setattr(_futures, "ThreadPoolExecutor", _InlineThreadPool)
+    # ProcessPoolExecutor must be patched too: the vendored 1.47 dispatch
+    # uses it at dispatch.py:165 for md5 hashing, and the forked worker
+    # process tries to ``import doingstuffoverlay`` (etc.) which is only
+    # registered in the parent's ``sys.modules``. The worker dies with
+    # ModuleNotFoundError on first task, the pool becomes Broken, and the
+    # main thread blocks forever on ``hash_thread_return_queue.get()``
+    # because the hash thread never puts its result. Running inline
+    # avoids the fork entirely.
+    monkeypatch.setattr(_futures, "ProcessPoolExecutor", _InlineThreadPool)
 
     # ---- capture converter invocations through a wrapper ------------------
     if format_module:

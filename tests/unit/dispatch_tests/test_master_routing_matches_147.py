@@ -296,3 +296,90 @@ def test_parity_deltas_summary():
         )
     if len(deltas) > 20:
         print(f"  ... and {len(deltas) - 20} more")
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for the load-bearing helpers in this module.
+#
+# The parametrized parity tests above exercise the helpers end-to-end, but
+# only when anonymized fixtures are committed. The tests below pin the
+# helper logic in isolation so a regression in the mapper (which all
+# parametrized tests would inherit silently) is caught independently of
+# fixture availability.
+# ---------------------------------------------------------------------------
+
+
+class _FakeLegacy:
+    """Minimal stand-in for Legacy147RoutingResult for _legacy_to_bucket tests."""
+    def __init__(
+        self,
+        skipped_reason: str = "",
+        errors: list | None = None,
+        format_module_requested: str = "",
+        converter_called: bool = False,
+    ):
+        self.skipped_reason = skipped_reason
+        self.errors = list(errors or [])
+        self.format_module_requested = format_module_requested
+        self.converter_called = converter_called
+
+
+def test_legacy_to_bucket_skipped_when_skip_reason_set():
+    """A 1.47 row that skipped for missing deps buckets as run_with_dep_skip."""
+    legacy = _FakeLegacy(
+        skipped_reason="missing deps: ['barcode']",
+        format_module_requested="convert_to_scansheet_type_a",
+        converter_called=False,
+    )
+    assert _legacy_to_bucket(legacy) == "run_with_dep_skip"
+
+
+def test_legacy_to_bucket_error_when_errors_and_no_converter_call():
+    """1.47 recorded errors but never called the converter -> error bucket."""
+    legacy = _FakeLegacy(
+        errors=["boom"],
+        format_module_requested="convert_to_csv",
+        converter_called=False,
+    )
+    assert _legacy_to_bucket(legacy) == "error"
+
+
+def test_legacy_to_bucket_noop_when_no_format_requested():
+    """If 1.47 wasn't asked to convert anything, the bucket is noop."""
+    legacy = _FakeLegacy(
+        format_module_requested="",
+        converter_called=False,
+    )
+    assert _legacy_to_bucket(legacy) == "noop"
+
+
+def test_legacy_to_bucket_run_when_converter_was_called():
+    """The common happy path: 1.47 reached the converter and called it."""
+    legacy = _FakeLegacy(
+        format_module_requested="convert_to_csv",
+        converter_called=True,
+    )
+    assert _legacy_to_bucket(legacy) == "run"
+
+
+def test_legacy_to_bucket_falls_back_to_noop_when_format_requested_but_no_call():
+    """Edge case: format was requested but the converter never invoked.
+    This is a 1.47 internal skip path; treat as noop so master matches.
+    """
+    legacy = _FakeLegacy(
+        format_module_requested="convert_to_csv",
+        converter_called=False,
+    )
+    assert _legacy_to_bucket(legacy) == "noop"
+
+
+def test_legitimate_deltas_set_includes_documented_pairs():
+    """The allowed-deltas set is the policy surface for what counts as a
+    regression vs. a known-acceptable difference. Pin its contents so a
+    silent shrinkage (e.g., removing 'run'/'error') is caught.
+    """
+    assert frozenset({"run", "error"}) in LEGITIMATE_DELTAS
+    assert frozenset({"noop", "disabled"}) in LEGITIMATE_DELTAS
+    assert frozenset({"run", "run_with_dep_skip"}) in LEGITIMATE_DELTAS
+    assert frozenset({"run", "noop"}) in LEGITIMATE_DELTAS
+
