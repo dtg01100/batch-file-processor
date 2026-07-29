@@ -41,6 +41,7 @@ class TestDatabaseObj:
             "administrative": MagicMock(spec=TableProtocol),
             "processed_files": MagicMock(spec=TableProtocol),
             "settings": MagicMock(spec=TableProtocol),
+            "kv_settings": MagicMock(spec=TableProtocol),
             "version": MagicMock(spec=TableProtocol),
         }
         # Set up version table to return valid version
@@ -103,10 +104,14 @@ class TestDatabaseObj:
         assert result[0]["folder_name"] == "folder1"
 
     def test_get_setting(self, database_obj, mock_tables):
-        """Test getting a setting by key."""
+        """Test getting a setting by key.
+
+        Backed by the kv_settings table (a true key/value store), not
+        the fixed-schema settings table.
+        """
         # Reset call count to only track calls made during this specific test
-        mock_tables["settings"].find_one.reset_mock()
-        mock_tables["settings"].find_one.return_value = {
+        mock_tables["kv_settings"].find_one.reset_mock()
+        mock_tables["kv_settings"].find_one.return_value = {
             "key": "test_key",
             "value": "test_value",
         }
@@ -114,23 +119,30 @@ class TestDatabaseObj:
         result = database_obj.get_setting("test_key")
 
         assert result == "test_value"
-        mock_tables["settings"].find_one.assert_called_once_with(key="test_key")
+        mock_tables["kv_settings"].find_one.assert_called_once_with(key="test_key")
 
     def test_get_setting_not_found(self, database_obj, mock_tables):
-        """Test getting a non-existent setting."""
+        """Test getting a non-existent setting.
+
+        Backed by the kv_settings table.
+        """
         # Reset call count to only track calls made during this specific test
-        mock_tables["settings"].find_one.reset_mock()
-        mock_tables["settings"].find_one.return_value = None
+        mock_tables["kv_settings"].find_one.reset_mock()
+        mock_tables["kv_settings"].find_one.return_value = None
 
         result = database_obj.get_setting("nonexistent")
 
         assert result is None
 
     def test_set_setting(self, database_obj, mock_tables):
-        """Test setting a setting value."""
+        """Test setting a setting value.
+
+        Backed by the kv_settings table (a true key/value store), not
+        the fixed-schema settings table.
+        """
         database_obj.set_setting("new_key", "new_value")
 
-        mock_tables["settings"].upsert.assert_called_once_with(
+        mock_tables["kv_settings"].upsert.assert_called_once_with(
             {"key": "new_key", "value": "new_value"}, ["key"]
         )
 
@@ -242,6 +254,7 @@ class TestDatabaseObjVersionChecking:
             "administrative": MagicMock(spec=TableProtocol),
             "processed_files": MagicMock(spec=TableProtocol),
             "settings": MagicMock(spec=TableProtocol),
+            "kv_settings": MagicMock(spec=TableProtocol),
             "version": MagicMock(spec=TableProtocol),
         }
 
@@ -443,6 +456,7 @@ class TestDatabaseObjReload:
             "administrative": MagicMock(spec=TableProtocol),
             "processed_files": MagicMock(spec=TableProtocol),
             "settings": MagicMock(spec=TableProtocol),
+            "kv_settings": MagicMock(spec=TableProtocol),
             "version": MagicMock(spec=TableProtocol),
         }
         mock_tables["version"].find_one.return_value = {"version": "33", "os": "Linux"}
@@ -466,6 +480,7 @@ class TestDatabaseObjReload:
             "administrative": MagicMock(spec=TableProtocol),
             "processed_files": MagicMock(spec=TableProtocol),
             "settings": MagicMock(spec=TableProtocol),
+            "kv_settings": MagicMock(spec=TableProtocol),
             "version": MagicMock(spec=TableProtocol),
         }
         mock_tables2["version"].find_one.return_value = {"version": "33", "os": "Linux"}

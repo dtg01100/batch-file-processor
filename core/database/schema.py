@@ -448,6 +448,12 @@ def ensure_schema(database_connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_jobs_file_id ON processing_jobs(file_id)
         """,
+        """
+        CREATE TABLE IF NOT EXISTS kv_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+        """,
     ]
 
     # Log schema initialization start

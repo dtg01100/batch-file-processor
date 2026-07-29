@@ -181,6 +181,7 @@ class DatabaseObj:
         self.oversight_and_defaults = None  # type: ignore[assignment]
         self.processed_files = None  # type: ignore[assignment]
         self.settings = None  # type: ignore[assignment]
+        self.kv_settings = None  # type: ignore[assignment]
 
         if self._connection is None:
             self._initialize_connection()
@@ -363,6 +364,7 @@ class DatabaseObj:
         self.oversight_and_defaults = self.database_connection["administrative"]
         self.processed_files = self.database_connection["processed_files"]
         self.settings = self.database_connection["settings"]
+        self.kv_settings = self.database_connection["kv_settings"]
 
         # Ensure singleton records exist after initialization
         self._ensure_singleton_records()
@@ -600,7 +602,12 @@ class DatabaseObj:
         return list(self.folders_table.all())
 
     def get_setting(self, key: str) -> Any | None:
-        """Get a setting value by key.
+        """Get a key/value setting.
+
+        Backed by the kv_settings table (a true key/value store).
+        The fixed-schema settings table holds typed singleton defaults
+        (enable_email, email_address, ...) and is not addressable
+        by arbitrary keys.
 
         Args:
             key: Setting key to look up
@@ -609,18 +616,20 @@ class DatabaseObj:
             Setting value or None if not found
 
         """
-        row = self.settings.find_one(key=key)
+        row = self.kv_settings.find_one(key=key)
         return row["value"] if row else None
 
     def set_setting(self, key: str, value: Any) -> None:
-        """Set a setting value.
+        """Upsert a key/value setting.
+
+        Backed by the kv_settings table (see get_setting).
 
         Args:
             key: Setting key
             value: Setting value
 
         """
-        self.settings.upsert({"key": key, "value": value}, ["key"])
+        self.kv_settings.upsert({"key": key, "value": value}, ["key"])
 
     def get_default_settings(self) -> dict | None:
         """Get the default settings from administrative table.
