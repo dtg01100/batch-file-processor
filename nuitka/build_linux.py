@@ -66,12 +66,10 @@ def build_argparse() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the command that would be run, but don't run it.",
     )
-    parser.add_argument(
-        "--cache-dir",
-        type=Path,
-        default=Path("build/nuitka-cache"),
-        help="Nuitka cache directory (default: build/nuitka-cache).",
-    )
+    # NOTE: --cache-dir was a CLI option in older Nuitka versions but is no longer
+    # accepted by current Nuitka. The cache location is now controlled via the
+    # NUITKA_CACHE_DIR environment variable (Nuitka's default is ~/.cache/nuitka
+    # or similar; not configurable via CLI).
     return parser
 
 
@@ -92,7 +90,10 @@ def build_command(args: argparse.Namespace) -> list[str]:
     if args.onefile:
         cmd.append("--onefile")
     else:
-        cmd.extend(["--standalone", "--no-onefile"])
+        # --standalone implies --no-onefile (folder build). Modern Nuitka
+        # does not have a --no-onefile flag; passing it raises
+        # 'no such option: --no-onefile'.
+        cmd.append("--standalone")
 
     for plugin in ENABLED_PLUGINS:
         cmd.append(f"--enable-plugin={plugin}")
@@ -106,7 +107,6 @@ def build_command(args: argparse.Namespace) -> list[str]:
     for src, dest in INCLUDED_DATA_DIRS:
         cmd.append(f"--include-data-dir={src}={dest}")
 
-    cmd.append(f"--cache-dir={args.cache_dir}")
     cmd.append(ENTRY_POINT)
     return cmd
 
@@ -116,7 +116,6 @@ def main() -> int:
     args = build_argparse().parse_args()
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.cache_dir.mkdir(parents=True, exist_ok=True)
 
     if args.clean and args.output.parent.exists():
         print(f"Cleaning {args.output.parent} ...")
