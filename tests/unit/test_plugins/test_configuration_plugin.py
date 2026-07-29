@@ -374,14 +374,14 @@ class TestFieldDefinitionValidate:
         )
         # Short value → errors non-empty → success must be False
         result = field.validate("short")
-        assert result.success is False, (
-            f"expected success=False when errors are non-empty, got {result.success}"
-        )
+        assert (
+            result.success is False
+        ), f"expected success=False when errors are non-empty, got {result.success}"
         # No errors → success must be True
         result = field.validate("a" * 200)
-        assert result.success is True, (
-            f"expected success=True when no errors, got {result.success}"
-        )
+        assert (
+            result.success is True
+        ), f"expected success=True when no errors, got {result.success}"
 
     def test_none_value_returns_success(self):
         """L103: when value is None and not required, return
@@ -410,9 +410,9 @@ class TestFieldDefinitionValidate:
             name="f",
             field_type=FieldType.STRING,
         )
-        assert field.required is False, (
-            f"expected default required=False, got {field.required}"
-        )
+        assert (
+            field.required is False
+        ), f"expected default required=False, got {field.required}"
 
     def test_label_defaults_to_name_when_none(self):
         """L74: self.label = label or name. With mutation to and,
@@ -425,9 +425,9 @@ class TestFieldDefinitionValidate:
             name="my_field",
             field_type=FieldType.STRING,
         )
-        assert field.label == "my_field", (
-            f"expected label='my_field' (from name), got {field.label!r}"
-        )
+        assert (
+            field.label == "my_field"
+        ), f"expected label='my_field' (from name), got {field.label!r}"
 
 
 if __name__ == "__main__":

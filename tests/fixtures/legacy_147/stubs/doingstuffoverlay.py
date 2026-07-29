@@ -8,21 +8,21 @@ unexpected import resolves cleanly.
 """
 
 
-def make_overlay(*args, **kwargs):  # noqa: ARG001
+def make_overlay(*args, **kwargs):
     return None
 
 
-def update_overlay(*args, **kwargs):  # noqa: ARG001
+def update_overlay(*args, **kwargs):
     return None
 
 
-def destroy_overlay(*args, **kwargs):  # noqa: ARG001
+def destroy_overlay(*args, **kwargs):
     return None
 
 
-class DoingStuffOverlay:  # noqa: D401 - stub only
-    def __init__(self, parent):  # noqa: ARG001
+class DoingStuffOverlay:
+    def __init__(self, parent):
         self.parent = parent
 
 
-__all__ = ["DoingStuffOverlay", "make_overlay", "update_overlay", "destroy_overlay"]
+__all__ = ["DoingStuffOverlay", "destroy_overlay", "make_overlay", "update_overlay"]

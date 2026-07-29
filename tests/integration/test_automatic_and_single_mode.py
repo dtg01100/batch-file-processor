@@ -96,9 +96,9 @@ class TestAutomaticModeIntegration:
             # This is the exact logic from automatic_process_directories
             has_active = mock_table.count(folder_is_active="True") > 0
 
-            assert has_active == should_process, (
-                f"Failed for {active_count} active folders"
-            )
+            assert (
+                has_active == should_process
+            ), f"Failed for {active_count} active folders"
 
 
 class TestSingleFolderModeIntegration:

@@ -72,9 +72,7 @@ INCLUDED_DATA_FILES: tuple[str, ...] = (
 # Nuitka plugins to enable. PySide6 is the critical one — it
 # handles Qt's dynamic imports, shiboken binding init, and Qt
 # platform plugin discovery. Without it, the binary won't start.
-ENABLED_PLUGINS: tuple[str, ...] = (
-    "pyside6",
-)
+ENABLED_PLUGINS: tuple[str, ...] = ("pyside6",)
 
 # Application metadata used for the Windows PE header.
 COMPANY_NAME = "Capital Candy"
@@ -95,4 +93,3 @@ OUTPUT_FILENAME_WINDOWS = "Batch File Sender.exe"
 # scripts; this constant is the default.
 DEFAULT_FLAVOR_WINDOWS = "onefile"
 DEFAULT_FLAVOR_LINUX = "standalone"
-

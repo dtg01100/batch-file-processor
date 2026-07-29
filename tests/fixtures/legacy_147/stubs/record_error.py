@@ -16,12 +16,12 @@ def reset() -> None:
 
 
 def do(
-    run_log,  # noqa: ARG001
-    errors_log,  # noqa: ARG001
+    run_log,
+    errors_log,
     error_message,
     filename,
     error_source,
-    threaded: bool = False,  # noqa: ARG001
+    threaded: bool = False,
 ) -> tuple[list, list]:
     """Capture the error tuple into ``recorded_errors`` and return unchanged logs."""
     recorded_errors.append(
@@ -34,4 +34,4 @@ def do(
     return [], []
 
 
-__all__ = ["do", "reset", "recorded_errors"]
+__all__ = ["do", "recorded_errors", "reset"]

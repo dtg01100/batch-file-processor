@@ -8,8 +8,6 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from core.utils.bool_utils import normalize_bool
-from core.utils.format_utils import normalize_convert_to_format
 from core.domain.models.folder import (
     BackendSpecificConfiguration,
     CopyConfiguration,
@@ -20,6 +18,8 @@ from core.domain.models.folder import (
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
 )
+from core.utils.bool_utils import normalize_bool
+from core.utils.format_utils import normalize_convert_to_format
 from interface.models.folder_configuration import (
     ConvertFormat,
 )

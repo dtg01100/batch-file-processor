@@ -387,9 +387,7 @@ class TestConvertToSimplifiedCSVColumnLayout(TestConvertToSimplifiedCSVFixtures)
             f"column must NOT get the 'Item Description' header."
         )
 
-    def test_default_include_headers_when_no_param(
-        self, default_settings, tmp_path
-    ):
+    def test_default_include_headers_when_no_param(self, default_settings, tmp_path):
         """Regression: when neither ``include_headers`` nor
         ``simple_csv_include_headers`` is in parameters, the default
         is True (headers are written). The mutation runner's
@@ -433,13 +431,11 @@ class TestConvertToSimplifiedCSVColumnLayout(TestConvertToSimplifiedCSVFixtures)
         )
         headers = rows[0]
         # Default column_layout starts with upc_number.
-        assert headers[0] == "UPC", (
-            f"expected default headers to start with 'UPC', got {headers!r}"
-        )
+        assert (
+            headers[0] == "UPC"
+        ), f"expected default headers to start with 'UPC', got {headers!r}"
 
-    def test_default_retail_uom_is_false(
-        self, default_settings, tmp_path
-    ):
+    def test_default_retail_uom_is_false(self, default_settings, tmp_path):
         """Regression: when ``retail_uom`` is not in parameters, the
         default is False (no retail UOM transform). The mutation
         runner's ``false_to_true`` at convert_to_simplified_csv.py:64
@@ -480,9 +476,7 @@ class TestConvertToSimplifiedCSVColumnLayout(TestConvertToSimplifiedCSVFixtures)
             reader = _csv.reader(f)
             rows = list(reader)
 
-        assert len(rows) == 2, (
-            f"expected 2 rows (header + 1 B record), got {len(rows)}"
-        )
+        assert len(rows) == 2, f"expected 2 rows (header + 1 B record), got {len(rows)}"
         # The B record's qty_of_units is "00005" → "5" (the converter
         # strips leading zeros). Default column_layout is
         # upc_number,qty_of_units,... so qty is the 2nd column.
@@ -632,18 +626,18 @@ class TestConvertToSimplifiedCSVEdgeCases(TestConvertToSimplifiedCSVFixtures):
             # If no exception: the converter produced a file. Verify
             # the truncated B record is NOT in the output (the
             # converter should have skipped it, not written garbage).
-            assert os.path.exists(result), (
-                f"converter returned {result!r} but no file exists"
-            )
+            assert os.path.exists(
+                result
+            ), f"converter returned {result!r} but no file exists"
             with open(result) as f:
                 csv_content = f.read()
             # The truncated B's vendor_item was "Short" (positions
             # 36-41 in a real B record). If the converter wrote the
             # truncated record as-is, the string "Short" would leak
             # into the output. Assert it's not there.
-            assert "Short" not in csv_content, (
-                f"truncated B record's text leaked into output:\n{csv_content}"
-            )
+            assert (
+                "Short" not in csv_content
+            ), f"truncated B record's text leaked into output:\n{csv_content}"
 
     def test_missing_input_file(self, default_parameters, default_settings, tmp_path):
         """Test that missing input file raises FileNotFoundError."""
@@ -767,7 +761,15 @@ class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures)
     def upc_lookup(self):
         return {self.VENDOR_ITEM: ("1", "11111111111", "22222222222")}
 
-    def _run(self, default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path):
+    def _run(
+        self,
+        default_parameters,
+        default_settings,
+        sample_header_record,
+        params,
+        upc_lookup,
+        tmp_path,
+    ):
         from dispatch.converters import convert_to_simplified_csv
 
         b_record = (
@@ -800,43 +802,99 @@ class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures)
         # Filter out header row
         return [r for r in rows if r and "UPC" not in r[0]]
 
-    def test_retail_uom_all_transforms(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+    def test_retail_uom_all_transforms(
+        self,
+        default_parameters,
+        default_settings,
+        sample_header_record,
+        tmp_path,
+        upc_lookup,
+    ):
         """With each_uom_categories='ALL', retail_uom=True transforms."""
         params = dict(default_parameters)
         params["retail_uom"] = "True"
         params["each_uom_categories"] = "ALL"
         params["each_uom_mode"] = "include"
-        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        rows = self._run(
+            default_parameters,
+            default_settings,
+            sample_header_record,
+            params,
+            upc_lookup,
+            tmp_path,
+        )
         assert rows  # transformed
 
-    def test_retail_uom_filter_excludes_category(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+    def test_retail_uom_filter_excludes_category(
+        self,
+        default_parameters,
+        default_settings,
+        sample_header_record,
+        tmp_path,
+        upc_lookup,
+    ):
         """With include filter that excludes the item's category, fields are NOT transformed."""
         params = dict(default_parameters)
         params["retail_uom"] = "True"
         params["each_uom_categories"] = "99"
         params["each_uom_mode"] = "include"
-        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        rows = self._run(
+            default_parameters,
+            default_settings,
+            sample_header_record,
+            params,
+            upc_lookup,
+            tmp_path,
+        )
         # Cost stays at original 1000 cents; no transform ran
         assert rows
         # column 2 (unit_cost) should still be 10.00 (not divided by 6)
         assert rows[0][2] == "10.00"
 
-    def test_retail_uom_exclude_mode(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+    def test_retail_uom_exclude_mode(
+        self,
+        default_parameters,
+        default_settings,
+        sample_header_record,
+        tmp_path,
+        upc_lookup,
+    ):
         """With exclude filter for the item's category, fields are NOT transformed."""
         params = dict(default_parameters)
         params["retail_uom"] = "True"
         params["each_uom_categories"] = "1"
         params["each_uom_mode"] = "exclude"
-        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        rows = self._run(
+            default_parameters,
+            default_settings,
+            sample_header_record,
+            params,
+            upc_lookup,
+            tmp_path,
+        )
         assert rows[0][2] == "10.00"
 
-    def test_retail_uom_include_mode_matches(self, default_parameters, default_settings, sample_header_record, tmp_path, upc_lookup):
+    def test_retail_uom_include_mode_matches(
+        self,
+        default_parameters,
+        default_settings,
+        sample_header_record,
+        tmp_path,
+        upc_lookup,
+    ):
         """With include filter matching the item's category, transform runs."""
         params = dict(default_parameters)
         params["retail_uom"] = "True"
         params["each_uom_categories"] = "1"
         params["each_uom_mode"] = "include"
-        rows = self._run(default_parameters, default_settings, sample_header_record, params, upc_lookup, tmp_path)
+        rows = self._run(
+            default_parameters,
+            default_settings,
+            sample_header_record,
+            params,
+            upc_lookup,
+            tmp_path,
+        )
         # Transform should have run: 1000 cents / 6 = 166.66... -> 1.66
         assert rows[0][2] != "10.00"
 
@@ -866,8 +924,12 @@ class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures)
             "simple_csv_sort_order": "upc_number,qty_of_units,unit_cost,vendor_item",
         }
         rows = self._run(
-            params, default_settings, sample_header_record,
-            params, upc_lookup, tmp_path,
+            params,
+            default_settings,
+            sample_header_record,
+            params,
+            upc_lookup,
+            tmp_path,
         )
         assert len(rows) == 1
         # The B record's unit_cost is "001000" (10.00 case cost = $10.00)

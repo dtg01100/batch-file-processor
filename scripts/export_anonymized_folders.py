@@ -19,6 +19,7 @@ can be overridden with the ``OUT_DIR`` environment variable.
 Anonymization note: this script trusts its input. The DB it reads must be
 already anonymized (no real customer paths, credentials, or PII).
 """
+
 from __future__ import annotations
 
 import json
@@ -79,13 +80,18 @@ def _iter_rows(con: sqlite3.Connection) -> list[sqlite3.Row]:
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Convert a sqlite3.Row to a plain dict (json.dumps-friendly)."""
-    return {k: row[k] for k in row.keys()}  # noqa: SIM118 - sqlite3.Row has its own .keys()
+    return {
+        k: row[k] for k in row.keys()
+    }  # noqa: SIM118 - sqlite3.Row has its own .keys()
 
 
 def main(argv: list[str]) -> int:
     db_path = os.environ.get("DB_PATH")
     if not db_path:
-        print("DB_PATH environment variable must be set to the anonymized DB path.", file=sys.stderr)
+        print(
+            "DB_PATH environment variable must be set to the anonymized DB path.",
+            file=sys.stderr,
+        )
         return 2
     db_file = Path(db_path)
     if not db_file.exists():
@@ -111,14 +117,19 @@ def main(argv: list[str]) -> int:
         con.close()
 
     if not rows:
-        print(f"No rows in folders table of {db_file}; nothing to export.", file=sys.stderr)
+        print(
+            f"No rows in folders table of {db_file}; nothing to export.",
+            file=sys.stderr,
+        )
         return 1
 
     written = 0
     for row in rows:
         row_dict = _row_to_dict(row)
         # Store dict in insertion order, but keys are sorted on dump below.
-        filename = f"{int(row_dict['id']):04d}_{_slugify(str(row_dict.get('alias', '')))}.json"
+        filename = (
+            f"{int(row_dict['id']):04d}_{_slugify(str(row_dict.get('alias', '')))}.json"
+        )
         out_path = out_dir / filename
         with out_path.open("w", encoding="utf-8") as fh:
             json.dump(row_dict, fh, sort_keys=True, indent=2, ensure_ascii=False)

@@ -101,6 +101,7 @@ class TestFTPConfiguration:
         assert len(errors) > 0
         assert any("number" in e.lower() for e in errors)
 
+
 class TestEmailConfiguration:
     """Test suite for EmailConfiguration."""
 
@@ -160,6 +161,7 @@ class TestEmailConfiguration:
         # Should pass (special chars are valid in local part)
         assert len(errors) == 0
 
+
 class TestCopyConfiguration:
     """Test suite for CopyConfiguration."""
 
@@ -182,6 +184,7 @@ class TestCopyConfiguration:
         errors = config.validate()
 
         assert len(errors) == 0
+
 
 class TestEDIConfiguration:
     """Test suite for EDIConfiguration."""
@@ -218,6 +221,7 @@ class TestEDIConfiguration:
         errors = config.validate()
 
         assert len(errors) == 0
+
 
 class TestUPCOverrideConfiguration:
     """Test suite for UPCOverrideConfiguration."""
@@ -261,6 +265,7 @@ class TestUPCOverrideConfiguration:
         assert len(errors) > 0
         assert any("category filter" in e.lower() for e in errors)
 
+
 class TestARecordPaddingConfiguration:
     """Test suite for ARecordPaddingConfiguration."""
 
@@ -296,6 +301,7 @@ class TestARecordPaddingConfiguration:
 
         assert len(errors) > 0
         assert any("six" in e.lower() for e in errors)
+
 
 class TestInvoiceDateConfiguration:
     """Test suite for InvoiceDateConfiguration."""
@@ -336,6 +342,7 @@ class TestInvoiceDateConfiguration:
 
         assert len(errors) > 0
         assert any("offset" in e.lower() for e in errors)
+
 
 class TestFolderConfiguration:
     """Test suite for FolderConfiguration."""
@@ -766,6 +773,7 @@ class TestFolderConfiguration:
         assert result["email_to"] == original_data["email_to"]
         assert result["copy_to_directory"] == original_data["copy_to_directory"]
 
+
 class TestBackendSpecificConfiguration:
     """Test suite for BackendSpecificConfiguration."""
 
@@ -791,6 +799,7 @@ class TestBackendSpecificConfiguration:
         assert config.estore_vendor_oid == "vendor123"
         assert config.estore_vendor_namevendoroid == "vendor_name_oid"
         assert config.fintech_division_id == "div456"
+
 
 class TestCSVConfiguration:
     """Test suite for CSVConfiguration."""
@@ -824,6 +833,7 @@ class TestCSVConfiguration:
         assert config.simple_csv_sort_order == "name,quantity,price"
         assert config.split_prepaid_sales_tax_crec is True
 
+
 class TestBackendType:
     """Test suite for BackendType enum."""
 
@@ -832,6 +842,7 @@ class TestBackendType:
         assert BackendType.COPY.value == "copy"
         assert BackendType.FTP.value == "ftp"
         assert BackendType.EMAIL.value == "email"
+
 
 class TestConvertFormat:
     """Test suite for ConvertFormat enum."""

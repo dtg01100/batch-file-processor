@@ -15,8 +15,14 @@ CURRENT_FILE = "/tmp/test.edi"
 
 def test_tuple_two_element():
     """2-tuple passes through with first element coerced to bool."""
-    assert normalize_validation_output((True, "new.edi"), CURRENT_FILE) == (True, "new.edi")
-    assert normalize_validation_output((False, ["bad"]), CURRENT_FILE) == (False, ["bad"])
+    assert normalize_validation_output((True, "new.edi"), CURRENT_FILE) == (
+        True,
+        "new.edi",
+    )
+    assert normalize_validation_output((False, ["bad"]), CURRENT_FILE) == (
+        False,
+        ["bad"],
+    )
 
 
 def test_tuple_three_element_rejected_gracefully():
@@ -45,15 +51,16 @@ def test_dict_valid():
 
 
 def test_dict_invalid():
-    out = normalize_validation_output(
-        {"valid": False, "errors": ["bad"]}, CURRENT_FILE
-    )
+    out = normalize_validation_output({"valid": False, "errors": ["bad"]}, CURRENT_FILE)
     assert out == (False, ["bad"])
 
 
 def test_dict_valid_no_file_path_defaults_to_current():
     """When valid+True but no file_path, returns current_file."""
-    assert normalize_validation_output({"valid": True}, CURRENT_FILE) == (True, CURRENT_FILE)
+    assert normalize_validation_output({"valid": True}, CURRENT_FILE) == (
+        True,
+        CURRENT_FILE,
+    )
 
 
 def test_bool_true():

@@ -8,7 +8,6 @@ rename-template branch is fully deterministic.
 """
 
 import datetime
-from unittest.mock import patch
 
 import pytest
 from hypothesis import given, settings
@@ -159,7 +158,7 @@ def test_build_output_filename_with_rename_template_substitutes_datetime(
 
     class _FixedDatetime(datetime.datetime):
         @classmethod
-        def now(cls, tz=None):  # noqa: ARG003 - mirror signature
+        def now(cls, tz=None):
             return fixed_now
 
     monkeypatch.setattr(datetime, "datetime", _FixedDatetime)
@@ -185,7 +184,8 @@ def test_extract_invoice_numbers_returns_only_a_records(tmp_path) -> None:
     """
     p = tmp_path / "invoices.edi"
     p.write_text(
-        _A_LINE_RAW + "\n"
+        _A_LINE_RAW
+        + "\n"
         # B and C records with bogus 'A'/'X' character in invoice_number
         # would still parse, but the L249 filter rejects non-A prefixes.
         + "BVENDOR0000000001120240000000123Grocery   00012345        \n"

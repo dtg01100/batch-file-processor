@@ -185,7 +185,9 @@ class TestPySide6Runtime:
     def test_no_legacy_pyqt5_in_hiddenimports(self):
         spec_hidden = _extract_hidden_imports()
         legacy_imports = [h for h in spec_hidden if "PyQt5" in h]
-        assert not legacy_imports, f"Found legacy PyQt5 in hiddenimports: {legacy_imports}"
+        assert (
+            not legacy_imports
+        ), f"Found legacy PyQt5 in hiddenimports: {legacy_imports}"
 
     @pytest.mark.unit
     def test_no_pyi_rth_pyqt6_hook_exists(self):
@@ -230,9 +232,9 @@ class TestHiddenImports:
         missing = sorted(
             m for m in app_modules_requiring_bundling if m not in hidden_imports
         )
-        assert not missing, (
-            f"The following modules require explicit hiddenimports: {missing}"
-        )
+        assert (
+            not missing
+        ), f"The following modules require explicit hiddenimports: {missing}"
 
     @pytest.mark.unit
     def test_hiddenimports_includes_all_dispatch_converters(self):
@@ -304,7 +306,11 @@ class TestHookFiles:
 
     @pytest.mark.unit
     def test_qt_hooks_use_collect_data_files_or_dynamic_libs(self):
-        qt_hooks = ["hook-PySide6.py", "hook-PySide6.QtCore.py", "hook-PySide6.QtGui.py"]
+        qt_hooks = [
+            "hook-PySide6.py",
+            "hook-PySide6.QtCore.py",
+            "hook-PySide6.QtGui.py",
+        ]
         for hook_name in qt_hooks:
             hook_file = HOOKS_DIR / hook_name
             if hook_file.exists():

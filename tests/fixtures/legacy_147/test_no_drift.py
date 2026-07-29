@@ -9,6 +9,7 @@ in sync with the branch.
 This test is intentionally independent of the rest of the routing-harness
 suite; it imports nothing heavy and runs in well under a second.
 """
+
 from __future__ import annotations
 
 import subprocess

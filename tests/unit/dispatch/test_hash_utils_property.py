@@ -4,6 +4,7 @@ Targets the pure helpers `generate_match_lists`, `build_hash_dictionaries`,
 and `check_file_against_processed`. `generate_file_hash` is excluded
 (reads from disk).
 """
+
 import os
 import tempfile
 from unittest.mock import patch
@@ -77,7 +78,9 @@ def test_generate_match_lists_length_matches_input(files: list[dict]) -> None:
 
 @settings(max_examples=100)
 @given(files=_processed_files())
-def test_generate_match_lists_resend_set_contains_only_flagged(files: list[dict]) -> None:
+def test_generate_match_lists_resend_set_contains_only_flagged(
+    files: list[dict],
+) -> None:
     """resend_set equals the set of checksums with resend_flag True."""
     _, _, resend_set = generate_match_lists(files)
     expected = {e["file_checksum"] for e in files if e["resend_flag"] is True}
@@ -125,7 +128,9 @@ def test_build_hash_dictionaries_round_trip(files: list[dict]) -> None:
 @settings(max_examples=50)
 @given(
     name=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=1,
         max_size=20,
     ),
@@ -142,7 +147,9 @@ def test_check_file_against_processed_truth_table(
     """
     name_dict = {checksum: name} if in_dict else {}
     resend_set = {checksum} if in_resend else set()
-    match, should_send = check_file_against_processed(name, checksum, name_dict, resend_set)
+    match, should_send = check_file_against_processed(
+        name, checksum, name_dict, resend_set
+    )
     assert match is in_dict
     expected_should_send = (not in_dict) or in_resend
     assert should_send is expected_should_send
@@ -151,13 +158,17 @@ def test_check_file_against_processed_truth_table(
 @settings(max_examples=50)
 @given(
     name=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=1,
         max_size=20,
     ),
     checksum=_CHECKSUMS,
 )
-def test_check_file_against_processed_new_file_should_send(name: str, checksum: str) -> None:
+def test_check_file_against_processed_new_file_should_send(
+    name: str, checksum: str
+) -> None:
     """A checksum that is not in name_dict and not in resend_set has
     should_send == True (it is a new file to send)."""
     match, should_send = check_file_against_processed(name, checksum, {}, set())
@@ -168,7 +179,9 @@ def test_check_file_against_processed_new_file_should_send(name: str, checksum: 
 @settings(max_examples=50)
 @given(
     name=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=1,
         max_size=20,
     ),
@@ -209,8 +222,10 @@ def test_generate_file_hash_retries_then_succeeds() -> None:
                     raise OSError("simulated transient failure")
             return real_open(path, *args, **kwargs)
 
-        with patch("builtins.open", side_effect=flaky_open), \
-             patch("time.sleep"):  # skip backoff
+        with (
+            patch("builtins.open", side_effect=flaky_open),
+            patch("time.sleep"),
+        ):  # skip backoff
             # Original (<): 3<3 False on attempt 3 -> raises after 3 calls
             # Mutated  (<=): 3<=3 True on attempt 3 -> retries, 4th call succeeds
             with pytest.raises(OSError):

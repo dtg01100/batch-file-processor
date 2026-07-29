@@ -174,9 +174,9 @@ class TestCaptureRecords:
                 return sentinel
 
         result = capture_records("ignored\n", parser=_FakeParser())
-        assert result == sentinel, (
-            f"expected parser's return value {sentinel!r}, got {result!r}"
-        )
+        assert (
+            result == sentinel
+        ), f"expected parser's return value {sentinel!r}, got {result!r}"
 
     def test_capture_records_with_parser_returns_none_for_eof_marker(self):
         """Regression: when a parser is provided and returns None for a
@@ -188,15 +188,14 @@ class TestCaptureRecords:
 
         See commit ea1ed275d (Phase 3 bug 5) for the audit trail.
         """
+
         class _FakeParser:
             def parse_line(self, _line: str) -> dict | None:
                 return None
 
         # Single Ctrl-Z character (the SUB / EOF marker).
         result = capture_records("\x1a", parser=_FakeParser())
-        assert result is None, (
-            f"expected None for EOF marker line, got {result!r}"
-        )
+        assert result is None, f"expected None for EOF marker line, got {result!r}"
 
     def test_capture_records_with_parser_raises_on_unparseable_nonempty(self):
         """Regression: when a parser is provided and returns None for a
@@ -261,9 +260,9 @@ class TestParseARecord:
         assert len(line_33) == 33, "test setup error: line should be exactly 33 chars"
 
         record = parse_a_record(line_33)
-        assert isinstance(record, ARecord), (
-            f"expected ARecord at boundary len=33, got {record!r}"
-        )
+        assert isinstance(
+            record, ARecord
+        ), f"expected ARecord at boundary len=33, got {record!r}"
         assert record.record_type == "A"
         assert record.cust_vendor == "VENDOR"
 

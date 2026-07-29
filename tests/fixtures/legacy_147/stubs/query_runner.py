@@ -20,10 +20,10 @@ class query_runner:
 
     def __init__(
         self,
-        as400_username: str = "",  # noqa: ARG002
-        as400_password: str = "",  # noqa: ARG002
-        as400_address: str = "",  # noqa: ARG002
-        odbc_driver: str = "",  # noqa: ARG002
+        as400_username: str = "",
+        as400_password: str = "",
+        as400_address: str = "",
+        odbc_driver: str = "",
     ) -> None:
         self._runs: list[str] = []
 
@@ -31,7 +31,7 @@ class query_runner:
         self._runs.append(_query)
         return iter(())
 
-    def run_query(self, _query: str, params=None):  # noqa: ARG002
+    def run_query(self, _query: str, params=None):
         return []
 
 

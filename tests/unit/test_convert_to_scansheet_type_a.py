@@ -6,7 +6,6 @@ import pytest
 
 from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
 
-
 # pyzbar is required for the round-trip barcode tests. If it's not
 # installed, the entire module is skipped — the tests cannot meaningfully
 # run, and the assertion-mutation meta-test runner would otherwise
@@ -15,6 +14,7 @@ from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConver
 # runner know the assertions are guarded by an external dependency.
 try:
     import pyzbar  # noqa: F401 — import only to check availability for skipif
+
     _pyzbar_available = True
 except ImportError:
     _pyzbar_available = False
@@ -22,9 +22,7 @@ except ImportError:
 pytestmark = [
     pytest.mark.unit,
     pytest.mark.conversion,
-    pytest.mark.skipif(
-        not _pyzbar_available, reason="pyzbar not installed"
-    ),
+    pytest.mark.skipif(not _pyzbar_available, reason="pyzbar not installed"),
 ]
 
 
@@ -67,9 +65,9 @@ class TestScanSheetBarcodeGeneration:
 
         # UPC-A is encoded as EAN-13 (12 digits → 13 digits with leading zero)
         expected_ean13 = "0" + upc
-        assert decoded == expected_ean13, (
-            f"Barcode decoded to {decoded}, expected EAN-13 format {expected_ean13}"
-        )
+        assert (
+            decoded == expected_ean13
+        ), f"Barcode decoded to {decoded}, expected EAN-13 format {expected_ean13}"
 
     def test_barcode_decodes_for_different_upcs(self):
         """Verify multiple different UPCs generate correct barcodes."""
@@ -94,9 +92,9 @@ class TestScanSheetBarcodeGeneration:
             pytest.skip("pyzbar not available for barcode decoding")
 
         expected = ["0" + upc for upc in test_upcs]
-        assert decoded_upcs == expected, (
-            f"Decoded UPCs {decoded_upcs} don't match expected {expected}"
-        )
+        assert (
+            decoded_upcs == expected
+        ), f"Decoded UPCs {decoded_upcs} don't match expected {expected}"
 
     def test_barcode_contains_visual_content(self):
         """Verify barcode image is not blank - contains bars and spaces."""
@@ -119,9 +117,9 @@ class TestScanSheetBarcodeGeneration:
         variance_ratio = different_pixels / len(pixels)
 
         # Lower threshold - barcodes have white space around them (quiet zones)
-        assert variance_ratio > 0.15, (
-            f"Barcode appears blank - only {variance_ratio:.1%} of pixels vary"
-        )
+        assert (
+            variance_ratio > 0.15
+        ), f"Barcode appears blank - only {variance_ratio:.1%} of pixels vary"
 
     def test_interpret_barcode_string_strips_non_digits(self):
         converter = ScanSheetTypeAConverter()
@@ -183,6 +181,6 @@ class TestScanSheetBarcodeGeneration:
         # be in the result. B and C records must NOT leak in.
         # A record invoice_number is "0000000001" (10 digits) →
         # last 7 digits = "0000001".
-        assert result == ["0000001"], (
-            f"expected only A-record invoice numbers, got {result!r}"
-        )
+        assert result == [
+            "0000001"
+        ], f"expected only A-record invoice numbers, got {result!r}"

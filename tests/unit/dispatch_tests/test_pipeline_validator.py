@@ -183,9 +183,7 @@ class TestNormalizeValidationOutput:
 
     def test_validation_result_invalid_returns_errors(self):
         """A ValidationResult with is_valid=False returns (False, errors)."""
-        result = ValidationResult(
-            is_valid=False, errors=["bad record"], warnings=[]
-        )
+        result = ValidationResult(is_valid=False, errors=["bad record"], warnings=[])
         is_valid, payload = normalize_validation_output(result, "current.edi")
         assert not is_valid
         assert payload == ["bad record"]
@@ -200,9 +198,7 @@ class TestNormalizeValidationOutput:
 
     def test_dict_with_valid_true_no_file_path_returns_current(self):
         """A dict with valid=True but no file_path returns (True, current_file)."""
-        is_valid, payload = normalize_validation_output(
-            {"valid": True}, "current.edi"
-        )
+        is_valid, payload = normalize_validation_output({"valid": True}, "current.edi")
         assert is_valid
         assert payload == "current.edi"
 
@@ -216,9 +212,7 @@ class TestNormalizeValidationOutput:
 
     def test_dict_with_valid_false_no_errors_returns_empty_list(self):
         """A dict with valid=False but no errors returns (False, [])."""
-        is_valid, payload = normalize_validation_output(
-            {"valid": False}, "current.edi"
-        )
+        is_valid, payload = normalize_validation_output({"valid": False}, "current.edi")
         assert not is_valid
         assert payload == []
 

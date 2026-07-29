@@ -49,9 +49,7 @@ def test_validate_upc_hardcoded_valid_oracle() -> None:
     d=_fixed_digits(11),
     wrong=st.integers(min_value=0, max_value=9),
 )
-def test_validate_upc_rejects_wrong_check_digit(
-    d: str, wrong: int
-) -> None:
+def test_validate_upc_rejects_wrong_check_digit(d: str, wrong: int) -> None:
     """A UPC with a mismatched final digit should fail validation."""
     expected = calc_check_digit(d)
     assume((expected - wrong) % 10 != 0)
@@ -176,9 +174,7 @@ def test_convert_upce_to_upca_produces_valid_upca_check_digit(
     target=st.integers(min_value=0, max_value=20),
     fill=st.sampled_from([" ", "0", "X"]),
 )
-def test_pad_upc_length_is_exactly_target(
-    s: str, target: int, fill: str
-) -> None:
+def test_pad_upc_length_is_exactly_target(s: str, target: int, fill: str) -> None:
     """pad_upc always returns a string of length target."""
     assert len(pad_upc(s, target, fill_char=fill)) == target
 
@@ -274,14 +270,18 @@ def test_apply_retail_uom_transform_passthrough_returns_true() -> None:
     assert record["unit_multiplier"] == "000001"
 
 
-def test_apply_retail_uom_transform_passthrough_returns_false_on_zero_multiplier() -> None:
+def test_apply_retail_uom_transform_passthrough_returns_false_on_zero_multiplier() -> (
+    None
+):
     """Zero unit_multiplier is rejected (matches the retail_uom implementation contract)."""
     record = _make_b_record(unit_multiplier="000000")
     upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}
     assert apply_retail_uom_transform(record, upc_dict) is False
 
 
-def test_apply_retail_uom_transform_passthrough_returns_false_on_bad_vendor_item() -> None:
+def test_apply_retail_uom_transform_passthrough_returns_false_on_bad_vendor_item() -> (
+    None
+):
     """Non-numeric vendor_item must return False; record must be unmodified."""
     record = _make_b_record(vendor_item="ABCDEF")
     upc_dict = {123: ["GROCERY", "12345678901", "00000000000"]}

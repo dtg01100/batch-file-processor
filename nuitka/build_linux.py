@@ -16,6 +16,7 @@ Usage:
 Validation-only (no actual build):
     python nuitka/build_linux.py --dry-run  # print the command, don't run
 """
+
 from __future__ import annotations
 
 import argparse
@@ -137,4 +138,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

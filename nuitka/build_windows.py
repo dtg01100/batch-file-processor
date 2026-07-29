@@ -14,6 +14,7 @@ Usage:
     python nuitka/build_windows.py            # onefile, default
     python nuitka/build_windows.py --dry-run  # print the command
 """
+
 from __future__ import annotations
 
 import argparse

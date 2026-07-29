@@ -147,8 +147,7 @@ class TestRedactionFunctions:
         """
         result = redact_string("abcd", visible_chars=4)
         assert "*" in result, (
-            "Length-equal-to-visible_chars must redact the suffix; "
-            f"got {result!r}"
+            "Length-equal-to-visible_chars must redact the suffix; " f"got {result!r}"
         )
         assert "abcd" not in result
 
@@ -533,7 +532,9 @@ class TestStructuredLogAdapterAutoCorrelation:
         # Specifically, `_inject_context_fields` writes to kwargs['extra'],
         # which the logging module stores under record.msg + record.args, and
         # the extras show up via getattr on the record.
-        assert "correlation_id" in (record.__dict__ if hasattr(record, "__dict__") else {}), (
+        assert "correlation_id" in (
+            record.__dict__ if hasattr(record, "__dict__") else {}
+        ), (
             "auto_correlation=True default must inject correlation_id; "
             f"got record={record.__dict__}"
         )

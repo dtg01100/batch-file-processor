@@ -18,8 +18,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from dispatch.feature_flags import get_strict_testing_mode
 from core.domain.models.folder import FolderConfiguration
+from dispatch.feature_flags import get_strict_testing_mode
 from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager

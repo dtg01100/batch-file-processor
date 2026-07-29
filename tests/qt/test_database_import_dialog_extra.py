@@ -20,7 +20,9 @@ class TestDatabaseImportDialogUI:
         """Test dialog initializes with correct properties."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         assert dialog.windowTitle() == "folders.db merging utility"
@@ -34,7 +36,9 @@ class TestDatabaseImportDialogUI:
         """Test that all required UI widgets are created."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         # Check for required widgets
@@ -48,7 +52,9 @@ class TestDatabaseImportDialogUI:
         """Test dialog opts out of BaseDialog default action buttons."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         assert dialog._button_box is None
@@ -57,7 +63,9 @@ class TestDatabaseImportDialogUI:
         """Test initial button enabled/disabled states."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         assert not dialog._import_button.isEnabled()
@@ -68,7 +76,9 @@ class TestDatabaseImportDialogUI:
         """Test that progress bar is initially hidden."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         assert not dialog._progress_bar.isVisible()
@@ -77,7 +87,9 @@ class TestDatabaseImportDialogUI:
         """Test database label initial text."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         assert dialog._db_label.text() == "No File Selected"
@@ -121,7 +133,9 @@ class TestDatabaseImportDialogFileSelection:
             "interface.qt.dialogs.database_import_dialog.os.path.exists", lambda x: True
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
@@ -139,7 +153,9 @@ class TestDatabaseImportDialogFileSelection:
             lambda *args, **kwargs: ("", ""),
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
@@ -160,7 +176,9 @@ class TestDatabaseImportDialogFileSelection:
             "interface.qt.dialogs.database_import_dialog.os.path.exists", lambda x: True
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
@@ -178,7 +196,9 @@ class TestDatabaseImportDialogFileSelection:
             lambda *args, **kwargs: ("/nonexistent.db", ""),
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         qtbot.mouseClick(dialog._select_button, Qt.MouseButton.LeftButton)
@@ -196,7 +216,9 @@ class TestDatabaseImportDialogProgress:
         """Test progress bar updates correctly."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         dialog._progress_bar.setVisible(True)
@@ -209,7 +231,9 @@ class TestDatabaseImportDialogProgress:
         """Test progress bar handles zero maximum (indeterminate mode)."""
         from interface.qt.dialogs.database_import_dialog import DatabaseImportDialog
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         dialog._progress_bar.setVisible(True)
@@ -233,7 +257,9 @@ class TestDatabaseImportDialogCompletion:
             mock_info,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         dialog._on_finished(True, "Import completed successfully")
@@ -252,7 +278,9 @@ class TestDatabaseImportDialogCompletion:
             mock_critical,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         dialog._on_finished(False, "Import failed")
@@ -270,7 +298,9 @@ class TestDatabaseImportDialogCompletion:
             mock_critical,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         dialog._on_error("Connection failed")
@@ -297,7 +327,9 @@ class TestDatabaseImportDialogConfirm:
             mock_question,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         result_event = threading.Event()
@@ -321,7 +353,9 @@ class TestDatabaseImportDialogConfirm:
             mock_question,
         )
 
-        dialog = DatabaseImportDialog(None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION)
+        dialog = DatabaseImportDialog(
+            None, "/original.db", "Linux", "/backup", CURRENT_DATABASE_VERSION
+        )
         qtbot.addWidget(dialog)
 
         result_event = threading.Event()

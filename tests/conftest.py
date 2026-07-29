@@ -23,6 +23,7 @@ from migrations import folders_database_migrator
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+
 # Force xdist off when the run includes Qt tests.
 # PySide6 6.11.1 has a binding-manager bug in libshiboken6.abi3.so
 # that triggers a Fatal Python error / Aborted when QThread +
@@ -42,6 +43,7 @@ def pytest_xdist_auto_num_workers(config):
     if _qt_tests_in_selection(config):
         return 0
     import os
+
     env = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
     if env:
         try:
@@ -49,6 +51,7 @@ def pytest_xdist_auto_num_workers(config):
         except ValueError:
             pass
     return -1  # xdist default (auto)
+
 
 # Qt test paths and the qt marker select tests that hit PySide6
 # runtime. If the user runs any of them, disable xdist.
@@ -60,10 +63,13 @@ def _qt_tests_in_selection(config):
     if any(a == "qt" or a.startswith("qt.") for a in args if isinstance(a, str)):
         return True
     for arg in args:
-        if isinstance(arg, str) and any(arg.startswith(p) or p in arg for p in _QT_TEST_PATHS):
+        if isinstance(arg, str) and any(
+            arg.startswith(p) or p in arg for p in _QT_TEST_PATHS
+        ):
             return True
     marker_expr = config.getoption("-m") or ""
     return "qt" in marker_expr.split() or "not qt" in marker_expr.split()
+
 
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
@@ -76,8 +82,6 @@ ODBC_REQUIRED_KEYS = [
     "AS400_PASSWORD",
     "ODBC_DRIVER",
 ]
-
-
 
 
 @pytest.fixture

@@ -27,6 +27,7 @@ This module is intentionally side-effect free so it can be imported from
 both the 1.47 oracle and the master parity test without any test-order
 dependency on globals.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -68,7 +69,7 @@ class Legacy147ModuleLoader:
         # the master's formatter.
         bare = module_name
         if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters."):]
+            bare = bare[len("dispatch.converters.") :]
         path = _VENDORED_DIR / f"{bare}.py"
         if not path.exists():
             raise ImportError(f"no vendored 1.47 module at {path}")
@@ -87,7 +88,7 @@ class Legacy147ModuleLoader:
     def module_exists(self, module_name: str) -> bool:
         bare = module_name
         if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters."):]
+            bare = bare[len("dispatch.converters.") :]
         return (_VENDORED_DIR / f"{bare}.py").exists()
 
 
@@ -163,7 +164,9 @@ class MasterMockModuleLoader:
         self._modules: dict[str, MasterRecorderModule] = {}
         self.calls: list[str] = []
 
-    def register(self, module_name: str, missing_dep: str | None = None) -> MasterRecorderModule:
+    def register(
+        self, module_name: str, missing_dep: str | None = None
+    ) -> MasterRecorderModule:
         recorder = MasterRecorderModule(module_name, missing_dep)
         self._modules[module_name] = recorder
         return recorder
@@ -180,7 +183,7 @@ class MasterMockModuleLoader:
             return True
         bare = module_name
         if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters."):]
+            bare = bare[len("dispatch.converters.") :]
         return (_VENDORED_DIR / f"{bare}.py").exists()
 
 
@@ -269,9 +272,7 @@ def drive_master_converter_step(
         bucket = "run"
         would_run = True
         would_error = False
-        converter_inputs = (
-            recorder.call_args[-1] if recorder.call_args else None
-        )
+        converter_inputs = recorder.call_args[-1] if recorder.call_args else None
         loaded_module = loader.calls[-1] if loader.calls else None
     elif result.success and (result.output_path == input_path):
         # success but no conversion -> either format unsupported and we
@@ -361,11 +362,19 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
     parameters_dict.setdefault("process_edi", row.get("process_edi", "False"))
     parameters_dict.setdefault("tweak_edi", row.get("tweak_edi", "False"))
     parameters_dict.setdefault("split_edi", row.get("split_edi", "False"))
-    parameters_dict.setdefault("force_edi_validation", row.get("force_edi_validation", "False"))
+    parameters_dict.setdefault(
+        "force_edi_validation", row.get("force_edi_validation", "False")
+    )
     parameters_dict.setdefault("rename_file", row.get("rename_file", ""))
-    parameters_dict.setdefault("process_backend_copy", row.get("process_backend_copy", "True"))
-    parameters_dict.setdefault("process_backend_ftp", row.get("process_backend_ftp", "False"))
-    parameters_dict.setdefault("process_backend_email", row.get("process_backend_email", "False"))
+    parameters_dict.setdefault(
+        "process_backend_copy", row.get("process_backend_copy", "True")
+    )
+    parameters_dict.setdefault(
+        "process_backend_ftp", row.get("process_backend_ftp", "False")
+    )
+    parameters_dict.setdefault(
+        "process_backend_email", row.get("process_backend_email", "False")
+    )
     parameters_dict.setdefault("copy_to_directory", row.get("copy_to_directory", ""))
     parameters_dict.setdefault("ftp_server", row.get("ftp_server", ""))
     parameters_dict.setdefault("ftp_folder", row.get("ftp_folder", ""))
@@ -382,10 +391,13 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
     parameters_dict["convert_to_format"] = row.get("convert_to_format", "") or ""
 
     # Fold the row's folder_name into tmp_path.
-    safe_alias = "".join(
-        ch if (ch.isalnum() or ch in "._-") else "_"
-        for ch in str(parameters_dict["alias"])
-    ) or "row"
+    safe_alias = (
+        "".join(
+            ch if (ch.isalnum() or ch in "._-") else "_"
+            for ch in str(parameters_dict["alias"])
+        )
+        or "row"
+    )
     parameters_dict["folder_name"] = str(tmp_path / safe_alias)
     (tmp_path / safe_alias).mkdir(parents=True, exist_ok=True)
     input_path = tmp_path / safe_alias / "input.edi"
@@ -400,7 +412,13 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
     legacy_enabled = parameters_dict.get("process_edi") == "True"
     master_enabled = _normalize_truthy(parameters_dict.get("process_edi"))
 
-    fmt = (parameters_dict.get("convert_to_format") or "").strip().lower().replace(" ", "_").replace("-", "_")
+    fmt = (
+        (parameters_dict.get("convert_to_format") or "")
+        .strip()
+        .lower()
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
     format_module = f"convert_to_{fmt}" if fmt else ""
 
     # ---- replace threading backends with non-forking, deterministic ones ----
@@ -446,7 +464,10 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
             original_module = None
 
         if original_module is not None and hasattr(original_module, "edi_convert"):
-            def wrapped(edi_process, output_filename, settings_dict, parameters_dict, upc_lookup):
+
+            def wrapped(
+                edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+            ):
                 tup = (
                     edi_process,
                     output_filename,
@@ -457,7 +478,11 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
                 captured_converters.setdefault(format_module, []).append(tup)
                 try:
                     return original_module.__wrapped_edi_convert__(
-                        edi_process, output_filename, settings_dict, parameters_dict, upc_lookup
+                        edi_process,
+                        output_filename,
+                        settings_dict,
+                        parameters_dict,
+                        upc_lookup,
                     )
                 except (ImportError, ModuleNotFoundError):
                     return edi_process
@@ -471,10 +496,9 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
     # ---- patch backend do() to record calls --------------------------------
     def _make_recorder(name):
         def _do(parameters, settings_dict, filename):
-            backend_calls.append(
-                {"backend": name, "filename": str(filename)}
-            )
+            backend_calls.append({"backend": name, "filename": str(filename)})
             return True
+
         return _do
 
     for backend_name in ("copy_backend", "ftp_backend", "email_backend"):
@@ -530,7 +554,9 @@ def drive_legacy_147_for_row(row: dict, tmp_path, monkeypatch, dispatch_module):
         # whole suite.
         backend_calls.append({"backend": "exception", "filename": str(exc)})
 
-    converter_calls = list(captured_converters.get(format_module, [])) if format_module else []
+    converter_calls = (
+        list(captured_converters.get(format_module, [])) if format_module else []
+    )
     converter_args: tuple | None = converter_calls[0] if converter_calls else None
 
     result = Legacy147RoutingResult(

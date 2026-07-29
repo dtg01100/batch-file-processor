@@ -1,11 +1,11 @@
 import pytest
 
 from core.domain.models.folder import (
+    ARecordPaddingConfiguration,
     EDIConfiguration,
     FolderConfiguration,
     FTPConfiguration,
     UPCOverrideConfiguration,
-    ARecordPaddingConfiguration,
 )
 
 
@@ -72,25 +72,25 @@ class TestFTPConfiguration:
         """
         ftp = FTPConfiguration(server="s", port=0)
         errors = ftp.validate()
-        assert any("Port" in e and "Valid" in e for e in errors), (
-            f"expected port=0 to be rejected as invalid, got errors={errors}"
-        )
+        assert any(
+            "Port" in e and "Valid" in e for e in errors
+        ), f"expected port=0 to be rejected as invalid, got errors={errors}"
 
     def test_ftp_port_high_boundary_65535_is_valid(self):
         """Boundary: port 65535 must be accepted (the upper limit)."""
         ftp = FTPConfiguration(server="s", port=65535)
         errors = ftp.validate()
-        assert all("Port" not in e for e in errors), (
-            f"expected port=65535 to be valid, got errors={errors}"
-        )
+        assert all(
+            "Port" not in e for e in errors
+        ), f"expected port=65535 to be valid, got errors={errors}"
 
     def test_ftp_port_low_boundary_1_is_valid(self):
         """Boundary: port 1 must be accepted (the lower limit)."""
         ftp = FTPConfiguration(server="s", port=1)
         errors = ftp.validate()
-        assert all("Port" not in e for e in errors), (
-            f"expected port=1 to be valid, got errors={errors}"
-        )
+        assert all(
+            "Port" not in e for e in errors
+        ), f"expected port=1 to be valid, got errors={errors}"
 
 
 class TestUPCOverrideConfiguration:
@@ -107,9 +107,7 @@ class TestUPCOverrideConfiguration:
         # which means 'ALL' bypasses the int check). The test below
         # exercises the `!= 'ALL'` boundary: a non-numeric non-ALL
         # value must be rejected.
-        config = UPCOverrideConfiguration(
-            enabled=True, category_filter="not-a-number"
-        )
+        config = UPCOverrideConfiguration(enabled=True, category_filter="not-a-number")
         errors = config.validate()
         assert any("Invalid" in e for e in errors), (
             f"expected non-ALL non-numeric category to be rejected, "
@@ -176,22 +174,22 @@ class TestFolderConfigurationDefaults:
             folder_name="base",
             alias="Base",
         )
-        assert config.alert_on_failure is True, (
-            f"expected default alert_on_failure=True, got {config.alert_on_failure}"
-        )
+        assert (
+            config.alert_on_failure is True
+        ), f"expected default alert_on_failure=True, got {config.alert_on_failure}"
 
 
 class TestConvertFormatLookup:
     """Tests for ConvertFormat metaclass dunder guard and lookup."""
 
     def test_dunder_access_raises_attribute_error(self):
-        '''L64 negate_if_condition: ``if name.startswith('_'): raise
+        """L64 negate_if_condition: ``if name.startswith('_'): raise
         AttributeError(name)`` must catch dunder lookups. With the
         mutation to ``if not (name.startswith('_'))``, dunder names
         would fall through to the rest of the function, attempting
         to look up the attribute (which may cause infinite recursion
         or wrong AttributeErrors).
-        '''
+        """
         from interface.models.folder_configuration import ConvertFormat
 
         with pytest.raises(AttributeError):
@@ -237,12 +235,10 @@ class TestBoolFromData:
         mutation to True, callers that don't pass ``default=`` would
         get True for missing keys (silently flipping the behavior).
         """
-        from core.domain.models.folder import _bool_from_data
         import inspect
+
+        from core.domain.models.folder import _bool_from_data
 
         sig = inspect.signature(_bool_from_data)
         default = sig.parameters["default"].default
-        assert not default, (
-            f"expected _bool_from_data default=False, got {default}"
-        )
-
+        assert not default, f"expected _bool_from_data default=False, got {default}"

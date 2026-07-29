@@ -258,15 +258,18 @@ def test_capture_records_with_parser_raises_on_non_empty_invalid() -> None:
     with pytest.raises(EDIParseError):
         capture_records("Znot-edi-line", parser=parser)
 
+
 @settings(max_examples=50)
-@given(payload=st.text(
-    alphabet=st.characters(
-        blacklist_categories=("Cs",),
-        blacklist_characters="\n\rABC",
-    ),
-    min_size=1,
-    max_size=80,
-))
+@given(
+    payload=st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cs",),
+            blacklist_characters="\n\rABC",
+        ),
+        min_size=1,
+        max_size=80,
+    )
+)
 def test_parse_b_record_raises_on_non_b_input(payload: str) -> None:
     """A non-B-prefixed line fed to parse_b_record raises ValueError."""
     line = payload + "\n"
@@ -275,17 +278,19 @@ def test_parse_b_record_raises_on_non_b_input(payload: str) -> None:
 
 
 @settings(max_examples=50)
-@given(payload=st.text(
-    alphabet=st.characters(
-        blacklist_categories=("Cs",),
-        # Block A, B, and C so the payload cannot accidentally start with
-        # the target record type. The function's `capture_records` only
-        # accepts those three prefixes.
-        blacklist_characters="\n\rABC",
-    ),
-    min_size=1,
-    max_size=80,
-))
+@given(
+    payload=st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cs",),
+            # Block A, B, and C so the payload cannot accidentally start with
+            # the target record type. The function's `capture_records` only
+            # accepts those three prefixes.
+            blacklist_characters="\n\rABC",
+        ),
+        min_size=1,
+        max_size=80,
+    )
+)
 def test_parse_c_record_raises_on_non_c_input(payload: str) -> None:
     """A non-C-prefixed line fed to parse_c_record raises ValueError."""
     line = payload + "\n"
@@ -338,4 +343,3 @@ def test_parse_a_record_length_at_min_length_round_trips(body: str) -> None:
     assert parsed.invoice_number == line[7:17]
     assert parsed.invoice_date == line[17:23]
     assert parsed.invoice_total == line[23:33]
-

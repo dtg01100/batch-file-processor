@@ -15,8 +15,8 @@ from migrations.legacy_migrations import run_legacy_migrations
 
 # Backward-compatible re-exports for external consumers
 from migrations.migration_helpers import (
-   CURRENT_SCHEMA_VERSION,  # noqa: F401 — re-exported for external consumers
-   _log_migration_step,  # noqa: F401 — re-exported for external consumers
+    CURRENT_SCHEMA_VERSION,  # noqa: F401 — re-exported for external consumers
+    _log_migration_step,  # noqa: F401 — re-exported for external consumers
 )
 from migrations.modern_migrations import apply_v33_to_current
 

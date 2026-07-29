@@ -6,6 +6,7 @@ imports the vendored ``dispatch`` module without exploding. If this test ever
 fails the per-row routing test below will likely also fail in confusing ways
 — fix this one first.
 """
+
 from __future__ import annotations
 
 import importlib

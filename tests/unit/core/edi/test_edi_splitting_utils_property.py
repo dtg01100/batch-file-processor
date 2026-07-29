@@ -93,7 +93,9 @@ def _edi_lines(draw, min_size: int = 0, max_size: int = 20) -> list[str]:
 @given(
     lines=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -116,7 +118,9 @@ def test_group_lines_by_invoice_empty_input_yields_empty(
 @given(
     lines=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -139,7 +143,9 @@ def test_group_lines_by_invoice_starts_chunk_at_a_record(
 @given(
     invoice_lines=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -158,7 +164,9 @@ def test_split_invoice_records_preserves_a_record(invoice_lines: list[str]) -> N
 @given(
     invoice_lines=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -179,7 +187,9 @@ def test_split_invoice_records_b_records_all_start_with_b(
 @given(
     invoice_lines=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -200,7 +210,9 @@ def test_split_invoice_records_c_record_is_last_seen(
 @given(
     b_records=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -223,7 +235,9 @@ def test_filter_b_records_by_category_all_returns_input(b_records: list[str]) ->
 @given(
     b_records=st.lists(
         st.text(
-            alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+            alphabet=st.characters(
+                blacklist_categories=("Cs",), blacklist_characters="\n\r"
+            ),
             min_size=1,
             max_size=15,
         ),
@@ -244,7 +258,6 @@ def test_filter_b_records_by_category_none_upc_returns_input(
     assert result == b_records
 
 
-
 def _build_b_record(vendor_item: str) -> str:
     """Build a minimal but valid B-record line with the given vendor_item field.
 
@@ -262,7 +275,19 @@ def _build_b_record(vendor_item: str) -> str:
     retail = "0" * 5
     multi = "000"
     parent = "0" * 6
-    return record_type + upc + description + vendor + unit_cost + combo + unit_mult + qty + retail + multi + parent
+    return (
+        record_type
+        + upc
+        + description
+        + vendor
+        + unit_cost
+        + combo
+        + unit_mult
+        + qty
+        + retail
+        + multi
+        + parent
+    )
 
 
 @settings(max_examples=30)
@@ -302,11 +327,15 @@ def test_filter_b_records_by_category_exclude_mode_keeps_non_match(
 
 
 @settings(max_examples=30)
-@given(payload=st.text(
-    alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\rB"),
-    min_size=0,
-    max_size=80,
-))
+@given(
+    payload=st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\rB"
+        ),
+        min_size=0,
+        max_size=80,
+    )
+)
 def test_should_include_b_record_returns_true_for_non_edi_line(
     payload: str,
 ) -> None:
@@ -387,10 +416,9 @@ def test_build_split_file_metadata_raises_when_line_dict_is_none() -> None:
     skip the guard and crash later when indexing line_dict[...] instead.
     """
     import pytest
+
     with pytest.raises(ValueError, match="capture_records returned None"):
-        _build_split_file_metadata(
-            None, 1, "foo.edi", "/tmp", prepend_date_files=False
-        )
+        _build_split_file_metadata(None, 1, "foo.edi", "/tmp", prepend_date_files=False)
 
 
 def test_validate_split_counts_raises_on_mismatched_line_count(tmp_path) -> None:
@@ -400,6 +428,7 @@ def test_validate_split_counts_raises_on_mismatched_line_count(tmp_path) -> None
     mismatched case pass silently.
     """
     from core.exceptions import DataIntegrityError
+
     out_file = tmp_path / "out.txt"
     out_file.write_text("a\n")
     with pytest.raises(DataIntegrityError, match="not all lines"):
@@ -479,17 +508,13 @@ def test_split_invoice_records_hardcoded_oracle() -> None:
     assert c == c_line
 
     # B records are accumulated in order.
-    a, b, c = _split_invoice_records(
-        [b_line, a_line, b_line, c_line, b_line]
-    )
+    a, b, c = _split_invoice_records([b_line, a_line, b_line, c_line, b_line])
     assert a == a_line
     assert b == [b_line, b_line, b_line]
     assert c == c_line
 
     # C record is the LAST 'C'-leading line, not the first.
-    a, b, c = _split_invoice_records(
-        [c_line, b_line, c_line]
-    )
+    a, b, c = _split_invoice_records([c_line, b_line, c_line])
     assert a is None
     assert b == [b_line]
     assert c == c_line  # the second C line wins

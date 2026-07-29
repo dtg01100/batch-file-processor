@@ -19,6 +19,7 @@ Fixtures provided:
 The install order matters: stubs MUST be installed before the vendored
 modules are imported, because Python consults ``sys.modules`` first.
 """
+
 from __future__ import annotations
 
 import importlib
@@ -182,7 +183,9 @@ def anonymized_folder_ids(all_anonymized_folder_rows: list[dict]) -> list[str]:
 
 
 @pytest.fixture
-def anonymized_folder_rows_parametrized(all_anonymized_folder_rows, anonymized_folder_ids):
+def anonymized_folder_rows_parametrized(
+    all_anonymized_folder_rows, anonymized_folder_ids
+):
     """Yield ``(row, id_label)`` pairs for the per-row tests.
 
     Returns the parametrization lists so test files can splat them into
@@ -196,6 +199,7 @@ def anonymized_folder_rows_parametrized(all_anonymized_folder_rows, anonymized_f
 # ---------------------------------------------------------------------------
 # Helpers for the per-row tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def make_fake_folders_database():

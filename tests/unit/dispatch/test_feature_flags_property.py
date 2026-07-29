@@ -44,18 +44,14 @@ def test_get_debug_mode_false_for_non_true(monkeypatch, value: str) -> None:
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(value=_TRUTHY)
-def test_get_strict_testing_mode_true_when_env_is_true(
-    monkeypatch, value: str
-) -> None:
+def test_get_strict_testing_mode_true_when_env_is_true(monkeypatch, value: str) -> None:
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
     assert get_strict_testing_mode() is True
 
 
 @settings(max_examples=50, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(value=_FALSY)
-def test_get_strict_testing_mode_false_for_non_true(
-    monkeypatch, value: str
-) -> None:
+def test_get_strict_testing_mode_false_for_non_true(monkeypatch, value: str) -> None:
     monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", value)
     assert get_strict_testing_mode() is False
 
@@ -72,7 +68,11 @@ def test_get_debug_mode_default_false_when_unset(monkeypatch, value: str) -> Non
 @given(name=st.sampled_from(["debug_mode", "strict_testing_mode"]))
 def test_set_feature_flag_true_sets_env_to_true(monkeypatch, name: str) -> None:
     """set_feature_flag(name, value=True) sets the env var to 'true'."""
-    env_var = "DISPATCH_DEBUG_MODE" if name == "debug_mode" else "DISPATCH_STRICT_TESTING_MODE"
+    env_var = (
+        "DISPATCH_DEBUG_MODE"
+        if name == "debug_mode"
+        else "DISPATCH_STRICT_TESTING_MODE"
+    )
     monkeypatch.delenv(env_var, raising=False)
     set_feature_flag(name, value=True)
     import os
@@ -84,7 +84,11 @@ def test_set_feature_flag_true_sets_env_to_true(monkeypatch, name: str) -> None:
 @given(name=st.sampled_from(["debug_mode", "strict_testing_mode"]))
 def test_set_feature_flag_false_sets_env_to_false(monkeypatch, name: str) -> None:
     """set_feature_flag(name, value=False) sets the env var to 'false'."""
-    env_var = "DISPATCH_DEBUG_MODE" if name == "debug_mode" else "DISPATCH_STRICT_TESTING_MODE"
+    env_var = (
+        "DISPATCH_DEBUG_MODE"
+        if name == "debug_mode"
+        else "DISPATCH_STRICT_TESTING_MODE"
+    )
     monkeypatch.delenv(env_var, raising=False)
     set_feature_flag(name, value=False)
     import os
@@ -109,12 +113,12 @@ def test_set_feature_flag_round_trip(monkeypatch, name: str) -> None:
 @settings(max_examples=50)
 @given(
     name=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=1,
         max_size=20,
-    ).filter(
-        lambda s: s not in ("debug_mode", "strict_testing_mode")
-    ),
+    ).filter(lambda s: s not in ("debug_mode", "strict_testing_mode")),
 )
 def test_set_feature_flag_unknown_name_raises(name: str) -> None:
     """An unknown flag name raises ValueError and the message names the bad flag."""

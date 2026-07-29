@@ -467,6 +467,7 @@ def _mutant_path(file: Path, line: int, rule_name: str) -> Path:
         safe = f"abs_{safe}"
     return MUTANTS_DIR / f"{safe}__L{line}__{rule_name}.py"
 
+
 def _run_pytest_on_mutant(mutant_path: Path) -> tuple[int, str, bool]:
     """Run pytest against ``mutant_path`` and return (exit_code, output, skipped).
 
@@ -869,6 +870,7 @@ _ARG_SHAPE_TYPEERROR_RE = re.compile(
     r"|takes \d+ positional argument[s]? but \d+ (?:was|were) given"
     r"|got an unexpected keyword argument"
 )
+
 
 def _run_subprocess_mutant(
     file: Path, line: int, rule: MutationRule, mutated_source: str
@@ -1356,9 +1358,7 @@ def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
     # ``custom_fixture``) and the fallback should fire.
     rule = next(r for r in ALL_RULES if r.name == "always_fail")
     source = test_file.read_text(encoding="utf-8")
-    line_no = source.splitlines().index(
-        "    assert custom_fixture == 1"
-    ) + 1
+    line_no = source.splitlines().index("    assert custom_fixture == 1") + 1
     # Patch the module's ``_run_pytest_on_mutant`` so the subprocess
     # fallback can be observed without actually spawning pytest.
     # The dotted-string form ``monkeypatch.setattr("tests.meta.…")``
@@ -1368,12 +1368,13 @@ def test_subprocess_fallback_fires_for_fixture_missing_typeerror(
     # actual module. Patching the module object directly avoids
     # the resolution.
     invoked: list[bool] = []
-    def fake_subprocess(
-        *args: object, **kwargs: object
-    ) -> tuple[int, str, bool]:
+
+    def fake_subprocess(*args: object, **kwargs: object) -> tuple[int, str, bool]:
         invoked.append(True)
         return 0, "", False
+
     import sys
+
     _runner_mod = sys.modules[__name__]
     monkeypatch.setattr(_runner_mod, "_run_pytest_on_mutant", fake_subprocess)
     outcome = _run_assertion_mutation(test_file, line_no, rule)
@@ -1403,7 +1404,6 @@ def test_mutant_path_under_project_root() -> None:
     assert "tests_unit_test_foo" in path.name
 
 
-
 @pytest.mark.meta_assertions
 def test_mutant_path_outside_project_root() -> None:
     """``_mutant_path`` produces a path under ``MUTANTS_DIR`` for
@@ -1426,6 +1426,7 @@ def test_mutant_path_outside_project_root() -> None:
     assert "external_test" in path.name
     assert "L7" in path.name
     assert "always_fail" in path.name
+
 
 @pytest.mark.meta_assertions
 def test_class_init_typeerror_is_silently_dropped() -> None:
@@ -1473,6 +1474,8 @@ def test_class_init_valueerror_is_real_failure() -> None:
     assert all_passed is False
     assert "ValueError" in snippet
     assert "__init__" in snippet
+
+
 # ---------------------------------------------------------------------------
 # CLI summary entry point. Runs the same checks as the pytest wrapper
 # and prints a per-file + per-rule summary, then exits 1 if any

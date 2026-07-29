@@ -246,12 +246,12 @@ class TestEditFoldersDialogRegression:
 
         active_btn = dialog._fields.get("active_checkbutton")
         assert active_btn is not None, "active_checkbutton should exist in fields"
-        assert isinstance(active_btn, QPushButton), (
-            "active_checkbutton must be a QPushButton (checkable full-width toggle)"
-        )
-        assert active_btn.isCheckable(), (
-            "active_checkbutton QPushButton must be checkable"
-        )
+        assert isinstance(
+            active_btn, QPushButton
+        ), "active_checkbutton must be a QPushButton (checkable full-width toggle)"
+        assert (
+            active_btn.isCheckable()
+        ), "active_checkbutton QPushButton must be checkable"
 
     def test_update_active_state_works_with_qcheckbox(self, qtbot):
         """Regression: Verify update_active_state() properly handles QCheckBox.
@@ -279,23 +279,23 @@ class TestEditFoldersDialogRegression:
         active_btn.setChecked(False)
         dialog.handlers.update_active_state()
 
-        assert not copy_check.isEnabled(), (
-            "Copy backend should be disabled when folder is disabled"
-        )
-        assert not ftp_check.isEnabled(), (
-            "FTP backend should be disabled when folder is disabled"
-        )
+        assert (
+            not copy_check.isEnabled()
+        ), "Copy backend should be disabled when folder is disabled"
+        assert (
+            not ftp_check.isEnabled()
+        ), "FTP backend should be disabled when folder is disabled"
 
         # Test 2: When folder is enabled, backend fields should be enabled
         active_btn.setChecked(True)
         dialog.handlers.update_active_state()
 
-        assert copy_check.isEnabled(), (
-            "Copy backend should be enabled when folder is enabled"
-        )
-        assert ftp_check.isEnabled(), (
-            "FTP backend should be enabled when folder is enabled"
-        )
+        assert (
+            copy_check.isEnabled()
+        ), "Copy backend should be enabled when folder is enabled"
+        assert (
+            ftp_check.isEnabled()
+        ), "FTP backend should be enabled when folder is enabled"
 
     def test_ok_button_click_does_not_crash_with_active_checkbutton(self, qtbot):
         """Regression: Verify OK button click doesn't crash with active_checkbutton.
@@ -423,9 +423,9 @@ class TestEditFoldersDialogOKButtonFlow:
         dialog.apply()
 
         # Verify plugin_configurations was NOT added to saved_config
-        assert "plugin_configurations" not in saved_config, (
-            "plugin_configurations should not be added to the target dict for database saving"
-        )
+        assert (
+            "plugin_configurations" not in saved_config
+        ), "plugin_configurations should not be added to the target dict for database saving"
 
 
 class TestEditFoldersDialogWave3FocusAndAccessibility:

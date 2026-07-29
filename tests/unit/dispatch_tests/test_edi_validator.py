@@ -26,6 +26,7 @@ class MockFileSystem:
             raise FileNotFoundError(f"File not found: {path}")
         return self.files[path]
 
+
 class TestEDIValidator:
     """Tests for EDIValidator class."""
 
@@ -120,9 +121,9 @@ class TestEDIValidator:
         # (changing ``0 < len(stripped_upc) < 11`` to ``<= 11``) would
         # erroneously fire "Truncated UPC" for blank UPCs because
         # ``0 <= 0 < 11`` is True while ``0 < 0 < 11`` is False.
-        assert not any("Truncated UPC" in w for w in warnings), (
-            f"blank UPC must not trigger Truncated UPC warning, got {warnings}"
-        )
+        assert not any(
+            "Truncated UPC" in w for w in warnings
+        ), f"blank UPC must not trigger Truncated UPC warning, got {warnings}"
 
     def test_validate_missing_pricing(self):
         """Test validation detects missing pricing (70 char line)."""
@@ -190,6 +191,7 @@ class TestEDIValidator:
         # Second validation (valid) should reset state
         is_valid2, _ = validator.validate("/test/valid.edi")
         assert is_valid2
+
 
 class TestRealFileSystem:
     """Tests for RealFileSystem class."""
@@ -308,6 +310,7 @@ class TestRealFileSystem:
 
         assert os.path.isabs(result)
 
+
 class TestUPCRegressions:
     """Regression tests for UPC validation bug fixes.
 
@@ -353,9 +356,9 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any("N4143303084" in e for e in errors), (
-            "Warning should include the offending UPC value"
-        )
+        assert any(
+            "N4143303084" in e for e in errors
+        ), "Warning should include the offending UPC value"
 
     def test_non_numeric_upc_warning_includes_description(self):
         """Regression: warning for non-numeric UPC must include item description."""
@@ -366,9 +369,9 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any("TURK/PROV SUB ITEM" in e for e in errors), (
-            "Warning should include the item description"
-        )
+        assert any(
+            "TURK/PROV SUB ITEM" in e for e in errors
+        ), "Warning should include the item description"
 
     def test_non_numeric_upc_warning_via_validate_with_warnings(self):
         """Regression: non-numeric UPC appears in warnings via validate_with_warnings."""
@@ -436,9 +439,10 @@ class TestUPCRegressions:
         validator = EDIValidator(file_system=mock_fs)
         _, errors = validator.validate("/test/file.edi")
 
-        assert any("line 3" in e for e in errors), (
-            "Warning should contain the correct line number"
-        )
+        assert any(
+            "line 3" in e for e in errors
+        ), "Warning should contain the correct line number"
+
 
 class TestEDIValidatorEdgeCases:
     """Edge case tests for EDIValidator."""
@@ -481,4 +485,3 @@ class TestEDIValidatorEdgeCases:
 
         # Should handle unicode without error
         assert isinstance(is_valid, bool)
-

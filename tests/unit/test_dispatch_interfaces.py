@@ -38,7 +38,7 @@ class TestDatabaseInterface:
     """Tests for DatabaseInterface Protocol."""
 
     def test_database_runtime_checkable(self):
-            """Verify DatabaseInterface is runtime_checkable."""
+        """Verify DatabaseInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -252,7 +252,7 @@ class TestFileSystemInterface:
     """Tests for FileSystemInterface Protocol."""
 
     def test_file_system_runtime_checkable(self):
-            """Verify FileSystemInterface is runtime_checkable."""
+        """Verify FileSystemInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -625,7 +625,7 @@ class TestBackendInterface:
     """Tests for BackendInterface Protocol."""
 
     def test_backend_runtime_checkable(self):
-            """Verify BackendInterface is runtime_checkable."""
+        """Verify BackendInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -751,7 +751,7 @@ class TestValidatorInterface:
     """Tests for ValidatorInterface Protocol."""
 
     def test_validator_runtime_checkable(self):
-            """Verify ValidatorInterface is runtime_checkable."""
+        """Verify ValidatorInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -868,7 +868,7 @@ class TestErrorHandlerInterface:
     """Tests for ErrorHandlerInterface Protocol."""
 
     def test_error_handler_runtime_checkable(self):
-            """Verify ErrorHandlerInterface is runtime_checkable."""
+        """Verify ErrorHandlerInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""
@@ -1114,7 +1114,7 @@ class TestLogInterface:
     """Tests for LogInterface Protocol."""
 
     def test_log_runtime_checkable(self):
-            """Verify LogInterface is runtime_checkable."""
+        """Verify LogInterface is runtime_checkable."""
 
     def test_full_implementation_passes_isinstance(self):
         """A complete implementation should pass isinstance check."""

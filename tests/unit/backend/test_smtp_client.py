@@ -385,7 +385,7 @@ class TestSMTPClientProtocolCompliance:
         for client_class in [RealSMTPClient, MockSMTPClient]:
             client = client_class()
             for method in required_methods:
-                assert hasattr(client, method), (
-                    f"{client_class.__name__} missing {method}"
-                )
+                assert hasattr(
+                    client, method
+                ), f"{client_class.__name__} missing {method}"
                 assert callable(getattr(client, method)), f"{method} not callable"

@@ -8,6 +8,7 @@ from typing import Any
 
 from core.domain.models.folder import CSVConfiguration
 from interface.models.folder_configuration import ConvertFormat
+
 from .base_simple_configuration_plugin import BaseSimpleConfigurationPlugin
 from .config_schemas import FieldDefinition, FieldType
 

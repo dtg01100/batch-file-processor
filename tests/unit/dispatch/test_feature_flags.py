@@ -83,7 +83,6 @@ class TestSetFeatureFlag:
         set_feature_flag("debug_mode", value=True)
         assert get_debug_mode() is True
 
-
     def test_set_debug_mode_false(self, monkeypatch):
         monkeypatch.delenv("DISPATCH_DEBUG_MODE", raising=False)
         set_feature_flag("debug_mode", value=False)

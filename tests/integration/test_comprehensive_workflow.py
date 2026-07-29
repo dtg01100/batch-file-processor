@@ -389,9 +389,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert updated_folder["convert_to_format"] == "fintech", (
-            "Format should be changed to fintech"
-        )
+        assert (
+            updated_folder["convert_to_format"] == "fintech"
+        ), "Format should be changed to fintech"
 
     def test_toggle_edi_processing(self, workspace, configured_folder):
         """Test toggling EDI processing on/off."""
@@ -442,9 +442,9 @@ class TestFolderConfigurationChanges:
 
         # Verify change
         updated_folder = get_folder_config(workspace["db"], folder_id)
-        assert updated_folder["copy_to_directory"] == str(new_output), (
-            "Copy destination should be updated"
-        )
+        assert updated_folder["copy_to_directory"] == str(
+            new_output
+        ), "Copy destination should be updated"
 
 
 # =============================================================================
@@ -639,12 +639,12 @@ class TestEDITweakingAndSplitting:
         # Verify settings
         folder = get_folder_config(workspace["db"], folder_id)
         assert folder["split_edi"] == 1, "Split should be enabled"
-        assert folder["split_edi_filter_categories"] == "CAT1,CAT2", (
-            "Categories should be set"
-        )
-        assert folder["split_edi_filter_mode"] == "include", (
-            "Filter mode should be include"
-        )
+        assert (
+            folder["split_edi_filter_categories"] == "CAT1,CAT2"
+        ), "Categories should be set"
+        assert (
+            folder["split_edi_filter_mode"] == "include"
+        ), "Filter mode should be include"
 
     def test_pad_a_records_config(self, workspace, configured_folder):
         """Test pad_a_records configuration."""
@@ -971,9 +971,9 @@ class TestEdgeCasesAndErrorHandling:
         assert "folder_name" in folder
         assert folder["folder_name"] == str(workspace["input_folder"])
         # Default convert_to_format should come from oversight defaults
-        assert "convert_to_format" in folder, (
-            "Folder should inherit convert_to_format default"
-        )
+        assert (
+            "convert_to_format" in folder
+        ), "Folder should inherit convert_to_format default"
 
     def test_database_consistency(self, workspace):
         """Test database remains consistent after multiple operations."""

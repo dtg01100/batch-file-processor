@@ -45,6 +45,7 @@ class TestErrorRecordingMixin:
         attempt to call ``record_error`` on None and raise
         AttributeError.
         """
+
         class HasMixinOnly(ErrorRecordingMixin):
             pass
 
@@ -74,4 +75,3 @@ class TestErrorRecordingMixin:
         assert call_kwargs.get("filename") == "file.edi"
         # error_msg is wrapped into an Exception in the call
         assert isinstance(call_kwargs.get("error"), Exception)
-

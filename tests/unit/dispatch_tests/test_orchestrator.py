@@ -145,14 +145,18 @@ class TestOrchestratorFinalize:
 
     def _make_orchestrator(self):
         from dispatch.orchestrator import DispatchOrchestrator
+
         config = DispatchConfig()
         return DispatchOrchestrator(config)
 
     def test_finalize_sets_success_true_when_no_failures(self):
         result = FolderResult(
-            folder_name="/data/input", alias="Input",
-            files_processed=10, files_failed=0,
-            errors=[], success=True,
+            folder_name="/data/input",
+            alias="Input",
+            files_processed=10,
+            files_failed=0,
+            errors=[],
+            success=True,
         )
         # Set success=False to verify the finalize method resets it.
         result.success = False
@@ -162,9 +166,12 @@ class TestOrchestratorFinalize:
 
     def test_finalize_sets_success_false_when_failures(self):
         result = FolderResult(
-            folder_name="/data/input", alias="Input",
-            files_processed=10, files_failed=2,
-            errors=["err1", "err2"], success=True,
+            folder_name="/data/input",
+            alias="Input",
+            files_processed=10,
+            files_failed=2,
+            errors=["err1", "err2"],
+            success=True,
         )
         orch = self._make_orchestrator()
         orch._finalize_folder_result(result)
@@ -173,9 +180,12 @@ class TestOrchestratorFinalize:
     def test_finalize_with_zero_processed_zero_failed(self):
         """Boundary: 0 files processed, 0 files failed → success."""
         result = FolderResult(
-            folder_name="/data/input", alias="Input",
-            files_processed=0, files_failed=0,
-            errors=[], success=False,
+            folder_name="/data/input",
+            alias="Input",
+            files_processed=0,
+            files_failed=0,
+            errors=[],
+            success=False,
         )
         orch = self._make_orchestrator()
         orch._finalize_folder_result(result)
@@ -460,7 +470,6 @@ class TestOrchestratorHelperMethods:
         # With force_edi_validation
         assert orchestrator._should_validate({"force_edi_validation": True}) is True
 
-
     def test_filter_processed_files_signature_slim(self):
         """_filter_processed_files must not re-introduce removed params.
 
@@ -469,7 +478,12 @@ class TestOrchestratorHelperMethods:
         `folder`).
         """
         varnames = DispatchOrchestrator._filter_processed_files.__code__.co_varnames
-        forbidden = {"_folder_name", "_folder_index", "_folder_total", "progress_reporter"}
+        forbidden = {
+            "_folder_name",
+            "_folder_index",
+            "_folder_total",
+            "progress_reporter",
+        }
         assert not (forbidden & set(varnames)), (
             f"_filter_processed_files re-introduced forbidden params: "
             f"{forbidden & set(varnames)}"

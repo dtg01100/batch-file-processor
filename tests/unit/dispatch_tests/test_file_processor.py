@@ -232,8 +232,6 @@ class TestCalculateChecksum:
         assert checksum == expected
 
 
-
-
 class TestCleanupTempArtifacts:
     """Tests for _cleanup_temp_artifacts method."""
 
@@ -498,8 +496,6 @@ class TestRunSplitting:
         )
 
         assert was_split
-
-
 
 
 class TestSendFile:

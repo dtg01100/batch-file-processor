@@ -27,6 +27,7 @@ parametrized test can walk all of them.
 Self-check: this runner's own public names (``_allowlist_entries``,
 ``ALLOWLISTS``) must exist and the ALLOWLISTS list must be non-empty.
 """
+
 from __future__ import annotations
 
 import sys
@@ -55,9 +56,7 @@ class AllowlistEntry:
     extra_key: str = ""
 
 
-def _entries_from_4tuple(
-    runner: str, items: list[tuple]
-) -> list[AllowlistEntry]:
+def _entries_from_4tuple(runner: str, items: list[tuple]) -> list[AllowlistEntry]:
     """Flatten ``(file, key, line, reason)`` allowlists (most runners)."""
     out: list[AllowlistEntry] = []
     for tup in items:
@@ -78,9 +77,7 @@ def _entries_from_4tuple(
     return out
 
 
-def _entries_from_3tuple(
-    runner: str, items: list[tuple]
-) -> list[AllowlistEntry]:
+def _entries_from_3tuple(runner: str, items: list[tuple]) -> list[AllowlistEntry]:
     """Flatten ``(file, line, reason)`` allowlists (hygiene, coverage,
     marker-placement, assertions).
     """
@@ -102,9 +99,7 @@ def _entries_from_3tuple(
     return out
 
 
-def _entries_from_5tuple(
-    runner: str, items: list[tuple]
-) -> list[AllowlistEntry]:
+def _entries_from_5tuple(runner: str, items: list[tuple]) -> list[AllowlistEntry]:
     """Flatten ``(file, test_name, line, kind, reason)`` (oracle runner)."""
     out: list[AllowlistEntry] = []
     for tup in items:

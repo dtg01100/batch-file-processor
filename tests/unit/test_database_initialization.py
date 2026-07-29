@@ -111,9 +111,9 @@ class TestFreshInstall:
         db = sqlite_wrapper.Database.connect(db_path)
 
         tables = db.tables
-        assert "folders_table" not in tables, (
-            "folders_table should not exist on fresh install"
-        )
+        assert (
+            "folders_table" not in tables
+        ), "folders_table should not exist on fresh install"
 
         db.close()
 
@@ -405,9 +405,9 @@ class TestDatabaseMigration:
         # but should have no records, simulating a legacy DB opened by new code
         administrative = db["administrative"]
         record = administrative.find_one(id=1)
-        assert record is None, (
-            "find_one should return None for empty administrative table"
-        )
+        assert (
+            record is None
+        ), "find_one should return None for empty administrative table"
 
         db.close()
 

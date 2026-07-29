@@ -293,5 +293,3 @@ def iter_all_test_files() -> list[tuple[Path, Layer]]:
         for f in layer.iter_files():
             out.append((f, layer))
     return out
-
-

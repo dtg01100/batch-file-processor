@@ -374,14 +374,13 @@ def _is_given_decorator(dec: ast.AST) -> bool:
         return dec.attr == "given"
     return False
 
+
 def _iter_asserts(
     test: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Iterable[ast.Assert]:
     for stmt in ast.walk(test):
         if isinstance(stmt, ast.Assert):
             yield stmt
-
-
 
 
 def _collect_imports(tree: ast.Module) -> set[str]:
@@ -639,23 +638,20 @@ def test_oracle_runner_self_check() -> None:
         # ``ast.dump``-based comparison correctly reports
         # ``trivially_true``.
         (
-            "def test_x(s):\n"
-            "    assert f([1, 2]) == f([1,2])\n",
+            "def test_x(s):\n" "    assert f([1, 2]) == f([1,2])\n",
             "f",
             "trivially_true",
         ),
         # Same text, identical operands.
         (
-            "def test_x(s):\n"
-            "    assert f(s) == f(s)\n",
+            "def test_x(s):\n" "    assert f(s) == f(s)\n",
             "f",
             "trivially_true",
         ),
         # Different arg forms: f(s) vs f(int(s)). The classifier
         # should report ``self_referential_helper``.
         (
-            "def test_x(s):\n"
-            "    assert f(s) == f(int(s))\n",
+            "def test_x(s):\n" "    assert f(s) == f(int(s))\n",
             "f",
             "self_referential_helper",
         ),
@@ -672,9 +668,7 @@ def test_classify_trivially_true_whitespace_stable(
     test_node = tree.body[0]
     assert_node = test_node.body[0]
     local_defs = _build_local_var_defs(test_node)
-    classification = _classify_assertion(
-        assert_node, function_under_test, local_defs
-    )
+    classification = _classify_assertion(assert_node, function_under_test, local_defs)
     assert classification.kind == expected_kind, (
         f"expected {expected_kind!r}, got {classification.kind!r}: "
         f"{classification.detail}"
@@ -730,7 +724,6 @@ def test_collect_imports_walks_class_bodies() -> None:
     imports = _collect_imports(tree)
     assert "top_func" in imports
     assert "class_func" in imports
-
 
 
 # ---------------------------------------------------------------------------

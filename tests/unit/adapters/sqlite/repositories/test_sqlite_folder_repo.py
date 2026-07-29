@@ -195,9 +195,7 @@ class TestInsert:
         table.insert.return_value = 42
         repo = SqliteFolderRepository(db)
 
-        pk = repo.insert(
-            FolderConfiguration(folder_name="/new", alias="new")
-        )
+        pk = repo.insert(FolderConfiguration(folder_name="/new", alias="new"))
 
         assert pk == 42
         call_args = table.insert.call_args[0][0]

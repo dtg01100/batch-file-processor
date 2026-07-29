@@ -37,8 +37,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("5", "6")
 
-
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "6":
         processed_table = database_connection["processed_files"]
@@ -50,8 +48,6 @@ def run_legacy_migrations(
 
         update_version = dict(id=1, version="7")
         db_version.update(update_version, ["id"])
-
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "7":
@@ -73,8 +69,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="8")
         db_version.update(update_version, ["id"])
 
-
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "8":
         administrative_section = database_connection["administrative"]
@@ -95,8 +89,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("8", "9")
 
-
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "9":
         administrative_section = database_connection["administrative"]
@@ -106,8 +98,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="10")
         db_version.update(update_version, ["id"])
         _log_migration_step("9", "10")
-
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "10":
@@ -124,8 +114,6 @@ def run_legacy_migrations(
             folders_table.update(line, ["id"])
         update_version = dict(id=1, version="11")
         db_version.update(update_version, ["id"])
-
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "11":
@@ -181,8 +169,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("11", "12")
 
-
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "12":
         administrative_section = database_connection["administrative"]
@@ -205,8 +191,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("12", "13")
 
-
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "13":
         database_connection.query(
@@ -215,8 +199,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="14", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("13", "14")
-
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "14":
@@ -233,7 +215,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="15", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("14", "15")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "15":
@@ -267,7 +248,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("15", "16")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "16":
         database_connection.query(
@@ -283,7 +263,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="17", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("16", "17")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "17":
@@ -301,7 +280,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("17", "18")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "18":
         database_connection.query("alter table 'folders' add column 'retail_uom'")
@@ -314,7 +292,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("18", "19")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "19":
         database_connection.query("alter table 'folders' add column 'force_each_upc'")
@@ -326,7 +303,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="20", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("19", "20")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "20":
@@ -343,7 +319,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="21", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("20", "21")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "21":
@@ -366,7 +341,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("21", "22")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "22":
         try:
@@ -387,7 +361,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="23", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("22", "23")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "23":
@@ -429,7 +402,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("23", "24")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "24":
         try:
@@ -450,7 +422,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="25", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("24", "25")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "25":
@@ -491,7 +462,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("25", "26")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "26":
         database_connection.query(
@@ -508,7 +478,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("26", "27")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "27":
         database_connection.query("alter table 'folders' add column 'rename_file'")
@@ -520,7 +489,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="28", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("27", "28")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "28":
@@ -537,7 +505,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="29", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("28", "29")
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "29":
@@ -576,7 +543,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("29", "30")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "30":
         database_connection.query(
@@ -603,7 +569,6 @@ def run_legacy_migrations(
         db_version.update(update_version, ["id"])
         _log_migration_step("30", "31")
 
-
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "31":
         database_connection.query(
@@ -617,8 +582,6 @@ def run_legacy_migrations(
         update_version = dict(id=1, version="32", os=running_platform)
         db_version.update(update_version, ["id"])
         _log_migration_step("31", "32")
-
-
 
     db_version_dict = db_version.find_one(id=1)
     if db_version_dict["version"] == "32":

@@ -17,6 +17,7 @@ Folder rows come from ``tests/fixtures/anonymized_folders/folders/*.json``.
 The test fails loudly when no fixtures are committed — see
 ``test_anonymized_fixtures_present`` — so the suite cannot pass vacuously.
 """
+
 from __future__ import annotations
 
 import json
@@ -28,7 +29,9 @@ from tests.unit.dispatch_tests.routing_parity_helpers import (
     drive_legacy_147_for_row,
 )
 
-ANON_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "anonymized_folders" / "folders"
+ANON_DIR = (
+    Path(__file__).resolve().parents[2] / "fixtures" / "anonymized_folders" / "folders"
+)
 
 
 def _load_anonymized_rows():
@@ -94,8 +97,10 @@ def _missing_third_party_deps(fmt: str) -> list[str]:
 @pytest.mark.parametrize(
     "row",
     ANONYMIZED_ROWS,
-    ids=[f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
-         for i, r in enumerate(ANONYMIZED_ROWS)],
+    ids=[
+        f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
+        for i, r in enumerate(ANONYMIZED_ROWS)
+    ],
 )
 def test_legacy_147_routing_per_row(
     row,
@@ -115,7 +120,13 @@ def test_legacy_147_routing_per_row(
     correlate. The master-parity test does NOT depend on this registry —
     it runs its own 1.47 drive so the two files are truly independent.
     """
-    fmt = (row.get("convert_to_format") or "").strip().lower().replace(" ", "_").replace("-", "_")
+    fmt = (
+        (row.get("convert_to_format") or "")
+        .strip()
+        .lower()
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
     format_module = f"convert_to_{fmt}" if fmt else ""
 
     missing = _missing_third_party_deps(fmt)
@@ -163,7 +174,9 @@ def test_format_coverage_in_anonymized_db():
         )
     from collections import Counter
 
-    formats = Counter((r.get("convert_to_format") or "").strip() for r in ANONYMIZED_ROWS)
+    formats = Counter(
+        (r.get("convert_to_format") or "").strip() for r in ANONYMIZED_ROWS
+    )
     print("\nformat coverage:")
     for fmt, count in sorted(formats.items(), key=lambda x: (-x[1], x[0])):
         print(f"  {count:5d}  {fmt!r}")
@@ -251,9 +264,7 @@ def test_process_edi_normalization_drift():
 
     msg = "\nprocess_edi classification of {n} rows:\n{rep}".format(
         n=len(ANONYMIZED_ROWS),
-        rep="\n".join(
-            f"  {cls:18s}: {cnt}" for cls, cnt in sorted(counts.items())
-        ),
+        rep="\n".join(f"  {cls:18s}: {cnt}" for cls, cnt in sorted(counts.items())),
     )
     if promotions:
         msg += "\n\nDRIFT: these rows will be PROMOTED from 'no conversion' to 'conversion':\n"
@@ -263,8 +274,7 @@ def test_process_edi_normalization_drift():
             msg += f"  ... and {len(promotions) - 50} more (see captured promotions list)\n"
         test_process_edi_normalization_drift.promotions = promotions  # type: ignore[attr-defined]
         pytest.fail(
-            msg
-            + "\nAction required: data-migrate or suppress-promote these rows "
+            msg + "\nAction required: data-migrate or suppress-promote these rows "
             "before master rollout. See plan §'process_edi promotion risk'."
         )
 
@@ -288,10 +298,16 @@ def test_process_backend_representation_drift():
         )
     from collections import Counter
 
-    kinds: dict[str, Counter] = {k: Counter() for k in (
-        "process_edi", "process_backend_copy", "process_backend_ftp",
-        "process_backend_email", "tweak_edi",
-    )}
+    kinds: dict[str, Counter] = {
+        k: Counter()
+        for k in (
+            "process_edi",
+            "process_backend_copy",
+            "process_backend_ftp",
+            "process_backend_email",
+            "tweak_edi",
+        )
+    }
     for row in ANONYMIZED_ROWS:
         for k in kinds:
             v = row.get(k)
@@ -387,7 +403,9 @@ def test_load_anonymized_rows_handles_missing_and_corrupt(tmp_path, monkeypatch)
     """
     # Re-point ANON_DIR at an empty tmp dir, then assert the loader
     # returns [] rather than raising.
-    monkeypatch.setattr(test_legacy_147_routing_per_row, "__wrapped__", None, raising=False)
+    monkeypatch.setattr(
+        test_legacy_147_routing_per_row, "__wrapped__", None, raising=False
+    )
     good = tmp_path / "0007_test.json"
     good.write_text('{"id": 7, "alias": "ok"}', encoding="utf-8")
     broken = tmp_path / "0008_bad.json"
@@ -400,6 +418,6 @@ def test_load_anonymized_rows_handles_missing_and_corrupt(tmp_path, monkeypatch)
     # raise on broken JSON. Sanity-check the file parses-badly so we
     # know the test actually exercises that path.
     import json as _json
+
     with pytest.raises(ValueError):
         _json.loads(broken.read_text(encoding="utf-8"))
-

@@ -331,9 +331,7 @@ def _is_production_path(path: Path) -> bool:
     # mirrors dispatch/orchestrator.py shape).
     rel_str = str(rel)
     return not (
-        rel_str.startswith("tests/")
-        or "fixtures/" in rel_str
-        or "/legacy_" in rel_str
+        rel_str.startswith("tests/") or "fixtures/" in rel_str or "/legacy_" in rel_str
     )
 
 
@@ -659,9 +657,9 @@ def test_collect_string_import_targets_shapes(
     assert isinstance(call, ast.Call)
     imports: set[str] = set()
     _collect_string_import_targets(call, imports)
-    assert imports == expected_modules, (
-        f"expected {expected_modules!r}, got {imports!r} for source {source!r}"
-    )
+    assert (
+        imports == expected_modules
+    ), f"expected {expected_modules!r}, got {imports!r} for source {source!r}"
 
 
 # ---------------------------------------------------------------------------

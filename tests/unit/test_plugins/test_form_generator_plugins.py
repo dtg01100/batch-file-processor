@@ -245,9 +245,7 @@ class TestFieldDefinitionValidationBoundaries:
         """
         from interface.plugins.config_schemas import FieldDefinition, FieldType
 
-        field = FieldDefinition(
-            name="code", field_type=FieldType.STRING, min_length=5
-        )
+        field = FieldDefinition(name="code", field_type=FieldType.STRING, min_length=5)
         # 5 chars at min — valid
         assert field.validate("abcde").success is True
         # 4 chars below min — invalid
@@ -259,9 +257,7 @@ class TestFieldDefinitionValidationBoundaries:
         """
         from interface.plugins.config_schemas import FieldDefinition, FieldType
 
-        field = FieldDefinition(
-            name="code", field_type=FieldType.STRING, max_length=5
-        )
+        field = FieldDefinition(name="code", field_type=FieldType.STRING, max_length=5)
         # 5 chars at max — valid
         assert field.validate("abcde").success is True
         # 6 chars above max — invalid
@@ -287,9 +283,7 @@ class TestFieldDefinitionValidationBoundaries:
         """
         from interface.plugins.config_schemas import FieldDefinition, FieldType
 
-        field = FieldDefinition(
-            name="opt", field_type=FieldType.STRING, required=False
-        )
+        field = FieldDefinition(name="opt", field_type=FieldType.STRING, required=False)
         result = field.validate(None)
         assert result.success is True, (
             f"expected None with required=False to be valid, "
@@ -303,9 +297,9 @@ class TestFieldDefinitionValidationBoundaries:
         from interface.plugins.config_schemas import FieldDefinition, FieldType
 
         field = FieldDefinition(name="my_field", field_type=FieldType.STRING)
-        assert field.label == "my_field", (
-            f"expected label='my_field' (fallback to name), got {field.label!r}"
-        )
+        assert (
+            field.label == "my_field"
+        ), f"expected label='my_field' (fallback to name), got {field.label!r}"
 
 
 if __name__ == "__main__":

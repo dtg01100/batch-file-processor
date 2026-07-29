@@ -798,27 +798,27 @@ class TestNestedConfigurationCoverage:
         ftp_fields = get_dataclass_fields_flat(FTPConfiguration)
         expected = {"server", "port", "username", "password", "folder"}
 
-        assert ftp_fields == expected, (
-            f"FTP fields mismatch. Expected: {expected}, Got: {ftp_fields}"
-        )
+        assert (
+            ftp_fields == expected
+        ), f"FTP fields mismatch. Expected: {expected}, Got: {ftp_fields}"
 
     def test_email_configuration_fields(self):
         """Verify EmailConfiguration has all expected fields."""
         email_fields = get_dataclass_fields_flat(EmailConfiguration)
         expected = {"recipients", "subject_line", "sender_address"}
 
-        assert email_fields == expected, (
-            f"Email fields mismatch. Expected: {expected}, Got: {email_fields}"
-        )
+        assert (
+            email_fields == expected
+        ), f"Email fields mismatch. Expected: {expected}, Got: {email_fields}"
 
     def test_copy_configuration_fields(self):
         """Verify CopyConfiguration has all expected fields."""
         copy_fields = get_dataclass_fields_flat(CopyConfiguration)
         expected = {"destination_directory"}
 
-        assert copy_fields == expected, (
-            f"Copy fields mismatch. Expected: {expected}, Got: {copy_fields}"
-        )
+        assert (
+            copy_fields == expected
+        ), f"Copy fields mismatch. Expected: {expected}, Got: {copy_fields}"
 
     def test_edi_configuration_fields(self):
         """Verify EDIConfiguration has all 11 expected fields."""
@@ -837,9 +837,9 @@ class TestNestedConfigurationCoverage:
             "split_edi_filter_mode",
         }
 
-        assert edi_fields == expected, (
-            f"EDI fields mismatch. Expected: {expected}, Got: {edi_fields}"
-        )
+        assert (
+            edi_fields == expected
+        ), f"EDI fields mismatch. Expected: {expected}, Got: {edi_fields}"
 
     def test_upc_override_configuration_fields(self):
         """Verify UPCOverrideConfiguration has all expected fields."""
@@ -852,9 +852,9 @@ class TestNestedConfigurationCoverage:
             "padding_pattern",
         }
 
-        assert upc_fields == expected, (
-            f"UPC fields mismatch. Expected: {expected}, Got: {upc_fields}"
-        )
+        assert (
+            upc_fields == expected
+        ), f"UPC fields mismatch. Expected: {expected}, Got: {upc_fields}"
 
     def test_a_record_padding_configuration_fields(self):
         """Verify ARecordPaddingConfiguration has all expected fields."""
@@ -868,9 +868,9 @@ class TestNestedConfigurationCoverage:
             "force_txt_extension",
         }
 
-        assert a_rec_fields == expected, (
-            f"A-record fields mismatch. Expected: {expected}, Got: {a_rec_fields}"
-        )
+        assert (
+            a_rec_fields == expected
+        ), f"A-record fields mismatch. Expected: {expected}, Got: {a_rec_fields}"
 
     def test_invoice_date_configuration_fields(self):
         """Verify InvoiceDateConfiguration has all expected fields."""
@@ -884,9 +884,9 @@ class TestNestedConfigurationCoverage:
             "each_uom_mode",
         }
 
-        assert inv_date_fields == expected, (
-            f"Invoice date fields mismatch. Expected: {expected}, Got: {inv_date_fields}"
-        )
+        assert (
+            inv_date_fields == expected
+        ), f"Invoice date fields mismatch. Expected: {expected}, Got: {inv_date_fields}"
 
     def test_backend_specific_configuration_fields(self):
         """Verify BackendSpecificConfiguration has all expected fields."""
@@ -899,9 +899,9 @@ class TestNestedConfigurationCoverage:
             "fintech_division_id",
         }
 
-        assert backend_fields == expected, (
-            f"Backend-specific fields mismatch. Expected: {expected}, Got: {backend_fields}"
-        )
+        assert (
+            backend_fields == expected
+        ), f"Backend-specific fields mismatch. Expected: {expected}, Got: {backend_fields}"
 
     def test_csv_configuration_fields(self):
         """Verify CSVConfiguration has all expected fields."""
@@ -915,9 +915,9 @@ class TestNestedConfigurationCoverage:
             "split_prepaid_sales_tax_crec",
         }
 
-        assert csv_fields == expected, (
-            f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
-        )
+        assert (
+            csv_fields == expected
+        ), f"CSV fields mismatch. Expected: {expected}, Got: {csv_fields}"
 
 
 class TestFieldCoverageReport:

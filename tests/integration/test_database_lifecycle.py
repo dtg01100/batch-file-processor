@@ -124,9 +124,9 @@ class TestDatabaseCreation:
         ]
 
         for col in required_admin_columns:
-            assert col in admin_columns, (
-                f"administrative table should have {col} column"
-            )
+            assert (
+                col in admin_columns
+            ), f"administrative table should have {col} column"
 
         # Verify foreign keys are enabled
         cursor.execute("PRAGMA foreign_keys")
@@ -502,9 +502,9 @@ class TestMigrationChain:
         for table in ("folders", "administrative"):
             cursor.execute(f"PRAGMA table_info({table})")
             cols = {row[1] for row in cursor.fetchall()}
-            assert "each_uom_categories" in cols, (
-                f"each_uom_categories missing in {table}"
-            )
+            assert (
+                "each_uom_categories" in cols
+            ), f"each_uom_categories missing in {table}"
             assert "each_uom_mode" in cols, f"each_uom_mode missing in {table}"
 
         # Migration is idempotent

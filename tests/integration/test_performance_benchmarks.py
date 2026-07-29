@@ -405,9 +405,9 @@ class TestDiskIO:
         # Verify all files were actually written
         written_files = list(output_dir.glob("test_*.txt"))
         assert len(written_files) == num_files, "Should write all 100 files"
-        assert all(f.stat().st_size == file_size for f in written_files), (
-            "Each written file should be exactly 1KB"
-        )
+        assert all(
+            f.stat().st_size == file_size for f in written_files
+        ), "Each written file should be exactly 1KB"
         assert_perf_threshold(elapsed < 1.0, "Should complete in under 1 second")
 
 

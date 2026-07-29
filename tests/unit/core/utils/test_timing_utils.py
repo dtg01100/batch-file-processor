@@ -81,9 +81,9 @@ class TestContextTimer:
         ratio = timer.duration_ms / elapsed
         # Ratio should be ~1000 (ms per second). Tolerance of 0.5
         # handles floating-point rounding but rejects 1001.
-        assert abs(ratio - 1000) < 0.5, (
-            f"duration_ms/seconds ratio {ratio} deviates from 1000"
-        )
+        assert (
+            abs(ratio - 1000) < 0.5
+        ), f"duration_ms/seconds ratio {ratio} deviates from 1000"
 
     def test_measures_zero_duration_for_empty_block(self):
         with context_timer() as timer:

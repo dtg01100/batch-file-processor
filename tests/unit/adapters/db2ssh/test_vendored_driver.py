@@ -220,9 +220,9 @@ class TestRunQuery:
         _run_query(mock_ssh, "SELECT 1 FROM DUAL")
 
         written_sql = mock_stdin.write.call_args[0][0]
-        assert written_sql.endswith(";"), (
-            "SQL should end with semicolon for db2 -t flag"
-        )
+        assert written_sql.endswith(
+            ";"
+        ), "SQL should end with semicolon for db2 -t flag"
 
     def test_does_not_duplicate_semicolon(self):
         mock_ssh, mock_stdin = self._make_mock_ssh()

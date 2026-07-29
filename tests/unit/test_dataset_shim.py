@@ -234,7 +234,6 @@ def test_insert_many_empty_no_error():
     assert t.count() == 0
 
 
-
 def test_query_raw_sql_and_commit():
     db = connect("sqlite:///")
     # create raw table

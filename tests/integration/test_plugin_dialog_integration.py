@@ -254,5 +254,3 @@ class TestPluginValidationIntegration:
 
         defaults = plugin.get_default_configuration()
         assert isinstance(defaults, dict), "Should return default configuration"
-
-

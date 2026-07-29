@@ -56,12 +56,14 @@ def _amounts(draw, max_value: float = 9_999_999.99) -> float:
 
 
 @settings(max_examples=100)
-@given(amount=st.floats(
-    min_value=0.0,
-    max_value=9999999.99,
-    allow_nan=False,
-    allow_infinity=False,
-))
+@given(
+    amount=st.floats(
+        min_value=0.0,
+        max_value=9999999.99,
+        allow_nan=False,
+        allow_infinity=False,
+    )
+)
 def test_format_amount_str_is_exactly_9_chars_for_nonneg(amount: float) -> None:
     """_format_amount_str returns exactly 9 characters for non-negative amounts."""
     gen = _gen()
@@ -70,12 +72,14 @@ def test_format_amount_str_is_exactly_9_chars_for_nonneg(amount: float) -> None:
 
 
 @settings(max_examples=100)
-@given(amount=st.floats(
-    min_value=-9999999.99,
-    max_value=-0.01,
-    allow_nan=False,
-    allow_infinity=False,
-))
+@given(
+    amount=st.floats(
+        min_value=-9999999.99,
+        max_value=-0.01,
+        allow_nan=False,
+        allow_infinity=False,
+    )
+)
 def test_format_amount_str_is_10_chars_for_negative(amount: float) -> None:
     """Negative amounts are 10 chars (9 digits + leading '-')."""
     gen = _gen()
@@ -125,7 +129,9 @@ def test_format_amount_str_zero_is_all_zeros(amount: float) -> None:
         alphabet=st.characters(max_codepoint=127), min_size=0, max_size=5
     ),
     description=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=0,
         max_size=40,
     ),
@@ -149,7 +155,9 @@ def test_generate_c_record_starts_with_C(
 @settings(max_examples=100)
 @given(
     description=st.text(
-        alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\n\r"
+        ),
         min_size=0,
         max_size=25,
     ),
@@ -203,7 +211,9 @@ def test_generate_c_record_amount_field_is_9_chars(amount: float) -> None:
                     max_size=3,
                 ),
                 "description": st.text(
-                    alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+                    alphabet=st.characters(
+                        blacklist_categories=("Cs",), blacklist_characters="\n\r"
+                    ),
                     min_size=0,
                     max_size=20,
                 ),
@@ -237,7 +247,9 @@ def test_generate_c_records_for_invoice_returns_one_per_charge(
         st.fixed_dictionaries(
             {
                 "description": st.text(
-                    alphabet=st.characters(blacklist_categories=("Cs",), blacklist_characters="\n\r"),
+                    alphabet=st.characters(
+                        blacklist_categories=("Cs",), blacklist_characters="\n\r"
+                    ),
                     min_size=0,
                     max_size=10,
                 ),

@@ -66,9 +66,7 @@ class SimplifiedCSVConverter(BaseEDIConverter):
         context.user_data["each_uom_categories"] = (
             params.get("each_uom_categories") or "ALL"
         )
-        context.user_data["each_uom_mode"] = (
-            params.get("each_uom_mode") or "include"
-        )
+        context.user_data["each_uom_mode"] = params.get("each_uom_mode") or "include"
         context.user_data["inc_headers"] = normalize_parameter(
             params.get(
                 "include_headers", params.get("simple_csv_include_headers", True)

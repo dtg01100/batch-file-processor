@@ -3,6 +3,7 @@
 This module provides a pipeline step for EDI file validation,
 wrapping the existing EDIValidator with pipeline integration.
 """
+
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Protocol, runtime_checkable
@@ -33,9 +34,7 @@ def normalize_validation_output(
     if isinstance(output, tuple) and len(output) == 2:
         return bool(output[0]), output[1]
     if isinstance(output, ValidationResult):
-        return output.is_valid, (
-            output.errors if not output.is_valid else current_file
-        )
+        return output.is_valid, (output.errors if not output.is_valid else current_file)
     if isinstance(output, dict):
         is_valid = bool(output.get("valid", True))
         if is_valid:

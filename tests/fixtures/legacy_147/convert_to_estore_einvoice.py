@@ -7,7 +7,9 @@ from typing import List
 import utils
 
 
-def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
+def edi_convert(
+    edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup
+):
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -68,9 +70,9 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
         invoice_total.clear()
         return (rowlist, shipper_mode, shipper_accum, shipper_line_number)
 
-    store_number = parameters_dict['estore_store_number']
-    vendor_oid = parameters_dict['estore_Vendor_OId']
-    vendor_name = parameters_dict['estore_vendor_NameVendorOID']
+    store_number = parameters_dict["estore_store_number"]
+    vendor_oid = parameters_dict["estore_Vendor_OId"]
+    vendor_name = parameters_dict["estore_vendor_NameVendorOID"]
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = list(work_file.readlines())  # make list of lines
@@ -137,7 +139,9 @@ def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
                         try:
-                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
+                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][
+                                1
+                            ]
                         except KeyError:
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]

@@ -177,4 +177,3 @@ class TestQueryRunnerProtocol:
         result = fetcher.fetch_po_number(100)
 
         assert result == "PO"
-

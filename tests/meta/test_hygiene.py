@@ -221,15 +221,7 @@ class _BodyHasAssertion(ast.NodeVisitor):
                     isinstance(ctx.func.value, ast.Name)
                     and ctx.func.value.id == "pytest"
                     and ctx.func.attr in {"raises", "warns"}
-                ):
-                    self.found = True
-                # pytest-qt qtbot.* context managers (waitSignal,
-                # assertNotEmitted, waitUntil, etc.) are load-bearing:
-                # entering the block asserts the signal/event occurs (or
-                # does not). Without recognizing them, every Qt test
-                # using a qtbot context manager would be flagged as
-                # missing_assert.
-                elif ctx.func.attr.startswith(("assert", "wait")):
+                ) or ctx.func.attr.startswith(("assert", "wait")):
                     self.found = True
         self.generic_visit(node)
 
@@ -584,10 +576,8 @@ def _check_assert_is_bool_comparison(file: Path) -> list[Violation]:
         # where ``assert x`` is strictly clearer than ``assert x is True``.
         if not isinstance(test.left, ast.Name):
             continue
-        if (
-            not isinstance(rhs, ast.Constant)
-            or rhs.value is not True
-            and rhs.value is not False
+        if not isinstance(rhs, ast.Constant) or (
+            rhs.value is not True and rhs.value is not False
         ):
             continue
         if 1 <= node.lineno <= len(source_lines):

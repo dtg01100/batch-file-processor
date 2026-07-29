@@ -418,9 +418,9 @@ class TestPluginManagerCombinations:
         if not result.success:
             # If default config is invalid, it's because required fields are empty
             # This is expected behavior - document the validation rules
-            assert result.errors, (
-                f"{format_name} validation failure should have error messages"
-            )
+            assert (
+                result.errors
+            ), f"{format_name} validation failure should have error messages"
 
     def test_multiple_plugins_can_be_validated(self, plugin_manager):
         """Test that multiple plugins can be validated in sequence."""
@@ -433,9 +433,9 @@ class TestPluginManagerCombinations:
             # Some plugins may have required fields that need values in default config
             if not result.success:
                 # Document which plugins require fields to be populated
-                assert result.errors, (
-                    f"{plugin.get_format_name()} validation failure should have error messages"
-                )
+                assert (
+                    result.errors
+                ), f"{plugin.get_format_name()} validation failure should have error messages"
 
             # Test with all booleans set to True and strings with valid values
             fields = plugin.get_config_fields()
@@ -454,9 +454,9 @@ class TestPluginManagerCombinations:
 
             if all_true_config:  # Only test if there are boolean/string fields
                 result = plugin.validate_config(all_true_config)
-                assert result.success, (
-                    f"{plugin.get_format_name()} all-true config should be valid: {result.errors if not result.success else ''}"
-                )
+                assert (
+                    result.success
+                ), f"{plugin.get_format_name()} all-true config should be valid: {result.errors if not result.success else ''}"
 
 
 class TestCrossPluginConfigurations:

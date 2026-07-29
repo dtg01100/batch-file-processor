@@ -49,15 +49,15 @@ class MagicMockVisitor(ast.NodeVisitor):
         """Check if target is a db mock variable without spec=."""
         if self._is_line_allowed(node.lineno):
             return
-        if isinstance(node.value, ast.Call) and isinstance(
-            node.value.func, ast.Name
-        ) and node.value.func.id == "MagicMock":
+        if (
+            isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "MagicMock"
+        ):
             has_spec = any(kw.arg == "spec" for kw in node.value.keywords)
             if has_spec:
                 return
-            target_names = [
-                t.id for t in node.targets if isinstance(t, ast.Name)
-            ]
+            target_names = [t.id for t in node.targets if isinstance(t, ast.Name)]
             if not target_names:
                 return
             for target_id in target_names:
@@ -117,8 +117,7 @@ def _check_bare_magicmock(request: Any) -> None:
         lines = [f"  Line {lineno}: {msg}" for lineno, msg in violations]
         msg = "\n".join(
             [
-                "Bare MagicMock() detected in "
-                f"{os.path.relpath(filepath)}:",
+                "Bare MagicMock() detected in " f"{os.path.relpath(filepath)}:",
                 *lines,
                 "",
                 "Use MagicMock(spec=...) for typed mocks.",

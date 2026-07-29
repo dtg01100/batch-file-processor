@@ -49,7 +49,9 @@ class FileResult:
     errors: list[str] = field(default_factory=list)
 
     def record_validation_outcome(
-        self, validated: bool, errors_or_file: Any  # noqa: FBT001 - boolean flag is intentional (validation outcome)
+        self,
+        validated: bool,
+        errors_or_file: Any,  # noqa: FBT001 - boolean flag is intentional (validation outcome)
     ) -> None:
         """Record validation outcome: set validated flag and append errors.
 
@@ -212,7 +214,6 @@ class FileProcessor:
 
         return result
 
-
     def _build_context(
         self,
         folder: dict,
@@ -253,7 +254,6 @@ class FileProcessor:
 
         """
         import time
-
 
         result.checksum = calculate_file_checksum(file_path)
         logger.debug("Calculated checksum for %s: %s", file_basename, result.checksum)
@@ -575,8 +575,6 @@ class FileProcessor:
             result.errors.append(f"Splitting error: {e}")
             return False
 
-
-
     def _send_file(
         self,
         current_file: str,
@@ -607,8 +605,9 @@ class FileProcessor:
 
         # Apply file rename if configured
         from dispatch.file_utils import apply_file_rename as _ar
+
         _td = context.temp_dirs
-        _tmpl = context.effective_folder.get('rename_file', '').strip()
+        _tmpl = context.effective_folder.get("rename_file", "").strip()
         final_file = _ar(current_file, _tmpl, _td)
 
         # Send to backends
@@ -633,7 +632,6 @@ class FileProcessor:
             return
 
         self._log_success(file_basename, file_path, run_log)
-
 
     def _send_to_backends(
         self,
@@ -715,7 +713,6 @@ class FileProcessor:
             except OSError as e:
                 logger.warning("Failed to clean up temp dir %s: %s", temp_dir, e)
 
-
         for temp_file in context.temp_files:
             try:
                 if os.path.exists(temp_file):
@@ -723,7 +720,6 @@ class FileProcessor:
                     logger.debug("Cleaned up temp file: %s", temp_file)
             except OSError as e:
                 logger.warning("Failed to clean up temp file %s: %s", temp_file, e)
-
 
         context.temp_dirs.clear()
         context.temp_files.clear()

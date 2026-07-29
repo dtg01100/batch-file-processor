@@ -681,7 +681,9 @@ class TestConverterMalformedInput:
         p.write_text(content, encoding="utf-8")
         return str(p)
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle truncated records")
+    @pytest.mark.xfail(
+        strict=False, reason="converter may not handle truncated records"
+    )
     def test_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -720,7 +722,9 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle unknown record types")
+    @pytest.mark.xfail(
+        strict=False, reason="converter may not handle unknown record types"
+    )
     def test_csv_unknown_record_type(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -765,7 +769,9 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle truncated records")
+    @pytest.mark.xfail(
+        strict=False, reason="converter may not handle truncated records"
+    )
     def test_simplified_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
@@ -807,7 +813,9 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle unknown record types")
+    @pytest.mark.xfail(
+        strict=False, reason="converter may not handle unknown record types"
+    )
     def test_fintech_unknown_record_type(
         self,
         tmp_path,
@@ -1731,7 +1739,9 @@ class TestEstoreEinvoiceGenericProcessing:
             # Should have multiple rows (header + B records)
             assert len(csv_content.split("\n")) >= 3
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle negative quantities")
+    @pytest.mark.xfail(
+        strict=False, reason="converter may not handle negative quantities"
+    )
     def test_estore_einvoice_generic_negative_quantity(
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):

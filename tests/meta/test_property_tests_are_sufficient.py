@@ -1685,9 +1685,7 @@ def test_mutation_rule_regex_contract(
     in a misguided refactor) would cause this test to fail, surfacing
     the regression before it ships to production.
     """
-    pattern = next(
-        (p for n, p, _r in MUTATIONS if n == rule_name), None
-    )
+    pattern = next((p for n, p, _r in MUTATIONS if n == rule_name), None)
     if pattern is None:
         pytest.fail(f"unknown rule: {rule_name}")
     matched = pattern.search(fragment) is not None
@@ -1818,7 +1816,6 @@ def test_run_meta_test_raises_runtime_error_on_broken_baseline(
     ).startswith("tests at")
 
 
-
 @pytest.mark.meta_mutation
 def test_pytest_wrapper_continues_past_broken_baseline(
     monkeypatch: pytest.MonkeyPatch,
@@ -1858,6 +1855,7 @@ def test_pytest_wrapper_continues_past_broken_baseline(
         return ModuleReport(module=module, test_path=test_path)
 
     import sys as _sys
+
     _runner_mod = _sys.modules[__name__]
     monkeypatch.setattr(_runner_mod, "run_meta_test", fake_run)
     # Inject a 2-pair DEFAULT_PAIRS-shaped list into the wrapper.
@@ -1885,6 +1883,7 @@ def test_pytest_wrapper_continues_past_broken_baseline(
     assert len(seen) == 2
     assert any("broken" in bp for bp in broken_pairs)
     assert not any("good" in bp for bp in broken_pairs)
+
 
 if __name__ == "__main__":
     sys.exit(main())

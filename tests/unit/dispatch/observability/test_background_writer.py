@@ -49,9 +49,11 @@ class TestAuditBackgroundWriter:
         q = queue.Queue()
         db = MagicMock()
         attempted = threading.Event()
+
         def _raise(*_a, **_kw):
             attempted.set()
             raise RuntimeError("DB error")
+
         db.audit_log_table.insert.side_effect = _raise
         writer = AuditBackgroundWriter(q, db)
         writer.start()
@@ -63,5 +65,7 @@ class TestAuditBackgroundWriter:
             event_status="failure",
         )
         q.put(evt)
-        assert attempted.wait(timeout=2), "writer never invoked insert (would hang test)"
+        assert attempted.wait(
+            timeout=2
+        ), "writer never invoked insert (would hang test)"
         writer.stop()

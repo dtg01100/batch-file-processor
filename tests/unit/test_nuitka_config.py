@@ -16,6 +16,7 @@ Asserts:
 The actual binary production is a separate concern (validated
 manually with a real build in CI).
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -96,9 +97,9 @@ def test_pyside6_plugin_enabled(cfg):
     Without --enable-plugin=pyside6, Nuitka fails to bundle Qt's
     dynamic imports and the binary won't start.
     """
-    assert "pyside6" in cfg.ENABLED_PLUGINS, (
-        f"ENABLED_PLUGINS must include 'pyside6'; got {cfg.ENABLED_PLUGINS!r}"
-    )
+    assert (
+        "pyside6" in cfg.ENABLED_PLUGINS
+    ), f"ENABLED_PLUGINS must include 'pyside6'; got {cfg.ENABLED_PLUGINS!r}"
 
 
 @pytest.mark.unit
@@ -155,17 +156,17 @@ def test_data_dirs_referenced_at_runtime_exist(cfg):
     a build that breaks at runtime.
     """
     for src, _dest in cfg.INCLUDED_DATA_DIRS:
-        assert (PROJECT_ROOT / src).is_dir(), (
-            f"INCLUDED_DATA_DIRS references missing directory: {src}"
-        )
+        assert (
+            PROJECT_ROOT / src
+        ).is_dir(), f"INCLUDED_DATA_DIRS references missing directory: {src}"
 
 
 @pytest.mark.unit
 def test_entry_point_exists(cfg):
     """The ENTRY_POINT file must exist at the project root."""
-    assert (PROJECT_ROOT / cfg.ENTRY_POINT).is_file(), (
-        f"ENTRY_POINT {cfg.ENTRY_POINT!r} does not exist at {PROJECT_ROOT}"
-    )
+    assert (
+        PROJECT_ROOT / cfg.ENTRY_POINT
+    ).is_file(), f"ENTRY_POINT {cfg.ENTRY_POINT!r} does not exist at {PROJECT_ROOT}"
 
 
 @pytest.mark.unit
@@ -218,12 +219,12 @@ def test_build_linux_dry_run_succeeds():
         f"build_linux.py --dry-run failed:\nstdout: {result.stdout}\n"
         f"stderr: {result.stderr}"
     )
-    assert "--enable-plugin=pyside6" in result.stdout, (
-        f"dry-run output should mention PySide6 plugin; got: {result.stdout!r}"
-    )
-    assert "--include-package=dispatch.converters" in result.stdout, (
-        "dry-run output should include dispatch.converters package"
-    )
+    assert (
+        "--enable-plugin=pyside6" in result.stdout
+    ), f"dry-run output should mention PySide6 plugin; got: {result.stdout!r}"
+    assert (
+        "--include-package=dispatch.converters" in result.stdout
+    ), "dry-run output should include dispatch.converters package"
 
 
 @pytest.mark.unit
@@ -237,6 +238,6 @@ def test_build_windows_dry_run_succeeds():
         f"build_windows.py --dry-run failed:\nstdout: {result.stdout}\n"
         f"stderr: {result.stderr}"
     )
-    assert "--windows-disable-console" in result.stdout, (
-        "Windows dry-run should include --windows-disable-console flag"
-    )
+    assert (
+        "--windows-disable-console" in result.stdout
+    ), "Windows dry-run should include --windows-disable-console flag"

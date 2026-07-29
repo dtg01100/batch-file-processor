@@ -82,11 +82,13 @@ class TestTweakerConfig:
         assert config.force_txt_file_ext is False
 
     def test_from_params_with_values(self):
-        config = TweakerConfig.from_params({
-            "pad_a_records": "True",
-            "force_txt_file_ext": "True",
-            "invoice_date_offset": 5,
-        })
+        config = TweakerConfig.from_params(
+            {
+                "pad_a_records": "True",
+                "force_txt_file_ext": "True",
+                "invoice_date_offset": 5,
+            }
+        )
         assert config.pad_arec is True
         assert config.force_txt_file_ext is True
         assert config.invoice_date_offset == 5
@@ -125,16 +127,16 @@ class TestEDITweaker:
 
     def test_tweak_passthrough(self, tweaker, edi_file, tmp_path):
         output = str(tmp_path / "output.edi")
-        result = tweaker.tweak(
-            edi_file, output, {}, {"pad_a_records": "False"}, {}
-        )
+        result = tweaker.tweak(edi_file, output, {}, {"pad_a_records": "False"}, {})
         assert result == output
         with open(output) as f:
             content = f.read()
         assert "A" in content
         assert "B" in content
 
-    def test_tweak_progress_log_fires_only_at_multiples_of_100(self, mock_query_runner, tmp_path):
+    def test_tweak_progress_log_fires_only_at_multiples_of_100(
+        self, mock_query_runner, tmp_path
+    ):
         """Regression test for gt_to_ge + eq_to_ne mutations at L386.
 
         The progress-log condition ``line_num > 0 and line_num % 100 == 0``
@@ -156,12 +158,11 @@ class TestEDITweaker:
 
         # Filter to progress-log calls (the "Processing: N/M lines" message)
         progress_calls = [
-            call for call in mock_log.call_args_list
-            if "Processing:" in str(call)
+            call for call in mock_log.call_args_list if "Processing:" in str(call)
         ]
-        assert len(progress_calls) == 1, (
-            f"Expected 1 progress-log call at line 100, got {len(progress_calls)}"
-        )
+        assert (
+            len(progress_calls) == 1
+        ), f"Expected 1 progress-log call at line 100, got {len(progress_calls)}"
 
     def test_apply_upc_calc_pads_non_numeric_upc(self, mock_query_runner):
         """Regression test for true_to_false mutation at L622.
@@ -184,9 +185,7 @@ class TestEDITweaker:
 
     def test_tweak_force_txt_extension(self, tweaker, edi_file, tmp_path):
         output = str(tmp_path / "output")
-        result = tweaker.tweak(
-            edi_file, output, {}, {"force_txt_file_ext": "True"}, {}
-        )
+        result = tweaker.tweak(edi_file, output, {}, {"force_txt_file_ext": "True"}, {})
         assert result == output + ".txt"
 
     def test_tweak_pad_a_record(self, mock_query_runner, edi_file, tmp_path):
@@ -239,11 +238,14 @@ class TestEDITweaker:
         # 01234567890 + check digit should be 12 chars
         assert len(upc_line.strip()) > 11
 
-    @pytest.mark.parametrize("make_record_fn,record_type", [
-        (make_a_record, "A"),
-        (make_b_record, "B"),
-        (make_c_record, "C"),
-    ])
+    @pytest.mark.parametrize(
+        "make_record_fn,record_type",
+        [
+            (make_a_record, "A"),
+            (make_b_record, "B"),
+            (make_c_record, "C"),
+        ],
+    )
     def test_tweak_each_record_type(
         self, tweaker, tmp_path, make_record_fn, record_type
     ):
@@ -290,9 +292,7 @@ class TestEDITweaker:
         result = t._handle_negative_digits(fields)
         assert result["unit_cost"] == "-00100"
 
-    def test_validate_parent_item_truncates_if_oversize(
-        self, mock_query_runner
-    ):
+    def test_validate_parent_item_truncates_if_oversize(self, mock_query_runner):
         config = TweakerConfig()
         t = EDITweaker(mock_query_runner, config)
         # projected_line shorter than EDI_B_RECORD_STANDARD_LENGTH
@@ -301,9 +301,7 @@ class TestEDITweaker:
         result = t._validate_parent_item_length(fields, projected)
         assert result["parent_item_number"] == ""
 
-    def test_validate_parent_item_preserves_if_valid(
-        self, mock_query_runner
-    ):
+    def test_validate_parent_item_preserves_if_valid(self, mock_query_runner):
         config = TweakerConfig()
         t = EDITweaker(mock_query_runner, config)
         projected = "B" + "x" * 76
@@ -333,9 +331,7 @@ class TestEDITweakerFileHandles:
         with open(output) as fh:
             assert fh.read() != ""
 
-    def test_file_handles_closed_on_tweak_error(
-        self, tmp_path, mock_query_runner
-    ):
+    def test_file_handles_closed_on_tweak_error(self, tmp_path, mock_query_runner):
         """When _process_records raises, both file handles must be closed."""
         t = EDITweaker(mock_query_runner)
         content = make_a_record() + "\n" + make_b_record() + "\n"
@@ -366,7 +362,9 @@ class TestEDITweakerFileHandles:
             assert result is not None
             result.close()
 
-    def test_open_input_with_retry_raises_oserror_after_5_attempts(self, mock_query_runner, tmp_path):
+    def test_open_input_with_retry_raises_oserror_after_5_attempts(
+        self, mock_query_runner, tmp_path
+    ):
         """Regression test for lt_to_le mutation at L322.
 
         The retry boundary ``attempt + 1 < max_retries`` (max_retries=5)
@@ -379,15 +377,14 @@ class TestEDITweakerFileHandles:
         f = tmp_path / "missing.edi"
         # File doesn't exist -> open() raises FileNotFoundError (OSError subclass)
 
-        with patch("time.sleep"), \
-             pytest.raises(OSError) as exc_info:
+        with patch("time.sleep"), pytest.raises(OSError) as exc_info:
             t._open_input_with_retry(str(f))
 
         # Original: OSError propagated from the 5th attempt
         # Mutated (<=): RuntimeError from the unreachable fallback
-        assert not isinstance(exc_info.value, RuntimeError), (
-            "Expected OSError, got RuntimeError — suggests <= mutation"
-        )
+        assert not isinstance(
+            exc_info.value, RuntimeError
+        ), "Expected OSError, got RuntimeError — suggests <= mutation"
 
 
 class TestQueryRunnerAdapter:
@@ -396,19 +393,25 @@ class TestQueryRunnerAdapter:
     def test_noop_runner_when_missing_credentials(self):
         from core.edi.edi_tweaker import _create_query_runner_adapter
 
-        runner = _create_query_runner_adapter({"as400_username": "", "as400_password": "", "as400_address": ""})
+        runner = _create_query_runner_adapter(
+            {"as400_username": "", "as400_password": "", "as400_address": ""}
+        )
         assert runner.run_query("SELECT 1") == []
 
     def test_noop_runner_partial_credentials(self):
         from core.edi.edi_tweaker import _create_query_runner_adapter
 
-        runner = _create_query_runner_adapter({"as400_username": "user", "as400_password": "", "as400_address": ""})
+        runner = _create_query_runner_adapter(
+            {"as400_username": "user", "as400_password": "", "as400_address": ""}
+        )
         assert runner.run_query("SELECT 1") == []
 
     def test_noop_runner_implements_protocol(self):
         from core.edi.edi_tweaker import _create_query_runner_adapter
 
-        runner = _create_query_runner_adapter({"as400_username": "", "as400_password": "", "as400_address": ""})
+        runner = _create_query_runner_adapter(
+            {"as400_username": "", "as400_password": "", "as400_address": ""}
+        )
         assert isinstance(runner, TweakerQueryRunnerProtocol)
 
 
@@ -454,9 +457,7 @@ class TestEachUOMCategoryFilter:
         from dispatch.converters.csv_utils import should_apply_retail_uom
 
         fields = {"vendor_item": str(vendor_item)}
-        assert (
-            should_apply_retail_uom(fields, upc_dict, categories, mode) is expected
-        )
+        assert should_apply_retail_uom(fields, upc_dict, categories, mode) is expected
 
     def test_transform_retail_uom_gated_by_filter(self, mock_query_runner):
         config = TweakerConfig(

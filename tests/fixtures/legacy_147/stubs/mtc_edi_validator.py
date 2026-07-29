@@ -7,7 +7,7 @@ real — we want ``convert_to_*.edi_convert`` to be reached with a valid file.
 """
 
 
-def report_edi_issues(input_file):  # noqa: ARG001
+def report_edi_issues(input_file):
     """Return ``(stringio, False, False)`` -> no validator errors, file is valid."""
     from io import StringIO
 

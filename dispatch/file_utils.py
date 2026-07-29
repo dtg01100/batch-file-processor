@@ -3,6 +3,7 @@
 This module contains pure functions for file operations,
 extracted from dispatch.py for testability.
 """
+
 import contextlib
 import datetime
 import io
@@ -344,6 +345,8 @@ def write_to_run_log(run_log: RunLog | None, message: str, prefix: str = "") -> 
         encoded_payload = full_message.encode("utf-8")
     with contextlib.suppress(Exception):
         run_log.write(encoded_payload)  # type: ignore[arg-type]
+
+
 __all__ = [
     "apply_file_rename",
     "build_error_log_filename",

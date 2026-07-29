@@ -110,6 +110,7 @@ def _wait_until(predicate, timeout=2.0, interval=0.01):
         time.sleep(interval)
     return predicate()
 
+
 # ---------------------------------------------------------------------------
 # LogSender unit tests (MockEmailService)
 # ---------------------------------------------------------------------------
@@ -350,9 +351,9 @@ class TestLogSenderWithRealSMTP:
 
         assert result
         # Deterministic wait: handler should record exactly one message.
-        assert _wait_until(lambda: len(handler.messages) == 1), (
-            f"handler.messages={handler.messages!r}"
-        )
+        assert _wait_until(
+            lambda: len(handler.messages) == 1
+        ), f"handler.messages={handler.messages!r}"
         msg = handler.messages[0]
         assert msg["rcpt_tos"] == ["dest@test.local"]
         raw = msg["data"].decode("utf-8", errors="replace")
@@ -378,9 +379,9 @@ class TestLogSenderWithRealSMTP:
         result = sender.send_log_file(log_path, ["recv@test.local"], "File Test")
 
         assert result
-        assert _wait_until(lambda: len(handler.messages) >= 1), (
-            f"handler.messages={handler.messages!r}"
-        )
+        assert _wait_until(
+            lambda: len(handler.messages) >= 1
+        ), f"handler.messages={handler.messages!r}"
         raw = handler.messages[-1]["data"].decode("utf-8", errors="replace")
         assert "real_test.log" in raw
 

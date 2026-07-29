@@ -277,6 +277,7 @@ class MaintenanceFunctions:
         """
         with open(path, "rb") as fh:
             return hashlib.md5(fh.read()).hexdigest()
+
     def _progress_message(
         self,
         prefix: str,

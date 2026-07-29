@@ -205,9 +205,9 @@ class TestFromDbBool:
     def test_return_type_is_bool(self):
         for value in ["True", "False", 1, 0, "1", "0", None]:
             result = utils.from_db_bool(value)
-            assert type(result) is bool, (
-                f"Expected bool for {value!r}, got {type(result).__name__}"
-            )
+            assert (
+                type(result) is bool
+            ), f"Expected bool for {value!r}, got {type(result).__name__}"
 
 
 # =============================================================================
@@ -1036,10 +1036,12 @@ class TestDoSplitEdi:
 
         result = utils.do_split_edi(str(edi_file), str(work_dir), params)
 
-        assert result, f"expected do_split_edi to return at least one file for credit invoice, got {result!r}"
-        assert result[0][2] == ".cr", (
-            f"expected .cr extension for negative-total invoice, got {result[0][2]!r}"
-        )
+        assert (
+            result
+        ), f"expected do_split_edi to return at least one file for credit invoice, got {result!r}"
+        assert (
+            result[0][2] == ".cr"
+        ), f"expected .cr extension for negative-total invoice, got {result[0][2]!r}"
 
     def test_too_many_invoices_returns_empty(self, tmp_path):
         """More than 700 A records returns empty list."""

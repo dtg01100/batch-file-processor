@@ -424,9 +424,7 @@ class FolderManager:
             return False
         folder_id = existing["id"]
         merged = {**existing, **folder_data}
-        self._folder_repo.update(
-            FolderConfiguration.from_dict(merged), folder_id
-        )
+        self._folder_repo.update(FolderConfiguration.from_dict(merged), folder_id)
         return True
 
     def batch_add_folders(

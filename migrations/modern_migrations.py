@@ -102,9 +102,7 @@ def apply_v33_to_current(
             "sent_to",
         ]:
             try:
-                cursor.execute(
-                    f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT"
-                )
+                cursor.execute(f"ALTER TABLE 'processed_files' ADD COLUMN '{col}' TEXT")
             except sqlite3.OperationalError as e:
                 logger.debug("Column %s may already exist: %s", col, e)
         try:
@@ -144,14 +142,10 @@ def apply_v33_to_current(
         # --- v38 → v39: edi_format ---
         for table in ("folders", "administrative"):
             try:
-                cursor.execute(
-                    f"ALTER TABLE '{table}' ADD COLUMN 'edi_format' TEXT"
-                )
+                cursor.execute(f"ALTER TABLE '{table}' ADD COLUMN 'edi_format' TEXT")
             except sqlite3.OperationalError as e:
                 logger.debug("Column edi_format may already exist: %s", e)
-            cursor.execute(
-                f"UPDATE '{table}' SET 'edi_format' = 'default'"
-            )
+            cursor.execute(f"UPDATE '{table}' SET 'edi_format' = 'default'")
 
         # --- v39 → v40: rebuild folders + administrative with id PK ---
         def _existing_columns(table_name):
@@ -166,7 +160,8 @@ def apply_v33_to_current(
 
             quoted_table = _quote_identifier(table_name)
             old_columns = [
-                (row[1], row[2]) for row in cursor.execute(
+                (row[1], row[2])
+                for row in cursor.execute(
                     f"PRAGMA table_info({quoted_table})"
                 ).fetchall()
             ]
@@ -199,9 +194,7 @@ def apply_v33_to_current(
             cursor.execute(
                 f"ALTER TABLE {quoted_table} ADD COLUMN {quoted_column} {sql_type}"
             )
-            cursor.execute(
-                f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}"
-            )
+            cursor.execute(f"UPDATE {quoted_table} SET {quoted_column} = {default_sql}")
 
         for table_name in ("folders", "administrative"):
             _ensure_column(table_name, "process_backend_email", "INTEGER", "0")
@@ -410,12 +403,8 @@ def apply_v33_to_current(
 
         # --- v50 → v51: each_uom columns ---
         for table_name in ("folders", "administrative"):
-            _ensure_column(
-                table_name, "each_uom_categories", "TEXT", "'ALL'"
-            )
-            _ensure_column(
-                table_name, "each_uom_mode", "TEXT", "'include'"
-            )
+            _ensure_column(table_name, "each_uom_categories", "TEXT", "'ALL'")
+            _ensure_column(table_name, "each_uom_mode", "TEXT", "'include'")
 
         # Backfill NULL values for columns where _ensure_column was a no-op
         # (i.e. ensure_schema pre-created the column without a default).

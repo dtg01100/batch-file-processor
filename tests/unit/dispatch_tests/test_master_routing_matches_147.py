@@ -32,6 +32,7 @@ Three parity guarantees are asserted for every row:
 Folder rows come from ``tests/fixtures/anonymized_folders/folders/*.json``.
 The test fails loudly when no fixtures are committed.
 """
+
 from __future__ import annotations
 
 import json
@@ -44,7 +45,9 @@ from tests.unit.dispatch_tests.routing_parity_helpers import (
     drive_master_converter_step,
 )
 
-ANON_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "anonymized_folders" / "folders"
+ANON_DIR = (
+    Path(__file__).resolve().parents[2] / "fixtures" / "anonymized_folders" / "folders"
+)
 
 
 def _load_anonymized_rows():
@@ -145,8 +148,10 @@ def master_outcomes_by_id(tmp_path_factory):
 @pytest.mark.parametrize(
     "row",
     ANONYMIZED_ROWS,
-    ids=[f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
-         for i, r in enumerate(ANONYMIZED_ROWS)],
+    ids=[
+        f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
+        for i, r in enumerate(ANONYMIZED_ROWS)
+    ],
 )
 def test_master_routing_bucket_matches_legacy(
     row,
@@ -206,10 +211,14 @@ def test_master_routing_bucket_matches_legacy(
 @pytest.mark.parametrize(
     "row",
     ANONYMIZED_ROWS,
-    ids=[f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
-         for i, r in enumerate(ANONYMIZED_ROWS)],
+    ids=[
+        f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
+        for i, r in enumerate(ANONYMIZED_ROWS)
+    ],
 )
-def test_master_module_name_matches_legacy(row, legacy_147_registry, master_outcomes_by_id):
+def test_master_module_name_matches_legacy(
+    row, legacy_147_registry, master_outcomes_by_id
+):
     """When both sides run a converter, the *normalized* module name must agree.
 
     1.47 loads ``convert_to_<fmt>`` (bare); master loads
@@ -226,20 +235,24 @@ def test_master_module_name_matches_legacy(row, legacy_147_registry, master_outc
         pytest.fail(f"master_outcomes_by_id missing row id={rid}")
 
     legacy_mod = legacy.format_module_requested  # e.g. "convert_to_csv"
-    master_mod = (master.module_loaded or master.module_requested or "").rsplit(".", 1)[-1]
+    master_mod = (master.module_loaded or master.module_requested or "").rsplit(".", 1)[
+        -1
+    ]
 
     if not master_mod:
         pytest.skip("master did not request a module")
-    assert master_mod == legacy_mod, (
-        f"row id={rid}: master would load {master_mod!r}; 1.47 loaded {legacy_mod!r}"
-    )
+    assert (
+        master_mod == legacy_mod
+    ), f"row id={rid}: master would load {master_mod!r}; 1.47 loaded {legacy_mod!r}"
 
 
 @pytest.mark.parametrize(
     "row",
     ANONYMIZED_ROWS,
-    ids=[f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
-         for i, r in enumerate(ANONYMIZED_ROWS)],
+    ids=[
+        f"{int(r.get('id', i))}-{(str(r.get('alias', '')) or 'row')}"
+        for i, r in enumerate(ANONYMIZED_ROWS)
+    ],
 )
 def test_master_process_edi_decision_matches_legacy(row, legacy_147_registry):
     """``process_edi`` gating must agree on the boolean across branches.
@@ -253,9 +266,7 @@ def test_master_process_edi_decision_matches_legacy(row, legacy_147_registry):
     legacy = legacy_147_registry.get(rid)
     if legacy is None:
         pytest.skip("no 1.47 oracle result for this row id")
-    assert (
-        legacy.legacy_process_edi_enabled == legacy.master_process_edi_enabled
-    ), (
+    assert legacy.legacy_process_edi_enabled == legacy.master_process_edi_enabled, (
         f"row id={rid} alias={row.get('alias')!r}: legacy_enabled="
         f"{legacy.legacy_process_edi_enabled} vs master_enabled="
         f"{legacy.master_process_edi_enabled} — see "
@@ -281,9 +292,7 @@ def test_parity_deltas_summary():
             "No anonymized folder fixtures committed; see "
             "test_anonymized_fixtures_present."
         )
-    deltas = getattr(
-        test_master_routing_bucket_matches_legacy, "deltas", []
-    )
+    deltas = getattr(test_master_routing_bucket_matches_legacy, "deltas", [])
     if not deltas:
         print("\nMaster <-> 1.47 parity: all rows in the allowed-deltas set.")
         return
@@ -311,6 +320,7 @@ def test_parity_deltas_summary():
 
 class _FakeLegacy:
     """Minimal stand-in for Legacy147RoutingResult for _legacy_to_bucket tests."""
+
     def __init__(
         self,
         skipped_reason: str = "",
@@ -382,4 +392,3 @@ def test_legitimate_deltas_set_includes_documented_pairs():
     assert frozenset({"noop", "disabled"}) in LEGITIMATE_DELTAS
     assert frozenset({"run", "run_with_dep_skip"}) in LEGITIMATE_DELTAS
     assert frozenset({"run", "noop"}) in LEGITIMATE_DELTAS
-

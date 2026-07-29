@@ -1293,11 +1293,9 @@ class TestOrchestratorPipelineHelpers:
         import textwrap
 
         edi_file = tmp_path / "test.edi"
-        edi_file.write_text(
-            textwrap.dedent("""\
+        edi_file.write_text(textwrap.dedent("""\
             HDR*TEST
-            """)
-        )
+            """))
 
         captured_params: dict = {}
 

@@ -395,8 +395,6 @@ class DispatchOrchestrator:
         write_to_run_log(run_log, error_msg, prefix="ERROR: ")
         return result
 
-
-
     def _get_upc_dictionary(self, settings: dict) -> dict:
         """Get or fetch UPC dictionary using the UPC lookup service.
 
@@ -410,10 +408,9 @@ class DispatchOrchestrator:
         if self.config.upc_dict:
             return self.config.upc_dict
 
-        strict_db_mode = (
-            str(settings.get("database_lookup_mode", "optional")).strip().lower()
-            in {"strict", "required", "test"}
-        )
+        strict_db_mode = str(
+            settings.get("database_lookup_mode", "optional")
+        ).strip().lower() in {"strict", "required", "test"}
         self.upc_service.settings = settings
         result = self.upc_service.get_dictionary(
             upc_service=self.config.upc_service,
@@ -595,15 +592,23 @@ class DispatchOrchestrator:
     ) -> None:
         """Log success and any extracted invoice numbers."""
         write_to_run_log(run_log, f"Success: {file_basename}")
-        log_with_context(logger, logging.INFO, f"Success: {file_basename}",
+        log_with_context(
+            logger,
+            logging.INFO,
+            f"Success: {file_basename}",
             correlation_id=get_or_create_correlation_id(),
-            operation="run_log")
+            operation="run_log",
+        )
         invoice_numbers = self._extract_invoice_numbers(file_path)
         if invoice_numbers:
             write_to_run_log(run_log, f"Invoice numbers: {invoice_numbers}")
-            log_with_context(logger, logging.INFO, f"Invoice numbers: {invoice_numbers}",
+            log_with_context(
+                logger,
+                logging.INFO,
+                f"Invoice numbers: {invoice_numbers}",
                 correlation_id=get_or_create_correlation_id(),
-                operation="run_log")
+                operation="run_log",
+            )
 
     def _run_validation_pipeline(
         self,
@@ -828,7 +833,6 @@ class DispatchOrchestrator:
             settings=self.config.settings,
             upc_dict=upc_dict,
         )
-
 
     def _send_pipeline_file(
         self, file_path: str, folder: dict, run_log: RunLog | None = None
@@ -1088,7 +1092,6 @@ class DispatchOrchestrator:
             or normalize_bool(folder.get("split_edi", False))
             or normalize_bool(folder.get("force_edi_validation", False))
         )
-
 
     def get_summary(self) -> str:
         """Get a summary of the processing run.

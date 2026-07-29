@@ -293,7 +293,9 @@ class TestEDISplitter:
         # Should return empty result if over limit
         assert len(result.output_files) == 0
 
-    def test_split_edi_max_invoices_zero_means_no_limit(self, splitter, mock_filesystem, config):
+    def test_split_edi_max_invoices_zero_means_no_limit(
+        self, splitter, mock_filesystem, config
+    ):
         """Test that max_invoices=0 means no limit (not zero invoices allowed)."""
         content = (
             "AVENDOR00000000010101240000000123\n"
@@ -434,9 +436,9 @@ class TestRealFilesystem:
             "get_absolute_path",
         ]
         for method in required_methods:
-            assert hasattr(fs, method), (
-                f"RealFilesystem missing required method: {method}"
-            )
+            assert hasattr(
+                fs, method
+            ), f"RealFilesystem missing required method: {method}"
 
 
 class TestEDISplitterProtocolCompliance:

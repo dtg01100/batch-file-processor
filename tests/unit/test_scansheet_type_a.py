@@ -313,9 +313,9 @@ CTABSales Tax                      000010000"""
 
                 # PNG files start with PNG signature
                 if img_file.endswith(".png"):
-                    assert img_data[:4] == b"\x89PNG", (
-                        f"Image file {img_file} does not have valid PNG signature"
-                    )
+                    assert (
+                        img_data[:4] == b"\x89PNG"
+                    ), f"Image file {img_file} does not have valid PNG signature"
 
 
 class TestScansheetTypeAContent:
@@ -337,6 +337,6 @@ CTABSales Tax                      000010000"""
         with zipfile.ZipFile(result, "r") as zf:
             if "xl/worksheets/sheet1.xml" in zf.namelist():
                 sheet_content = zf.read("xl/worksheets/sheet1.xml").decode("utf-8")
-                assert invoice_num in sheet_content, (
-                    f"Invoice number {invoice_num} not found in output"
-                )
+                assert (
+                    invoice_num in sheet_content
+                ), f"Invoice number {invoice_num} not found in output"
