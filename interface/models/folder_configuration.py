@@ -123,5 +123,8 @@ class ConvertFormat(metaclass=_ConvertFormatMeta):
         return hash(self._value)
 
 
-# Initialize - this populates the class attributes for all formats
-ConvertFormat._ensure_discovered()
+# NOTE: ConvertFormat._ensure_discovered() is NO LONGER called at module load time.
+# Removing this eager call breaks the interface->dispatch import-time dependency.
+# The metaclass methods (__iter__, __len__, __getattr__, values(), from_string())
+# all call _ensure_discovered() internally, so discovery happens lazily on first access.
+# Tests that read _discovered directly must call _ensure_discovered() explicitly first.

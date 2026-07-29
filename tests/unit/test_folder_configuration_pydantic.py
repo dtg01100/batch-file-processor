@@ -208,6 +208,10 @@ class TestConvertFormatLookup:
         """
         from interface.models.folder_configuration import ConvertFormat
 
+        # _ensure_discovered is no longer called at module-load time, so trigger
+        # it explicitly here before reading the internal _discovered state.
+        ConvertFormat._ensure_discovered()
+
         if not ConvertFormat._discovered:
             pytest.skip("no discovered convert formats in this environment")
 
