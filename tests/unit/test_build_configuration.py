@@ -172,8 +172,7 @@ class TestHiddenImports:
         # as the full module path backend.*_backend.
         backend_dir = PROJECT_ROOT / "backend"
         backend_modules = [
-            f"backend.{f.stem}"
-            for f in backend_dir.glob("*_backend.py")
+            f"backend.{f.stem}" for f in backend_dir.glob("*_backend.py")
         ]
 
         for module in backend_modules:
