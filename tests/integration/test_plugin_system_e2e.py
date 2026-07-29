@@ -125,6 +125,7 @@ class TestPluginConfigurationWithFolderModel:
         from interface.operations.plugin_configuration_mapper import (
             PluginConfigurationMapper,
         )
+
         mapper = PluginConfigurationMapper()
         errors = mapper.plugin_manager.validate_folder_configurations(
             config.plugin_configurations
@@ -245,6 +246,7 @@ class TestPluginErrorIsolation:
         from interface.operations.plugin_configuration_mapper import (
             PluginConfigurationMapper,
         )
+
         mapper = PluginConfigurationMapper()
         errors = mapper.plugin_manager.validate_folder_configurations(
             config.plugin_configurations
@@ -266,6 +268,7 @@ class TestPluginErrorIsolation:
         from interface.operations.plugin_configuration_mapper import (
             PluginConfigurationMapper,
         )
+
         mapper = PluginConfigurationMapper()
         errors = mapper.plugin_manager.validate_folder_configurations(
             config.plugin_configurations

@@ -697,6 +697,7 @@ class PluginConfigurationMapper:
         return self.plugin_manager.validate_folder_configurations(
             folder_config.plugin_configurations
         )
+
     def validate_plugin_configurations_from_dict(
         self, folder_config_dict: dict[str, Any]
     ) -> list[str]:
@@ -714,6 +715,7 @@ class PluginConfigurationMapper:
         return self.plugin_manager.validate_folder_configurations(
             folder_config_dict.get("plugin_configurations", {})
         )
+
     def get_plugin_configuration_fields(self, format_name: str) -> list[dict[str, Any]]:
         """
         Get the configuration fields for a specific plugin format.

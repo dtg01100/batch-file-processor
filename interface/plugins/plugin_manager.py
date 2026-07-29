@@ -310,6 +310,7 @@ class PluginManager:
         from .validation_framework import ValidationResult
 
         return ValidationResult(success=False, errors=["Unsupported format"])
+
     def validate_folder_configurations(
         self, plugin_configs: dict[str, dict[str, Any]]
     ) -> list[str]:
@@ -333,27 +334,19 @@ class PluginManager:
         errors: list[str] = []
         for format_name, config in plugin_configs.items():
             try:
-                plugin = self.get_configuration_plugin_by_format_name(
-                    format_name
-                )
+                plugin = self.get_configuration_plugin_by_format_name(format_name)
                 if plugin:
                     validation: ValidationResult = plugin.validate_config(config)
                     if not validation.success:
                         for error in validation.errors:
-                            errors.append(
-                                f"Plugin config for {format_name}: {error}"
-                            )
+                            errors.append(f"Plugin config for {format_name}: {error}")
                 else:
                     errors.append(
                         f"No configuration plugin found for format: {format_name}"
                     )
             except Exception as e:
-                errors.append(
-                    f"Error validating plugin configurations: {e!s}"
-                )
+                errors.append(f"Error validating plugin configurations: {e!s}")
         return errors
-
-
 
     def create_configuration(
         self, format_enum: ConvertFormat, data: dict[str, Any]

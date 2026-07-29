@@ -16,7 +16,7 @@ Tests:
 - Plugin configuration validation
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from core.domain.models.folder import (
     ARecordPaddingConfiguration,
@@ -936,7 +936,9 @@ class TestPluginConfigurationValidation:
     tests exercise the real validate_folder_configurations logic.
     """
 
-    def _make_pm_with_plugin(self, format_name: str, validation_result) -> PluginManager:
+    def _make_pm_with_plugin(
+        self, format_name: str, validation_result
+    ) -> PluginManager:
         """Create a PluginManager with per-config lookup stubbed."""
         pm = PluginManager()
         pm._initialized = True  # skip discover_plugins/initialize_plugins
@@ -1005,9 +1007,11 @@ class TestPluginConfigurationValidation:
         """Test validation handles per-config exceptions gracefully."""
         pm = PluginManager()
         pm._initialized = True
+
         # Make per-config lookup raise; the method catches this per-config.
         def raise_exc(fmt):
             raise Exception("Plugin manager error")
+
         pm.get_configuration_plugin_by_format_name = raise_exc
 
         config = FolderConfiguration()
