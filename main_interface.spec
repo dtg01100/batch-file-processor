@@ -36,6 +36,7 @@ a = Analysis(
         'backend.copy_backend',
         'backend.email_backend',
         'backend.ftp_backend',
+        'backend.http_backend',
         'core.edi.edi_parser',
         'core.edi.edi_splitter',
         'core.edi.inv_fetcher',

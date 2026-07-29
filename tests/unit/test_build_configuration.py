@@ -149,7 +149,13 @@ class TestHiddenImports:
         """Verify all convert_to_* modules are in hidden imports or hooks."""
         hidden_imports = get_spec_hidden_imports()
 
-        convert_modules = [f.stem for f in PROJECT_ROOT.glob("convert_to_*.py")]
+        # Convert backends live in dispatch/converters/ and are listed
+        # in the spec as the full module path dispatch.converters.convert_to_*.
+        converters_dir = PROJECT_ROOT / "dispatch" / "converters"
+        convert_modules = [
+            f"dispatch.converters.{f.stem}"
+            for f in converters_dir.glob("convert_to_*.py")
+        ]
 
         for module in convert_modules:
             assert module in hidden_imports, (
@@ -162,7 +168,13 @@ class TestHiddenImports:
         """Verify all *_backend modules are in hidden imports or hooks."""
         hidden_imports = get_spec_hidden_imports()
 
-        backend_modules = [f.stem for f in PROJECT_ROOT.glob("*_backend.py")]
+        # Send backends live in backend/ and are listed in the spec
+        # as the full module path backend.*_backend.
+        backend_dir = PROJECT_ROOT / "backend"
+        backend_modules = [
+            f"backend.{f.stem}"
+            for f in backend_dir.glob("*_backend.py")
+        ]
 
         for module in backend_modules:
             assert module in hidden_imports, (
