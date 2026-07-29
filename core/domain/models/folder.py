@@ -373,41 +373,6 @@ class FolderConfiguration:
         """
         return format_name.lower() in self.plugin_configurations
 
-    def validate_plugin_configurations(self) -> list[str]:
-        """Validate all plugin configurations.
-
-        Returns:
-            List[str]: List of validation errors
-
-        """
-        errors = []
-        from interface.plugins.plugin_manager import PluginManager
-        from interface.plugins.validation_framework import ValidationResult
-
-        try:
-            plugin_manager = PluginManager()
-            plugin_manager.discover_plugins()
-            plugin_manager.initialize_plugins()
-
-            for format_name, config in self.plugin_configurations.items():
-                # Find the plugin for this format
-                plugin = plugin_manager.get_configuration_plugin_by_format_name(
-                    format_name
-                )
-                if plugin:
-                    validation: ValidationResult = plugin.validate_config(config)
-                    if not validation.success:
-                        for error in validation.errors:
-                            errors.append(f"Plugin config for {format_name}: {error}")
-                else:
-                    errors.append(
-                        f"No configuration plugin found for format: {format_name}"
-                    )
-        except Exception as e:
-            errors.append(f"Error validating plugin configurations: {e!s}")
-
-        return errors
-
     def validate_with_pydantic(self) -> None:
         """Validate current FolderConfiguration using Pydantic schema."""
         try:

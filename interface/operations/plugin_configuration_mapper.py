@@ -683,8 +683,9 @@ class PluginConfigurationMapper:
     def validate_plugin_configurations(
         self, folder_config: FolderConfiguration
     ) -> list[str]:
-        """
-        Validate all plugin configurations in FolderConfiguration.
+        """Validate all plugin configurations in FolderConfiguration.
+
+        Thin wrapper that delegates to the underlying PluginManager.
 
         Args:
             folder_config: Folder configuration to validate
@@ -693,35 +694,15 @@ class PluginConfigurationMapper:
             List[str]: List of validation errors
 
         """
-        errors = []
-
-        for format_name, config in folder_config.plugin_configurations.items():
-            try:
-                plugin = self.plugin_manager.get_configuration_plugin_by_format_name(
-                    format_name
-                )
-
-                if plugin:
-                    validation: ValidationResult = plugin.validate_config(config)
-                    if not validation.success:
-                        for error in validation.errors:
-                            errors.append(f"Plugin config for {format_name}: {error}")
-                else:
-                    errors.append(
-                        f"No configuration plugin found for format: {format_name}"
-                    )
-            except Exception as e:
-                errors.append(
-                    f"Error validating plugin config for {format_name}: {e!s}"
-                )
-
-        return errors
-
+        return self.plugin_manager.validate_folder_configurations(
+            folder_config.plugin_configurations
+        )
     def validate_plugin_configurations_from_dict(
         self, folder_config_dict: dict[str, Any]
     ) -> list[str]:
-        """
-        Validate all plugin configurations in folder config dict.
+        """Validate all plugin configurations in folder config dict.
+
+        Thin wrapper that delegates to the underlying PluginManager.
 
         Args:
             folder_config_dict: Folder configuration dictionary
@@ -730,32 +711,9 @@ class PluginConfigurationMapper:
             List[str]: List of validation errors
 
         """
-        errors = []
-
-        plugin_configs = folder_config_dict.get("plugin_configurations", {})
-
-        for format_name, config in plugin_configs.items():
-            try:
-                plugin = self.plugin_manager.get_configuration_plugin_by_format_name(
-                    format_name
-                )
-
-                if plugin:
-                    validation: ValidationResult = plugin.validate_config(config)
-                    if not validation.success:
-                        for error in validation.errors:
-                            errors.append(f"Plugin config for {format_name}: {error}")
-                else:
-                    errors.append(
-                        f"No configuration plugin found for format: {format_name}"
-                    )
-            except Exception as e:
-                errors.append(
-                    f"Error validating plugin config for {format_name}: {e!s}"
-                )
-
-        return errors
-
+        return self.plugin_manager.validate_folder_configurations(
+            folder_config_dict.get("plugin_configurations", {})
+        )
     def get_plugin_configuration_fields(self, format_name: str) -> list[dict[str, Any]]:
         """
         Get the configuration fields for a specific plugin format.

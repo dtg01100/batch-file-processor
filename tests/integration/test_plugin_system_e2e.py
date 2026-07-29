@@ -122,7 +122,13 @@ class TestPluginConfigurationWithFolderModel:
         }
         config = FolderConfiguration.from_dict(data)
 
-        errors = config.validate_plugin_configurations()
+        from interface.operations.plugin_configuration_mapper import (
+            PluginConfigurationMapper,
+        )
+        mapper = PluginConfigurationMapper()
+        errors = mapper.plugin_manager.validate_folder_configurations(
+            config.plugin_configurations
+        )
         assert len(errors) == 0
 
     def test_serialize_deserialize_plugin_config(self):
@@ -236,7 +242,13 @@ class TestPluginErrorIsolation:
         }
         config = FolderConfiguration.from_dict(data)
 
-        errors = config.validate_plugin_configurations()
+        from interface.operations.plugin_configuration_mapper import (
+            PluginConfigurationMapper,
+        )
+        mapper = PluginConfigurationMapper()
+        errors = mapper.plugin_manager.validate_folder_configurations(
+            config.plugin_configurations
+        )
         # Should have validation errors, not crash
         assert isinstance(errors, list)
 
@@ -251,7 +263,13 @@ class TestPluginErrorIsolation:
         }
         config = FolderConfiguration.from_dict(data)
 
-        errors = config.validate_plugin_configurations()
+        from interface.operations.plugin_configuration_mapper import (
+            PluginConfigurationMapper,
+        )
+        mapper = PluginConfigurationMapper()
+        errors = mapper.plugin_manager.validate_folder_configurations(
+            config.plugin_configurations
+        )
 
         assert len(errors) > 0
         assert any("nonexistent" in e for e in errors)

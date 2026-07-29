@@ -929,84 +929,92 @@ class TestPluginConfigurationManagement:
 
 
 class TestPluginConfigurationValidation:
-    """Test suite for plugin configuration validation."""
+    """Test suite for plugin configuration validation.
+
+    After the refactor, validation lives on PluginManager (not FolderConfiguration).
+    We use a real PluginManager with the per-config lookup stubbed so the
+    tests exercise the real validate_folder_configurations logic.
+    """
+
+    def _make_pm_with_plugin(self, format_name: str, validation_result) -> PluginManager:
+        """Create a PluginManager with per-config lookup stubbed."""
+        pm = PluginManager()
+        pm._initialized = True  # skip discover_plugins/initialize_plugins
+        mock_plugin = MagicMock()
+        mock_plugin.validate_config.return_value = validation_result
+        pm.get_configuration_plugin_by_format_name = lambda fmt: mock_plugin
+        return pm
 
     def test_validate_plugin_configurations_empty(self):
         """Test validation with no plugin configurations."""
+        pm = PluginManager()
+        pm._initialized = True
+
         config = FolderConfiguration()
-        errors = config.validate_plugin_configurations()
+
+        errors = pm.validate_folder_configurations(config.plugin_configurations)
+
         assert len(errors) == 0
 
-    @patch("interface.plugins.plugin_manager.PluginManager")
-    def test_validate_plugin_configurations_success(self, mock_plugin_manager):
+    def test_validate_plugin_configurations_success(self):
         """Test validation succeeds with valid plugin configurations."""
-        # Mock plugin manager and validation result
-        mock_plugin = MagicMock()
         mock_validation = MagicMock()
         mock_validation.success = True
         mock_validation.errors = []
-        mock_plugin.validate_config.return_value = mock_validation
 
-        mock_pm_instance = MagicMock(spec=PluginManager)
-        mock_pm_instance.get_configuration_plugin_by_format_name.return_value = (
-            mock_plugin
-        )
-        mock_plugin_manager.return_value = mock_pm_instance
-
+        pm = self._make_pm_with_plugin("csv", mock_validation)
         config = FolderConfiguration()
         config.set_plugin_configuration("csv", {"key": "value"})
 
-        errors = config.validate_plugin_configurations()
+        errors = pm.validate_folder_configurations(config.plugin_configurations)
+
         assert len(errors) == 0
 
-    @patch("interface.plugins.plugin_manager.PluginManager")
-    def test_validate_plugin_configurations_failure(self, mock_plugin_manager):
+    def test_validate_plugin_configurations_failure(self):
         """Test validation fails with invalid plugin configurations."""
-        # Mock plugin manager and validation result
-        mock_plugin = MagicMock()
         mock_validation = MagicMock()
         mock_validation.success = False
         mock_validation.errors = ["Invalid configuration"]
-        mock_plugin.validate_config.return_value = mock_validation
 
-        mock_pm_instance = MagicMock(spec=PluginManager)
-        mock_pm_instance.get_configuration_plugin_by_format_name.return_value = (
-            mock_plugin
-        )
-        mock_plugin_manager.return_value = mock_pm_instance
-
+        pm = self._make_pm_with_plugin("csv", mock_validation)
         config = FolderConfiguration()
         config.set_plugin_configuration("csv", {"invalid": "config"})
 
-        errors = config.validate_plugin_configurations()
+        errors = pm.validate_folder_configurations(config.plugin_configurations)
+
         assert len(errors) > 0
         assert any("Plugin config for csv" in error for error in errors)
 
-    @patch("interface.plugins.plugin_manager.PluginManager")
-    def test_validate_plugin_configurations_no_plugin(self, mock_plugin_manager):
+    def test_validate_plugin_configurations_no_plugin(self):
         """Test validation when no plugin found for format."""
-        mock_pm_instance = MagicMock(spec=PluginManager)
-        mock_pm_instance.get_configuration_plugin_by_format_name.return_value = None
-        mock_plugin_manager.return_value = mock_pm_instance
+        pm = PluginManager()
+        pm._initialized = True
+        pm.get_configuration_plugin_by_format_name = lambda fmt: None
 
         config = FolderConfiguration()
         config.set_plugin_configuration("unknown_format", {"key": "value"})
 
-        errors = config.validate_plugin_configurations()
+        errors = pm.validate_folder_configurations(config.plugin_configurations)
+
         assert len(errors) > 0
         assert any(
             "No configuration plugin found for format" in error for error in errors
         )
 
-    @patch("interface.plugins.plugin_manager.PluginManager")
-    def test_validate_plugin_configurations_exception(self, mock_plugin_manager):
-        """Test validation handles exceptions gracefully."""
-        mock_plugin_manager.side_effect = Exception("Plugin manager error")
+    def test_validate_plugin_configurations_exception(self):
+        """Test validation handles per-config exceptions gracefully."""
+        pm = PluginManager()
+        pm._initialized = True
+        # Make per-config lookup raise; the method catches this per-config.
+        def raise_exc(fmt):
+            raise Exception("Plugin manager error")
+        pm.get_configuration_plugin_by_format_name = raise_exc
 
         config = FolderConfiguration()
         config.set_plugin_configuration("csv", {"key": "value"})
 
-        errors = config.validate_plugin_configurations()
+        errors = pm.validate_folder_configurations(config.plugin_configurations)
+
         assert len(errors) > 0
         assert any(
             "Error validating plugin configurations" in error for error in errors
