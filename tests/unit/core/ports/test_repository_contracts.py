@@ -1,18 +1,11 @@
 """Port contract tests.
 
-Parameterized assertions that run against the in-memory adapter for
-each port. The in-memory adapter exercises the full port contract
-end-to-end and serves as the canonical proof that the port is
-implementable.
-
-The SQLite adapter is also exercised when reachable, but several
-column names in the SQLite adapters drifted from the schema in
-:mod:`core.database.schema` (the existing MagicMock-based tests
-missed this). Those tests are marked ``xfail`` until the adapter
-column names are corrected in a follow-up.
+Parameterized assertions that run against the in-memory adapter AND
+the SQLite adapter for each port. The SQLite adapter is exercised
+end-to-end against a real temp_database fixture.
 
 If a future adapter is added (async, db2ssh, etc.) it should be
-added to the ``adapter_factories`` dict for its port and run through
+added to the adapter_factories dict for its port and run through
 the same assertions.
 """
 
@@ -54,6 +47,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.database]
 # IFolderRepository contract
 # ---------------------------------------------------------------------------
 
+
 def _make_folder_repo(kind: str, temp_database=None) -> IFolderRepository:
     if kind == "inmemory":
         return InMemoryFolderRepository()
@@ -62,22 +56,7 @@ def _make_folder_repo(kind: str, temp_database=None) -> IFolderRepository:
     raise ValueError(kind)
 
 
-# SQLite parameterization is xfailed — see module docstring.
-@pytest.fixture(
-    params=[
-        "inmemory",
-        pytest.param(
-            "sqlite",
-            marks=pytest.mark.xfail(
-                reason=(
-                    "SQLite adapter column names drift from schema; "
-                    "follow-up. In-memory path proves the contract."
-                ),
-                strict=False,
-            ),
-        ),
-    ]
-)
+@pytest.fixture(params=["inmemory", "sqlite"])
 def folder_repo(request, temp_database) -> IFolderRepository:
     return _make_folder_repo(request.param, temp_database=temp_database)
 
@@ -169,9 +148,7 @@ class TestIFolderRepositoryContract:
 # ---------------------------------------------------------------------------
 
 
-def _make_processed_repo(
-    kind: str, temp_database=None
-) -> IProcessedFilesRepository:
+def _make_processed_repo(kind: str, temp_database=None) -> IProcessedFilesRepository:
     if kind == "inmemory":
         return InMemoryProcessedFilesRepository()
     if kind == "sqlite":
@@ -179,18 +156,7 @@ def _make_processed_repo(
     raise ValueError(kind)
 
 
-@pytest.fixture(
-    params=[
-        "inmemory",
-        pytest.param(
-            "sqlite",
-            marks=pytest.mark.xfail(
-                reason="SQLite adapter column names drift from schema; follow-up.",
-                strict=False,
-            ),
-        ),
-    ]
-)
+@pytest.fixture(params=["inmemory", "sqlite"])
 def processed_repo(request, temp_database) -> IProcessedFilesRepository:
     return _make_processed_repo(request.param, temp_database=temp_database)
 
@@ -201,35 +167,35 @@ class TestIProcessedFilesRepositoryContract:
     ) -> None:
         assert not processed_repo.is_processed("h1")
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h1", folder_id=3, filename="a.edi")
+            ProcessedFile(file_checksum="h1", folder_id=3, filename="a.edi")
         )
         assert processed_repo.is_processed("h1")
 
-    def test_find_by_hash_returns_record(
+    def test_find_by_checksum_returns_record(
         self, processed_repo: IProcessedFilesRepository
     ) -> None:
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h1", folder_id=3, filename="a.edi")
+            ProcessedFile(file_checksum="h1", folder_id=3, filename="a.edi")
         )
-        got = processed_repo.find_by_hash("h1")
+        got = processed_repo.find_by_checksum("h1")
         assert got is not None
-        assert got.file_hash == "h1"
+        assert got.file_checksum == "h1"
         assert got.folder_id == 3
         assert got.filename == "a.edi"
 
-    def test_find_by_hash_returns_none_when_missing(
+    def test_find_by_checksum_returns_none_when_missing(
         self, processed_repo: IProcessedFilesRepository
     ) -> None:
-        assert processed_repo.find_by_hash("nope") is None
+        assert processed_repo.find_by_checksum("nope") is None
 
     def test_clear_for_folder_only_removes_target(
         self, processed_repo: IProcessedFilesRepository
     ) -> None:
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h1", folder_id=1, filename="a")
+            ProcessedFile(file_checksum="h1", folder_id=1, filename="a")
         )
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h2", folder_id=2, filename="b")
+            ProcessedFile(file_checksum="h2", folder_id=2, filename="b")
         )
         deleted = processed_repo.clear_for_folder(1)
         assert deleted == 1
@@ -238,10 +204,10 @@ class TestIProcessedFilesRepositoryContract:
 
     def test_clear_all(self, processed_repo: IProcessedFilesRepository) -> None:
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h1", folder_id=1, filename="a")
+            ProcessedFile(file_checksum="h1", folder_id=1, filename="a")
         )
         processed_repo.mark_processed(
-            ProcessedFile(file_hash="h2", folder_id=1, filename="b")
+            ProcessedFile(file_checksum="h2", folder_id=1, filename="b")
         )
         assert processed_repo.clear_all() == 2
         assert processed_repo.clear_all() == 0
@@ -252,9 +218,7 @@ class TestIProcessedFilesRepositoryContract:
 # ---------------------------------------------------------------------------
 
 
-def _make_settings_repo(
-    kind: str, temp_database=None
-) -> ISettingsRepository:
+def _make_settings_repo(kind: str, temp_database=None) -> ISettingsRepository:
     if kind == "inmemory":
         return InMemorySettingsRepository()
     if kind == "sqlite":
@@ -262,18 +226,7 @@ def _make_settings_repo(
     raise ValueError(kind)
 
 
-@pytest.fixture(
-    params=[
-        "inmemory",
-        pytest.param(
-            "sqlite",
-            marks=pytest.mark.xfail(
-                reason="SQLite adapter column names drift from schema; follow-up.",
-                strict=False,
-            ),
-        ),
-    ]
-)
+@pytest.fixture(params=["inmemory", "sqlite"])
 def settings_repo(request, temp_database) -> ISettingsRepository:
     return _make_settings_repo(request.param, temp_database=temp_database)
 
@@ -285,9 +238,7 @@ class TestISettingsRepositoryContract:
         defaults = settings_repo.get_defaults()
         assert isinstance(defaults, dict)
 
-    def test_set_and_get_setting(
-        self, settings_repo: ISettingsRepository
-    ) -> None:
+    def test_set_and_get_setting(self, settings_repo: ISettingsRepository) -> None:
         settings_repo.set_setting("custom_key", "custom_value")
         assert settings_repo.get_setting("custom_key") == "custom_value"
 
@@ -296,14 +247,14 @@ class TestISettingsRepositoryContract:
     ) -> None:
         assert settings_repo.get_setting("nonexistent_key_xyz") is None
 
-    def test_update_defaults_merges(
-        self, settings_repo: ISettingsRepository
-    ) -> None:
+    def test_update_defaults_merges(self, settings_repo: ISettingsRepository) -> None:
         original = settings_repo.get_defaults()
         before_count = len(original)
-        settings_repo.update_defaults({"custom_field": "x"})
+        # Use a real column from the administrative table schema; the table
+        # is fixed-schema so update_defaults cannot introduce new columns.
+        settings_repo.update_defaults({"enable_reporting": True})
         updated = settings_repo.get_defaults()
-        assert updated["custom_field"] == "x"
+        assert updated["enable_reporting"] is True
         # id is forced to 1
         assert updated["id"] == 1
         # Other fields preserved
@@ -314,9 +265,8 @@ class TestISettingsRepositoryContract:
 # IEmailQueueRepository contract
 # ---------------------------------------------------------------------------
 
-def _make_email_repo(
-    kind: str, temp_database=None
-) -> IEmailQueueRepository:
+
+def _make_email_repo(kind: str, temp_database=None) -> IEmailQueueRepository:
     if kind == "inmemory":
         return InMemoryEmailQueueRepository()
     if kind == "sqlite":
@@ -324,50 +274,30 @@ def _make_email_repo(
     raise ValueError(kind)
 
 
-@pytest.fixture(
-    params=[
-        "inmemory",
-        pytest.param(
-            "sqlite",
-            marks=pytest.mark.xfail(
-                reason="SQLite adapter column names drift from schema; follow-up.",
-                strict=False,
-            ),
-        ),
-    ]
-)
+@pytest.fixture(params=["inmemory", "sqlite"])
 def email_repo(request, temp_database) -> IEmailQueueRepository:
     return _make_email_repo(request.param, temp_database=temp_database)
 
 
 class TestIEmailQueueRepositoryContract:
-    def test_enqueue_then_dequeue(
-        self, email_repo: IEmailQueueRepository
-    ) -> None:
-        email_repo.enqueue(
-            {"to": "a@example.com", "subject": "s1", "body": "hello"}
-        )
-        email_repo.enqueue(
-            {"to": "b@example.com", "subject": "s2", "body": "world"}
-        )
+    def test_enqueue_then_dequeue(self, email_repo: IEmailQueueRepository) -> None:
+        # emails_to_send schema columns: folder_alias, log, folder_id
+        email_repo.enqueue({"folder_alias": "a", "log": "log1", "folder_id": 1})
+        email_repo.enqueue({"folder_alias": "b", "log": "log2", "folder_id": 1})
         batch = email_repo.dequeue_batch(max_size=10_000, max_count=10)
         assert len(batch) == 2
-        assert {e["subject"] for e in batch} == {"s1", "s2"}
+        assert {e["folder_alias"] for e in batch} == {"a", "b"}
 
     def test_dequeue_respects_max_count(
         self, email_repo: IEmailQueueRepository
     ) -> None:
         for i in range(5):
-            email_repo.enqueue(
-                {"to": f"a{i}@example.com", "subject": str(i), "body": "x"}
-            )
+            email_repo.enqueue({"folder_alias": f"a{i}", "log": "x", "folder_id": 1})
         batch = email_repo.dequeue_batch(max_size=10_000, max_count=3)
         assert len(batch) == 3
 
-    def test_mark_sent_removes_records(
-        self, email_repo: IEmailQueueRepository
-    ) -> None:
-        email_repo.enqueue({"to": "a@example.com", "body": "x"})
+    def test_mark_sent_removes_records(self, email_repo: IEmailQueueRepository) -> None:
+        email_repo.enqueue({"folder_alias": "a", "log": "x", "folder_id": 1})
         batch = email_repo.dequeue_batch(max_size=10_000, max_count=10)
         ids = [int(e["id"]) for e in batch]
         email_repo.mark_sent(ids)
@@ -376,6 +306,6 @@ class TestIEmailQueueRepositoryContract:
 
     def test_clear_queue(self, email_repo: IEmailQueueRepository) -> None:
         for i in range(3):
-            email_repo.enqueue({"to": f"a{i}@example.com", "body": "x"})
+            email_repo.enqueue({"folder_alias": f"a{i}", "log": "x", "folder_id": 1})
         assert email_repo.clear_queue() == 3
         assert email_repo.clear_queue() == 0
