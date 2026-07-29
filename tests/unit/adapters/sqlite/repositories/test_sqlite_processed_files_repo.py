@@ -3,12 +3,14 @@ Unit tests for SqliteProcessedFilesRepository.
 
 Uses a mock database_obj (no real DB connection required) to verify
 the repository correctly delegates to the underlying Table API and
-maps row dicts to :class:`ProcessedFile` domain objects.
+maps row dicts to ProcessedFile domain objects.
 """
 
 from unittest.mock import MagicMock
 
-from adapters.sqlite.repositories import SqliteProcessedFilesRepository
+from adapters.sqlite.repositories.sqlite_processed_files_repo import (
+    SqliteProcessedFilesRepository,
+)
 from backend.database.database_obj import DatabaseObj, TableProtocol
 from core.domain.models.processed_file import ProcessedFile
 from core.ports.repositories import IProcessedFilesRepository
@@ -29,11 +31,11 @@ class TestIProcessedFilesRepositoryConformance:
 class TestIsProcessed:
     def test_returns_true_when_record_found(self):
         db = _make_db()
-        db.processed_files.find_one.return_value = {"id": 1, "file_hash": "abc123"}
+        db.processed_files.find_one.return_value = {"id": 1, "file_checksum": "abc123"}
         repo = SqliteProcessedFilesRepository(db)
 
         assert repo.is_processed("abc123") is True
-        db.processed_files.find_one.assert_called_once_with(file_hash="abc123")
+        db.processed_files.find_one.assert_called_once_with(file_checksum="abc123")
 
     def test_returns_false_when_not_found(self):
         db = _make_db()
@@ -49,11 +51,11 @@ class TestMarkProcessed:
         repo = SqliteProcessedFilesRepository(db)
 
         repo.mark_processed(
-            ProcessedFile(file_hash="hash1", folder_id=3, filename="file.edi")
+            ProcessedFile(file_checksum="hash1", folder_id=3, filename="file.edi")
         )
 
         db.processed_files.insert.assert_called_once_with(
-            {"file_hash": "hash1", "folder_id": 3, "filename": "file.edi"}
+            {"file_checksum": "hash1", "folder_id": 3, "filename": "file.edi"}
         )
 
 
@@ -83,23 +85,23 @@ class TestClearForFolder:
         assert result == 4
 
 
-class TestFindByHash:
+class TestFindByChecksum:
     def test_returns_processedfile_when_found(self):
         db = _make_db()
         db.processed_files.find_one.return_value = {
             "id": 5,
-            "file_hash": "xyz",
+            "file_checksum": "xyz",
             "folder_id": 7,
             "filename": "x.edi",
         }
         repo = SqliteProcessedFilesRepository(db)
 
-        result = repo.find_by_hash("xyz")
+        result = repo.find_by_checksum("xyz")
 
-        db.processed_files.find_one.assert_called_once_with(file_hash="xyz")
+        db.processed_files.find_one.assert_called_once_with(file_checksum="xyz")
         assert isinstance(result, ProcessedFile)
         assert result.id == 5
-        assert result.file_hash == "xyz"
+        assert result.file_checksum == "xyz"
         assert result.folder_id == 7
         assert result.filename == "x.edi"
 
@@ -108,4 +110,4 @@ class TestFindByHash:
         db.processed_files.find_one.return_value = None
         repo = SqliteProcessedFilesRepository(db)
 
-        assert repo.find_by_hash("missing") is None
+        assert repo.find_by_checksum("missing") is None

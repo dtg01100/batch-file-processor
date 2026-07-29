@@ -457,10 +457,10 @@ class TestFolderManagerCommunicationWiring:
         manager, folder_repo, _, processed_files_repo = _make_manager()
         pk = _insert_folder(folder_repo, folder_name="/x", alias="x")
         processed_files_repo.mark_processed(
-            ProcessedFile(file_hash="h1", folder_id=pk, filename="f1.edi")
+            ProcessedFile(file_checksum="h1", folder_id=pk, filename="f1.edi")
         )
         processed_files_repo.mark_processed(
-            ProcessedFile(file_hash="h2", folder_id=pk, filename="f2.edi")
+            ProcessedFile(file_checksum="h2", folder_id=pk, filename="f2.edi")
         )
 
         result = manager.delete_folder_with_related(pk)
@@ -476,7 +476,7 @@ class TestFolderManagerCommunicationWiring:
         # record to detect any unintended deletion
         _insert_folder(folder_repo, folder_name="/other", alias="other")
         processed_files_repo.mark_processed(
-            ProcessedFile(file_hash="keepme", folder_id=999, filename="k.edi")
+            ProcessedFile(file_checksum="keepme", folder_id=999, filename="k.edi")
         )
 
         result = manager.delete_folder_with_related(404)

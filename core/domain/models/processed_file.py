@@ -12,14 +12,15 @@ class ProcessedFile:
     """A record indicating that a specific file has been processed.
 
     Attributes:
-        file_hash: Hash string uniquely identifying the file content.
+        file_checksum: Checksum string uniquely identifying the file
+            content (md5/sha256/etc — content fingerprint only).
         folder_id: Foreign key to the folders table.
         filename: Original filename (for audit/display purposes).
         id: Primary key, assigned by the database on insert.
 
     """
 
-    file_hash: str
+    file_checksum: str
     folder_id: int
     filename: str
     id: int | None = None

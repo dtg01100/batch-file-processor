@@ -206,14 +206,14 @@ class IProcessedFilesRepository(ABC):
     """
 
     @abstractmethod
-    def is_processed(self, file_hash: str) -> bool:
-        """Check if a file hash has already been processed.
+    def is_processed(self, file_checksum: str) -> bool:
+        """Check if a file checksum has already been processed.
 
         Args:
-            file_hash: Hash string identifying the file.
+            file_checksum: Checksum string identifying the file.
 
         Returns:
-            True if the hash exists in the processed files table.
+            True if the checksum exists in the processed files table.
 
         """
         ...
@@ -253,11 +253,11 @@ class IProcessedFilesRepository(ABC):
         ...
 
     @abstractmethod
-    def find_by_hash(self, file_hash: str) -> ProcessedFile | None:
-        """Find a processed-file record by its hash.
+    def find_by_checksum(self, file_checksum: str) -> ProcessedFile | None:
+        """Find a processed-file record by its checksum.
 
         Args:
-            file_hash: Hash string to look up.
+            file_checksum: Checksum string to look up.
 
         Returns:
             ProcessedFile, or None if not found.
