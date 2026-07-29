@@ -10,7 +10,7 @@ Tests the FolderSettingsValidator class methods:
 
 import pytest
 
-from interface.models.folder_configuration import EDIConfiguration, FolderConfiguration
+from core.domain.models.folder import EDIConfiguration, FolderConfiguration
 from interface.validation.folder_settings_validator import FolderSettingsValidator
 
 pytestmark = [pytest.mark.unit]

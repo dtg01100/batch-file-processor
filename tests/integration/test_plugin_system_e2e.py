@@ -64,7 +64,7 @@ class TestPluginConfigurationWithFolderModel:
 
     def test_create_folder_config_with_plugin_config(self):
         """Test creating FolderConfiguration with plugin config."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {
             "folder_name": "/test/folder",
@@ -80,7 +80,7 @@ class TestPluginConfigurationWithFolderModel:
 
     def test_set_plugin_configuration(self):
         """Test setting plugin configuration."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {"folder_name": "/test", "alias": "Test"}
         config = FolderConfiguration.from_dict(data)
@@ -92,7 +92,7 @@ class TestPluginConfigurationWithFolderModel:
 
     def test_update_folder_config_with_plugin_mapper(self):
         """Test updating folder config with PluginConfigurationMapper."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
             ExtractedPluginConfig,
             PluginConfigurationMapper,
@@ -112,7 +112,7 @@ class TestPluginConfigurationWithFolderModel:
 
     def test_validate_plugin_configurations(self):
         """Test validating plugin configurations."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {
             "folder_name": "/test",
@@ -226,7 +226,7 @@ class TestPluginErrorIsolation:
 
     def test_invalid_plugin_config_handled(self):
         """Test handling invalid plugin config."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {
             "folder_name": "/test",
@@ -242,7 +242,7 @@ class TestPluginErrorIsolation:
 
     def test_missing_plugin_handled(self):
         """Test handling missing plugin reference."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {
             "folder_name": "/test",
@@ -263,7 +263,7 @@ class TestMultiplePluginsWorkflow:
 
     def test_multiple_plugins_same_folder(self):
         """Test multiple plugins in same folder."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         data = {"folder_name": "/test", "alias": "Test", "convert_to_format": "csv"}
         config = FolderConfiguration.from_dict(data)
@@ -274,7 +274,7 @@ class TestMultiplePluginsWorkflow:
 
     def test_plugin_configuration_switching(self):
         """Test switching plugin configurations."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
             ExtractedPluginConfig,
             PluginConfigurationMapper,
@@ -319,7 +319,7 @@ class TestPluginLifecycle:
 
     def test_plugin_full_lifecycle(self, workspace_with_edi):
         """Test plugin lifecycle: discover → configure → use."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
         from interface.operations.plugin_configuration_mapper import (
             ExtractedPluginConfig,
             PluginConfigurationMapper,

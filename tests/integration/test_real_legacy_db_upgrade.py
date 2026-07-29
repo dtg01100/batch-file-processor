@@ -906,7 +906,7 @@ class TestRequiredFieldReadability:
 
     def test_all_folders_readable_as_folder_configuration(self, fully_migrated_db):
         """FolderConfiguration.from_dict() must not raise for any migrated folder."""
-        from interface.models.folder_configuration import FolderConfiguration
+        from core.domain.models.folder import FolderConfiguration
 
         errors = []
         for folder in fully_migrated_db["folders"].all():

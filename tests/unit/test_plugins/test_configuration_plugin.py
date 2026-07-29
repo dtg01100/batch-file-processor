@@ -7,7 +7,8 @@ Tests for the ConfigurationPlugin interface and its implementations.
 import unittest
 from typing import Any
 
-from interface.models.folder_configuration import ConvertFormat, CSVConfiguration
+from core.domain.models.folder import CSVConfiguration
+from interface.models.folder_configuration import ConvertFormat
 from interface.plugins import ConfigurationPlugin
 from interface.plugins.config_schemas import (
     ConfigurationSchema,

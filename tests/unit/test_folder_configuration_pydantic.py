@@ -1,6 +1,6 @@
 import pytest
 
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     EDIConfiguration,
     FolderConfiguration,
     FTPConfiguration,
@@ -237,7 +237,7 @@ class TestBoolFromData:
         mutation to True, callers that don't pass ``default=`` would
         get True for missing keys (silently flipping the behavior).
         """
-        from interface.models.folder_configuration import _bool_from_data
+        from core.domain.models.folder import _bool_from_data
         import inspect
 
         sig = inspect.signature(_bool_from_data)

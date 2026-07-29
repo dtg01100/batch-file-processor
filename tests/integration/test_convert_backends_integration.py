@@ -22,7 +22,7 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     EDIConfiguration,

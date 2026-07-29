@@ -17,7 +17,7 @@ project_root = Path(__file__).parent.parent.parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     CopyConfiguration,

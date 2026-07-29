@@ -11,11 +11,10 @@ sys.path.insert(
     ),
 )
 
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     BackendType,
-    ConvertFormat,
     CopyConfiguration,
     CSVConfiguration,
     EDIConfiguration,
@@ -24,6 +23,9 @@ from interface.models.folder_configuration import (
     FTPConfiguration,
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
+)
+from interface.models.folder_configuration import (
+    ConvertFormat,
 )
 
 

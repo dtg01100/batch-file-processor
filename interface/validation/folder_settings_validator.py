@@ -10,9 +10,8 @@ from typing import TYPE_CHECKING
 
 from core.utils.bool_utils import normalize_bool
 from core.utils.format_utils import normalize_convert_to_format
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     BackendSpecificConfiguration,
-    ConvertFormat,
     CopyConfiguration,
     EDIConfiguration,
     EmailConfiguration,
@@ -20,6 +19,9 @@ from interface.models.folder_configuration import (
     FTPConfiguration,
     InvoiceDateConfiguration,
     UPCOverrideConfiguration,
+)
+from interface.models.folder_configuration import (
+    ConvertFormat,
 )
 from interface.services.ftp_service import FTPServiceProtocol
 

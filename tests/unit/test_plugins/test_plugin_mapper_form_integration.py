@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
     ExtractedPluginConfig,
     PluginConfigurationMapper,

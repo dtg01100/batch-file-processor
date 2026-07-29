@@ -1,6 +1,6 @@
 # tests/unit/interface/models/test_folder_config_alert.py
 
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 
 
 class TestFolderConfigAlertOnFailure:

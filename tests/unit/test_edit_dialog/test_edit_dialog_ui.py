@@ -12,7 +12,7 @@ sys.path.insert(
     ),
 )
 
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 from interface.operations.folder_data_extractor import (
     ExtractedDialogFields,
     FolderDataExtractor,

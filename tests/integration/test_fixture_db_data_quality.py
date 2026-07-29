@@ -8,7 +8,7 @@ shapes present in the 530-row production database.
 
 import pytest
 
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 
 pytestmark = [pytest.mark.integration]
 

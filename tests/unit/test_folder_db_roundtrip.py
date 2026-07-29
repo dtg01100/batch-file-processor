@@ -5,7 +5,7 @@ import unittest
 
 from backend.database import sqlite_wrapper
 from core.database import schema
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 from interface.operations.plugin_configuration_mapper import (
     ExtractedPluginConfig,
     PluginConfigurationMapper,

@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from dispatch.feature_flags import get_strict_testing_mode
-from interface.models.folder_configuration import FolderConfiguration
+from core.domain.models.folder import FolderConfiguration
 from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager

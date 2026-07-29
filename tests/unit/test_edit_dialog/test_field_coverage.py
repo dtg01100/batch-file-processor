@@ -22,7 +22,7 @@ sys.path.insert(
 
 from backend.database import sqlite_wrapper
 from core.database import schema
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     CopyConfiguration,
@@ -154,7 +154,7 @@ def get_to_dict_keys_with_http() -> set[str]:
     )
 
     # Use dataclass model directly to avoid accidental API drift in test setup.
-    from interface.models.folder_configuration import HTTPConfiguration
+    from core.domain.models.folder import HTTPConfiguration
 
     config.http = HTTPConfiguration(
         url="https://example.test/upload",

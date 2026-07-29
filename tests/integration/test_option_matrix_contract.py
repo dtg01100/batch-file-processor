@@ -16,7 +16,7 @@ from dataclasses import fields
 import pytest
 
 from dispatch.pipeline.converter import SUPPORTED_FORMATS
-from interface.models.folder_configuration import (
+from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
     CSVConfiguration,
