@@ -24,7 +24,6 @@ from interface.plugins.configuration_plugin import ConfigurationPlugin
 from interface.plugins.plugin_manager import PluginManager
 from interface.plugins.plugin_manager_provider import get_shared_plugin_manager
 from interface.plugins.ui_abstraction import WidgetBase
-from interface.plugins.validation_framework import ValidationResult
 
 
 @dataclass
