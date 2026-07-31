@@ -10,8 +10,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
-
 from core.utils.bool_utils import normalize_bool
 
 
@@ -243,32 +241,6 @@ class CSVConfiguration:
     split_prepaid_sales_tax_crec: bool = False
 
 
-class FolderConfigurationPydantic(BaseModel):
-    folder_name: str = Field(default="")
-    folder_is_active: bool = Field(default=False)
-    alias: str = Field(default="")
-
-    process_backend_copy: bool = Field(default=False)
-    process_backend_ftp: bool = Field(default=False)
-    process_backend_email: bool = Field(default=False)
-    process_backend_http: bool = Field(default=False)
-
-    process_edi: bool = Field(default=False)
-    split_edi: bool = Field(default=False)
-    split_edi_include_invoices: bool = Field(default=False)
-    split_edi_include_credits: bool = Field(default=False)
-    prepend_date_files: bool = Field(default=False)
-
-    @model_validator(mode="after")
-    def validate_edi_options(cls, values):
-        if values.prepend_date_files and not values.split_edi:
-            raise ValueError("prepend_date_files requires split_edi to be true")
-        return values
-
-    class Config:
-        extra = "forbid"
-
-
 @dataclass
 class FolderConfiguration:
     """Complete folder configuration data model.
@@ -374,30 +346,39 @@ class FolderConfiguration:
         return format_name.lower() in self.plugin_configurations
 
     def validate_with_pydantic(self) -> None:
-        """Validate current FolderConfiguration using Pydantic schema."""
-        try:
-            FolderConfigurationPydantic(
-                folder_name=self.folder_name,
-                folder_is_active=self.folder_is_active,
-                alias=self.alias,
-                process_backend_copy=self.process_backend_copy,
-                process_backend_ftp=self.process_backend_ftp,
-                process_backend_email=self.process_backend_email,
-                process_backend_http=self.process_backend_http,
-                process_edi=self.edi.process_edi if self.edi else False,
-                split_edi=self.edi.split_edi if self.edi else False,
-                split_edi_include_invoices=(
-                    self.edi.split_edi_include_invoices if self.edi else False
-                ),
-                split_edi_include_credits=(
-                    self.edi.split_edi_include_credits if self.edi else False
-                ),
-                prepend_date_files=self.edi.prepend_date_files if self.edi else False,
-            )
-        except ValidationError as exc:
+        """Validate current FolderConfiguration.
+
+        Historical note: this method used to delegate to a pydantic
+        ``BaseModel`` for the schema check. After pydantic was removed
+        (2026-07-31, see CHANGELOG / commit message), it now performs
+        the same invariant checks in plain Python. Method name is kept
+        for backward compatibility with callers and tests; the
+        ``"pydantic validation failed"`` substring in the error
+        message is also kept for the same reason.
+
+        Currently the load-bearing check is:
+          * ``prepend_date_files`` requires ``split_edi`` to be true.
+
+        The flat subset of fields that used to live on the pydantic
+        model (``folder_name``, ``folder_is_active``, ``alias``,
+        the four ``process_backend_*`` flags, ``process_edi``,
+        ``split_edi``, the two ``split_edi_include_*`` flags,
+        ``prepend_date_files``) are all simple bool / str values on
+        ``FolderConfiguration`` / ``EDIConfiguration`` and don't need
+        type-checking here -- their defaults and the dataclass
+        invariants are sufficient. The ``extra="forbid"`` semantics
+        from the old pydantic model were not exercised by any caller
+        or test and have been dropped; if a future consumer needs
+        unknown-key rejection, add it here.
+        """
+        edi = self.edi
+        split_edi = edi.split_edi if edi else False
+        prepend_date_files = edi.prepend_date_files if edi else False
+        if prepend_date_files and not split_edi:
             raise ValueError(
-                f"FolderConfiguration pydantic validation failed: {exc}"
-            ) from exc
+                "FolderConfiguration pydantic validation failed: "
+                "prepend_date_files requires split_edi to be true"
+            )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FolderConfiguration":
@@ -727,7 +708,6 @@ __all__ = [
     "EmailConfiguration",
     "FTPConfiguration",
     "FolderConfiguration",
-    "FolderConfigurationPydantic",
     "HTTPConfiguration",
     "InvoiceDateConfiguration",
     "UPCOverrideConfiguration",

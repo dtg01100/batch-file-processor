@@ -5,8 +5,8 @@ enum-like class auto-populated from dispatch.converters.registry at
 import time. It is the only part of the folder configuration model
 that depends on dispatch.
 
-All other folder configuration classes (FolderConfiguration, the
-nested configs, FolderConfigurationPydantic) live in
+All other folder configuration classes (FolderConfiguration and the
+nested configs) live in
 :mod:`core.domain.models.folder` and can be imported without pulling
 in dispatch.
 

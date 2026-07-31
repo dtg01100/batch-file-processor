@@ -54,7 +54,6 @@ test = [
     "pytest-timeout>=2.2.0",
     "pytest-xdist>=3.5.0",
     "hypothesis>=6.100.0",
-    "pydantic>=2.10.0",
     "pyzbar",
     "mypy>=1.10.0",
     "isort==5.12.0",
@@ -76,6 +75,74 @@ include = [
     "scripts*",
     "adapters*",
 ]
+
+# Per-project configuration for the nuitka-wine-builder image
+# (../nuitka-wine-builder). The CLI reads this table when
+# ``--src-dir`` is given; CLI flags always override. Drop or
+# change these values to point the builder at a different entry
+# point or to add / remove bundled packages. See
+# ../nuitka-wine-builder/README.md for the full schema.
+[tool.nuitka-wine-build]
+entry_point = "main_interface.py"
+output_filename = "Batch File Sender.exe"
+company_name = "Capital Candy"
+product_name = "Batch File Sender"
+file_version = "1.0.0"
+product_version = "1.0.0"
+include_packages = [
+    "dispatch",
+    "dispatch.converters",
+    "dispatch.pipeline",
+    "interface",
+    "interface.qt",
+    "interface.qt.dialogs",
+    "interface.qt.dialogs.edit_folders",
+    "interface.qt.services",
+    "interface.qt.widgets",
+    "interface.form",
+    "interface.operations",
+    "interface.plugins",
+    "interface.services",
+    "core",
+    "core.edi",
+    "backend",
+    "adapters",
+    "adapters.sqlite",
+    "adapters.sqlite.repositories",
+    "adapters.inmemory",
+    "adapters.inmemory.repositories",
+    "adapters.db2ssh",
+    "migrations",
+    "scripts",
+    # Third-party deps that Nuitka's static import-walk can't reach from
+    # main_interface.py but are pulled in by reachable modules. Adding
+    # these here is the difference between "Nuitka reports success" and
+    # "the .exe actually boots." Each one is in pyproject.toml deps.
+    # See audit log: dispatch/converters/* uses openpyxl+PIL+barcode via
+    # dynamic pkgutil discovery, scripts/mover.py uses PyQt5 (legacy).
+    # (pydantic/pydantic_core/typing_inspection were removed 2026-07-31
+    # when the project dropped its pydantic dependency; they are no
+    # longer pulled in by any reachable module.)
+    "openpyxl",
+    "PIL",
+    "barcode",
+    "dateutil",
+    "paramiko",
+]
+include_modules = [
+    "appdirs",
+    "lxml._elementpath",
+    "thefuzz.process",
+    "rapidfuzz.process",
+    # python-barcode lazy-loads these; without explicit includes the .exe
+    # crashes the first time a barcode is rendered. Source: audit of
+    # python_barcode.writer — all SVG/PNG backends are imported on demand.
+    "barcode.writer",
+    "barcode.codex",
+]
+include_data_dirs = [["edi_formats", "edi_formats"]]
+enable_plugins = ["pyside6"]
+jobs = 4
 [tool.black]
 line-length = 88
 target-version = [
