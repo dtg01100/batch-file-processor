@@ -35,8 +35,13 @@ def test_main_reports_actionable_qt_import_failures(tmp_path, monkeypatch, capsy
     assert "DLL load failed while importing QtWidgets" in captured.err
     assert "Visual C++ 2015-2022 Redistributable (x64)" in captured.err
     assert "single-file executable" in captured.err
-    assert "_internal/PyQt5/Qt5/bin" in captured.err
-    assert "plugins/platforms/qwindows.dll" in captured.err
+    # PySide6 / Qt6 bundled paths (the binding shipped since the
+    # PyQt5->PySide6 cutover in 2026-05).
+    assert "qt6core.dll" in captured.err
+    assert "qt6gui.dll" in captured.err
+    assert "qt6widgets.dll" in captured.err
+    assert "PySide6/QtCore.pyd" in captured.err
+    assert "PySide6/qt-plugins/platforms/qwindows.dll" in captured.err
     assert f"Support log: {expected_log}" in captured.err
 
     assert expected_log.exists()

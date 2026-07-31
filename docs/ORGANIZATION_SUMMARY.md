@@ -25,8 +25,7 @@ docs/
 ├── architecture/      (3 files)  - Architecture documents
 ├── api/              (1 file)   - API specifications
 ├── design/           (existing) - Design specifications
-├── deployment/       (empty)    - Deployment documentation
-└── archive/          (59 files) - Historical/session files
+└── deployment/       (empty)    - Deployment documentation
 ```
 
 ### Files Organized by Category
@@ -60,8 +59,14 @@ docs/
 #### API (`docs/api/`)
 - `API_CONTRACT_REVIEW.md` - API specifications
 
-#### Archive (`docs/archive/`)
-59 ephemeral files moved to archive, including:
+#### Archive (removed)
+
+The `docs/archive/` directory was removed on 2026-05-18 in commit
+`56299c19a docs: cleanup archive and update AGENTS.md`. The 59
+ephemeral files that lived there (session summaries, implementation
+reports, status files, analysis reports, plans) are recoverable from
+git history if you need them. Examples of what was archived:
+
 - Session summaries (FINAL_SUMMARY.md, SESSION_SUMMARY.md, etc.)
 - Implementation reports (PIPELINE_IMPLEMENTATION_COMPLETE.md, etc.)
 - Status files (TESTING_STATUS.md, TEST_STATUS.md, etc.)
@@ -123,10 +128,11 @@ Following the documentation handling instructions:
 
 ### For Contributors
 - Use the organized structure when adding new documentation
-- Place session artifacts in `docs/archive/` or session memory
+- Historical session artifacts belong in git history (use `git log` /
+  `git show` to recover prior content); see the "Archive (removed)"
+  section above.
 - Update `docs/README.md` when adding new major documentation
 
 ### Maintenance
-- Periodically review `docs/archive/` for outdated files
 - Keep root directory clean (only README.md, DOCUMENTATION.md, AGENTS.md)
 - Update DOCUMENTATION.md when adding new documentation categories

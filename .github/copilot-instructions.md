@@ -22,7 +22,6 @@ Batch File Processor is a PyQt5 desktop application (project is intentionally Qt
 - `docs/architecture/` - Architecture and design documents
 - `docs/api/` - API specifications and contracts
 - `docs/design/` - Detailed design specifications
-- `docs/archive/` - Historical documents and session summaries
 
 **Key Files**:
 - [`README.md`](../README.md) - Project overview and quick start

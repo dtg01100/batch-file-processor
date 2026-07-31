@@ -188,13 +188,11 @@ The tweak function logs at DEBUG level:
 2. UPC dictionary not loaded - check AS400 credentials in settings
 3. Vendor item number not in UPC dictionary
 
-**Fix in `archive/edi_tweaks.py`**:
-```python
-# Line ~371 - empty filter should default to ALL behavior
-category_filter = override_upc_category_filter.strip()
-if category_filter == "" or category_filter == "ALL":
-    # Apply override to all items
-```
+**Fix**: in `dispatch/converters/convert_to_tweaks.py` (previously
+`archive/edi_tweaks.py`; the archive dir was removed 2026-05-18).
+The current implementation handles the empty-vs-ALL case internally;
+look for the `override_upc` tweak function and the
+`override_upc_category_filter` parameter.
 
 ### Check Digit Not Added
 

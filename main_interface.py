@@ -36,9 +36,17 @@ if _script_dir not in sys.path:
     sys.path.insert(0, _script_dir)
 
 _SUPPORT_LOG_NAME = "batch-file-sender-startup-error.log"
+# Paths to the Qt runtime DLLs in the frozen (PyInstaller / Nuitka) bundle.
+# Used by _build_startup_error_lines to suggest what to check when Qt
+# fails to load at startup. The Qt binding shipped with this build is
+# PySide6 (Qt6); see pyproject.toml's [tool.nuitka-wine-build] block
+# and the Phase 5 commit history for the PyQt5 -> PySide6 cutover.
 _FROZEN_QT_PATHS = (
-    Path("_internal") / "PyQt5" / "Qt5" / "bin",
-    Path("_internal") / "PyQt5" / "plugins" / "platforms" / "qwindows.dll",
+    Path("qt6core.dll"),
+    Path("qt6gui.dll"),
+    Path("qt6widgets.dll"),
+    Path("PySide6") / "QtCore.pyd",
+    Path("PySide6") / "qt-plugins" / "platforms" / "qwindows.dll",
 )
 
 
@@ -83,7 +91,7 @@ def _build_startup_error_lines(exc: ImportError | OSError) -> list[str]:
             )
     else:
         lines.append(
-            "- If running from source, confirm PyQt5 is installed and "
+            "- If running from source, confirm PySide6 is installed and "
             "matches this Python environment."
         )
 

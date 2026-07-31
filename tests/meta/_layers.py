@@ -158,7 +158,7 @@ ALL_LAYERS: list[Layer] = [
     Layer(
         name="qt",
         path=Path("tests/qt"),
-        description="PyQt5 UI tests (single-threaded per AGENTS.md).",
+        description="Qt UI tests, PySide6 binding (single-threaded per AGENTS.md).",
         iter_files=lambda: _glob_test_files(Path("tests/qt")),
     ),
     Layer(

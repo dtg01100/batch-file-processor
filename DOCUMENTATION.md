@@ -20,7 +20,7 @@ Welcome to the Batch File Processor documentation. This is the main entry point 
 ### Testing Documentation (`docs/testing/`)
 - [Testing Guide](docs/testing/TESTING.md) - Comprehensive testing documentation
 - [Testing Best Practices](docs/testing/TESTING_BEST_PRACTICES.md) - Guidelines for writing tests
-- [Qt Testing Guide](docs/testing/QT_TESTING_GUIDE.md) - PyQt5/Qt widget testing
+- [Qt Testing Guide](docs/testing/QT_TESTING_GUIDE.md) - PySide6/Qt widget testing
 - [Corpus Testing Guide](docs/testing/CORPUS_TESTING_GUIDE.md) - Production EDI corpus testing
 - [Conversion Testing Quick Reference](docs/testing/CONVERT_TESTING_QUICK_REFERENCE.md) - All 11 conversion targets including EDI tweaks
 - [Tests Documentation](docs/testing/TESTS_DOCUMENTATION.md) - Test suite overview
@@ -47,9 +47,12 @@ Welcome to the Batch File Processor documentation. This is the main entry point 
 - [Database Design](docs/DATABASE_DESIGN.md) - Database schema and design
 - [API Summary](docs/API_SUMMARY.md) - API overview
 
-### Archive (`docs/archive/`)
-Historical documents, session summaries, and implementation reports are archived here for reference.
+### Archive (removed)
 
+The `docs/archive/` directory was removed on 2026-05-18 in commit
+`56299c19a docs: cleanup archive and update AGENTS.md`. Historical
+documents and session summaries are no longer kept in-tree; check
+git history (`git log --follow <file>`) when you need them.
 ---
 
 ## Table of Contents
@@ -81,7 +84,7 @@ The **Batch File Processor** (also known as "Batch File Sender") is a Python-bas
 
 ### Key Features
 
-- **GUI Interface**: PyQt5-based desktop application for configuration management
+- **GUI Interface**: Qt-based desktop application for configuration management (PySide6 binding; PyQt5 is legacy)
 - **Multi-threading**: Parallel file processing using ThreadPoolExecutor and ProcessPoolExecutor
 - **Database Storage**: SQLite database for configuration and processed file tracking
 - **AS400 Integration**: SSH/db2ssh connectivity for fetching additional invoice/customer data
@@ -94,7 +97,7 @@ The **Batch File Processor** (also known as "Batch File Sender") is a Python-bas
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER (PyQt5 GUI)                                │
+│                              USER (Qt GUI)                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼

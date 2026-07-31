@@ -1,13 +1,13 @@
 # Batch File Processor
 
-A PyQt5 desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
+A Qt (PySide6) desktop application that processes EDI (Electronic Data Interchange) files through a configurable pipeline — validating, splitting, converting, and sending files via FTP, SMTP, or local filesystem.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Python 3.11+
-- PyQt5
+- PySide6 (>= 6.5.0, < 6.12)
 - SQLite3
 
 ### Installation
@@ -42,6 +42,13 @@ pytest -m unit      # Unit tests only
 pytest -m integration  # Integration tests only
 ```
 
+### Building the Windows `.exe`
+
+The Windows .exe builder is now a separate sibling project at
+`../nuitka-wine-builder/` (see its README for full docs). The `nuitka-wine`
+Docker service is pre-built and consumed as an image. To rebuild the builder
+image after pulling changes: `make build-builder-image`.
+
 ## Documentation
 
 **📖 [Complete Documentation](DOCUMENTATION.md)** - Start here for comprehensive guides
@@ -71,7 +78,7 @@ batch-file-processor/
 ├── core/           # Core utilities, EDI parser, database abstraction
 ├── dispatch/       # Pipeline orchestration and file processing
 ├── backend/        # FTP, SMTP, and copy backend clients
-├── interface/      # PyQt5 UI layer
+├── interface/      # Qt UI layer (PySide6)
 ├── docs/           # Documentation (architecture, testing, migrations, etc.)
 ├── tests/          # Test suite (unit, integration, e2e)
 ├── migrations/     # Database migration scripts

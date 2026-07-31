@@ -25,7 +25,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER (PyQt5 GUI)                                │
+│                              USER (Qt GUI)                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
                                       ▼
@@ -75,7 +75,7 @@
 
 | Path | Purpose | Key Files |
 |------|---------|-----------|
-| **interface/** | PyQt5 GUI layer | `qt/app.py`, `qt/main_window.py`, `application_controller.py` |
+| **interface/** | Qt GUI layer (PySide6 binding; PyQt5 is legacy) | `qt/app.py`, `qt/main_window.py`, `application_controller.py` |
 | **interface/qt/** | Qt widgets and dialogs | `dialogs/`, `widgets/`, `theme.py`, `run_coordinator.py` |
 | **interface/models/** | Data models (dataclasses) | `folder_configuration.py` |
 | **interface/operations/** | Business logic | `folder_operations.py`, `processing.py`, `maintenance.py` |
@@ -296,7 +296,7 @@ if flags.get("DISPATCH_DEBUG_MODE"):
 |--------|---------|-----------|
 | `unit` | Fast unit tests | `pytest -m unit -n auto` |
 | `integration` | Database/integration tests | `pytest -m integration -n auto` |
-| `qt` | PyQt5 UI tests | `pytest -m qt -n0` (single-threaded) |
+| `qt` | Qt UI tests (PySide6) | `pytest -m qt -n0` (single-threaded) |
 | `conversion` | Converter parity tests | `pytest -m conversion -n auto` |
 | `backend` | Backend tests | `pytest -m backend -n auto` |
 | `fast` | Tests <5 seconds | `pytest -m "unit and fast" -n auto` |
@@ -322,7 +322,7 @@ make test-failfast
 
 ### Qt Test Rules
 
-⚠️ **Qt tests MUST run single-threaded (`-n0`)** due to PyQt5 + pytest-xdist segfaults from worker thread cleanup.
+⚠️ **Qt tests MUST run single-threaded (`-n0`)** due to PySide6 + pytest-xdist segfaults from worker thread cleanup.
 
 ```bash
 # ✓ Correct
@@ -402,9 +402,8 @@ When auditing code, check for:
 
 ## Version Constraints
 
-- **Python:** 3.11 maximum (target system limitation)
-- **Qt:** PyQt5 5.15 / Qt5 maximum (target system limitation)
-- **Do NOT update** to Python 3.12+ or PyQt6/Qt6
+- **Python:** 3.11+ (pyproject.toml requires-python = ">=3.11"; black/ruff target = py313)
+- **Qt:** PySide6 >= 6.5.0, < 6.12 (PyQt5 is legacy; see `scripts/mover.py` for the one remaining PyQt5 user)
 
 ---
 

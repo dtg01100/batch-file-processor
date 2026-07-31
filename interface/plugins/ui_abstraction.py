@@ -570,7 +570,7 @@ class QtListWidgetWidget(QtWidgetBase):
         )
 
         self.widget = QListWidget(parent)
-        # Use QAbstractItemView.MultiSelection for PyQt5 selection mode
+        # MultiSelection mode (same enum name in both PySide6 and PyQt5)
         self.widget.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         for choice in field_definition.choices:
             item = QListWidgetItem(choice["label"])

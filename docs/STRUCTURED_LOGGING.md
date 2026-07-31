@@ -242,7 +242,7 @@ The following modules are instrumented with structured logging:
 |--------|-------------|
 | `dispatch/pipeline/converter.py` | EDI conversion pipeline step |
 | `dispatch/pipeline/tweaker.py` | EDI tweak pipeline step |
-| `archive/edi_tweaks.py` | Core EDI tweak functions |
+| `dispatch/converters/convert_to_tweaks.py` | Core EDI tweak functions (replaces the historical `archive/edi_tweaks.py` — the archive dir was removed 2026-05-18) |
 | `convert_to_scansheet_type_a.py` | ScanSheet Type A converter |
 
 ## Migration Plan
@@ -252,7 +252,7 @@ The following modules are instrumented with structured logging:
 - [x] `dispatch/pipeline/tweaker.py`
 
 ### Priority 2: Core Functions (COMPLETED)
-- [x] `archive/edi_tweaks.py`
+- [x] `dispatch/converters/convert_to_tweaks.py` (previously `archive/edi_tweaks.py`)
 
 ### Priority 3: Converters (COMPLETED)
 - [x] `convert_to_scansheet_type_a.py`
