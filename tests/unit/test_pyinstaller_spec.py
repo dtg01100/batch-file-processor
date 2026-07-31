@@ -271,11 +271,6 @@ class TestHiddenImports:
         assert not missing, f"Missing backend hiddenimports: {missing}"
 
     @pytest.mark.unit
-    def test_hiddenimports_includes_archive_module(self):
-        hidden_imports = _extract_hidden_imports()
-        assert "archive" in hidden_imports
-
-    @pytest.mark.unit
     def test_all_dispatch_converters_covered(self):
         all_hidden = _get_all_hidden_imports()
         converters_dir = PROJECT_ROOT / "dispatch" / "converters"

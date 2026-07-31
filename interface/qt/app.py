@@ -2,7 +2,8 @@
 
 Provides :class:`QtBatchFileSenderApp`, which mirrors the public API of
 :class:`~interface.app.BatchFileSenderApp` (``initialize``, ``run``,
-``shutdown``) while using PyQt5 for all UI rendering.
+``shutdown``) while using Qt for all UI rendering (PySide6 binding;
+previously PyQt5).
 """
 
 from __future__ import annotations

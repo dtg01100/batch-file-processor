@@ -689,7 +689,6 @@ class TestQtBatchFileSenderApp:
             "lxml",
             "lxml.etree",
             "PySide6.QtCore",
-            "archive",
         }
 
         def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):

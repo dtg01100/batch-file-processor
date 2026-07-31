@@ -1,7 +1,8 @@
 """Qt reimplementation of EditFoldersDialog.
 
-Provides a PyQt5-based dialog for editing folder configuration settings.
-Uses a decomposed architecture with dedicated builders and handlers.
+Provides a Qt-based dialog (PySide6 binding; previously PyQt5) for editing
+folder configuration settings. Uses a decomposed architecture with
+dedicated builders and handlers.
 """
 
 import logging

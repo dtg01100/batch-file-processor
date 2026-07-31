@@ -1,8 +1,9 @@
-"""PyQt5 implementations of UIServiceProtocol and ProgressServiceProtocol.
+"""Qt implementations of UIServiceProtocol and ProgressServiceProtocol.
 
 Provides :class:`QtUIService` and :class:`QtProgressService` as the Qt
-equivalents of ``TkinterUIService`` and ``TkinterProgressCallback``.  All
-dependencies (parent widgets, application instance) are injectable to
+equivalents of ``TkinterUIService`` and ``TkinterProgressCallback``. Uses
+the PySide6 binding (previously PyQt5). All dependencies (parent widgets,
+application instance) are injectable to
 support testing and headless environments.
 """
 
@@ -35,7 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 class QtUIService:
-    """Adapter that satisfies :class:`UIServiceProtocol` using PyQt5.
+    """Adapter that satisfies :class:`UIServiceProtocol` using Qt
+    (PySide6 binding; previously PyQt5).
 
     Uses :class:`QMessageBox` for informational and question dialogs,
     :class:`QFileDialog` for file/directory selection, and

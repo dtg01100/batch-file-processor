@@ -124,12 +124,10 @@ def test_self_test_output_completeness(built_executable, tmp_path):
     # Verify the modules that are most likely to be missing from the bundle
     # are explicitly confirmed present by the self-test output.
     required_module_checks = [
-        "[OK] archive",
         "[OK] dispatch.converters.convert_to_csv",
         "[OK] backend.copy_backend",
         "[OK] backend.ftp_backend",
         "[OK] backend.email_backend",
-        "[OK] PyQt5.sip",
     ]
 
     for check in required_module_checks:

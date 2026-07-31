@@ -1,4 +1,6 @@
-"""Modern Material Design 3 inspired theme system for PyQt5 applications.
+"""Modern Material Design 3 inspired theme system for Qt applications.
+
+Uses the PySide6 binding (previously PyQt5).
 
 This theme system implements contemporary design principles including:
 - Material Design 3 color palette with accessible colors

@@ -2,7 +2,8 @@
 
 Extracts folder configuration data from Qt widgets. Reads from a dict of
 field name -> QWidget mappings and produces an ExtractedDialogFields dataclass,
-mirroring the Tkinter-based FolderDataExtractor but operating on PyQt5 widgets.
+mirroring the Tkinter-based FolderDataExtractor but operating on Qt widgets
+(PySide6 binding; previously PyQt5).
 """
 
 from typing import Any
@@ -27,7 +28,8 @@ class QtFolderDataExtractor:
 
     Reads from a dict of field name -> QWidget mappings and produces
     an ExtractedDialogFields dataclass, mirroring the Tkinter-based
-    FolderDataExtractor but operating on PyQt5 widgets.
+    FolderDataExtractor but operating on Qt widgets (PySide6 binding;
+    previously PyQt5).
     """
 
     def __init__(

@@ -60,8 +60,6 @@ a = Analysis(
         "dispatch.converters.convert_to_stewarts_custom",
         "dispatch.converters.convert_to_tweaks",
         "dispatch.converters.convert_to_yellowdog_csv",
-        "archive",
-        "archive.edi_tweaks",
     ],
     hookspath=[str(hooks_dir)],
     win_no_prefer_redirects=False,
