@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-pytest_plugins = ["conftest_magicmock_plugin"]
+pytest_plugins = ["tests.conftest_magicmock_plugin"]
 
 from adapters.db2ssh.connection import DB2SSHConnection
 from backend.database import sqlite_wrapper

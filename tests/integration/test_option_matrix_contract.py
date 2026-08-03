@@ -72,6 +72,8 @@ MODEL_FIELD_TO_DB_KEY: dict[type, dict[str, str]] = {
         "custom_format_enabled": "invoice_date_custom_format",
         "custom_format_string": "invoice_date_custom_format_string",
         "retail_uom": "retail_uom",
+        "each_uom_categories": "each_uom_categories",
+        "each_uom_mode": "each_uom_mode",
     },
     CSVConfiguration: {
         "include_headers": "include_headers",

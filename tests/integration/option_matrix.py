@@ -246,4 +246,6 @@ EXCLUDED_CONVERSION_TWEAK_OPTION_KEYS: Final[set[str]] = {
     "estore_vendor_NameVendorOID",
     "estore_c_record_OID",
     "fintech_division_id",
+    "each_uom_categories",
+    "each_uom_mode",
 }

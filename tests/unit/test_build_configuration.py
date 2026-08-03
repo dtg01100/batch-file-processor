@@ -42,6 +42,7 @@ def get_python_packages():
                 "build",
                 "dist",
                 "hooks",
+                "tests",
             }
         ):
             packages.append(item.name)
@@ -270,23 +271,39 @@ class TestImportDiscovery:
     """Tests to discover dynamically imported modules."""
 
     def test_find_importlib_import_module_calls(self):
-        """Find all importlib.import_module() calls to identify dynamic imports."""
+        """Find all importlib.import_module() calls to identify dynamic imports.
+
+        Walks ``git ls-files`` instead of ``Path.rglob`` so transient build
+        caches (``.nuitka-wine-cache/`` carries 6,000+ Python 3.9 stdlib
+        ``.py`` files from the Wine/Windows download, ``.mypy_cache/``,
+        ``.ruff_cache/``, ``.pytest_temp/``, ``.mutmut-cache/``,
+        ``.hypothesis/``, ``.opencode/``, ``.clio/``, etc.) don't get
+        picked up. We want to scan the project's tracked source — anything
+        else is a false positive.
+        """
         dynamic_imports = set()
 
-        for py_file in PROJECT_ROOT.rglob("*.py"):
-            if (
-                ".venv" in str(py_file)
-                or "test_venv" in str(py_file)
-                or "/venv" in str(py_file)
-                or ".wine" in str(py_file)
-                or "build_wine" in str(py_file)
-                or "winvenv" in str(py_file)
-                or "tests/_tmp" in str(py_file)
-                or "tests/tmp" in str(py_file)
-                or "/tests/" in str(py_file)
-            ):
-                continue
+        import subprocess as _subprocess
 
+        try:
+            listed = _subprocess.run(
+                ["git", "ls-files", "-z", "*.py"],
+                cwd=str(PROJECT_ROOT),
+                capture_output=True,
+                check=True,
+            )
+        except (FileNotFoundError, OSError, _subprocess.CalledProcessError):
+            pytest.skip("git not available or not a git repo")
+
+        for rel_path in listed.stdout.split(b"\x00"):
+            if not rel_path:
+                continue
+            rel_str = rel_path.decode("utf-8")
+            # Skip tests/ — those import_modules exercise vendored
+            # fixtures and meta-tests, not production wiring.
+            if rel_str.startswith("tests/"):
+                continue
+            py_file = PROJECT_ROOT / rel_str
             try:
                 with open(py_file) as f:
                     content = f.read()
