@@ -20,6 +20,7 @@ Validation-only (no actual build):
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -107,6 +108,12 @@ def build_command(args: argparse.Namespace) -> list[str]:
     for src, dest in INCLUDED_DATA_DIRS:
         cmd.append(f"--include-data-dir={src}={dest}")
 
+    # Strip docstrings from the compiled output. Saves 5-10% on cold
+    # C compile for a PySide6+SQLAlchemy+Jinja2 app because the C
+    # compiler doesn't have to embed docstring string constants.
+    # Reversible: drop this flag to restore docstrings.
+    cmd.append("--python-flag=no_docstrings")
+
     cmd.append(ENTRY_POINT)
     return cmd
 
@@ -131,7 +138,18 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    result = subprocess.run(cmd, cwd=Path.cwd())
+    # Pin the Nuitka cache to a project-local directory so subsequent
+    # builds reuse it. Without this, Nuitka's default cache location
+    # (~/.cache/nuitka on Linux) gets reused only if the user's home
+    # directory persists across runs — which is NOT the case in CI or
+    # in the Wine docker container (which mounts the source read-only).
+    # Using build/nuitka-cache-linux/ keeps the cache next to the
+    # output and gets cleaned by --clean.
+    cache_dir = args.output.parent / "nuitka-cache-linux"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, "NUITKA_CACHE_DIR": str(cache_dir)}
+
+    result = subprocess.run(cmd, cwd=Path.cwd(), env=env)
     return result.returncode
 
 
