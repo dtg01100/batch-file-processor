@@ -157,3 +157,13 @@ ai-assisted/
 # Session scratch — long-form plans and AI processing logs
 plans/
 Copilot-Processing.md
+
+# Nuitka-on-Wine build cache + artifacts (Phase 5 — docker-compose.yml)
+.nuitka-wine-cache/
+build/nuitka-wine-dist/
+.env.docker
+nuitka-crash-report.xml
+
+# Mutation testing artifacts (mutmut / mutant assertions)
+.mutmut-cache/
+mutants_assertions/
