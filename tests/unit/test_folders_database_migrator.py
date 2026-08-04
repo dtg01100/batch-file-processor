@@ -261,6 +261,7 @@ class TestMigrationVersion40:
 class TestMigrationVersion41:
     """Test version 41 migration (boolean normalization) and version 42."""
 
+    @pytest.mark.slow
     def test_version_40_to_42(self, tmp_path):
         """Test migration from version 40 completes to version 42."""
         db_path = str(tmp_path / "test_v41.db")
@@ -283,6 +284,7 @@ class TestMigrationVersion41:
 class TestMigrationSkipLogic:
     """Test the version checking and skip logic in migrations."""
 
+    @pytest.mark.slow
     def test_double_version_check_does_not_hang(self, tmp_path):
         """Test that duplicate version checks work correctly."""
         db_path = str(tmp_path / "test_double_check.db")
@@ -779,6 +781,7 @@ class TestMigrationVersion49to50:
 
 @pytest.mark.integration
 @pytest.mark.database
+@pytest.mark.slow
 class TestV32UpgradeIntegration:
     """Integration tests for the v32→current upgrade path using the real legacy fixture."""
 

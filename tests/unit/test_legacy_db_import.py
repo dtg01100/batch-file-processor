@@ -251,8 +251,14 @@ class TestOldV33DatabaseMigration:
 
 
 class TestV32DatabaseMigration:
-    """Test migration from v32 using the real legacy fixture database."""
+    """Test migration from v32 using the real legacy fixture database.
 
+    Each test runs the full v32->current migration pipeline on the
+    530-folder fixture (~7-8s per test). Marked slow so dev loops can
+    skip with ``-m 'not slow'``.
+    """
+
+    @pytest.mark.slow
     def test_v32_migrates_to_current(self, legacy_v32_db, tmp_path):
         """A real v32 database should be upgradable to the current schema version."""
         db = sqlite_wrapper.Database.connect(legacy_v32_db)
@@ -262,6 +268,7 @@ class TestV32DatabaseMigration:
         assert version["version"] == CURRENT_SCHEMA_VERSION
         db.close()
 
+    @pytest.mark.slow
     def test_v32_gets_all_v33_columns(self, legacy_v32_db, tmp_path):
         """A real v32 database should get filter columns AND plugin_config at v33."""
         db = sqlite_wrapper.Database.connect(legacy_v32_db)
@@ -286,8 +293,9 @@ class TestV32DatabaseMigration:
         assert "plugin_config" in admin
         db.close()
 
+    @pytest.mark.slow
     def test_v32_preserves_existing_data(self, legacy_v32_db, tmp_path):
-        """v32 migration should preserve existing folder data from real production DB."""
+        """v32 folder data should survive migration intact."""
         db = sqlite_wrapper.Database.connect(legacy_v32_db)
         folders_database_migrator.upgrade_database(db, str(tmp_path), "Linux")
 

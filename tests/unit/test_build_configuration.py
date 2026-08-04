@@ -89,9 +89,15 @@ def get_hook_packages():
 
 
 class TestHiddenImports:
-    """Test that hidden imports are properly configured."""
+    """Test that hidden imports are properly configured.
+
+    The two slowest tests in this class walk the import graph and
+    discover submodules — ~2-9s each. Marked slow so dev loops can
+    skip with ``-m 'not slow'``.
+    """
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
+    @pytest.mark.slow
     def test_hook_files_collect_all_submodules(self):
         """Verify hook files collect all submodules for their packages."""
         hook_packages = get_hook_packages()
@@ -211,6 +217,7 @@ class TestHiddenImports:
             pytest.fail(f"Failed to import packages: {errors}")
 
     @pytest.mark.skipif(not PYINSTALLER_AVAILABLE, reason="PyInstaller not installed")
+    @pytest.mark.slow
     def test_collect_submodules_returns_expected(self):
         """Verify collect_submodules works for project packages."""
         packages = get_python_packages()

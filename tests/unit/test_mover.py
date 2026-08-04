@@ -54,6 +54,7 @@ class TestDbMigrationThingInit:
 class TestDoMigrate:
     """Integration tests for DbMigrationThing.do_migrate()."""
 
+    @pytest.mark.slow
     def test_do_migrate_calls_progress_callback(self, tmp_path):
         """do_migrate must invoke progress_callback at least once."""
         orig_db = tmp_path / "original.db"
@@ -67,6 +68,7 @@ class TestDoMigrate:
 
         assert len(calls) > 0
 
+    @pytest.mark.slow
     def test_do_migrate_inserts_new_folder_into_original(self, tmp_path):
         """Active folders in new_db absent from original_db get inserted."""
         orig_db = tmp_path / "original.db"
