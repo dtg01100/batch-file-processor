@@ -681,13 +681,10 @@ class TestConverterMalformedInput:
         p.write_text(content, encoding="utf-8")
         return str(p)
 
-    @pytest.mark.xfail(
-        strict=False, reason="converter may not handle truncated records"
-    )
     def test_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
-        """A B record shorter than 76 chars should not crash convert_to_csv."""
+        """A B record shorter than 76 chars is tolerated by convert_to_csv without crashing."""
         from dispatch.converters import convert_to_csv
 
         # Truncated B record -- only 20 chars
@@ -722,13 +719,10 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(
-        strict=False, reason="converter may not handle unknown record types"
-    )
     def test_csv_unknown_record_type(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
-        """Lines starting with an unknown record type (e.g. 'X') should not crash."""
+        """Lines starting with an unknown record type (e.g. 'X') are tolerated by convert_to_csv without crashing."""
         from dispatch.converters import convert_to_csv
 
         content = (
@@ -769,13 +763,10 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(
-        strict=False, reason="converter may not handle truncated records"
-    )
     def test_simplified_csv_truncated_b_record(
         self, tmp_path, output_base, default_settings_dict, default_parameters_dict
     ):
-        """convert_to_simplified_csv with a truncated B record should not crash."""
+        """convert_to_simplified_csv tolerates a truncated B record without crashing."""
         from dispatch.converters import convert_to_simplified_csv
 
         truncated_b = "B01234567890Test Ite"
@@ -813,9 +804,6 @@ class TestConverterMalformedInput:
         )
         assert os.path.exists(result)
 
-    @pytest.mark.xfail(
-        strict=False, reason="converter may not handle unknown record types"
-    )
     def test_fintech_unknown_record_type(
         self,
         tmp_path,
@@ -824,7 +812,7 @@ class TestConverterMalformedInput:
         default_parameters_dict,
         mock_inv_fetcher,
     ):
-        """convert_to_fintech with an unknown record type should not crash."""
+        """convert_to_fintech tolerates unknown record type lines without crashing."""
         from dispatch.converters import convert_to_fintech
 
         content = make_a_record() + "\n" + "Xunknown\n" + make_b_record() + "\n"
@@ -1635,11 +1623,10 @@ class TestSimplifiedCsvSortOrder:
 class TestEstoreEinvoiceGenericProcessing:
     """Test estore_einvoice_generic converter with various EDI content scenarios."""
 
-    @pytest.mark.xfail(strict=False, reason="converter may not handle missing A record")
     def test_estore_einvoice_generic_with_b_record_only(
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
-        """Test converter handles content without A record gracefully."""
+        """convert_to_estore_einvoice_generic handles content with no A record gracefully."""
         from dispatch.converters import convert_to_estore_einvoice_generic
 
         # Just B record without A record
@@ -1739,13 +1726,10 @@ class TestEstoreEinvoiceGenericProcessing:
             # Should have multiple rows (header + B records)
             assert len(csv_content.split("\n")) >= 3
 
-    @pytest.mark.xfail(
-        strict=False, reason="converter may not handle negative quantities"
-    )
     def test_estore_einvoice_generic_negative_quantity(
         self, tmp_path, default_settings_dict, default_parameters_dict
     ):
-        """Test converter handles negative quantities in B records."""
+        """convert_to_estore_einvoice_generic handles negative quantities in B records."""
         from dispatch.converters import convert_to_estore_einvoice_generic
 
         # B record with negative quantity (starts with -)

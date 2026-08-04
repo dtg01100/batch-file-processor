@@ -37,6 +37,7 @@ if str(project_root) not in sys.path:
 from adapters.sqlite.repositories import SqliteFolderRepository
 from backend.database import sqlite_wrapper
 from backend.database.database_obj import DatabaseObj
+from core.constants import CURRENT_DATABASE_VERSION
 from core.database.schema import ensure_schema
 from dispatch.hash_utils import generate_file_hash
 from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator
@@ -109,7 +110,7 @@ def workspace(tmp_path):
     # oversight_and_defaults records with id=1
     db = DatabaseObj(
         database_path=str(db_path),
-        database_version="33",
+        database_version=CURRENT_DATABASE_VERSION,
         config_folder=str(workspace),
         running_platform="Linux",
         connection=db_conn,

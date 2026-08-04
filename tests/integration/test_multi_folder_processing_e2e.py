@@ -54,7 +54,7 @@ def multiple_folders_workspace():
                         "alias": f"Folder {i}",
                         "process_backend_copy": True,
                         "copy_to_directory": str(output_dir),
-                        "convert_to_type": "csv",
+                        "convert_to_format": "csv",
                         "convert_edi": True,
                     },
                 }
@@ -108,7 +108,7 @@ class TestSequentialMultiFolderProcessing:
 
         # Verify all outputs created (EDI files are copied as-is)
         for folder in multiple_folders_workspace["folders"]:
-            output_files = list(folder["output"].glob("*.edi"))
+            output_files = list(folder["output"].glob("*.csv"))
             assert len(output_files) == 3
 
     def test_process_folders_with_different_configs(self, multiple_folders_workspace):
@@ -129,9 +129,9 @@ class TestSequentialMultiFolderProcessing:
 
         # Configure each folder differently
         configs = [
-            {"convert_to_type": "csv", "convert_edi": True},
-            {"convert_to_type": "csv", "convert_edi": True},
-            {"convert_to_type": "csv", "convert_edi": True},
+            {"convert_to_format": "csv", "convert_edi": True},
+            {"convert_to_format": "csv", "convert_edi": True},
+            {"convert_to_format": "csv", "convert_edi": True},
         ]
 
         for _i, (folder, cfg) in enumerate(
@@ -250,7 +250,7 @@ class TestResourceContention:
             assert result.success is True
 
         # All files should be in shared output (in subdirectories)
-        all_files = list(shared_output.glob("**/*.edi"))
+        all_files = list(shared_output.glob("**/*.csv"))
         assert len(all_files) == 15  # 5 folders x 3 files
 
     def test_database_locking_during_multi_folder(
@@ -388,7 +388,7 @@ class TestParallelProcessing:
 
         # Verify outputs
         for folder in multiple_folders_workspace["folders"]:
-            output_files = list(folder["output"].glob("*.edi"))
+            output_files = list(folder["output"].glob("*.csv"))
             assert len(output_files) == 3
 
 
@@ -430,7 +430,7 @@ class TestLargeScaleMultiFolder:
                         "alias": f"Folder {i}",
                         "process_backend_copy": True,
                         "copy_to_directory": str(output_dir),
-                        "convert_to_type": "csv",
+                        "convert_to_format": "csv",
                         "convert_edi": True,
                     },
                 }
@@ -456,7 +456,7 @@ class TestLargeScaleMultiFolder:
         assert all(r.success for r in results)
 
         # Verify outputs
-        total_outputs = sum(len(list(f["output"].glob("*.edi"))) for f in folders)
+        total_outputs = sum(len(list(f["output"].glob("*.csv"))) for f in folders)
         assert total_outputs == 40  # 20 folders x 2 files
 
 

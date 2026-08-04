@@ -22,7 +22,7 @@ def do_backup(input_file):
             counter += 1
         backup_folder_path = proposed_backup_folder_path + str(counter)
     if not os.path.exists(backup_folder_path):
-        os.mkdir(backup_folder_path)
+        os.makedirs(backup_folder_path, exist_ok=True)
     backup_path = os.path.join(
         backup_folder_path,
         os.path.basename(input_file)

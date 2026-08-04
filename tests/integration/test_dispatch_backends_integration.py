@@ -881,22 +881,66 @@ class TestSendManagerIntegration:
 class TestFolderProcessingIntegration:
     """Test suite for folder-level processing integration."""
 
-    def test_process_folder_with_multiple_files(
-        self, sample_folder, folder_config_with_copy, settings_dict
-    ):
-        """Test processing a folder with multiple files."""
+    def test_process_folder_with_multiple_files(self, tmp_path, settings_dict):
+        """Test processing a folder with multiple files failing validation.
+
+        Regression test for the validation-failure path: when every file in
+        the folder fails EDI validation, ``process_folder`` must report
+        ``success=False``, ``files_failed`` equal to the file count, and must
+        not invoke any of the send backends (here: copy).
+
+        The orchestrator only runs validation when ``validator_step`` is
+        configured AND the folder flags ``process_edi`` /
+        ``force_edi_validation`` / ``split_edi`` are truthy. The original
+        test wired up neither a validator nor those flags, so it was
+        asserting against a code path the production code never reaches —
+        the 3 well-formed EDI files would just be sent through the copy
+        backend successfully.
+
+        The fix injects a ``MockValidator(should_pass=False)`` (the
+        established pattern used by
+        ``test_process_folder_with_force_validation`` in this same file)
+        and sets ``process_edi="True"`` so the validation step actually
+        runs, mirroring the failure path the original test was meant to
+        cover.
+        """
         copy_calls = []
 
         def mock_copy_do(process_parameters, settings, filename):
             copy_calls.append({"filename": filename})
 
-        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
-            config = DispatchConfig(settings=settings_dict)
-            orchestrator = DispatchOrchestrator(config)
+        # Validator that always fails: simulates EDI validation failure
+        # without depending on the exact EDI format details.
+        failing_validator = MagicMock(spec=EDIValidationStep)
+        failing_validator.execute.return_value = (False, ["Validation error"])
 
-            # Update folder config with actual path
-            folder_config = folder_config_with_copy.copy()
-            folder_config["folder_name"] = sample_folder
+        folder = tmp_path / "invalid_folder"
+        folder.mkdir()
+        for i in range(3):
+            (folder / f"invoice_{i:03d}.edi").write_text(
+                "AINV001202401011234567890Test Vendor        001\n"
+                "B001001ITEM001     000010EA0010Test Item Description      0000010000\n"
+                "C00000003000030000\n"
+            )
+
+        folder_config = {
+            "id": 1,
+            "folder_name": str(folder),
+            "alias": "Invalid EDI Test Folder",
+            "process_backend_copy": True,
+            "copy_to_directory": "/tmp/test_output",
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+            "process_edi": "True",
+            "force_edi_validation": False,
+        }
+
+        with patch("backend.copy_backend.do", side_effect=mock_copy_do):
+            config = DispatchConfig(
+                settings=settings_dict,
+                validator_step=failing_validator,
+            )
+            orchestrator = DispatchOrchestrator(config)
 
             # Create a mock run log
             run_log = MagicMock(spec=RunLog)
