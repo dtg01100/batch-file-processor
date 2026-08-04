@@ -113,7 +113,10 @@ include_packages = [
     "adapters.inmemory.repositories",
     "adapters.db2ssh",
     "migrations",
-    "scripts",
+    "scripts.backup_increment",
+    "scripts.batch_log_sender",
+    "scripts.create_database",
+    "scripts.print_run_log",
     # Third-party deps that Nuitka's static import-walk can't reach from
     # main_interface.py but are pulled in by reachable modules. Adding
     # these here is the difference between "Nuitka reports success" and
@@ -123,6 +126,11 @@ include_packages = [
     # (pydantic/pydantic_core/typing_inspection were removed 2026-07-31
     # when the project dropped its pydantic dependency; they are no
     # longer pulled in by any reachable module.)
+    # `scripts/` package was narrowed from a single `--include-package=scripts`
+    # to four module-level includes 2026-08-03: only those 4 modules
+    # are reachable from the entrypoint. Dev-only scripts (PyQt5,
+    # pytest, CLI tools) no longer get bundled — drops cold-build
+    # work, removes an anti-bloat warning, and shrinks the .exe.
     "openpyxl",
     "PIL",
     "barcode",

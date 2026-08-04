@@ -5,7 +5,7 @@ PYTEST := .venv/bin/pytest
 PYTEST_XDIST := -n auto
 PYTEST_QT := -n0
 
-.PHONY: help test test-unit test-unit-fast test-integration test-file test-parallel test-quick test-all test-failfast test-qt test-qt-single test-no-qt lint type-check
+.PHONY: help test test-unit test-unit-fast test-integration test-file test-parallel test-quick test-all test-failfast test-qt test-qt-single test-no-qt lint type-check build-builder-image
 
 help:
 	@echo "Testing targets:"
@@ -26,6 +26,20 @@ help:
 	@echo "Linting targets:"
 	@echo "  make lint             - Run ruff linter"
 	@echo "  make type-check       - Run mypy type checker"
+
+
+# =============================================================================
+# Builder Image (Nuitka-on-Wine Docker image used by the `nuitka-wine` compose service)
+# =============================================================================
+# Build the Docker image used by docker-compose.yml's `nuitka-wine` service.
+# The image is built from the sibling project ../nuitka-wine-builder/.
+# Run this after pulling changes that touch the Dockerfile, pyproject.toml,
+# nuitka_wine_builder/, or fixtures/icu/ — anything baked into the image.
+# =============================================================================
+
+.PHONY: build-builder-image
+build-builder-image:
+	docker build -t nuitka-wine-builder:latest ../nuitka-wine-builder
 
 # Default: show available targets
 test:
