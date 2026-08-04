@@ -502,7 +502,7 @@ class TestFolderConfiguration:
         """Test creating default folder configuration."""
         config = FolderConfiguration()
         assert config.folder_name == ""
-        assert config.folder_is_active is False
+        assert config.folder_is_active is True
         assert config.alias == ""
         assert config.is_template is False
 

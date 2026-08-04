@@ -353,7 +353,7 @@ class TestFolderConfiguration:
 
         # Identity
         assert config.folder_name == ""
-        assert config.folder_is_active is False
+        assert config.folder_is_active is True
         assert config.alias == ""
         assert config.is_template is False
 
@@ -392,7 +392,7 @@ class TestFolderConfiguration:
         config = FolderConfiguration.from_dict(data)
 
         assert config.folder_name == "test_folder"
-        assert config.folder_is_active is False
+        assert config.folder_is_active is True
         assert config.alias == ""
         assert config.is_template is False
 
@@ -660,7 +660,7 @@ class TestFolderConfiguration:
         result = config.to_dict()
 
         assert result["folder_name"] == "test"
-        assert result["folder_is_active"] is False
+        assert result["folder_is_active"] is True
         assert "ftp_server" not in result
         assert "email_to" not in result
 

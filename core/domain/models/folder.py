@@ -258,7 +258,7 @@ class FolderConfiguration:
 
     # Identity
     folder_name: str = ""
-    folder_is_active: bool = False
+    folder_is_active: bool = True
     alias: str = ""
     is_template: bool = False
 
@@ -499,7 +499,7 @@ class FolderConfiguration:
         folder_config = cls(
             id=data.get("id"),
             folder_name=data.get("folder_name", ""),
-            folder_is_active=normalize_bool(data.get("folder_is_active", False)),
+            folder_is_active=normalize_bool(data.get("folder_is_active", True)),
             alias=data.get("alias", ""),
             is_template=data.get("folder_name") == "template",
             process_backend_copy=_bool_from_data(data, "process_backend_copy"),
