@@ -124,7 +124,6 @@ class FolderPipelineExecutor:
             dependencies: Container for processing dependencies
         """
         self._deps = dependencies
-        self._log_messages: list[str] = []
         self._audit_logger: Any = None
         self._correlation_id: str | None = None
 
@@ -613,7 +612,6 @@ class FolderPipelineExecutor:
         """Write message to run log and Python logging."""
         from dispatch.file_utils import write_to_run_log
 
-        self._log_messages.append(message)
         logger.info(message)
         write_to_run_log(run_log, message)
 

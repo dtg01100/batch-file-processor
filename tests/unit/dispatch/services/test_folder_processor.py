@@ -283,17 +283,15 @@ class TestFolderPipelineExecutor:
 
         executor._log_message(mock_log, "test message")
 
-        assert len(executor._log_messages) == 1
-        assert executor._log_messages[0] == "test message"
+        mock_log.write.assert_called_once()
 
     def test_log_message_handles_non_writable(self):
         """Test _log_message handles non-writable run_log."""
         deps = FolderProcessingDependencies()
         executor = FolderPipelineExecutor(deps)
 
+        # Should not raise even when run_log is None.
         executor._log_message(None, "test message")
-
-        assert len(executor._log_messages) == 1
 
     def test_get_upc_dictionary_from_deps(self):
         """Test _get_upc_dictionary uses configured function."""

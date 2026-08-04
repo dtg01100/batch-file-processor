@@ -293,12 +293,7 @@ def redact_sensitive_data(
 
     result: dict[str, Any] = {}
     for key, value in data.items():
-        key_lower = key.lower()
-        # Check if key matches any redaction pattern
-        if any(pattern in key_lower for pattern in REDACTION_PATTERNS):
-            result[key] = redact_value(value, visible_chars)
-        else:
-            result[key] = redact_value(value, visible_chars)
+        result[key] = redact_value(value, visible_chars)
     return result
 
 
