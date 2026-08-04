@@ -15,6 +15,13 @@ from dispatch.services.progress_reporter import (
 )
 from dispatch.services.upc_service import UPCLookupService
 
+# These tests exercise the real UPCLookupService behaviour (last_error,
+# WARNING emission, ``create_query_runner_from_settings`` monkeypatch,
+# ``upc_service=external`` injection). The autouse
+# ``tests.conftest.py::mock_upc_service`` fixture skips patching when the
+# ``unit`` marker is present so that assertions here keep working.
+pytestmark = [pytest.mark.unit]
+
 
 class _StubQueryRunner:
     """Stub query runner that returns fixed rows."""

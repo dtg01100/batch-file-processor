@@ -291,6 +291,72 @@ def mock_as400_query_runner(monkeypatch):
     return dummy
 
 
+@pytest.fixture(autouse=True)
+def mock_upc_service(request, monkeypatch):
+    """Silence UPC WARNING noise from ``dispatch.services.upc_service``.
+
+    Why this exists
+    ---------------
+    Under ``DISPATCH_STRICT_TESTING_MODE=true`` (set in this conftest), every
+    integration test that constructs a ``DispatchOrchestrator`` via
+    ``DispatchConfig(settings={})`` triggers two WARNING lines from
+    ``dispatch/services/upc_service.py`` (lines 190 and 112):
+
+        WARNING  Cannot fetch UPC dictionary: missing AS400 credentials (...)
+        WARNING  UPC dictionary is empty: fallback query failed (...)
+
+    Those warnings drown out real production misconfiguration warnings and
+    clutter the test log without indicating any actual test problem — the
+    integration tests under test intentionally run without AS400 credentials.
+
+    This fixture monkeypatches :py:meth:`UPCLookupService.get_dictionary` so
+    it returns ``{}`` directly, never calling into the real AS400 lookup path
+    and never emitting the noisy WARNINGs.
+
+    Reference: kanban task ``t_b708094a`` (option b — test-side fix).
+
+    Why we skip ``@pytest.mark.unit`` tests
+    ---------------------------------------
+    Unit tests in ``tests/unit/dispatch_tests/test_services.py`` exercise the
+    real :class:`UPCLookupService` behaviour (assertions on
+    ``last_error``, WARNING emission, the ``create_query_runner_from_settings``
+    monkeypatch path, and ``get_dictionary(upc_service=external)`` injection).
+    Patching the class method would break those tests — e.g. the
+    ``upc_service=external`` kwarg is forwarded to the patched stub, which
+    doesn't accept it. The ``unit`` marker opt-out preserves their behaviour.
+
+    How to override
+    ---------------
+    Tests that genuinely need the real UPC behaviour should either:
+
+    * Mark themselves with ``@pytest.mark.unit`` (the autouse fixture
+      becomes a no-op), or
+    * Take a ``monkeypatch`` parameter and replace ``UPCLookupService`` or
+      its methods explicitly — those ``monkeypatch.setattr`` calls run
+      after this fixture, so they win.
+
+    The fixture is autouse so existing integration tests benefit without any
+    per-test opt-in.
+    """
+    if request.node.get_closest_marker("unit") is not None:
+        # Unit tests intentionally exercise the real UPC service — leave it
+        # untouched so their assertions on WARNING emission, last_error,
+        # and the injected ``upc_service=`` kwarg keep working.
+        return
+
+    from dispatch.services.upc_service import UPCLookupService
+
+    def _stub_get_dictionary(self, *args, **kwargs):
+        # No-op stub: returns an empty UPC dict and emits no warnings.
+        # *args/**kwargs accept (and ignore) any legacy call shape
+        # (``upc_service=`` injection, ``strict_db_mode=`` kwarg, etc.)
+        # so this fixture is safe to install even for tests that pass
+        # extra arguments.
+        return {}
+
+    monkeypatch.setattr(UPCLookupService, "get_dictionary", _stub_get_dictionary)
+
+
 @pytest.fixture
 def temp_database(tmp_path):
     """Create a temporary database for testing.
