@@ -1191,7 +1191,7 @@ class TestConverterEmptyUpcLut:
         )
         assert os.path.exists(result)
 
-    def test_convert_to_fintech_empty_upc_lut_raises_key_error(
+    def test_convert_to_fintech_empty_upc_lut_returns_empty_strings(
         self,
         valid_edi_file,
         output_base,
@@ -1251,13 +1251,23 @@ class TestConverterEmptyUpcLut:
             mock_utils.convert_to_price.return_value = "1.00"
 
             # Empty UPC LUT should be handled gracefully - returns empty strings
-            convert_to_fintech.edi_convert(
+            result = convert_to_fintech.edi_convert(
                 valid_edi_file,
                 output_base,
                 default_settings_dict,
                 default_parameters_dict,
                 {},  # empty upc_lut
             )
+
+            assert result is not None
+            assert os.path.exists(result)
+            with open(result, "r", encoding="utf-8", newline="") as output_file:
+                rows = list(csv.reader(output_file))
+            assert rows[0][7] == "upc_pack"
+            assert rows[0][8] == "upc_case"
+            assert rows[1:]
+            for row in rows[1:]:
+                assert row[7] == "" and row[8] == ""
 
     def test_convert_to_yellowdog_csv_empty_upc_lut(
         self,

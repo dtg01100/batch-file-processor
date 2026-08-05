@@ -54,13 +54,6 @@ class TestBaseDialog:
         qtbot.addWidget(dialog)
         assert dialog.validate() is True
 
-    def test_apply_does_nothing(self, qtbot):
-        from interface.qt.dialogs.base_dialog import BaseDialog
-
-        dialog = BaseDialog()
-        qtbot.addWidget(dialog)
-        dialog.apply()  # Should not raise any errors
-
     def test_ok_button_calls_validate_and_apply(self, qtbot, monkeypatch):
         from interface.qt.dialogs.base_dialog import BaseDialog
 

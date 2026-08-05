@@ -290,8 +290,14 @@ class TestFolderPipelineExecutor:
         deps = FolderProcessingDependencies()
         executor = FolderPipelineExecutor(deps)
 
-        # Should not raise even when run_log is None.
-        executor._log_message(None, "test message")
+        mock_run_log = Mock()
+        mock_run_log.write.side_effect = OSError("Not writable")
+
+        # Should not raise even when the run_log write fails.
+        executor._log_message(mock_run_log, "test message")
+
+        # write() was still attempted with the encoded message.
+        mock_run_log.write.assert_called_once_with(b"test message")
 
     def test_get_upc_dictionary_from_deps(self):
         """Test _get_upc_dictionary uses configured function."""
@@ -352,8 +358,11 @@ class TestFolderPipelineExecutor:
             checksum="abc123",
         )
 
-        executor._record_processed_file(
-            mock_processed,
-            {"id": 1},
-            mock_file_result,
-        )
+        try:
+            executor._record_processed_file(
+                mock_processed,
+                {"id": 1},
+                mock_file_result,
+            )
+        except Exception as exc:
+            assert False, f"_record_processed_file propagated exception: {exc}"

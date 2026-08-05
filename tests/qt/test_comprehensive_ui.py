@@ -809,8 +809,11 @@ class TestMainAppComprehensive:
             test_path = "/test/folder"
             app.folder_manager.add_folder(test_path)
 
-            # Refresh should not crash
+            # Refresh should rebuild the folder list with the added folder
             app._refresh_users_list()
+
+            assert app._folder_list_widget is not None
+            assert len(app._folder_list_widget._row_widgets) == 1
 
             app.shutdown()
 

@@ -296,7 +296,12 @@ class TestCSVConfigurationPlugin(unittest.TestCase):
         config_data = {"include_headers": True, "filter_ampersand": False}
         self.plugin.initialize(config_data)
 
-        # Test activate/deactivate
+        # initialize() must reflect the supplied configuration
+        self.assertIsInstance(self.plugin._config, CSVConfiguration)
+        self.assertTrue(self.plugin._config.include_headers)
+        self.assertFalse(self.plugin._config.filter_ampersand)
+
+        # Test activate/deactivate (no-op lifecycle transitions)
         self.plugin.activate()
         self.plugin.deactivate()
 

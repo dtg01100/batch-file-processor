@@ -227,7 +227,12 @@ class TestFolderListWidget:
             on_delete=lambda fid, name: callbacks["delete"].append((fid, name)),
         )
         qtbot.addWidget(widget)
-        # Should render without errors even with empty table
+
+        # Empty table renders with zero rows and no callbacks fired
+        assert widget._row_widgets == {}
+        assert widget._empty_label is not None
+        for name in ("send", "edit", "toggle", "delete"):
+            assert callbacks[name] == []
 
     def test_active_folder_buttons(self, qtbot, temp_database):
         from interface.qt.widgets.folder_list_widget import FolderListWidget

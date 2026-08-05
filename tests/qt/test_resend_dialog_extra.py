@@ -291,7 +291,10 @@ class TestResendDialogApply:
 
         qtbot.mouseClick(dialog._bulk_select_all, Qt.MouseButton.LeftButton)
         qtbot.mouseClick(dialog._bulk_mark_resend, Qt.MouseButton.LeftButton)
-        # No assertion beyond not crashing
+
+        # Marking selected files for resend must persist the flag and clear selection
+        assert all(f["resend_flag"] for f in dialog._all_files)
+        assert dialog._selected_files == set()
 
 
 # ---------------------------------------------------------------------------

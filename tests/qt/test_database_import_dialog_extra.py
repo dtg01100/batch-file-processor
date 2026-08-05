@@ -463,13 +463,17 @@ class TestImportThread:
             backup_path="/backup",
         )
 
-        # Create a database at the new path for testing
-        # Since we can't mock signals, we just verify run() doesn't crash
-        # when dealing with non-existent files
-        import contextlib
+        # run() must catch the failure internally and report it via the
+        # error signal rather than raising. The old contextlib.suppress
+        # (Exception) silently swallowed every exception, so the test
+        # passed even if run() crashed.
+        emitted_errors = []
+        thread.error.connect(emitted_errors.append)
 
-        with contextlib.suppress(Exception):
-            thread.run()
+        thread.run()
+
+        assert len(emitted_errors) == 1
+        assert emitted_errors[0] != ""
 
 
 @pytest.mark.qt
