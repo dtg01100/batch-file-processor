@@ -1507,3 +1507,79 @@ pre-existing test-quality debt for future cleanup.
 - Sufficiency runner: `test_default_pairs_resolve` and
   `test_mutation_runner_self_check` pass
 
+## Hygiene runner FP fix (2026-08-05)
+
+The `missing_assert` visitor in `tests/meta/test_hygiene.py` had three
+false-positive patterns that survived the 2026-07-16 class-body fix.
+Each was fixed in commit `26bfcb904`:
+
+1. **`mock.assert_called_*` (6 methods)** — every MagicMock-based test
+   that verifies a dependency call with `mock.assert_called_once()`,
+   `assert_called_with()`, etc. was flagged as "no assertion".
+2. **`self.assertX(...)` (31 unittest.TestCase methods)** — classic
+   `self.assertEqual`, `self.assertIn`, `self.assertRaises`,
+   `self.assertWarns`, etc. were invisible to `_BodyHasAssertion`.
+3. **`pytest.raises` / `pytest.warns` already handled** — the remaining
+   family (the `assertX` forms above) closed the gap for
+   `test_configuration_plugin.py` and similar.
+
+**Before fix:** 19 failing files, 69 individual `missing_assert`
+violations.
+**After fix:** 13 failing files, 18 individual `missing_assert`
+violations — all remaining cases are genuinely no-assert tests, not
+runner false positives.
+
+### 18 remaining violations, two buckets
+
+**9 SMOKE no-ops** — legitimate "method invocation without result
+observation" tests. Allowlisted in `KNOWN_HYGIENE_VIOLATIONS` (2026-08-05)
+with per-entry cited reasons:
+
+| File | Line | Test |
+|---|---|---|
+| `tests/unit/dispatch_tests/test_services.py` | 219 | `test_update_does_nothing` |
+| `tests/unit/dispatch_tests/test_services.py` | 232 | `test_update_with_empty_values` |
+| `tests/unit/interface/database/test_database_obj.py` | 174 | `test_close_with_no_connection` |
+| `tests/unit/test_structured_logging.py` | 364 | `test_func` (nested helper; outer test asserts) |
+| `tests/integration/test_gui_user_workflows.py` | 333 | `test_maintenance_dialog_workflow` |
+| `tests/integration/test_gui_user_workflows.py` | 345 | `test_database_import_workflow` |
+| `tests/integration/test_gui_user_workflows.py` | 1232 | `test_view_processed_files_workflow` |
+| `tests/integration/test_gui_user_workflows.py` | 1588 | `test_dialog_cleanup` |
+| `tests/qt/test_qt_app.py` | 772 | `test_refresh_users_list_no_panel_is_noop` |
+
+**9 SUSPICIOUS** — tests with multiple calls and no observation, likely
+real test-quality debt. Each needs per-test analysis to fix correctly;
+deferred to a follow-up task (NOT allowlisted):
+
+| File | Line | Test |
+|---|---|---|
+| `tests/unit/dispatch/services/test_folder_processor.py` | 288 | `test_log_message_handles_non_writable` |
+| `tests/unit/dispatch/services/test_folder_processor.py` | 342 | `test_record_processed_file_handles_error` |
+| `tests/unit/test_converter_edge_cases.py` | 1194 | `test_convert_to_fintech_empty_upc_lut_raises_key_error` |
+| `tests/unit/test_plugins/test_configuration_plugin.py` | 293 | `test_plugin_lifecycle` |
+| `tests/qt/test_comprehensive_ui.py` | 801 | `test_app_refresh_folders` |
+| `tests/qt/test_database_import_dialog_extra.py` | 449 | `test_import_thread_run_handles_exception` |
+| `tests/qt/test_qt_dialogs.py` | 57 | `test_apply_does_nothing` |
+| `tests/qt/test_qt_widgets.py` | 217 | `test_empty_table` |
+| `tests/qt/test_resend_dialog_extra.py` | 286 | `test_apply_resend_flags` |
+
+### Headline numbers (superseded)
+
+The "TOTAL: 208 / 0 / 0" claim above (2026-07-14) described the state
+after the `bare_except_pass` tightening and predates both the
+2026-07-16 class-body surfacing and this FP fix. Current state:
+
+| Layer | Files | missing_assert violations (post-allowlist) |
+|---|---|---|
+| unit | — | 3 failing files (test_folder_processor, test_converter_edge_cases, test_configuration_plugin) |
+| integration | — | 0 |
+| qt | — | 5 failing files (test_comprehensive_ui, test_database_import_dialog_extra, test_qt_dialogs, test_qt_widgets, test_resend_dialog_extra) |
+| **TOTAL** | **208** | **8 failing files / 9 violations** (all suspicious bucket) |
+
+### Verification
+
+- Hygiene runner `missing_assert`: 13 → 8 failing files (smoke bucket
+  allowlisted).
+- The 8 remaining failures are all in the suspicious bucket.
+- Self-check (`test_hygiene_runner_self_check`) passes.
+

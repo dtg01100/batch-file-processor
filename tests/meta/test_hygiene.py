@@ -2945,6 +2945,65 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         365,
         "class-body method; test_func has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
     ),
+    # ---- Smoke no-op allowlist (2026-08-05) ----
+    # Post-26bfcb904 the missing_assert runner recognizes
+    # mock.assert_called_* and unittest self.assertX, dropping its
+    # false positives. These 9 are genuine smoke no-ops: the body
+    # invokes a method and exits with no result observation.
+    (
+        "tests/unit/dispatch_tests/test_services.py",
+        "missing_assert",
+        219,
+        "legitimate smoke - NullProgressReporter.update invoked, no result observation",
+    ),
+    (
+        "tests/unit/dispatch_tests/test_services.py",
+        "missing_assert",
+        232,
+        "legitimate smoke - NullProgressReporter.update empty values, no observation",
+    ),
+    (
+        "tests/unit/interface/database/test_database_obj.py",
+        "missing_assert",
+        174,
+        "legitimate smoke - close() on unset connection must not raise, no observation",
+    ),
+    (
+        "tests/unit/test_structured_logging.py",
+        "missing_assert",
+        364,
+        "nested helper named test_func inside @logged test; outer scope asserts result",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        333,
+        "legitimate smoke - patched maintenance dialog opened, no result observation",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        345,
+        "legitimate smoke - patched database import dialog opened, no result observation",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1232,
+        "legitimate smoke - patched processed-files dialog opened, no result observation",
+    ),
+    (
+        "tests/integration/test_gui_user_workflows.py",
+        "missing_assert",
+        1588,
+        "legitimate smoke - patched edit-settings dialog exec'd, no result observation",
+    ),
+    (
+        "tests/qt/test_qt_app.py",
+        "missing_assert",
+        772,
+        "legitimate smoke - _refresh_users_list no-op with no right panel, no observation",
+    ),
 ]
 
 
