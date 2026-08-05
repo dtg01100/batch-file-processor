@@ -944,7 +944,6 @@ class TestFolderProcessingIntegration:
 
             # Create a mock run log
             run_log = MagicMock(spec=RunLog)
-            run_log.write = MagicMock()
 
             # Process the folder
             result = orchestrator.process_folder(folder_config, run_log)
@@ -985,7 +984,6 @@ class TestFolderProcessingIntegration:
             orchestrator = DispatchOrchestrator(config)
 
             run_log = MagicMock(spec=RunLog)
-            run_log.write = MagicMock()
 
             # Process the folder
             result = orchestrator.process_folder(folder_config, run_log)
