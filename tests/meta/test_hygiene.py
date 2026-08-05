@@ -182,6 +182,62 @@ def _check_bare_magicmock(file: Path) -> list[Violation]:
 # Check: test function with no assertions.
 # ---------------------------------------------------------------------------
 
+# MagicMock assertion methods. This project's convention is to verify every
+# ``MagicMock(spec=...)`` interaction with an explicit ``assert_called*``
+# call (hermetic-real-shape tests skill, pitfall #9). These method names
+# only exist on ``unittest.mock.Mock``, so matching on the attribute name
+# is safe for any receiver expression — there is no realistic
+# ``assert_called_once`` method on a non-mock object.
+_MOCK_ASSERT_METHODS: frozenset[str] = frozenset(
+    {
+        "assert_called_with",
+        "assert_called_once_with",
+        "assert_called_once",
+        "assert_not_called",
+        "assert_any_call",
+        "assert_has_calls",
+    }
+)
+
+# unittest.TestCase assertion family. Require an explicit ``self.`` receiver
+# so a hypothetical ``obj.assertSomething()`` helper (which does not exist
+# in stdlib) is not mistaken for an assertion.
+_UNITTEST_ASSERT_METHODS: frozenset[str] = frozenset(
+    {
+        "assertIsNotNone",
+        "assertTrue",
+        "assertFalse",
+        "assertIs",
+        "assertIsNot",
+        "assertIsInstance",
+        "assertNotIsInstance",
+        "assertEqual",
+        "assertNotEqual",
+        "assertIn",
+        "assertNotIn",
+        "assertGreater",
+        "assertGreaterEqual",
+        "assertLess",
+        "assertLessEqual",
+        "assertRaises",
+        "assertRaisesRegex",
+        "assertWarns",
+        "assertWarnsRegex",
+        "assertAlmostEqual",
+        "assertNotAlmostEqual",
+        "assertDictEqual",
+        "assertListEqual",
+        "assertTupleEqual",
+        "assertSetEqual",
+        "assertMultiLineEqual",
+        "assertSequenceEqual",
+        "assertCountEqual",
+        "assertRegex",
+        "assertNotRegex",
+        "assertLogs",
+    }
+)
+
 
 class _BodyHasAssertion(ast.NodeVisitor):
     """True if the function body contains any load-bearing assertion shape."""
@@ -197,15 +253,21 @@ class _BodyHasAssertion(ast.NodeVisitor):
             self.found = True
 
     def visit_Call(self, node: ast.Call) -> None:
-        if isinstance(node.func, ast.Attribute) and isinstance(
-            node.func.value, ast.Name
-        ):
-            if node.func.value.id == "pytest" and node.func.attr in {
-                "fail",
-                "raises",
-                "warns",
-                "skip",
-            }:
+        if isinstance(node.func, ast.Attribute):
+            if isinstance(node.func.value, ast.Name):
+                if node.func.value.id == "pytest" and node.func.attr in {
+                    "fail",
+                    "raises",
+                    "warns",
+                    "skip",
+                }:
+                    self.found = True
+            if node.func.attr in _MOCK_ASSERT_METHODS:
+                self.found = True
+            if node.func.attr in _UNITTEST_ASSERT_METHODS and (
+                isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "self"
+            ):
                 self.found = True
         elif isinstance(node.func, ast.Name) and node.func.id in {
             "pytest_fail",
