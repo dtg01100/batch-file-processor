@@ -119,7 +119,9 @@ class TweaksConverter(BaseEDIConverter, DatabaseConnectionMixin):
         output_file = context.output_file
         assert output_file is not None, "output_file not initialized"
         text_output = cast(TextIO, output_file)
-        transformed = tweaker._process_c_record(record.fields, text_output)
+        transformed = tweaker._process_c_record(
+            record.fields, text_output, record.raw_line
+        )
         if transformed:
             text_output.write(transformed)
 

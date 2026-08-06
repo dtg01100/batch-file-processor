@@ -172,6 +172,28 @@ def capture_records(line: str, parser=None) -> dict | None:
         {'record_type': 'A', 'cust_vendor': 'VENDOR', ...}
 
     """
+    # Strip trailing line terminators before parsing. EDI records are
+    # fixed-width content; the trailing "\n" / "\r\n" is a line-delimiter
+    # artifact (e.g. from file.readlines()) and must NOT leak into the
+    # last field of a record (parent_item_number on B, amount on C).
+    # The bug only manifests when the parser's positional slice reaches
+    # PAST the end of the record content into the trailing terminator:
+    #   - 75-char B record + "\n" -> line[70:76] = "00000\n" (LEAK)
+    #   - 76-char B record + "\n" -> line[70:76] = "000000" (no leak;
+    #     the slice stays within record content)
+    #   - 37-char C record + "\n" -> line[29:38] = "00000100\n" (LEAK)
+    #   - 38-char C record + "\n" -> line[29:38] = "000001234" (no leak)
+    # The downstream tweaks converter wrote the leaked "\n" verbatim
+    # (followed by its own appended "\n"), producing a spurious trailing
+    # "\r\n\r\n" vs. the legacy 1.47 reference output. The legacy stub
+    # masked this with `if len(writeable_line) < 77: parent_item_number
+    # = ""` before writing; modern code relies on the parser being
+    # correct at the boundary.
+    if line.endswith("\r\n"):
+        line = line[:-2]
+    elif line.endswith("\n"):
+        line = line[:-1]
+
     # Handle parser parameter
     if parser is not None:
         result = parser.parse_line(line)

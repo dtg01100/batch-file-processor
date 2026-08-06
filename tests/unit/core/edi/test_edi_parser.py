@@ -515,6 +515,134 @@ class TestRecordIntegration:
         assert result["record_type"] == "B"
         assert result["parent_item_number"] == ""  # Truncated, not corrupted
 
+    def test_capture_records_b_record_strips_trailing_newline(self):
+        """Regression: trailing ``\\n`` from ``readlines()`` must not leak into
+        ``parent_item_number``.
+
+        Before the parser stripped line terminators, a 75-char B record plus
+        the ``\\n`` that ``readlines()`` appends gave a 76-char line, and
+        ``line[70:76]`` captured ``parent_item_number = '00000\\n'`` (6 chars
+        including the newline). The downstream tweaks converter would then
+        write that field verbatim and add its own ``\\n``, producing a
+        spurious trailing ``\\r\\n\\r\\n`` in the output vs. the legacy 1.47
+        reference.
+
+        Note: a 76-char B record (with full parent) + ``\\n`` does NOT
+        exhibit this bug, because ``line[70:76]`` stays within the line's
+        record content. The bug is specific to the case where the parser
+        slice reaches past the end of the record into the trailing ``\\n``.
+
+        With the fix, the trailing ``\\n`` is stripped at the parser boundary
+        so the slice yields the empty string and ``parent_item_number`` is
+        empty (matching legacy's ``< 77`` workaround behaviour).
+        """
+        # 75-char B record (no parent_item_number on disk) + \n = 76-char line
+        # Without stripping: line[70:76] = '00000\n' (6 chars with \n)
+        # With stripping:    line[70:76] = '' (no parent at all)
+        line_76 = (
+            "B01234567890Test Item Description    "
+            "12345600105001000001000100019900100000\n"
+        )
+        assert len(line_76) == 76  # 75-char B record + \n
+
+        result = capture_records(line_76)
+
+        assert result is not None
+        assert result["record_type"] == "B"
+        assert result["parent_item_number"] == ""
+        assert "\n" not in result["parent_item_number"]
+        assert "\r" not in result["parent_item_number"]
+
+    def test_capture_records_b_record_full_length_strips_newline(self):
+        """Sanity: a 76-char B record (with full parent) + ``\\n`` still
+        parses cleanly. The ``\\n`` is stripped before slicing so
+        ``parent_item_number`` is exactly ``'000000'`` with no newline.
+
+        This case did NOT exhibit the original bug (because the slice
+        ``line[70:76]`` stays within record content), but it documents the
+        strip behaviour for the standard full-length B record.
+        """
+        line_77 = (
+            "B01234567890Test Item Description    "
+            "123456001050010000010001000199001000000\n"
+        )
+        assert len(line_77) == 77  # 76-char B record + \n
+
+        result = capture_records(line_77)
+
+        assert result is not None
+        assert result["record_type"] == "B"
+        assert result["parent_item_number"] == "000000"
+        assert "\n" not in result["parent_item_number"]
+
+    def test_capture_records_b_record_strips_crlf(self):
+        """Regression: ``\\r\\n`` line endings (Windows / FTP origin) must
+        also be stripped before parsing.
+
+        EDI files occasionally arrive with CRLF endings. The bug pattern is
+        the same as for ``\\n``: a 75-char B record plus ``\\r\\n`` gives
+        a 77-char line, and ``line[70:76]`` captures
+        ``parent_item_number = '00000\\r'`` (with trailing CR). With the
+        fix, the trailing ``\\r\\n`` is stripped so ``parent_item_number``
+        is empty (matching legacy's ``< 77`` workaround behaviour).
+        """
+        # 75-char B record (no parent_item_number on disk) + \r\n = 77-char line
+        # Without stripping: line[70:76] = '00000\r' (5 zeros + \r)
+        # With stripping:    line[70:76] = '' (no parent at all)
+        line_77 = (
+            "B01234567890Test Item Description    "
+            "12345600105001000001000100019900100000\r\n"
+        )
+        assert len(line_77) == 77  # 75-char B record + \r\n
+
+        result = capture_records(line_77)
+
+        assert result is not None
+        assert result["parent_item_number"] == ""
+        assert "\n" not in result["parent_item_number"]
+        assert "\r" not in result["parent_item_number"]
+
+    def test_capture_records_c_record_strips_trailing_newline(self):
+        """Regression: trailing ``\\n`` from ``readlines()`` must not leak into
+        ``amount``.
+
+        Before the parser stripped line terminators, a 37-char C record plus
+        the ``\\n`` from ``readlines()`` gave a 38-char line that satisfied
+        ``len(line) >= EDI_C_RECORD_MIN_LENGTH`` (38), so the parser
+        captured ``amount = '00000100\\n'`` (9 chars including the newline).
+        Downstream this produced spurious trailing bytes in the output.
+
+        With the fix, the trailing ``\\n`` is stripped, so the line is 37
+        chars and ``capture_records`` correctly returns ``None`` (37 < 38
+        minimum length).
+        """
+        line_38 = "CTAXTabSales Tax            000000100\n"
+        assert len(line_38) == 38  # 37-char C record + \n
+
+        result = capture_records(line_38)
+
+        assert result is None
+
+    def test_capture_records_c_record_full_length(self):
+        """Sanity: a properly-sized C record with a trailing ``\\n`` parses
+        cleanly and the ``amount`` field has exactly 9 chars with no
+        trailing newline.
+        """
+        # 38-char C record + \n = 39 chars on disk
+        #   C(1) + charge_type(3) + description(25) + amount(9) = 38
+        line_38 = "CTAB" + "Sales Tax".ljust(25) + "000001234"
+        assert len(line_38) == 38
+        line_39 = line_38 + "\n"
+        assert len(line_39) == 39
+
+        result = capture_records(line_39)
+
+        assert result is not None
+        assert result["record_type"] == "C"
+        assert result["charge_type"] == "TAB"
+        assert result["amount"] == "000001234"
+        assert "\n" not in result["amount"]
+
     def test_capture_records_truncated_c_record_returns_none(self):
         """Regression: truncated C record should return None with debug log, not corrupted data."""
         # C record needs >=38 chars, this is only 20

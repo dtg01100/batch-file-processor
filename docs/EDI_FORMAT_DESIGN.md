@@ -398,7 +398,9 @@ class MyConverter(BaseConverter):
     def convert(self):
         with open(self.edi_process, 'r') as f:
             for line in f:
-                record = capture_records(line.rstrip(), self.edi_parser)
+                # capture_records strips trailing \n / \r\n internally,
+                # so no .rstrip() is needed (and would be a no-op).
+                record = capture_records(line, self.edi_parser)
                 
                 if record is None:
                     continue

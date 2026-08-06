@@ -967,6 +967,60 @@ class TestEdgeCases:
         assert not tweak_mock_module.edi_convert.called
         assert estore_mock_module.edi_convert.called
 
+    @pytest.mark.parametrize(
+        ("convert_to_format", "process_edi", "tweak_edi", "expected_module"),
+        [
+            ("csv", "True", False, "dispatch.converters.convert_to_csv"),
+            ("CSV", True, False, "dispatch.converters.convert_to_csv"),
+            (
+                "eStore eInvoice",
+                "1",
+                False,
+                "dispatch.converters.convert_to_estore_einvoice",
+            ),
+            (
+                "YellowDog CSV",
+                "yes",
+                False,
+                "dispatch.converters.convert_to_yellowdog_csv",
+            ),
+            (
+                "scansheet-type-a",
+                "on",
+                False,
+                "dispatch.converters.convert_to_scansheet_type_a",
+            ),
+            ("tweaks", "True", True, "dispatch.converters.convert_to_tweaks"),
+        ],
+    )
+    def test_legacy_converter_option_matrix_routes_to_equivalent_module(
+        self,
+        convert_to_format,
+        process_edi,
+        tweak_edi,
+        expected_module,
+    ):
+        """Legacy format spellings and flags select the equivalent converter."""
+        module = create_mock_conversion_module("/output/result")
+        mock_loader = MockModuleLoader({expected_module: module})
+        step = EDIConverterStep(module_loader=mock_loader)
+
+        result = step.convert(
+            "/input/test.edi",
+            "/output",
+            {
+                "convert_to_format": convert_to_format,
+                "process_edi": process_edi,
+                "tweak_edi": tweak_edi,
+            },
+            {},
+            {},
+        )
+
+        assert result.success is True
+        assert mock_loader.last_module_name == expected_module
+        assert module.edi_convert.call_count == 1
+
     def test_tweaks_format_routes_to_tweaks_converter(self):
         """convert_to_format='tweaks' routes to the tweaks converter module."""
         tweak_mock_module = create_mock_conversion_module("/output/tweaked.csv")

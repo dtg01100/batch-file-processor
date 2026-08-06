@@ -17,8 +17,35 @@ from datetime import datetime, timedelta
 
 
 def capture_records(line):
-    """Capture records out of EDI segment line — minimal stub for split path."""
-    return []
+    """Parse the fixed-width EDI records used by output parity tests."""
+    if not line:
+        return None
+    record_type = line[0]
+    if record_type == "A":
+        return {
+            "record_type": "A",
+            "cust_vendor": line[1:7],
+            "invoice_number": line[7:17],
+            "invoice_date": line[17:23],
+            "invoice_total": line[23:33].strip(),
+        }
+    if record_type == "B":
+        return {
+            "record_type": "B",
+            "upc_number": line[1:12],
+            "description": line[12:37],
+            "vendor_item": line[37:43],
+            "unit_cost": line[43:49],
+            "combo_code": line[49:51],
+            "unit_multiplier": line[51:57],
+            "qty_of_units": line[57:62],
+            "suggested_retail_price": line[62:67],
+            "price_multi_pack": line[67:70],
+            "parent_item_number": line[70:76],
+        }
+    if record_type == "C":
+        return {"record_type": "C", "description": line[4:29]}
+    return None
 
 
 def detect_invoice_is_credit(edi_process):

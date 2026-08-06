@@ -381,6 +381,8 @@ class EDITweaker:
             if not line.strip():
                 continue
             input_edi_dict = utils.capture_records(line)
+            if input_edi_dict is None:
+                continue
             writeable_line = line
 
             if line_num > 0 and line_num % 100 == 0:
@@ -404,7 +406,9 @@ class EDITweaker:
 
             if writeable_line.startswith("C"):
                 c_records += 1
-                writeable_line = self._process_c_record(input_edi_dict, output_file)
+                writeable_line = self._process_c_record(
+                    input_edi_dict, output_file, line
+                )
 
             if writeable_line:
                 output_file.write(writeable_line)
@@ -532,23 +536,37 @@ class EDITweaker:
             )
         )
 
-    def _process_c_record(self, fields: dict, output_file: TextIO) -> str:
+    def _process_c_record(
+        self, fields: dict, output_file: TextIO, raw_line: str | None = None
+    ) -> str:
         """Process a C record.
 
         Args:
             fields: Parsed C record fields
             output_file: Output file handle
+            raw_line: The original, unparsed C record line. When supplied this
+                is emitted verbatim, matching the 1.47 behaviour.
 
         Returns:
             Formatted C record line (may include generated split tax records)
 
         """
+        # 1.47 tested the *raw* line ("CTABSales Tax"), not a parsed field.
+        # ``description`` starts at offset 4, i.e. after the "TAB" charge_type,
+        # so matching "TABSales Tax" against it never fires.
+        tax_source = raw_line if raw_line is not None else fields.get("record_type", "")
         if (
             self.config.split_prepaid_sales_tax_crec
             and self.crec_appender.unappended_records
-        ) and fields.get("description", "").startswith("TABSales Tax"):
+        ) and tax_source.startswith("CTABSales Tax"):
             self.crec_appender.fetch_splitted_sales_tax_totals(output_file)
             return ""
+
+        # 1.47 wrote the C record verbatim. Rebuilding it from the parsed
+        # fields silently truncates anything past the last captured field
+        # (offset 38), so prefer the raw line when we have it.
+        if raw_line is not None:
+            return raw_line if raw_line.endswith("\n") else raw_line + "\n"
 
         return (  # type: ignore[no-any-return]
             fields["record_type"]
@@ -628,7 +646,7 @@ class EDITweaker:
             # Prefer explicit check-digit calculation for 11-digit UPCs when enabled.
             # This ensures calculate_upc_check_digit behavior is applied even when
             # upc_target_length defaults to 11.
-            if upc_len == UPC_A_NO_CHECK_LENGTH:
+            if self.config.calc_upc and upc_len == UPC_A_NO_CHECK_LENGTH:
                 check_digit = utils.calc_check_digit(proposed_upc)
                 fields["upc_number"] = str(proposed_upc) + str(check_digit)
             elif upc_len == self.config.upc_target_length:
@@ -733,9 +751,23 @@ class EDITweaker:
     def _validate_parent_item_length(self, fields: dict, projected_line: str) -> dict:
         """Validate and adjust parent item length.
 
+        If the projected line is shorter than the standard B-record length,
+        zero out ``parent_item_number`` so it does not contribute stray bytes
+        to the rewritten output.
+
+        The threshold is ``EDI_B_RECORD_STANDARD_LENGTH`` (76), not 77. The
+        legacy 1.47 reference (and its stub) used ``< 77`` because its parser
+        captured a trailing ``\\n`` (from ``readlines()``) into the
+        ``parent_item_number`` field, inflating the join length by one.
+        Modern ``core.edi.edi_parser.capture_records`` strips line
+        terminators at the parser boundary, so the projected-line length is
+        the un-contaminated record length and ``76`` is the correct
+        full-record threshold.
+
         Args:
             fields: B record fields
             projected_line: Projected line string for length validation
+                (record_type + all fields except ``parent_item_number``)
 
         Returns:
             Modified fields dictionary
