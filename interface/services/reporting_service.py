@@ -104,7 +104,6 @@ class ReportingService:
         self,
         database: ReportingDatabaseProtocol,
         batch_log_sender_module: Any = None,
-        print_run_log_module: Any = None,
         utils_module: Any = None,
     ) -> None:
         """Initialize the reporting service.
@@ -113,14 +112,12 @@ class ReportingService:
             database: Database object implementing ReportingDatabaseProtocol
             batch_log_sender_module: Module for sending batch logs
                 (injected for testing)
-            print_run_log_module: Module for printing run logs (injected for testing)
             utils_module: Utils module with normalize_bool function
                 (injected for testing)
 
         """
         self._db = database
         self._batch_log_sender = batch_log_sender_module
-        self._print_run_log = print_run_log_module
         self._utils = utils_module
 
     def _normalize_bool(self, value: Any) -> bool:
@@ -409,47 +406,12 @@ class ReportingService:
 
         if run_log_file:
             with open(run_log_file, "a", encoding="utf-8") as run_log:
-                if self._normalize_bool(
-                    reporting_config.get("report_printing_fallback")
-                ):
-                    logger.info(
-                        "Emailing report log failed with error: %s, printing file",
-                        error,
-                    )
-                    run_log.write(
-                        "Emailing report log failed with error: "
-                        + str(error)
-                        + ", printing file\r\n"
-                    )
-                else:
-                    logger.info(
-                        "Emailing report log failed with error: %s, "
-                        "printing disabled, stopping",
-                        error,
-                    )
-                    run_log.write(
-                        "Emailing report log failed with error: "
-                        + str(error)
-                        + ", printing disabled, stopping\r\n"
-                    )
-
-        if (
-            self._normalize_bool(reporting_config.get("report_printing_fallback"))
-            and run_log_file
-            and self._print_run_log is not None
-        ):
-            try:
-                with open(run_log_file, encoding="utf-8") as run_log:
-                    self._print_run_log.do(run_log)
-            except Exception as printing_error:
-                logger.debug(
-                    "Printing error log failed with error: %s",
-                    printing_error,
+                logger.info(
+                    "Emailing report log failed with error: %s, stopping",
+                    error,
                 )
-                if run_log_file:
-                    with open(run_log_file, "a", encoding="utf-8") as run_log:
-                        run_log.write(
-                            "Printing error log failed with error: "
-                            + str(printing_error)
-                            + "\r\n"
-                        )
+                run_log.write(
+                    "Emailing report log failed with error: "
+                    + str(error)
+                    + ", stopping\r\n"
+                )

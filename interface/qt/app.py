@@ -41,7 +41,7 @@ from interface.qt.qt_compat import (
 from interface.qt.run_coordinator import QtRunCoordinator
 from interface.qt.window_controller import QtMainWindowController
 from interface.services.reporting_service import ReportingService
-from scripts import backup_increment, batch_log_sender, print_run_log
+from scripts import backup_increment, batch_log_sender
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,6 @@ class QtBatchFileSenderApp:
         self._reporting_service = ReportingService(
             database=self._database,
             batch_log_sender_module=batch_log_sender,
-            print_run_log_module=print_run_log,
             utils_module=utils,
         )
 

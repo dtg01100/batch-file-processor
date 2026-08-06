@@ -2895,25 +2895,6 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         135,
         "class-body method; test_clear_resets_state has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
     ),
-    # ---- tests/unit/test_print_run_log.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/unit/test_print_run_log.py",
-        "missing_assert",
-        113,
-        "class-body method; test_unix_printing_uses_lpr has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/test_print_run_log.py",
-        "missing_assert",
-        197,
-        "class-body method; test_printer_workflow_sequence has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/test_print_run_log.py",
-        "missing_assert",
-        224,
-        "class-body method; test_lpr_command_construction has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
     # ---- tests/unit/test_schema.py (class-body methods, surfaced 2026-07-16) ----
     (
         "tests/unit/test_schema.py",

@@ -305,10 +305,6 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "tests/unit/dispatch_tests/test_processed_files_tracker.py",
     ),  # 7/9 killed
     (
-        "dispatch/print_service.py",
-        "tests/unit/dispatch_tests/test_print_service.py",
-    ),  # 4/9 killed
-    (
         "dispatch/services/file_filter.py",
         "tests/unit/dispatch_tests/test_file_filter.py",
     ),  # 2/8 killed

@@ -105,7 +105,6 @@ This document maps all modules to their responsibilities and dependencies. **Upd
 | ErrorHandler | `error_handler.py` | Error recording/reporting |
 | ErrorLogger | `error_handler.py` | Legacy error logging |
 | LogSender | `log_sender.py` | Email error reports |
-| PrintService | `print_service.py` | Print configuration |
 | PreflightValidator | `preflight_validator.py` | Pre-flight validation |
 | ProcessedFilesTracker | `processed_files_tracker.py` | File tracking |
 | FileResult | `services/file_processor.py` | Processing result type |

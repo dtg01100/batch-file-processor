@@ -676,7 +676,6 @@ class TestQtBatchFileSenderApp:
         )
         fake_exact = {
             "batch_log_sender",
-            "print_run_log",
             "utils",
             "backup_increment",
             "record_error",

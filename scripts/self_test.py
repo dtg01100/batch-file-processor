@@ -133,7 +133,6 @@ def _check_app_modules() -> tuple[int, int]:
         "interface.qt.widgets.extra_widgets",
         # Top-level scripts
         "batch_log_sender",
-        "print_run_log",
         "utils",
         "backup_increment",
         # Core business logic
@@ -260,7 +259,6 @@ def _check_module_file_attrs() -> tuple[int, int]:
     passed = failed = 0
     local_modules = [
         "batch_log_sender",
-        "print_run_log",
         "utils",
         "backup_increment",
     ]

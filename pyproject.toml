@@ -116,7 +116,6 @@ include_packages = [
     "scripts.backup_increment",
     "scripts.batch_log_sender",
     "scripts.create_database",
-    "scripts.print_run_log",
     # Third-party deps that Nuitka's static import-walk can't reach from
     # main_interface.py but are pulled in by reachable modules. Adding
     # these here is the difference between "Nuitka reports success" and
@@ -586,7 +585,6 @@ module = [
     "barcode.*",
     "barcode",
     "openpyxl.*",
-    "win32print",
     "PySide6",
     "PySide6.*",
     "shiboken6",
