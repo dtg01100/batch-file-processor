@@ -50,8 +50,8 @@ class FileResult:
 
     def record_validation_outcome(
         self,
-        validated: bool,
-        errors_or_file: Any,  # noqa: FBT001 - boolean flag is intentional (validation outcome)
+        validated: bool,  # noqa: FBT001 - boolean flag is intentional (validation outcome)
+        errors_or_file: Any,
     ) -> None:
         """Record validation outcome: set validated flag and append errors.
 

@@ -168,10 +168,10 @@ class TestNormalizeValidationOutput:
     def test_tuple_with_truthy_first_element_coerces_to_bool(self):
         """A 2-tuple with non-bool first element is coerced to bool."""
         # 1 (truthy) -> True
-        is_valid, payload = normalize_validation_output((1, "x"), "current.edi")
+        is_valid, _payload = normalize_validation_output((1, "x"), "current.edi")
         assert is_valid
         # 0 (falsy) -> False
-        is_valid, payload = normalize_validation_output((0, "x"), "current.edi")
+        is_valid, _payload = normalize_validation_output((0, "x"), "current.edi")
         assert not is_valid
 
     def test_validation_result_valid_returns_current_file(self):

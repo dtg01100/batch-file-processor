@@ -76,6 +76,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -642,10 +643,8 @@ class _InProcMonkeyPatch:
             # does not handle that pattern. Real pytest supports it.
             return
         self._setattrs.append((target, name, value))
-        try:
+        with suppress(AttributeError, TypeError):
             setattr(target, name, value)
-        except (AttributeError, TypeError):
-            pass
 
     def setenv(self, name: str, value: object) -> None:
         self._setenvs.append((name, value))
@@ -891,10 +890,8 @@ def _run_subprocess_mutant(
     try:
         code, output, skipped = _run_pytest_on_mutant(mutant_path)
     finally:
-        try:
+        with suppress(OSError):
             mutant_path.unlink()
-        except OSError:
-            pass
 
     killed = code != 0
     snippet = ""

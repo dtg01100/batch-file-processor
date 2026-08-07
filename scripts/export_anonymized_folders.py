@@ -80,9 +80,7 @@ def _iter_rows(con: sqlite3.Connection) -> list[sqlite3.Row]:
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
     """Convert a sqlite3.Row to a plain dict (json.dumps-friendly)."""
-    return {
-        k: row[k] for k in row.keys()
-    }  # noqa: SIM118 - sqlite3.Row has its own .keys()
+    return {k: row[k] for k in row}
 
 
 def main(argv: list[str]) -> int:
