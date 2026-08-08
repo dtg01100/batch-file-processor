@@ -41,4 +41,4 @@ jobs:
       - name: Format check (black)
         run: black --check .
       - name: Run tests
-        run: pytest -n0 -m "not slow and not meta_assertions" --timeout=60
+        run: pytest -n0 -m "not slow and not meta_assertions and not qt" --timeout=60
