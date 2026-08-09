@@ -2,6 +2,14 @@
 
 This module contains the individual pipeline steps that make up
 the file processing pipeline in the dispatch system.
+
+IMPORT NOTE (import cycle): this package eagerly re-exports its submodules,
+so ANY ``import dispatch.pipeline.<submodule>`` runs this whole file first.
+In particular, it pulls in ``dispatch.pipeline.factory``, which imports
+``dispatch.results``. That is only safe because ``dispatch.results`` is a
+leaf module (see its IMPORT NOTE and ``docs/IMPORT_ARCHITECTURE.md``); it
+must stay that way, and ``dispatch.services.*`` must not
+module-level-import this package.
 """
 
 from dispatch.pipeline.converter import (
