@@ -2,6 +2,16 @@
 
 This module contains service classes that provide specialized functionality
 for the dispatch pipeline.
+
+IMPORT NOTE (import cycle): this package eagerly re-exports its submodules,
+so ANY ``import dispatch.services.<submodule>`` runs this whole file first.
+That makes ``dispatch.services`` a fan-in hub: ``dispatch.results`` must not
+runtime-import anything here (it uses ``TYPE_CHECKING`` for
+``ProgressReporter``), and no ``dispatch.services.*`` module may
+module-level-import ``dispatch.pipeline.*`` (``file_processor`` keeps those
+imports function-local). Otherwise the cycle
+``dispatch.results -> dispatch.services -> dispatch.pipeline ->
+dispatch.results`` comes back — see ``docs/IMPORT_ARCHITECTURE.md``.
 """
 
 from dispatch.services.file_processor import (

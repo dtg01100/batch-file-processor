@@ -2,10 +2,21 @@
 
 This module contains dataclasses returned by dispatch services,
 extracted from orchestrator.py to break circular dependencies.
+
+IMPORT NOTE (import cycle): this module MUST stay a leaf of the dispatch
+import graph. It must never import from ``dispatch.services`` or
+``dispatch.pipeline`` at runtime. ``ProgressReporter`` is only used as a
+type annotation, so it is imported under ``TYPE_CHECKING``; a runtime import
+here used to drag in ``dispatch.services`` -> ``dispatch.pipeline`` ->
+back to this module, creating the cycle documented in
+``docs/IMPORT_ARCHITECTURE.md``. See also the eager-re-export comments in
+``dispatch/services/__init__.py`` and ``dispatch/pipeline/__init__.py``.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dispatch.interfaces import (
     BackendInterface,
@@ -14,7 +25,9 @@ from dispatch.interfaces import (
     FileSystemInterface,
     UPCDictionaryProvider,
 )
-from dispatch.services.progress_reporter import ProgressReporter
+
+if TYPE_CHECKING:
+    from dispatch.services.progress_reporter import ProgressReporter
 
 
 @dataclass
