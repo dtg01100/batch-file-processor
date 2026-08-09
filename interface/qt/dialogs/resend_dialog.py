@@ -424,7 +424,7 @@ class ResendDialog(BaseDialog):
             checkbox.released.connect(self._on_checkbox_released)
             checkbox.stateChanged.connect(
                 lambda state, fid=file_info["id"]: self._on_file_selected(
-                    fid, selected=state == Qt.CheckState.Checked
+                    fid, selected=Qt.CheckState(state) == Qt.CheckState.Checked
                 )
             )
             self._table.setCellWidget(row, 0, checkbox)
@@ -505,6 +505,10 @@ class ResendDialog(BaseDialog):
         thread.finished.connect(thread.deleteLater)
 
         self._file_check_worker = worker
+        # Store the thread so _cancel_file_check_worker can quit+wait on it;
+        # without this the dialog can be destroyed while the worker thread is
+        # still running (crash vector under PySide6's binding-manager teardown).
+        self._file_check_thread = thread
         thread.start()
 
     def _on_file_checked(self, file_info: dict[str, Any]) -> None:
@@ -778,10 +782,21 @@ class ResendDialog(BaseDialog):
         self._file_check_thread = None
         if worker is None:
             return
-        worker.cancel()
-        if thread is not None and thread.isRunning():
-            thread.quit()
-            thread.wait(5000)
+        # The worker/thread may already have been deleteLater()-ed after
+        # finishing normally; touching a deleted PySide6 wrapper raises
+        # RuntimeError, so treat it as already stopped.
+        try:
+            worker.cancel()
+        except RuntimeError:
+            worker = None
+        if thread is not None:
+            try:
+                running = thread.isRunning()
+            except RuntimeError:
+                running = False
+            if running:
+                thread.quit()
+                thread.wait(5000)
         # Worker and thread are auto-deleted via deleteLater() wired
         # in _check_files_exist_async (thread.finished connections).
 
