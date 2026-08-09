@@ -11,7 +11,14 @@ through the validation, splitting, conversion, and sending pipeline. It handles:
 import os
 import shutil
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # Type-checking only: importing dispatch.pipeline at module level creates
+    # a circular import (dispatch.results -> dispatch.services ->
+    # file_processor -> dispatch.pipeline -> dispatch.results). The runtime
+    # imports live inside _run_splitting. See docs/IMPORT_ARCHITECTURE.md.
+    from dispatch.pipeline.splitter import SplitterResult
 
 from core.structured_logging import (
     get_logger,
@@ -294,7 +301,7 @@ class FileProcessor:
 
         # Run splitting
         split_start = time.time()
-        split_skipped = self._run_splitting(
+        split_outcome = self._run_splitting(
             current_file=current_file,
             _file_path=file_path,
             file_basename=file_basename,
@@ -303,16 +310,44 @@ class FileProcessor:
             _run_log=run_log,
         )
         split_duration = int((time.time() - split_start) * 1000)
-        if self._audit_logger and split_skipped:
+        if self._audit_logger:
+            split_output = (
+                split_outcome.files[0][0]
+                if split_outcome.files and split_outcome.files[0][0] != current_file
+                else None
+            )
             self._audit_logger.log_step(
                 correlation_id=correlation_id,
                 folder_id=folder_id,
                 file_name=file_name,
                 step="split",
-                status="skipped",
+                status="success" if split_outcome.was_split else "skipped",
                 duration_ms=split_duration,
                 input_path=current_file,
+                output_path=split_output,
             )
+
+        # When the file was split, convert and send each split output instead
+        # of the original (which may be a multi-invoice file the receiver
+        # cannot process as-is). Split outputs live in a temp dir tracked on
+        # the context and are cleaned up by _cleanup_temp_artifacts.
+        if self._handle_split_outputs(
+            split_outcome=split_outcome,
+            current_file=current_file,
+            file_path=file_path,
+            context=context,
+            result=result,
+            run_log=run_log,
+            correlation_id=correlation_id,
+            folder_id=folder_id,
+            file_name=file_name,
+        ):
+            return
+
+        # Without a split, the splitter may still have produced a single
+        # category-filtered copy — send that instead of the original input.
+        if split_outcome.files and split_outcome.files[0][0] != current_file:
+            current_file = split_outcome.files[0][0]
 
         # Run conversion
         convert_start = time.time()
@@ -539,8 +574,12 @@ class FileProcessor:
         context: ProcessingContext,
         result: FileResult,
         _run_log: RunLog | None,
-    ) -> bool:
+    ) -> "SplitterResult":
         """Run splitting step of the pipeline.
+
+        Split outputs are written to a temp directory tracked on the
+        processing context so the files remain on disk until they are sent;
+        cleanup happens in ``_cleanup_temp_artifacts``.
 
         Args:
             current_file: Current file path
@@ -551,29 +590,149 @@ class FileProcessor:
             run_log: Run log
 
         Returns:
-            True if processing should stop (split occurred)
+            SplitterResult describing the split outcome. ``was_split`` is
+            True when the input was split into multiple outputs; ``files``
+            holds ``(path, prefix, suffix)`` tuples for the outputs.
 
         """
+        # Function-local imports: importing dispatch.pipeline at module level
+        # creates a circular import (dispatch.results -> dispatch.services ->
+        # file_processor -> dispatch.pipeline -> dispatch.results).
+        from dispatch.pipeline.splitter import SplitterResult
+        from dispatch.pipeline.temp_dir_utils import create_pipeline_temp_dir
+
         if not self.splitter_step:
-            return False
+            return SplitterResult(files=[], was_split=False)
+
+        temp_dir, _ = create_pipeline_temp_dir(
+            "edi_split", context.effective_folder, context
+        )
 
         try:
-            split_output = self.splitter_step.execute(
+            split_result: SplitterResult = self.splitter_step.split(
                 current_file,
+                temp_dir,
                 context.effective_folder,
+                context.upc_dict or {},
             )
-            # Returns list[str] of output paths
-            was_split = bool(split_output)
-            if was_split:
-                logger.info(
-                    "File %s was split into %d files", file_basename, len(split_output)
-                )
-                return True
-            return False
         except Exception as e:
             logger.exception("Splitting error for %s: %s", file_basename, e)
             result.errors.append(f"Splitting error: {e}")
+            return SplitterResult(files=[], was_split=False, errors=[str(e)])
+
+        if split_result.was_split:
+            logger.info(
+                "File %s was split into %d files",
+                file_basename,
+                len(split_result.files),
+            )
+        else:
+            logger.debug(
+                "File %s was not split (was_filtered=%s)",
+                file_basename,
+                split_result.was_filtered,
+            )
+        return split_result
+
+    def _handle_split_outputs(
+        self,
+        split_outcome: "SplitterResult",
+        current_file: str,
+        file_path: str,
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: RunLog | None,
+        *,
+        correlation_id: str,
+        folder_id: int,
+        file_name: str,
+    ) -> bool:
+        """Send split outputs when a split occurred, logging the send step.
+
+        Returns:
+            True when the file was split and its outputs were sent (the
+            pipeline should stop); False when no split occurred.
+
+        """
+        import time
+
+        if not split_outcome.was_split:
             return False
+
+        send_start = time.time()
+        self._send_split_files(
+            split_files=split_outcome.files or [(current_file, "", "")],
+            context=context,
+            result=result,
+            run_log=run_log,
+        )
+        send_duration = int((time.time() - send_start) * 1000)
+        if self._audit_logger:
+            send_status = "success" if result.sent else "failure"
+            self._audit_logger.log_step(
+                correlation_id=correlation_id,
+                folder_id=folder_id,
+                file_name=file_name,
+                step="send",
+                status=send_status,
+                duration_ms=send_duration,
+                input_path=file_path,
+            )
+        return True
+
+    def _send_split_files(
+        self,
+        split_files: list[tuple[str, str, str]],
+        context: ProcessingContext,
+        result: FileResult,
+        run_log: RunLog | None,
+    ) -> None:
+        """Convert (if enabled) and send each split output file.
+
+        Aggregates the send outcome across all split files into
+        ``result.sent``. Conversion is applied per split file when a
+        converter step is configured and validation passed.
+
+        Args:
+            split_files: List of (path, prefix, suffix) split outputs
+            context: Processing context
+            result: File result
+            run_log: Run log
+
+        """
+        all_sends_succeeded = True
+        for split_path, _prefix, _suffix in split_files:
+            pipeline_file = split_path
+            if self.converter_step and result.validated:
+                try:
+                    converted_file = self.converter_step.execute(
+                        pipeline_file,
+                        context.effective_folder,
+                        context.settings,
+                        context.upc_dict,
+                        context=context,
+                    )
+                except Exception as e:
+                    logger.exception(
+                        "Conversion error for split file %s: %s", pipeline_file, e
+                    )
+                    converted_file = None
+                if converted_file:
+                    result.converted = True
+                    pipeline_file = converted_file
+
+            send_ok = self._send_file(
+                current_file=pipeline_file,
+                file_path=pipeline_file,
+                file_basename=os.path.basename(pipeline_file),
+                context=context,
+                result=result,
+                run_log=run_log,
+            )
+            if not send_ok:
+                all_sends_succeeded = False
+
+        result.sent = all_sends_succeeded
 
     def _send_file(
         self,
@@ -583,7 +742,7 @@ class FileProcessor:
         context: ProcessingContext,
         result: FileResult,
         run_log: RunLog | None,
-    ) -> None:
+    ) -> bool:
         """Send file to enabled backends.
 
         Args:
@@ -594,6 +753,9 @@ class FileProcessor:
             result: File result
             run_log: Run log
 
+        Returns:
+            True if the send succeeded
+
         """
         enabled_backends = self.send_manager.get_enabled_backends(
             context.effective_folder
@@ -601,7 +763,7 @@ class FileProcessor:
         if not enabled_backends:
             result.sent = False
             result.errors.append("No backends enabled")
-            return
+            return False
 
         # Apply file rename if configured
         from dispatch.file_utils import apply_file_rename as _ar
@@ -629,9 +791,10 @@ class FileProcessor:
                 current_file=current_file,
                 _run_log=run_log,
             )
-            return
+            return result.sent
 
         self._log_success(file_basename, file_path, run_log)
+        return result.sent
 
     def _send_to_backends(
         self,

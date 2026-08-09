@@ -606,12 +606,26 @@ class EDISplitterStep(ErrorRecordingMixin):
         )
         return filtered_files
 
-    def execute(self, file_path: str, folder: dict) -> list[str]:
+    def execute(
+        self,
+        file_path: str,
+        folder: dict,
+        output_dir: str | None = None,
+    ) -> list[str]:
         """Execute split step (wrapper for pipeline compatibility).
+
+        Note:
+            Prefer the ``split()`` interface when the caller needs the split
+            outputs to outlive this call (e.g. to send them). This wrapper
+            returns paths into a caller-owned directory; it never deletes
+            the outputs it produces.
 
         Args:
             file_path: Path to the file to split
             folder: Folder configuration dictionary
+            output_dir: Optional caller-owned directory for split outputs.
+                When omitted, a fresh temp dir is created and left for the
+                caller to clean up.
 
         Returns:
             List of output file paths
@@ -619,8 +633,7 @@ class EDISplitterStep(ErrorRecordingMixin):
         """
         import tempfile
 
+        temp_dir = output_dir or tempfile.mkdtemp(prefix="edi_split_")
         upc_dict = folder.get("upc_dict", {})
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            result = self.split(file_path, temp_dir, folder, upc_dict)
-            return [f[0] for f in result.files]
+        result = self.split(file_path, temp_dir, folder, upc_dict)
+        return [f[0] for f in result.files]
