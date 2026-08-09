@@ -951,7 +951,7 @@ class TestNormalizationHelpers:
 class TestExecuteWrapper:
     """Tests for EDISplitterStep.execute wrapper behavior."""
 
-    def test_execute_returns_output_paths_from_split_result(self):
+    def test_execute_returns_output_paths_from_split_result(self, tmp_path):
         """Execute maps SplitterResult tuples to a flat list of output paths."""
         step = EDISplitterStep(splitter=MockEDISplitter())
 
@@ -965,12 +965,14 @@ class TestExecuteWrapper:
                 ]
             ),
         ) as mock_split:
-            result = step.execute("/input/source.edi", {"upc_dict": {"1": "x"}})
+            result = step.execute(
+                "/input/source.edi", {"upc_dict": {"1": "x"}}, output_dir=str(tmp_path)
+            )
 
         assert result == ["/out/one.edi", "/out/two.edi"]
         mock_split.assert_called_once()
 
-    def test_execute_defaults_upc_dict_to_empty_dict(self):
+    def test_execute_defaults_upc_dict_to_empty_dict(self, tmp_path):
         """Execute uses an empty UPC dict when folder config does not provide one."""
         step = EDISplitterStep(splitter=MockEDISplitter())
 
@@ -979,7 +981,7 @@ class TestExecuteWrapper:
             "split",
             return_value=SplitterResult(files=[("/out/only.edi", "", "")]),
         ) as mock_split:
-            step.execute("/input/source.edi", {})
+            step.execute("/input/source.edi", {}, output_dir=str(tmp_path))
 
         call_args = mock_split.call_args.args
         assert call_args[3] == {}
