@@ -127,6 +127,15 @@ class ResendDialog(BaseDialog):
         self._should_show = True
         self._search_timer = QTimer(self)
         self._search_timer.setSingleShot(True)
+        # Single-shot timer for the async file-existence check. Parented to
+        # the dialog (not a bare QTimer.singleShot) so it is cancelled when
+        # the dialog closes — a pending singleShot used to fire during a
+        # LATER test's event processing and spawn the worker QThread
+        # mid-suite (the PySide6 binding-manager crash vector).
+        self._file_check_timer = QTimer(self)
+        self._file_check_timer.setSingleShot(True)
+        self._file_check_timer.setInterval(100)
+        self._file_check_timer.timeout.connect(self._check_files_exist_async)
         self._search_timer.timeout.connect(self._do_search_filter)
 
         self._current_offset = 0
@@ -408,7 +417,7 @@ class ResendDialog(BaseDialog):
         self._update_pagination()
         self._update_status()
 
-        QTimer.singleShot(100, self._check_files_exist_async)
+        self._file_check_timer.start()
 
     def _populate_table(self) -> None:
         """Populate the table with filtered files."""
@@ -776,6 +785,11 @@ class ResendDialog(BaseDialog):
         finish so subsequent _check_files_exist_async calls don't
         overlap.
         """
+        # Stop any pending file-existence check so it cannot fire after the
+        # dialog is closed (the timer is parented to the dialog; closing it
+        # otherwise leaves a pending event that spawns a worker QThread later).
+        self._file_check_timer.stop()
+
         worker = self._file_check_worker
         thread = self._file_check_thread
         self._file_check_worker = None
@@ -862,7 +876,7 @@ class ResendDialog(BaseDialog):
         self._loading_label.setText("")
         self._update_pagination()
 
-        QTimer.singleShot(100, self._check_files_exist_async)
+        self._file_check_timer.start()
 
     def _select_all_files(self) -> None:
         """Select all visible files."""
