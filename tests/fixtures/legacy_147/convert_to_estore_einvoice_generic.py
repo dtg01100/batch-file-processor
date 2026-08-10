@@ -3,10 +3,9 @@ import os
 from datetime import datetime
 from decimal import Decimal
 from typing import List
-
-import utils
 from query_runner import query_runner
 
+import utils
 
 class invFetcher:
     def __init__(self, settings_dict):
@@ -35,7 +34,9 @@ class invFetcher:
     def fetch_po(self, invoice_number):
         if invoice_number == self.last_invoice_number:
             return self.po
-        qry_ret = self._run_qry(f"""
+        else:
+            qry_ret = self._run_qry(
+                f"""
                 SELECT
             trim(ohhst.bte4cd),
                 trim(ohhst.bthinb)
@@ -43,15 +44,16 @@ class invFetcher:
                 FROM
             dacdata.ohhst ohhst
                 WHERE
-            ohhst.BTHHNB = {int(invoice_number)!s}
-            """)
-        self.last_invoice_number = invoice_number
-        try:
-            self.po = qry_ret[0][0]
-            self.cust = qry_ret[0][1]
-        except IndexError:
-            self.po = ""
-        return self.po
+            ohhst.BTHHNB = {str(int(invoice_number))}
+            """
+            )
+            self.last_invoice_number = invoice_number
+            try:
+                self.po = qry_ret[0][0]
+                self.cust = qry_ret[0][1]
+            except IndexError:
+                self.po = ""
+            return self.po
 
     def fetch_cust(self, invoice_number):
         self.fetch_po(invoice_number)
@@ -69,36 +71,34 @@ class invFetcher:
                 FROM
                     dacdata.odhst odhst
                 WHERE
-                    odhst.BUHHNB = {int(invno)!s}
+                    odhst.BUHHNB = {str(int(invno))}
             """
             qry_ret = self._run_qry(qry)
             self.uom_lut = dict(qry_ret)
             self.last_invno = invno
         try:
             return self.uom_lut[lineno + 1]
-        except KeyError:
+        except KeyError as error:
             try:
                 if int(uommult) > 1:
                     qry = f"""select dsanrep.ANB9TX
                             from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {int(itemno)!s}"""
+                            where dsanrep.ANBACD = {str(int(itemno))}"""
                 else:
                     qry = f"""select dsanrep.ANB8TX
                             from dacdata.dsanrep dsanrep
-                            where dsanrep.ANBACD = {int(itemno)!s}"""
+                            where dsanrep.ANBACD = {str(int(itemno))}"""
                 uomqry_ret = self._run_qry(qry)
                 return uomqry_ret[0][0]
-            except Exception:
+            except Exception as error:
                 if int(uommult) > 1:
                     return "HI"
-                return "LO"
+                else:
+                    return "LO"
 
 
-def edi_convert(
-    edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup
-):
+def edi_convert(edi_process, output_filename_initial, settings_dict, parameters_dict, upc_lookup):
     inv_fetcher = invFetcher(settings_dict)
-
     def convert_to_price(value):
         retprice = (
             (value[:-2].lstrip("0") if not value[:-2].lstrip("0") == "" else "0")
@@ -155,9 +155,9 @@ def edi_convert(
         invoice_total.clear()
         return (rowlist, shipper_mode, shipper_accum, shipper_line_number)
 
-    store_number = parameters_dict["estore_store_number"]
-    vendor_oid = parameters_dict["estore_Vendor_OId"]
-    vendor_name = parameters_dict["estore_vendor_NameVendorOID"]
+    store_number = parameters_dict['estore_store_number']
+    vendor_oid = parameters_dict['estore_Vendor_OId']
+    vendor_name = parameters_dict['estore_vendor_NameVendorOID']
 
     with open(edi_process, encoding="utf-8") as work_file:  # open input file
         work_file_lined = list(work_file.readlines())  # make list of lines
@@ -234,25 +234,15 @@ def edi_convert(
                             "Store Number": store_number,
                             "Vendor OId": vendor_oid,
                             "Invoice Number": input_edi_dict["invoice_number"],
-                            "Purchase Order": inv_fetcher.fetch_po(
-                                input_edi_dict["invoice_number"]
-                            ),
+                            "Purchase Order": inv_fetcher.fetch_po(input_edi_dict['invoice_number']),
                             "Invoice Date": write_invoice_date,
-                            "Total Invoice Cost": utils.convert_to_price(
-                                str(
-                                    utils.dac_str_int_to_int(
-                                        input_edi_dict["invoice_total"]
-                                    )
-                                )
-                            ),
+                            "Total Invoice Cost": utils.convert_to_price(str(utils.dac_str_int_to_int(input_edi_dict['invoice_total'])))
                         }
                         # row_dict_list.append(row_dict)
                         invoice_index += 1
                     if input_edi_dict["record_type"] == "B":
                         try:
-                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][
-                                1
-                            ]
+                            upc_entry = upc_lookup[int(input_edi_dict["vendor_item"])][1]
                         except KeyError:
                             print("cannot find each upc")
                             upc_entry = input_edi_dict["upc_number"]
@@ -331,7 +321,7 @@ def edi_convert(
 
                         invoice_accum.append(row_dict["Extended Cost"])
 
-                    if input_edi_dict["record_type"] == "C":
+                    if input_edi_dict["record_type"] == 'C':
 
                         row_dict = {
                             "Detail Type": "S",
@@ -345,7 +335,9 @@ def edi_convert(
                             "QTY": 1,
                             "Unit Cost": convert_to_price(input_edi_dict["amount"]),
                             "Unit Retail": 0,
-                            "Extended Cost": convert_to_price(input_edi_dict["amount"]),
+                            "Extended Cost": convert_to_price(
+                                input_edi_dict["amount"]
+                            ),
                             "Extended Retail": "",
                         }
 

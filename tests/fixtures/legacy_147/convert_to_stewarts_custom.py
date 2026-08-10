@@ -2,14 +2,15 @@ import csv
 import decimal
 from datetime import datetime, timedelta
 
-import utils
 from dateutil import parser
+
+import utils
+
 from query_runner import query_runner
 
 
 class CustomerLookupError(Exception):
     pass
-
 
 def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_dict):
     def convert_to_price(value):
@@ -27,12 +28,8 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 str(int(stripped_date_value[0]) + 19) + stripped_date_value[1:]
             )
             parsed_date_string = parser.isoparse(calculated_date_string).date()
-            corrected_date_string = parsed_date_string + timedelta(
-                days=int(offset) + adj_offset
-            )
-            formatted_date_string = str(
-                datetime.strftime(corrected_date_string, "%m/%d/%y")
-            )
+            corrected_date_string = parsed_date_string + timedelta(days=int(offset) + adj_offset)
+            formatted_date_string = str(datetime.strftime(corrected_date_string, "%m/%d/%y"))
         except Exception:
             formatted_date_string = "Not Available"
         return formatted_date_string
@@ -54,7 +51,8 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
 
             header_a_record = utils.capture_records(work_file_lined[0])
 
-            header_fields = query_object.run_arbitrary_query(f"""
+            header_fields = query_object.run_arbitrary_query(
+                f"""
     SELECT TRIM(dsadrep.adbbtx) AS "Salesperson Name",
         ohhst.btcfdt AS "Invoice Date",
         TRIM(ohhst.btfdtx) AS "Terms Code",
@@ -96,7 +94,8 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             LEFT outer JOIN dacdata.dsadrep dsadrep_corp
                 ON dsabrep_corp.abajcd = dsadrep_corp.adaecd
         WHERE ohhst.bthhnb = {header_a_record['invoice_number'].lstrip("0")}
-            """)
+            """
+            )
 
             # print(header_fields[0])
 
@@ -129,9 +128,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             ]
 
             if len(header_fields) == 0:
-                raise CustomerLookupError(
-                    f"Cannot Find Order {header_a_record['invoice_number']} In History."
-                )
+                raise CustomerLookupError(f"Cannot Find Order {header_a_record['invoice_number']} In History.")
             header_fields_dict = dict(zip(header_fields_list, header_fields[0]))
 
             csv_file.writerow(["Invoice Details"])
@@ -144,84 +141,36 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     prettify_dates(header_fields_dict["Invoice_Date"]),
                     header_fields_dict["Terms_Code"],
                     header_a_record["invoice_number"],
-                    prettify_dates(
-                        header_fields_dict["Invoice_Date"],
-                        header_fields_dict["Terms_Duration"],
-                        -1,
-                    ),
+                    prettify_dates(header_fields_dict["Invoice_Date"], header_fields_dict['Terms_Duration'], -1),
                 ]
             )
             if header_fields_dict["Corporate_Customer_Number"] is not None:
                 bill_to_segment = [
-                    str(header_fields_dict["Corporate_Customer_Number"])
-                    + "\n"
-                    + header_fields_dict["Corporate_Customer_Name"]
-                    + "\n"
-                    + header_fields_dict["Corporate_Customer_Address"]
-                    + "\n"
-                    + header_fields_dict["Corporate_Customer_Town"]
-                    + ", "
-                    + header_fields_dict["Corporate_Customer_State"]
-                    + ", "
-                    + header_fields_dict["Corporate_Customer_Zip"]
-                    + ", "
-                    + "\n"
-                    + "US",
+                    str(header_fields_dict['Corporate_Customer_Number']) + "\n" + \
+                    header_fields_dict['Corporate_Customer_Name'] + "\n" + \
+                    header_fields_dict['Corporate_Customer_Address'] + "\n" + \
+                    header_fields_dict['Corporate_Customer_Town'] + ", " + header_fields_dict['Corporate_Customer_State'] + ", " + header_fields_dict['Corporate_Customer_Zip'] + ", " + "\n" + \
+                "US",
                 ]
             else:
                 bill_to_segment = [
-                    str(header_fields_dict["Customer_Number"])
-                    + "\n"
-                    + header_fields_dict["Customer_Name"]
-                    + "\n"
-                    + header_fields_dict["Customer_Address"]
-                    + "\n"
-                    + header_fields_dict["Customer_Town"]
-                    + ", "
-                    + header_fields_dict["Customer_State"]
-                    + ", "
-                    + header_fields_dict["Customer_Zip"]
-                    + ", "
-                    + "\n"
-                    + "US",
+                    str(header_fields_dict['Customer_Number']) + "\n" + \
+                    header_fields_dict['Customer_Name'] + "\n" + \
+                    header_fields_dict['Customer_Address'] + "\n" + \
+                    header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
+                    "US",
                 ]
             csv_file.writerow(
-                [
-                    "Ship To:",
-                    str(header_fields_dict["Customer_Number"])
-                    + " "
-                    + str(header_fields_dict["Customer_Store_Number"])
-                    + "\n"
-                    + header_fields_dict["Customer_Name"]
-                    + "\n"
-                    + header_fields_dict["Customer_Address"]
-                    + "\n"
-                    + header_fields_dict["Customer_Town"]
-                    + ", "
-                    + header_fields_dict["Customer_State"]
-                    + ", "
-                    + header_fields_dict["Customer_Zip"]
-                    + ", "
-                    + "\n"
-                    + "US",
-                    "Bill To:",
-                ]
-                + bill_to_segment
+                ["Ship To:",
+                str(header_fields_dict['Customer_Number']) + " " + str(header_fields_dict["Customer_Store_Number"]) + "\n" + \
+                header_fields_dict['Customer_Name'] + "\n" + \
+                header_fields_dict['Customer_Address'] + "\n" + \
+                header_fields_dict['Customer_Town'] + ", " + header_fields_dict['Customer_State'] + ", " + header_fields_dict['Customer_Zip'] + ", " + "\n" + \
+                "US",
+                "Bill To:"] + bill_to_segment
             )
             csv_file.writerow([""])
-            csv_file.writerow(
-                [
-                    "Invoice Number",
-                    "Store Number",
-                    "Item Number",
-                    "Description",
-                    "UPC #",
-                    "Quantity",
-                    "UOM",
-                    "Price",
-                    "Amount",
-                ]
-            )
+            csv_file.writerow(["Invoice Number", "Store Number", "Item Number", "Description", "UPC #", "Quantity", "UOM", "Price", "Amount"])
 
             uom_lookup_list = query_object.run_arbitrary_query(f"""
             select distinct bubacd as itemno, bus3qt as uom_mult, buhxtx as uom_code from dacdata.odhst odhst
@@ -244,11 +193,11 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 try:
                     retval = stage_2_list[0][2]
                 except IndexError:
-                    retval = "?"
-                return retval
+                    retval = '?'
+                return(retval)
 
             def convert_to_item_total(unit_cost, qty):
-                if qty.startswith("-"):
+                if qty.startswith('-'):
                     wrkqty = int(qty[1:])
                     wrkqtyint = wrkqty - (wrkqty * 2)
                 else:
@@ -257,9 +206,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                     except ValueError:
                         wrkqtyint = 0
                 try:
-                    item_total = (
-                        decimal.Decimal(convert_to_price(unit_cost)) * wrkqtyint
-                    )
+                    item_total = decimal.Decimal(convert_to_price(unit_cost)) * wrkqtyint
                 except ValueError:
                     item_total = decimal.Decimal()
                 except decimal.InvalidOperation:
@@ -278,9 +225,7 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
                 if blank_upc is False:
                     proposed_upc = input_upc
                     if len(str(proposed_upc)) == 11:
-                        upc_string = str(proposed_upc) + str(
-                            utils.calc_check_digit(proposed_upc)
-                        )
+                        upc_string = str(proposed_upc) + str(utils.calc_check_digit(proposed_upc))
                     else:
                         if len(str(proposed_upc)) == 8:
                             upc_string = str(utils.convert_UPCE_to_UPCA(proposed_upc))
@@ -291,52 +236,27 @@ def edi_convert(edi_process, output_filename, settings_dict, parameters_dict, up
             ):  # iterate over work file contents
                 input_edi_dict = utils.capture_records(line)
                 if input_edi_dict is not None:
-                    if input_edi_dict["record_type"] == "B":
-                        total_price, qtyint = convert_to_item_total(
-                            input_edi_dict["unit_cost"], input_edi_dict["qty_of_units"]
-                        )
-                        csv_file.writerow(
-                            [
-                                header_a_record["invoice_number"],
-                                header_fields_dict["Customer_Store_Number"],
-                                input_edi_dict["vendor_item"],
-                                input_edi_dict["description"],
-                                generate_full_upc(input_edi_dict["upc_number"]),
-                                qtyint,
-                                get_uom(
-                                    input_edi_dict["vendor_item"],
-                                    input_edi_dict["unit_multiplier"],
-                                ),
-                                "$"
-                                + str(convert_to_price(input_edi_dict["unit_cost"])),
-                                "$" + str(total_price),
-                            ]
-                        )
-                    if input_edi_dict["record_type"] == "C":
-                        csv_file.writerow(
-                            [
-                                input_edi_dict["description"],
-                                "000000000000",
-                                1,
-                                "EA",
-                                "$" + str(convert_to_price(input_edi_dict["amount"])),
-                                "$" + str(convert_to_price(input_edi_dict["amount"])),
-                            ]
-                        )
-            csv_file.writerow(
-                [
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "",
-                    "Total:",
-                    "$"
-                    + str(
-                        convert_to_price(header_a_record["invoice_total"]).lstrip("0")
-                    ),
-                ]
-            )
-    return output_filename + ".csv"
+                    if input_edi_dict['record_type'] == 'B':
+                        total_price, qtyint = convert_to_item_total(input_edi_dict['unit_cost'], input_edi_dict['qty_of_units'])
+                        csv_file.writerow([
+                            header_a_record["invoice_number"],
+                            header_fields_dict["Customer_Store_Number"],
+                            input_edi_dict['vendor_item'],
+                            input_edi_dict['description'],
+                            generate_full_upc(input_edi_dict['upc_number']),
+                            qtyint,
+                            get_uom(input_edi_dict['vendor_item'], input_edi_dict['unit_multiplier']),
+                            "$"+str(convert_to_price(input_edi_dict['unit_cost'])),
+                            "$"+str(total_price)
+                        ])
+                    if input_edi_dict['record_type'] == 'C':
+                        csv_file.writerow([
+                            input_edi_dict['description'],
+                            '000000000000',
+                            1,
+                            'EA',
+                            "$"+str(convert_to_price(input_edi_dict['amount'])),
+                            "$"+str(convert_to_price(input_edi_dict['amount']))
+                        ])
+            csv_file.writerow(["","","","","","","","Total:","$"+str(convert_to_price(header_a_record['invoice_total']).lstrip("0"))])
+    return(output_filename + ".csv")

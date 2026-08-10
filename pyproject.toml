@@ -10,7 +10,9 @@ version = "0.0.0"
 description = "Batch file processor with EDI support"
 requires-python = ">=3.11"
 dependencies = [
-    "PySide6>=6.8.0,<6.11",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "python-multipart>=0.0.9",
     "SQLAlchemy>=1.4.49",
     "Jinja2>=3.1.6",
     "Mako>=1.3.12",
@@ -58,13 +60,6 @@ test = [
     "mypy>=1.10.0",
     "isort==5.12.0",
 ]
-build = [
-    "pyinstaller>=6.0.0",
-    "pyinstaller-hooks-contrib>=2024.0",
-    "nuitka>=2.4",
-    "ordered-set>=4.1",
-    "patchelf>=0.17",
-]
 
 [tool.setuptools.packages.find]
 include = [
@@ -74,82 +69,9 @@ include = [
     "interface*",
     "scripts*",
     "adapters*",
+    "webapp*",
 ]
 
-# Per-project configuration for the nuitka-wine-builder image
-# (../nuitka-wine-builder). The CLI reads this table when
-# ``--src-dir`` is given; CLI flags always override. Drop or
-# change these values to point the builder at a different entry
-# point or to add / remove bundled packages. See
-# ../nuitka-wine-builder/README.md for the full schema.
-[tool.nuitka-wine-build]
-entry_point = "main_interface.py"
-output_filename = "Batch File Sender.exe"
-company_name = "Capital Candy"
-product_name = "Batch File Sender"
-file_version = "1.0.0"
-product_version = "1.0.0"
-include_packages = [
-    "dispatch",
-    "dispatch.converters",
-    "dispatch.pipeline",
-    "interface",
-    "interface.qt",
-    "interface.qt.dialogs",
-    "interface.qt.dialogs.edit_folders",
-    "interface.qt.services",
-    "interface.qt.widgets",
-    "interface.form",
-    "interface.operations",
-    "interface.plugins",
-    "interface.services",
-    "core",
-    "core.edi",
-    "backend",
-    "adapters",
-    "adapters.sqlite",
-    "adapters.sqlite.repositories",
-    "adapters.inmemory",
-    "adapters.inmemory.repositories",
-    "adapters.db2ssh",
-    "migrations",
-    "scripts.backup_increment",
-    "scripts.batch_log_sender",
-    "scripts.create_database",
-    # Third-party deps that Nuitka's static import-walk can't reach from
-    # main_interface.py but are pulled in by reachable modules. Adding
-    # these here is the difference between "Nuitka reports success" and
-    # "the .exe actually boots." Each one is in pyproject.toml deps.
-    # See audit log: dispatch/converters/* uses openpyxl+PIL+barcode via
-    # dynamic pkgutil discovery, scripts/mover.py uses PyQt5 (legacy).
-    # (pydantic/pydantic_core/typing_inspection were removed 2026-07-31
-    # when the project dropped its pydantic dependency; they are no
-    # longer pulled in by any reachable module.)
-    # `scripts/` package was narrowed from a single `--include-package=scripts`
-    # to four module-level includes 2026-08-03: only those 4 modules
-    # are reachable from the entrypoint. Dev-only scripts (PyQt5,
-    # pytest, CLI tools) no longer get bundled — drops cold-build
-    # work, removes an anti-bloat warning, and shrinks the .exe.
-    "openpyxl",
-    "PIL",
-    "barcode",
-    "dateutil",
-    "paramiko",
-]
-include_modules = [
-    "appdirs",
-    "lxml._elementpath",
-    "thefuzz.process",
-    "rapidfuzz.process",
-    # python-barcode lazy-loads these; without explicit includes the .exe
-    # crashes the first time a barcode is rendered. Source: audit of
-    # python_barcode.writer — all SVG/PNG backends are imported on demand.
-    "barcode.writer",
-    "barcode.codex",
-]
-include_data_dirs = [["edi_formats", "edi_formats"]]
-enable_plugins = ["pyside6"]
-jobs = 4
 [tool.black]
 line-length = 88
 target-version = [
@@ -197,7 +119,6 @@ ignore = [
 keep-runtime-typing = true
 
 [tool.ruff.lint.per-file-ignores]
-"main_interface.spec" = ["F821"]
 "archive/*" = [
     "E402",
     "E501",
@@ -264,15 +185,6 @@ keep-runtime-typing = true
 "migrations/folders_database_migrator.py" = [
     "C90",
 ]
-"main_qt.py" = [
-    "E402",
-]
-"interface/qt/dialogs/edit_folders/dynamic_edi_builder.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "FBT001",
-]
 "backend/email_backend.py" = [
     "ARG",
     "FBT001",
@@ -324,10 +236,40 @@ keep-runtime-typing = true
     "ARG",
     "C90",
 ]
+"dispatch/converters/convert_to_fintech.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
 "dispatch/converters/convert_to_funding.py" = [
     "E402",
     "E501",
     "ARG",
+]
+"dispatch/converters/convert_to_jolley_custom.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_scansheet_type_a.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_simplified_csv.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"dispatch/converters/convert_to_stewarts_custom.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
 ]
 "dispatch/converters/convert_to_sears_mosaic.py" = [
     "E402",
@@ -364,6 +306,7 @@ keep-runtime-typing = true
     "E402",
     "E501",
     "ARG",
+    "C90",
 ]
 "core/edi/edi_splitting_utils.py" = [
     "SIM115",
@@ -372,7 +315,10 @@ keep-runtime-typing = true
     "B027",
 ]
 "dispatch/converters/convert_to_scannerware.py" = [
-    "SIM115",
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
 ]
 "core/structured_logging.py" = [
     "UP017",
@@ -380,192 +326,12 @@ keep-runtime-typing = true
 "dispatch/observability/audit_logger.py" = [
     "UP017",
 ]
-"interface/qt/dialogs/edit_folders/layout_builder.py" = [
-    "E501",
-    "ARG",
-    "E402",
-]
-"interface/qt/dialogs/edit_folders_dialog.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT003",
-]
-"interface/qt/dialogs/resend_dialog.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT001",
-    "FBT003",
-]
-"interface/qt/dialogs/database_import_dialog.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT001",
-    "FBT003",
-]
-"interface/qt/dialogs/edit_folders/event_handlers.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT001",
-    "FBT003",
-]
-"interface/qt/services/qt_services.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT003",
-]
-"interface/qt/widgets/folder_list_widget.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT003",
-]
-"interface/qt/widgets/search_widget.py" = [
-    "E501",
-    "ARG",
-    "E402",
-    "FBT003",
-]
 "interface/services/ftp_service.py" = [
-    "E402",
-    "E501",
-    "ARG",
+    "ARG002",
 ]
-"converters/customer_queries.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
+"interface/services/reporting_service.py" = [
+    "ARG002",
 ]
-"converters/convert_to_csv.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_fintech.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_jolley_custom.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_scannerware.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_simplified_csv.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_stewarts_custom.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_tweaks.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_scansheet_type_a.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_base.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_estore_einvoice.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_estore_einvoice_generic.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/mixins.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"converters/convert_to_yellowdog_csv.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"dispatch/converters/convert_to_fintech.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"dispatch/converters/*.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"dispatch/error_handler.py" = [
-    "E501",
-    "ARG",
-]
-"dispatch/orchestrator.py" = [
-    "E501",
-    "ARG",
-]
-"dispatch/services/folder_processor.py" = [
-    "E501",
-    "ARG",
-]
-"interface/form/form_generator.py" = [
-    "E501",
-    "ARG",
-    "SIM",
-]
-"interface/operations/folder_manager.py" = [
-    "E501",
-    "ARG",
-]
-"interface/operations/plugin_configuration_mapper.py" = [
-    "E501",
-    "ARG",
-]
-"tests/conftest_magicmock_plugin.py" = [
-    "SIM",
-]
-"tests/unit/dispatch_tests/test_file_filter.py" = [
-    "B905",
-]
-"tests/unit/test_convert_to_scansheet_type_a.py" = [
-    "W293",
-]
-
 [tool.mypy]
 python_version = "3.13"
 strict = false
@@ -591,8 +357,5 @@ module = [
     "barcode.*",
     "barcode",
     "openpyxl.*",
-    "PySide6",
-    "PySide6.*",
-    "shiboken6",
 ]
 ignore_missing_imports = true
