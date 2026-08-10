@@ -1260,7 +1260,9 @@ class StructuredLogger:
 T = TypeVar("T")
 
 
-def logged(func: Callable[..., T]) -> Callable[..., T]:
+def logged(  # noqa: UP047 - decorator must accept arbitrary callable shape; PEP 695 syntax can't capture func.__name__/wraps at this scope
+    func: Callable[..., T],
+) -> Callable[..., T]:
     """Decorator to automatically log function entry, exit, and errors.
 
     This decorator wraps a function to provide automatic structured logging:

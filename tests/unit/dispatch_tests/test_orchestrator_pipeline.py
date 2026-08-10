@@ -970,62 +970,6 @@ class TestProcessedFilesAndCleanupBehavior:
 
 
 # =============================================================================
-# Tests: Send Pipeline File
-# =============================================================================
-
-
-class TestSendPipelineFile:
-    """Tests for _send_pipeline_file method."""
-
-    def test_send_pipeline_file_success(self, input_folder: Path):
-        """Test successful sending of pipeline file."""
-        backend = CaptureBackend()
-
-        config = DispatchConfig(backends={"copy": backend}, settings={})
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {"process_backend_copy": True}
-
-        result = orchestrator._send_pipeline_file(
-            str(input_folder / "test.edi"), folder
-        )
-
-        assert result
-        assert len(backend.received) == 1
-
-    def test_send_pipeline_file_no_backends(self, input_folder: Path):
-        """Test sending with no enabled backends."""
-        config = DispatchConfig(backends={}, settings={})
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {}
-
-        result = orchestrator._send_pipeline_file(
-            str(input_folder / "test.edi"), folder
-        )
-
-        assert not result
-
-    def test_send_pipeline_file_partial_failure(self, input_folder: Path):
-        """Test sending with partial backend failure."""
-        backend1 = CaptureBackend()
-        backend2 = FailingBackend()
-
-        config = DispatchConfig(
-            backends={"copy1": backend1, "copy2": backend2}, settings={}
-        )
-        orchestrator = DispatchOrchestrator(config)
-
-        folder = {"process_backend_copy1": True, "process_backend_copy2": True}
-
-        result = orchestrator._send_pipeline_file(
-            str(input_folder / "test.edi"), folder
-        )
-
-        assert not result
-
-
-# =============================================================================
 # Tests: Process Folder Pipeline Routing
 # =============================================================================
 

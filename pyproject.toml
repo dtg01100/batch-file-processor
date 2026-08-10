@@ -10,7 +10,7 @@ version = "0.0.0"
 description = "Batch file processor with EDI support"
 requires-python = ">=3.11"
 dependencies = [
-    "PySide6>=6.5.0,<6.12",
+    "PySide6>=6.8.0,<6.11",
     "SQLAlchemy>=1.4.49",
     "Jinja2>=3.1.6",
     "Mako>=1.3.12",
@@ -163,7 +163,13 @@ py_version = "313"
 [tool.ruff]
 line-length = 88
 target-version = "py313"
-
+# Exclude vendored production code shipped as test fixtures (1.47 parity
+# harness). These files are imported via sys.modules injection and are not
+# project source. Linting them duplicates work done at their source repo
+# and yields noise unrelated to this project's code health.
+extend-exclude = [
+    "tests/fixtures/legacy_147",
+]
 [tool.ruff.lint]
 select = [
     "E",

@@ -278,13 +278,19 @@ class _BodyHasAssertion(ast.NodeVisitor):
     def visit_With(self, node: ast.With) -> None:
         for item in node.items:
             ctx = item.context_expr
-            if isinstance(ctx, ast.Call) and isinstance(ctx.func, ast.Attribute):
-                if (
-                    isinstance(ctx.func.value, ast.Name)
-                    and ctx.func.value.id == "pytest"
-                    and ctx.func.attr in {"raises", "warns"}
-                ) or ctx.func.attr.startswith(("assert", "wait")):
-                    self.found = True
+            if (
+                isinstance(ctx, ast.Call)
+                and isinstance(ctx.func, ast.Attribute)
+                and (
+                    (
+                        isinstance(ctx.func.value, ast.Name)
+                        and ctx.func.value.id == "pytest"
+                        and ctx.func.attr in {"raises", "warns"}
+                    )
+                    or ctx.func.attr.startswith(("assert", "wait"))
+                )
+            ):
+                self.found = True
         self.generic_visit(node)
 
 
@@ -368,13 +374,14 @@ def _is_sleep_call(node: ast.Call) -> bool:
     ``module.time.sleep(...)`` shapes. Excludes string mentions.
     """
     func = node.func
-    if isinstance(func, ast.Attribute) and func.attr == "sleep":
-        value = func.value
-        if isinstance(value, ast.Name) and value.id == "time":
-            return True
-    if isinstance(func, ast.Name) and func.id == "sleep":
+    if (
+        isinstance(func, ast.Attribute)
+        and func.attr == "sleep"
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "time"
+    ):
         return True
-    return False
+    return isinstance(func, ast.Name) and func.id == "sleep"
 
 
 def _check_sleep_call(file: Path) -> list[Violation]:
@@ -481,10 +488,7 @@ def _is_bare_except(handler: ast.ExceptHandler) -> bool:
     # Multiple names: `except (A, B):` — at least one must be the
     # generic ``Exception`` or ``BaseException`` for it to be bare.
     if isinstance(handler.type, ast.Tuple):
-        for elt in handler.type.elts:
-            if _is_generic_exception(elt):
-                return True
-        return False
+        return any(_is_generic_exception(elt) for elt in handler.type.elts)
     return _is_generic_exception(handler.type)
 
 
@@ -495,11 +499,11 @@ def _is_generic_exception(node: ast.expr) -> bool:
     handlers. Anything else (``ValueError``, ``OSError``, etc.)
     is a narrow handler.
     """
-    if isinstance(node, ast.Name) and node.id in {"Exception", "BaseException"}:
-        return True
-    if isinstance(node, ast.Attribute) and node.attr in {"Exception", "BaseException"}:
-        return True
-    return False
+    return (
+        isinstance(node, ast.Name) and node.id in {"Exception", "BaseException"}
+    ) or (
+        isinstance(node, ast.Attribute) and node.attr in {"Exception", "BaseException"}
+    )
 
 
 def _is_pass_only(body: list[ast.stmt]) -> bool:
@@ -508,10 +512,11 @@ def _is_pass_only(body: list[ast.stmt]) -> bool:
     stmt = body[0]
     if isinstance(stmt, ast.Pass):
         return True
-    if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant):
-        if stmt.value.value is None:
-            return True
-    return False
+    return (
+        isinstance(stmt, ast.Expr)
+        and isinstance(stmt.value, ast.Constant)
+        and stmt.value.value is None
+    )
 
 
 def _check_bare_except_pass(file: Path) -> list[Violation]:
@@ -879,14 +884,22 @@ def _check_nested_try_pyramid(file: Path) -> list[Violation]:
 
     def _has_bare_except_pass(try_node: ast.Try) -> bool:
         for handler in try_node.handlers:
+            if (
+                handler.type is None
+                and len(handler.body) == 1
+                and isinstance(handler.body[0], ast.Pass)
+            ):
+                return True
             if handler.type is None:
-                if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass):
-                    return True
                 continue
             type_node = handler.type
-            if isinstance(type_node, ast.Name) and type_node.id == "Exception":
-                if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass):
-                    return True
+            if (
+                isinstance(type_node, ast.Name)
+                and type_node.id == "Exception"
+                and len(handler.body) == 1
+                and isinstance(handler.body[0], ast.Pass)
+            ):
+                return True
         return False
 
     def visit(node: ast.AST, chain: list[ast.Try]) -> None:
