@@ -168,24 +168,53 @@ def run_folders(settings: Settings, db=None) -> RunReport:
 
 
 class RunStore:
-    """In-memory store of background runs (single-user local webapp)."""
+    """In-memory store of background runs (single-user local webapp).
+
+    A single-user internal tool doesn't need a queue, but it does need a
+    guardrail: a fat-fingered double-click on "Process all folders" (or a
+    stale 8-second poll loop firing POST /api/run twice) would otherwise
+    spawn two simultaneous worker threads hammering the same SQLite
+    database. The active-run counter refuses a second ``start()`` while a
+    previous run is still in flight; the UI surfaces the rejection via the
+    standard FastAPI 400 path.
+    """
 
     def __init__(self) -> None:
         self._runs: dict[str, RunReport] = {}
         self._lock = threading.Lock()
+        self._active: int = 0
+
+    @property
+    def active_count(self) -> int:
+        """Return the number of runs currently in flight."""
+        with self._lock:
+            return self._active
 
     def start(self, settings: Settings) -> str:
-        """Start a background run and return its id immediately."""
+        """Start a background run and return its id immediately.
+
+        Raises:
+            RuntimeError: If a previous run is still in flight.
+                (The caller maps that to HTTP 400.)
+        """
+        with self._lock:
+            if self._active > 0:
+                raise RuntimeError("A run is already in progress")
+            self._active += 1
         run_id = uuid.uuid4().hex[:12]
         placeholder = RunReport(run_id=run_id, status="running")
         with self._lock:
             self._runs[run_id] = placeholder
 
         def _work() -> None:
-            report = run_folders(settings)
-            report.run_id = run_id
-            with self._lock:
-                self._runs[run_id] = report
+            try:
+                report = run_folders(settings)
+                report.run_id = run_id
+                with self._lock:
+                    self._runs[run_id] = report
+            finally:
+                with self._lock:
+                    self._active -= 1
 
         threading.Thread(target=_work, name=f"webapp-run-{run_id}", daemon=True).start()
         return run_id

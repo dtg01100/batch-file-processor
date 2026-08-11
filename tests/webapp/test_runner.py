@@ -118,3 +118,35 @@ def test_run_reports_missing_folder_as_failure(workspace):
     folder = report.folders[0]
     assert not folder.success
     assert folder.files_failed == 1
+
+
+def test_run_store_refuses_second_concurrent_run(workspace):
+    """A second ``start()`` while a previous run is in flight raises."""
+    from webapp.runner import RunStore
+
+    store = RunStore()
+
+    # First start succeeds and increments the active counter.
+    store.start(workspace)
+    assert store.active_count == 1
+
+    # Second start is rejected; counter is unchanged.
+    with pytest.raises(RuntimeError, match="already in progress"):
+        store.start(workspace)
+    assert store.active_count == 1
+
+
+def test_run_store_active_count_drops_after_run_completes(workspace):
+    """A successful run leaves the active counter at zero."""
+    from webapp.runner import RunStore
+
+    store = RunStore()
+    store.start(workspace)
+
+    # Wait for the worker to finish; 5s is generous for an empty folder.
+    import time
+
+    deadline = time.monotonic() + 5.0
+    while store.active_count > 0 and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert store.active_count == 0

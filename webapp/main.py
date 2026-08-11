@@ -218,7 +218,11 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         settings = app.state.settings
         if not settings.database_path.is_file():
             raise HTTPException(status_code=400, detail="No database imported yet")
-        run_id = app.state.run_store.start(settings)
+        try:
+            run_id = app.state.run_store.start(settings)
+        except RuntimeError as exc:
+            # Guardrail: refuse to start a second concurrent run.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"run_id": run_id}
 
     @app.get("/api/runs")

@@ -18,7 +18,9 @@ async function api(path, options) {
       const body = await resp.json();
       detail = body.detail || detail;
     } catch (_e) { /* non-JSON error body */ }
-    throw new Error(detail);
+    const err = new Error(detail);
+    err.status = resp.status;
+    throw err;
   }
   return resp.json();
 }
@@ -109,8 +111,8 @@ async function loadFolders() {
   body.innerHTML = folders.map((f) => {
     const tags = f.backends.map((b) => `<span class="tag tag--${b}">${b}</span>`).join("");
     const pathCell = f.path_exists
-      ? `<span class="exists">✓</span> <code>${esc(f.resolved_path)}</code>`
-      : `<span class="missing">✗</span> <code>${esc(f.resolved_path)}</code>`;
+      ? `<span class="exists">OK</span> <code>${esc(f.resolved_path)}</code>`
+      : `<span class="missing">MISS</span> <code>${esc(f.resolved_path)}</code>`;
     return `<tr>
       <td><b>${esc(f.alias || f.folder_name)}</b></td>
       <td><code>${esc(f.folder_name)}</code></td>
@@ -139,6 +141,9 @@ $("run-btn").addEventListener("click", async () => {
     await pollRun(run_id);
   } catch (err) {
     flashRunError(err.message);
+  } finally {
+    // The button stays disabled while a run is in flight; once the poll
+    // loop finishes, refreshConfig() re-enables it (see pollRun).
   }
 });
 

@@ -23,7 +23,7 @@ open http://localhost:8000
 ```
 
 The compose file mounts `./data` as the base-dir volume (`/data`) and stores the
-database in `./data/config` (`BFS_CONFIG_DIR`). Drop incoming files into
+database in `./data/config` (`BFS_DATA_DIR`). Drop incoming files into
 `./data/<relative-path>/...` so the configured folders can find them.
 
 ## Quick Start (local dev)
