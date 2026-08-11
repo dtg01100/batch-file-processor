@@ -449,6 +449,7 @@ $("run-btn").addEventListener("click", async () => {
     state.pollHandle = window.setInterval(() => {
       $("run-elapsed").textContent = ((Date.now() - started) / 1000).toFixed(1) + "s";
     }, 200);
+    streamRunLog(run_id);  // fire-and-forget; the polling loop below still drives status
     await pollRun(run_id);
   } catch (err) {
     flashRunError(err.message);
@@ -458,10 +459,10 @@ $("run-btn").addEventListener("click", async () => {
   }
 });
 
-async function pollRun(runId) {
-  const report = await api("/api/runs/" + runId);
+async function _pollRun(runId) {
+  const report = await api(`/api/runs/${runId}`);
   if (report.status === "running") {
-    setTimeout(() => pollRun(runId), 1200);
+    setTimeout(() => _pollRun(runId), 1200);
     return;
   }
   window.clearInterval(state.pollHandle);
@@ -469,6 +470,39 @@ async function pollRun(runId) {
   $("run-btn").disabled = false;
   renderRun(report);
   await loadProcessed();
+}
+
+async function streamRunLog(runId) {
+  const logEl = $("run-log-body");
+  logEl.textContent = "";
+  $("run-log").hidden = false;
+  logEl.hidden = false;
+  $("log-toggle").textContent = "hide";
+  try {
+    const resp = await fetch(`/api/runs/${runId}/log`);
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      // Parse SSE frames (event:/data:/blank line).
+      const events = buf.split("\n\n");
+      buf = events.pop();
+      for (const frame of events) {
+        const lines = frame.split("\n");
+        const ev = (lines.find((l) => l.startsWith("event:")) || "").slice(6).trim();
+        const data = (lines.find((l) => l.startsWith("data:")) || "").slice(5).trim();
+        if (ev === "log" && data) {
+          logEl.textContent += data.replace(/\\n/g, "\n") + "\n";
+          logEl.scrollTop = logEl.scrollHeight;
+        } else if (ev === "done") {
+          return;
+        }
+      }
+    }
+  } catch (_e) { /* ignore */ }
 }
 
 function renderRun(report) {

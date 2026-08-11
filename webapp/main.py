@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.domain.models.folder import FolderConfiguration
@@ -55,6 +55,7 @@ from webapp.folder_schema import (
     folder_row_to_schema,
     schema_to_folder_row,
 )
+from webapp.history import RunHistory
 from webapp.importer import ImportResult, import_database
 from webapp.maintenance import (
     clear_processed_files,
@@ -80,12 +81,17 @@ STATIC_DIR = Path(__file__).parent / "static"
 logger = get_logger(__name__)
 
 _run_store = RunStore()
+_history: RunHistory | None = None
 _scheduler = Scheduler()
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     """Start/stop the background scheduler alongside the app."""
+    global _history
+    settings = _app.state.settings
+    _history = RunHistory(settings)
+    _run_store.attach_history(_history)
     _scheduler.attach_run_store(_run_store)
     _scheduler.start()
     try:
@@ -446,14 +452,79 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
 
     @app.get("/api/runs")
     def api_runs() -> list[dict]:
-        return [_run_summary(r) for r in app.state.run_store.list()]
+        """Return recent runs (in-memory first, then persistent history)."""
+        in_memory = {r.run_id: r for r in app.state.run_store.list()}
+        persisted = []
+        if _history is not None:
+            persisted = _history.recent(limit=50)
+        seen: set[str] = set()
+        out: list[dict] = []
+        for r in in_memory.values():
+            out.append(_run_summary(r))
+            seen.add(r.run_id)
+        for r in persisted:
+            if r.run_id not in seen:
+                out.append(_run_summary(r))
+                seen.add(r.run_id)
+        return out
 
     @app.get("/api/runs/{run_id}")
     def api_run_detail(run_id: str) -> dict:
         report = app.state.run_store.get(run_id)
+        if report is None and _history is not None:
+            report = _history.get(run_id)
         if report is None:
             raise HTTPException(status_code=404, detail="Run not found")
         return _run_summary(report, include_log=True)
+
+    @app.get("/api/runs/{run_id}/log")
+    def api_run_log(run_id: str):
+        """Server-Sent Events stream of the run's per-folder logs.
+
+        For finished runs we replay the persisted run_log. For
+        in-flight runs we poll the in-memory report every second and
+        emit any new lines since the last tick. The connection closes
+        when the run finishes (``event: done``).
+        """
+        store = app.state.run_store
+        report = store.get(run_id)
+        if report is None and _history is not None:
+            report = _history.get(run_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        def _events():
+            last_seen = 0
+            yielded = False
+            while True:
+                # Re-fetch on every tick so we see new lines as the
+                # worker writes them.
+                cur = store.get(run_id)
+                if cur is None and _history is not None:
+                    cur = _history.get(run_id)
+                if cur is None:
+                    yield "event: done\ndata: missing\n\n"
+                    return
+                log = "\n".join(f.run_log for f in cur.folders)
+                if len(log) > last_seen:
+                    chunk = log[last_seen:]
+                    yield "event: log\ndata: " + chunk.replace("\n", "\\n") + "\n\n"
+                    last_seen = len(log)
+                    yielded = True
+                if cur.status != "running":
+                    if not yielded:
+                        # Stream the full log once before closing.
+                        yield "event: log\ndata: " + log.replace("\n", "\\n") + "\n\n"
+                    yield f"event: done\ndata: {cur.status}\n\n"
+                    return
+                import time
+                time.sleep(1.0)
+
+        return StreamingResponse(
+            _events(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     @app.get("/api/processed-files")
     def api_processed_files() -> dict:

@@ -303,12 +303,28 @@ class RunStore:
     database. The active-run counter refuses a second ``start()`` while a
     previous run is still in flight; the UI surfaces the rejection via the
     standard FastAPI 400 path.
+
+    In-memory state is for the live view (a worker thread mutates a
+    ``RunReport`` while the browser polls). On completion, each run is
+    appended to the persistent ``RunHistory`` so /api/runs still shows
+    recent runs after a container restart.
     """
 
     def __init__(self) -> None:
         self._runs: dict[str, RunReport] = {}
         self._lock = threading.Lock()
         self._active: int = 0
+        self._history = None  # injected via attach_history
+
+    def attach_history(self, history) -> None:
+        """Inject the persistent RunHistory (called from main.py)."""
+        self._history = history
+
+    def _persist(self, report: RunReport, *, kind: str) -> None:
+        if self._history is None:
+            return
+        with contextlib.suppress(Exception):
+            self._history.append(report, kind=kind)
 
     @property
     def active_count(self) -> int:
@@ -338,6 +354,7 @@ class RunStore:
                 report.run_id = run_id
                 with self._lock:
                     self._runs[run_id] = report
+                self._persist(report, kind="normal")
             finally:
                 with self._lock:
                     self._active -= 1
@@ -369,6 +386,7 @@ class RunStore:
                 report.run_id = run_id
                 with self._lock:
                     self._runs[run_id] = report
+                self._persist(report, kind="resend")
             finally:
                 with self._lock:
                     self._active -= 1
