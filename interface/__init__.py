@@ -1,17 +1,13 @@
 # Interface package
 """Interface package for Batch File Sender application.
 
-This package contains the main application class, UI components,
-database operations, and business logic for the batch file processor.
+This package contains the Qt-free business-logic layer that the webapp
+reuses: database operations, folder management, and data models. The
+former Qt UI layer (``interface/qt``) was removed in the webapp pivot.
 
 Key components:
-- QtBatchFileSenderApp: Main application class (interface.qt.app)
-- DatabaseObj: Database operations (backend.database.database_obj)
 - FolderManager: Folder management operations (interface.operations.folder_manager)
-- Dialogs: UI dialogs (interface.qt.dialogs)
+- DatabaseObj: Database operations (backend.database.database_obj)
 """
 
-try:
-    __all__ = ["QtBatchFileSenderApp"]
-except ImportError:
-    __all__ = []
+__all__: list[str] = []

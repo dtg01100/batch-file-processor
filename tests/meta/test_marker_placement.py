@@ -64,8 +64,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # inspection of test file distribution) rather than the strict
 # one-to-one directory mapping in AGENTS.md.
 MARKER_TO_DIRECTORIES: dict[str, list[str]] = {
-    "unit": ["tests/unit"],
-    "integration": ["tests/integration"],
+    "unit": ["tests/unit", "tests/webapp"],
+    "integration": ["tests/integration", "tests/webapp"],
     "qt": ["tests/qt", "tests/unit/interface/qt"],
     "dispatch": [
         "tests/dispatch",
@@ -137,40 +137,6 @@ KNOWN_MARKER_MISPLACEMENT: list[tuple[str, str, str]] = [
         "the tests/integration/ split",
     ),
     # ---- @qt outside tests/qt/ ----
-    # Integration scenarios that exercise Qt UI as part of a full
-    # pipeline test (mock automatic run, GUI user workflows, UI
-    # backend workflows). These need real services + Qt together,
-    # which neither directory alone supports.
-    (
-        "tests/integration/test_graphical_mock_automatic_run.py",
-        "qt",
-        "mock automatic-run UI test; needs Qt + service mocks together",
-    ),
-    (
-        "tests/integration/test_gui_user_workflows.py",
-        "qt",
-        "end-to-end GUI user-workflow test; needs Qt + real services",
-    ),
-    (
-        "tests/integration/test_ui_backend_workflows.py",
-        "qt",
-        "UI + backend integration test; needs Qt + real backend services",
-    ),
-    # Unit tests that touch Qt widgets but live under tests/unit/
-    # because they are pure-widget tests (no main-window spin-up).
-    (
-        "tests/unit/test_form_generator.py",
-        "qt",
-        "form generator widget unit test; @qt marks the widget "
-        "dependency but the test is a pure widget test, not a "
-        "full-app test",
-    ),
-    (
-        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
-        "qt",
-        "plugin configuration mapper that produces Qt config widgets; "
-        "@qt marks the widget dependency",
-    ),
 ]
 
 

@@ -7,20 +7,15 @@ pumping) plus a null implementation for headless/testing use.
 
 By programming against these protocols, the application logic is fully
 decoupled from any specific UI framework.
+
+Note: the former Qt adapter (:class:`QtUIService`) was removed with the
+Qt UI layer in the webapp pivot. The protocols and :class:`NullUIService`
+remain for headless/testing use.
 """
 
 from __future__ import annotations
 
-import os
-from typing import Any, Protocol, runtime_checkable
-
-try:
-    from interface.qt.qt_compat import QApplication, QFileDialog, QMessageBox, QWidget
-except ImportError:
-    QApplication = None  # type: ignore[assignment,misc]  # headless: assign None to Qt type
-    QFileDialog = None  # type: ignore[assignment,misc]
-    QMessageBox = None  # type: ignore[assignment,misc]
-    QWidget = None  # type: ignore[assignment,misc]
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -356,190 +351,9 @@ class NullUIService:
         """No-op -- nothing to pump."""
 
 
-# ---------------------------------------------------------------------------
-# Qt adapter
-# ---------------------------------------------------------------------------
 
-
-class QtUIService:
-    """Adapter that satisfies :class:`UIServiceProtocol` using Qt
-    (PySide6 binding; previously PyQt5).
-
-    Uses QMessageBox for dialogs, QFileDialog for file/directory selection,
-    and QApplication.processEvents() for event-loop pumping.
-
-    This adapter bridges the application logic (which programs against the
-    Protocol interfaces) to the actual Qt toolkit implementations.
-
-    Example:
-        >>> ui = QtUIService(parent=main_window)
-        >>> ui.show_info("Welcome", "Application started successfully.")
-        >>> selected = ui.ask_directory("Choose folder", initial_dir="/home")
-
-    Attributes:
-        _parent: Optional parent widget for modal dialogs.
-
-    """
-
-    def __init__(self, parent: Any = None) -> None:
-        """Initialize the Qt UI adapter.
-
-        Args:
-            parent: Optional parent QWidget for dialog modality.
-                If None, dialogs will be application-modal.
-
-        """
-        self._parent: QWidget | None = parent
-
-    # -- informational dialogs ------------------------------------------------
-
-    def show_info(self, title: str, message: str) -> None:
-        """Delegates to QMessageBox.information."""
-        QMessageBox.information(self._parent, title, message)
-
-    def show_error(self, title: str, message: str) -> None:
-        """Delegates to QMessageBox.critical."""
-        QMessageBox.critical(self._parent, title, message)
-
-    def show_warning(self, title: str, message: str) -> None:
-        """Delegates to QMessageBox.warning."""
-        QMessageBox.warning(self._parent, title, message)
-
-    # -- question dialogs -----------------------------------------------------
-
-    def ask_yes_no(self, title: str, message: str) -> bool:
-        """Delegates to QMessageBox.question."""
-        result = QMessageBox.question(
-            self._parent,
-            title,
-            message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
-            QMessageBox.StandardButton.No,
-        )
-        return result == QMessageBox.StandardButton.Yes
-
-    def ask_ok_cancel(self, title: str, message: str) -> bool:
-        """Delegates to QMessageBox.question."""
-        result = QMessageBox.question(
-            self._parent,
-            title,
-            message,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,  # type: ignore[arg-type]  # Qt stubs lack __or__ for button enums
-            QMessageBox.StandardButton.Cancel,
-        )
-        return result == QMessageBox.StandardButton.Ok
-
-    def ask_three_choices(
-        self,
-        title: str,
-        message: str,
-        choice1: str,
-        choice2: str,
-        choice3: str,
-    ) -> int:
-        """Prompt the user with a three-choice question.
-
-        Displays a QMessageBox with three custom buttons. The return value
-        indicates which button was clicked.
-
-        Args:
-            title: Dialog title.
-            message: Question or informational text.
-            choice1: Label for first button (returns 0 if clicked).
-            choice2: Label for second button (returns 1 if clicked).
-        choice3: Label for third button, typically cancel-like
-            (returns 2 if clicked).
-
-        Returns:
-            0 if user selected choice1, 1 if choice2, 2 if choice3.
-            Returns -1 if no button matched (e.g., dialog closed unexpectedly).
-
-        """
-        msg_box = QMessageBox(self._parent)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        btn1 = msg_box.addButton(choice1, QMessageBox.ButtonRole.AcceptRole)
-        btn2 = msg_box.addButton(choice2, QMessageBox.ButtonRole.AcceptRole)
-        btn3 = msg_box.addButton(choice3, QMessageBox.ButtonRole.RejectRole)
-        msg_box.setDefaultButton(btn1)
-        msg_box.exec()
-        clicked = msg_box.clickedButton()
-        if clicked == btn1:
-            return 0
-        if clicked == btn2:
-            return 1
-        if clicked == btn3:
-            return 2
-        return -1
-
-    # -- file / directory dialogs ---------------------------------------------
-
-    @staticmethod
-    def _convert_filetypes(
-        filetypes: list[tuple[str, str]] | None,
-    ) -> str:
-        """Convert filetypes to a Qt filter string.
-
-        Tkinter format: ``[("Description", "*.ext"), ...]``
-        Qt format:      ``"Description (*.ext);;..."``
-        """
-        if not filetypes:
-            return ""
-        parts: list[str] = []
-        for description, pattern in filetypes:
-            parts.append(f"{description} ({pattern})")
-        return ";;".join(parts)
-
-    def ask_directory(
-        self,
-        title: str = "Select Directory",
-        initial_dir: str | None = None,
-    ) -> str:
-        """Delegates to QFileDialog.getExistingDirectory."""
-        result = QFileDialog.getExistingDirectory(
-            self._parent,
-            title,
-            initial_dir or "",
-        )
-        return result or ""
-
-    def ask_open_filename(
-        self,
-        title: str = "Open File",
-        initial_dir: str | None = None,
-        filetypes: list[tuple[str, str]] | None = None,
-    ) -> str:
-        """Delegates to QFileDialog.getOpenFileName."""
-        filter_str = self._convert_filetypes(filetypes)
-        path, _ = QFileDialog.getOpenFileName(
-            self._parent,
-            title,
-            initial_dir or "",
-            filter_str,
-        )
-        return path or ""
-
-    def ask_save_filename(
-        self,
-        title: str = "Save File",
-        initial_dir: str | None = None,
-        default_ext: str = "",
-        filetypes: list[tuple[str, str]] | None = None,
-    ) -> str:
-        """Delegates to QFileDialog.getSaveFileName."""
-        filter_str = self._convert_filetypes(filetypes)
-        path, _ = QFileDialog.getSaveFileName(
-            self._parent,
-            title,
-            initial_dir or "",
-            filter_str,
-        )
-        if path and default_ext and "." not in os.path.basename(path):
-            path += default_ext
-        return path or ""
-
-    # -- event loop -----------------------------------------------------------
-
-    def pump_events(self) -> None:
-        """Delegates to QApplication.processEvents()."""
-        QApplication.processEvents()
+__all__ = [
+    "NullUIService",
+    "ProgressServiceProtocol",
+    "UIServiceProtocol",
+]

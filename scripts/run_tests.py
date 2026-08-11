@@ -23,7 +23,6 @@ class Colors:
 TEST_SUITES = {
     "unit": ("unit", "Unit Tests", "Fast, isolated tests"),
     "integration": ("integration", "Integration Tests", "Tests with real components"),
-    "qt": ("qt", "Qt/UI Tests", "GUI tests using pytest-qt"),
     "e2e": ("e2e", "End-to-End Tests", "Full workflow tests"),
     "fast": ("fast", "Fast Tests", "Tests completing in < 5 seconds"),
     "slow": ("slow", "Slow Tests", "Tests taking > 30 seconds"),
@@ -33,8 +32,7 @@ TEST_SUITES = {
     "dispatch": ("dispatch", "Dispatch Tests", "Orchestration tests"),
     "workflow": ("workflow", "Workflow Tests", "Complete workflow tests"),
     "upgrade": ("upgrade", "Upgrade Tests", "Database upgrade tests"),
-    "pyinstaller": ("pyinstaller", "PyInstaller Tests", "Build integration tests"),
-    "gui": ("gui", "GUI Tests", "User interface tests"),
+    "webapp": ("webapp", "Webapp Tests", "Local webapp API/runner tests"),
 }
 
 

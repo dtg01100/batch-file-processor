@@ -43,23 +43,8 @@ _ERROR_RE = re.compile(r"^([A-Za-z_][\w.]*(?:Error|Exception|Warning)):")
 # Modules that are audited to fail as first imports for known, deliberate
 # reasons (as of 2026-08-09). They are reported but do not fail the run, so
 # the script can act as a CI guard for NEW import cycles. Each entry is the
-# module path relative to the repo root, mapped to why it is expected to fail:
-#   - nuitka/build_*.py: build scripts use a flat `import nuitka_config` that
-#     only resolves in script mode (sys.path[0] == nuitka/); they are never
-#     imported as package members.
-#   - scripts/dummy_run_progress.py, scripts/screenshot_script.py: legacy
-#     scratch scripts that import the legacy PyQt5 binding, which is not
-#     installed (the project is PySide6). See tests/meta/test_module_coverage.py.
-#   - scripts/test_animation.py: raises pytest.skip() at module level on
-#     purpose, so pytest collection skips it; outside pytest that raise is
-#     intentional (it is a manual debug script).
-KNOWN_FAILURES: dict[str, str] = {
-    "nuitka/build_linux.py": "script-only build tool (flat sibling import)",
-    "nuitka/build_windows.py": "script-only build tool (flat sibling import)",
-    "scripts/dummy_run_progress.py": "legacy scratch script (PyQt5 not installed)",
-    "scripts/screenshot_script.py": "legacy scratch script (PyQt5 not installed)",
-    "scripts/test_animation.py": "deliberate module-level pytest.skip()",
-}
+# module path relative to the repo root, mapped to why it is expected to fail.
+KNOWN_FAILURES: dict[str, str] = {}
 
 
 def discover_modules(root: Path, include_tests: bool) -> list[tuple[str, str]]:

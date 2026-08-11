@@ -185,49 +185,32 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
     ),
     # ---- interface ----
     (
-        "interface/form/config_section_widgets.py",
-        "Qt form widget factory; not imported by any test "
-        "(covered via interface/qt/dialogs/* tests)",
-    ),
-    (
-        "interface/form/section_factory.py",
-        "form section factory; not imported by any test "
-        "(covered via interface/qt/dialogs/* tests)",
-    ),
-    (
         "interface/interfaces.py",
         "interface module protocol definitions; not imported by any "
         "test (covered via interface/qt/* smoke tests at runtime)",
     ),
     (
-        "interface/plugins/plugin_config.py",
-        "plugin config dataclasses; not imported by any test "
-        "(plugin system covered via tests/unit/test_plugins/*)",
-    ),
-    (
-        "interface/plugins/plugin_manager_provider.py",
-        "plugin manager provider singleton; not imported by any test "
-        "(covered via tests/unit/test_plugins/test_plugin_manager*)",
-    ),
-    (
-        "interface/qt/bootstrap.py",
-        "Qt bootstrap helpers; not imported by any test "
-        "(bootstrap is exercised at app startup, see "
-        "tests/unit/test_app_smoke.py)",
-    ),
-    (
-        "interface/qt/diagnostics.py",
-        "Qt diagnostics helpers; not imported by any test",
-    ),
-    (
-        "interface/qt/window_controller.py",
-        "Qt window controller; not imported by any test "
-        "(window construction is covered in tests/qt/*)",
-    ),
-    (
         "interface/services/progress_service.py",
         "progress service; not imported by any test "
         "(covered transitively via qt UI smoke tests)",
+    ),
+    (
+        "interface/services/ftp_service.py",
+        "FTP service helper; previously covered by the Qt dialog "
+        "tests, which were removed in the webapp pivot. The backend/ "
+        "FTP client is the tested path; this wrapper is UI-era glue.",
+    ),
+    (
+        "interface/services/smtp_service.py",
+        "SMTP service helper; previously covered by the Qt dialog "
+        "tests, which were removed in the webapp pivot. The backend/ "
+        "SMTP client is the tested path; this wrapper is UI-era glue.",
+    ),
+    (
+        "interface/operations/folder_data_extractor.py",
+        "folder-data helper; no test imports it directly, but it is "
+        "exercised transitively via interface.validation.folder_settings_validator "
+        "(tested by test_settings_validation.py)",
     ),
     # ---- scripts ----
     # Utility scripts. Most are CLI entry points invoked from the
@@ -238,6 +221,11 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
         "CLI utility; invoked manually, not imported by tests",
     ),
     (
+        "scripts/import_check.py",
+        "CLI utility; invoked manually to check first-import cycles, "
+        "not imported by tests",
+    ),
+    (
         "scripts/create_database.py",
         "CLI utility for DB creation; tests use "
         "DatabaseConnectionManager fixture instead (see conftest.py)",
@@ -245,14 +233,6 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
     (
         "scripts/create_tar.py",
         "CLI utility; invoked manually",
-    ),
-    (
-        "scripts/demo_legacy_import.py",
-        "CLI demo / scratch script; not imported by tests",
-    ),
-    (
-        "scripts/dummy_run_progress.py",
-        "CLI demo / scratch script; not imported by tests",
     ),
     (
         "scripts/export_anonymized_folders.py",
@@ -273,18 +253,6 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
     ),
     (
         "scripts/record_error.py",
-        "CLI utility; invoked manually",
-    ),
-    (
-        "scripts/screenshot_script.py",
-        "CLI utility; invoked manually",
-    ),
-    (
-        "scripts/self_test.py",
-        "CLI self-test entry point; not imported by tests",
-    ),
-    (
-        "scripts/test_animation.py",
         "CLI utility; invoked manually",
     ),
 ]

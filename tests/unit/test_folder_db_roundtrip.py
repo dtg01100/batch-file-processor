@@ -6,10 +6,6 @@ import unittest
 from backend.database import sqlite_wrapper
 from core.database import schema
 from core.domain.models.folder import FolderConfiguration
-from interface.operations.plugin_configuration_mapper import (
-    ExtractedPluginConfig,
-    PluginConfigurationMapper,
-)
 
 
 def _normalize_plugin_configs(value):
@@ -33,6 +29,13 @@ def _normalize_plugin_configs(value):
 
 
 class TestFolderDatabaseRoundTrip(unittest.TestCase):
+    """Folder rows round-trip through the DB, including plugin_configurations.
+
+    The plugin *configuration mapper* (form/widget layer) was removed in the
+    webapp pivot; the plugin_configurations JSON column and its DB round-trip
+    remain load-bearing because the dispatch converters read them at run time.
+    """
+
     def setUp(self):
         # in-memory DB
         self.db = sqlite_wrapper.Database.connect(":memory:")
@@ -58,33 +61,24 @@ class TestFolderDatabaseRoundTrip(unittest.TestCase):
         self.assertIn("csv", stored)
         self.assertEqual(stored["csv"]["include_headers"], True)
 
-    def test_update_folder_plugin_configurations_via_mapper(self):
-        # create basic folder w/ empty plugin configs
-        fc = FolderConfiguration(folder_name="update-test")
+    def test_insert_and_read_folder_plugin_configs_roundtrip_via_from_dict(self):
+        """to_dict() -> DB -> find_one -> from_dict() preserves plugin configs."""
+        fc = FolderConfiguration(folder_name="rt-roundtrip")
+        fc.set_plugin_configuration("tweaks", {"foo": "bar", "n": 3})
+
         folders = self.db["folders"]
-        rowid = folders.insert(fc.to_dict())
+        new_id = folders.insert(fc.to_dict())
 
-        # prepare extracted plugin configs (as mapper would produce)
-        extracted = [
-            ExtractedPluginConfig(
-                format_name="csv",
-                config={"include_headers": False},
-                validation_errors=[],
-            )
-        ]
+        row = folders.find_one(id=new_id)
+        self.assertIsNotNone(row)
+        row["plugin_configurations"] = _normalize_plugin_configs(
+            row.get("plugin_configurations")
+        )
 
-        # load existing dict, apply update
-        folder_dict = folders.find_one(id=rowid)
-        mapper = PluginConfigurationMapper()
-        updated = mapper.update_folder_configuration_from_dict(folder_dict, extracted)
-
-        # perform DB update
-        folders.update(updated, ["id"])
-
-        row_after = folders.find_one(id=rowid)
-        stored = _normalize_plugin_configs(row_after.get("plugin_configurations"))
-        self.assertIn("csv", stored)
-        self.assertEqual(stored["csv"]["include_headers"], False)
+        restored = FolderConfiguration.from_dict(dict(row))
+        self.assertEqual(
+            restored.get_plugin_configuration("tweaks"), {"foo": "bar", "n": 3}
+        )
 
 
 if __name__ == "__main__":

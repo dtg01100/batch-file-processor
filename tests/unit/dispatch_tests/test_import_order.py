@@ -28,8 +28,8 @@ CRITICAL_FIRST_IMPORTS = [
     "dispatch.services",
     "dispatch.services.file_processor",
     "dispatch.send_manager",
-    "interface.qt.app",
-    "main_interface",
+    "webapp.main",
+    "webapp.runner",
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

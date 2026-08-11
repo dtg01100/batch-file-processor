@@ -16,8 +16,6 @@ Tests:
 - Plugin configuration validation
 """
 
-from unittest.mock import MagicMock
-
 from core.domain.models.folder import (
     ARecordPaddingConfiguration,
     BackendSpecificConfiguration,
@@ -34,7 +32,6 @@ from core.domain.models.folder import (
 from interface.models.folder_configuration import (
     ConvertFormat,
 )
-from interface.plugins.plugin_manager import PluginManager
 
 
 class TestFTPConfiguration:
@@ -926,103 +923,6 @@ class TestPluginConfigurationManagement:
 
         csv_result = new_config.get_plugin_configuration("csv")
         assert csv_result == {"csv_key": "csv_value"}
-
-
-class TestPluginConfigurationValidation:
-    """Test suite for plugin configuration validation.
-
-    After the refactor, validation lives on PluginManager (not FolderConfiguration).
-    We use a real PluginManager with the per-config lookup stubbed so the
-    tests exercise the real validate_folder_configurations logic.
-    """
-
-    def _make_pm_with_plugin(
-        self, format_name: str, validation_result
-    ) -> PluginManager:
-        """Create a PluginManager with per-config lookup stubbed."""
-        pm = PluginManager()
-        pm._initialized = True  # skip discover_plugins/initialize_plugins
-        mock_plugin = MagicMock()
-        mock_plugin.validate_config.return_value = validation_result
-        pm.get_configuration_plugin_by_format_name = lambda fmt: mock_plugin
-        return pm
-
-    def test_validate_plugin_configurations_empty(self):
-        """Test validation with no plugin configurations."""
-        pm = PluginManager()
-        pm._initialized = True
-
-        config = FolderConfiguration()
-
-        errors = pm.validate_folder_configurations(config.plugin_configurations)
-
-        assert len(errors) == 0
-
-    def test_validate_plugin_configurations_success(self):
-        """Test validation succeeds with valid plugin configurations."""
-        mock_validation = MagicMock()
-        mock_validation.success = True
-        mock_validation.errors = []
-
-        pm = self._make_pm_with_plugin("csv", mock_validation)
-        config = FolderConfiguration()
-        config.set_plugin_configuration("csv", {"key": "value"})
-
-        errors = pm.validate_folder_configurations(config.plugin_configurations)
-
-        assert len(errors) == 0
-
-    def test_validate_plugin_configurations_failure(self):
-        """Test validation fails with invalid plugin configurations."""
-        mock_validation = MagicMock()
-        mock_validation.success = False
-        mock_validation.errors = ["Invalid configuration"]
-
-        pm = self._make_pm_with_plugin("csv", mock_validation)
-        config = FolderConfiguration()
-        config.set_plugin_configuration("csv", {"invalid": "config"})
-
-        errors = pm.validate_folder_configurations(config.plugin_configurations)
-
-        assert len(errors) > 0
-        assert any("Plugin config for csv" in error for error in errors)
-
-    def test_validate_plugin_configurations_no_plugin(self):
-        """Test validation when no plugin found for format."""
-        pm = PluginManager()
-        pm._initialized = True
-        pm.get_configuration_plugin_by_format_name = lambda fmt: None
-
-        config = FolderConfiguration()
-        config.set_plugin_configuration("unknown_format", {"key": "value"})
-
-        errors = pm.validate_folder_configurations(config.plugin_configurations)
-
-        assert len(errors) > 0
-        assert any(
-            "No configuration plugin found for format" in error for error in errors
-        )
-
-    def test_validate_plugin_configurations_exception(self):
-        """Test validation handles per-config exceptions gracefully."""
-        pm = PluginManager()
-        pm._initialized = True
-
-        # Make per-config lookup raise; the method catches this per-config.
-        def raise_exc(fmt):
-            raise Exception("Plugin manager error")
-
-        pm.get_configuration_plugin_by_format_name = raise_exc
-
-        config = FolderConfiguration()
-        config.set_plugin_configuration("csv", {"key": "value"})
-
-        errors = pm.validate_folder_configurations(config.plugin_configurations)
-
-        assert len(errors) > 0
-        assert any(
-            "Error validating plugin configurations" in error for error in errors
-        )
 
 
 class TestEnums:

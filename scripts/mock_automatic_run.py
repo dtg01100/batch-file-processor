@@ -1,44 +1,37 @@
 #!/usr/bin/env python3
-"""Run automatic processing with mocked config, files, and database.
+"""Run an automatic processing pass with mocked config, files, and database.
 
 This script creates a temporary end-to-end environment and executes the
-application's ``--automatic`` path with:
+webapp's Qt-free runner (``webapp.runner``) with:
 
-- temporary configuration folder
+- temporary base directory (``config/`` + ``input/`` + ``logs/``)
 - temporary SQLite database
 - temporary input/log directories and sample files
-- mocked dispatch processing (no real backend calls)
+- real dispatch processing with the copy backend (no FTP/email)
 
-It is useful for smoke-testing the automatic flow without requiring real
-production configuration or external systems.
+It is useful for smoke-testing the automatic flow without the browser UI
+or external systems. The Qt desktop app it used to drive was removed in
+the webapp pivot.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
-import platform
+import contextlib
+import shutil
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import patch
 
 # Ensure project root is importable when run as a standalone script.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from adapters.sqlite.repositories.sqlite_folder_repo import SqliteFolderRepository
-from adapters.sqlite.repositories.sqlite_processed_files_repo import (
-    SqliteProcessedFilesRepository,
-)
-from adapters.sqlite.repositories.sqlite_settings_repo import SqliteSettingsRepository
-from backend.database.database_obj import DatabaseObj
-from core.constants import CURRENT_DATABASE_VERSION
-from dispatch.results import FolderResult
-from interface.operations.folder_manager import FolderManager
-from interface.qt.app import QtBatchFileSenderApp
+from webapp.config import Settings
+from webapp.database import open_database
+from webapp.runner import run_folders
 
 
 @dataclass(frozen=True)
@@ -47,136 +40,69 @@ class MockRunResult:
 
     exit_code: int
     base_dir: Path
-    config_dir: Path
     database_path: Path
     input_dir: Path
     logs_dir: Path
-    run_log_files: list[Path]
+    total_processed: int
+    total_failed: int
 
 
-def _mock_orchestrator_discover_and_process_folder(*args, **kwargs):
-    """Mock replacement for DispatchOrchestrator.discover_and_process_folder.
-
-    When patching on the class (DispatchOrchestrator.discover_and_process_folder),
-    the orchestrator instance is passed as args[0]. When patching on an instance
-    (orch.patch(...)), the orchestrator is NOT included in args.
-    We detect which case we're in by checking if args[0] has a 'config' attribute.
-    """
-    # Detect whether we're bound-method or class-method patched
-    if args and hasattr(args[0], "config"):
-        # Class-level patch: args[0] is orchestrator instance
-        folder = args[1]
-        run_log = args[2]
-    else:
-        # Instance-level patch or no self passed
-        folder = args[0] if len(args) > 0 else kwargs.get("folder")
-        run_log = args[1] if len(args) > 1 else kwargs.get("run_log")
-
-    alias = folder.get("alias", folder.get("folder_name", "unknown"))
-    run_log.write(
-        f"[MOCK] DispatchOrchestrator.discover_and_process_folder "
-        f"called for {alias}\n".encode()
-    )
-    run_log.write(b"[MOCK] no real conversions or backends were executed\n")
-
-    return FolderResult(
-        folder_name=folder.get("folder_name", ""),
-        alias=folder.get("alias", ""),
-        files_processed=1,
-        files_failed=0,
-        success=True,
-    )
-
-
-def run_mock_automatic(base_dir: str | os.PathLike[str]) -> MockRunResult:
-    """Execute one mocked automatic run inside ``base_dir``."""
+def run_mock_automatic(base_dir: str) -> MockRunResult:
+    """Execute one automatic run inside ``base_dir`` (no backends configured)."""
     root = Path(base_dir)
     config_dir = root / "config"
     input_dir = root / "input"
     logs_dir = root / "logs"
+    output_dir = root / "output"
     config_dir.mkdir(parents=True, exist_ok=True)
     input_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     (input_dir / "sample_001.edi").write_text("MOCK EDI CONTENT\n", encoding="utf-8")
     (input_dir / "sample_002.txt").write_text("MOCK TXT CONTENT\n", encoding="utf-8")
 
-    database_path = config_dir / "folders.db"
-    db = DatabaseObj(
-        database_path=str(database_path),
-        database_version=CURRENT_DATABASE_VERSION,
-        config_folder=str(config_dir),
-        running_platform=platform.system(),
-    )
+    settings = Settings(base_dir=root, data_dir=config_dir)
+    db = open_database(settings)
 
     oversight = db.get_oversight_or_default()
     oversight["logs_directory"] = str(logs_dir)
     oversight["enable_reporting"] = False
     db.oversight_and_defaults.update(oversight, ["id"])
 
-    settings = db.get_settings_or_default()
-    settings["enable_interval_backups"] = False
-    settings["backup_counter"] = 0
-    settings["backup_counter_maximum"] = 100
-    db.settings.update(settings, ["id"])
+    settings_dict = db.get_settings_or_default()
+    settings_dict["enable_interval_backups"] = False
+    db.settings.update(settings_dict, ["id"])
 
-    folder_repo = SqliteFolderRepository(db)
-    settings_repo = SqliteSettingsRepository(db)
-    processed_files_repo = SqliteProcessedFilesRepository(db)
-    folder_manager = FolderManager(
-        folder_repo=folder_repo,
-        settings_repo=settings_repo,
-        processed_files_repo=processed_files_repo,
-    )
-    folder_manager.add_folder(str(input_dir))
-    folder = db.folders_table.find_one(folder_name=str(input_dir))
-    if folder is None:
-        raise RuntimeError("Failed to create mock folder entry")
+    folder = {
+        "folder_name": str(input_dir),
+        "folder_is_active": "True",
+        "alias": "mock-inbox",
+        "process_backend_email": False,
+        "process_backend_ftp": False,
+        "process_backend_copy": True,
+        "copy_to_directory": str(output_dir),
+    }
+    db.folders_table.insert(folder)
+    with contextlib.suppress(Exception):
+        db.close()
 
-    folder["folder_is_active"] = "True"
-    folder["process_backend_email"] = False
-    folder["process_backend_ftp"] = False
-    folder["process_backend_copy"] = False
-    db.folders_table.update(folder, ["id"])
-
-    app = QtBatchFileSenderApp(
-        appname="Batch File Sender",
-        version="(Mock Automatic Run)",
-        database_version=CURRENT_DATABASE_VERSION,
-        database_obj=db,
-    )
-
-    exit_code = 0
-    try:
-        with patch(
-            "interface.qt.app.appdirs.user_data_dir", return_value=str(config_dir)
-        ):
-            with patch(
-                "dispatch.orchestrator.DispatchOrchestrator.discover_and_process_folder",
-                side_effect=_mock_orchestrator_discover_and_process_folder,
-            ):
-                app.initialize(args=["--automatic"])
-                app.run()
-    except SystemExit as system_exit:
-        if isinstance(system_exit.code, int):
-            exit_code = system_exit.code
-
-    run_log_files = sorted(logs_dir.glob("Run Log *.txt"))
-
+    report = run_folders(settings)
+    exit_code = 0 if report.status == "completed" and report.total_failed == 0 else 1
     return MockRunResult(
         exit_code=exit_code,
         base_dir=root,
-        config_dir=config_dir,
-        database_path=database_path,
+        database_path=settings.database_path,
         input_dir=input_dir,
         logs_dir=logs_dir,
-        run_log_files=run_log_files,
+        total_processed=report.total_processed,
+        total_failed=report.total_failed,
     )
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run a mocked automatic processing smoke test",
+        description="Run a mocked automatic processing smoke test (webapp runner)",
     )
     parser.add_argument(
         "--keep",
@@ -194,49 +120,35 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
 
+    temp_dir = None
     if args.base_dir:
         base_dir = Path(args.base_dir).resolve()
         base_dir.mkdir(parents=True, exist_ok=True)
-        result = run_mock_automatic(base_dir)
-        print("Mock automatic run complete")
-        print(f"Exit code    : {result.exit_code}")
-        print(f"Base dir     : {result.base_dir}")
-        print(f"Database     : {result.database_path}")
-        print(f"Input dir    : {result.input_dir}")
-        print(f"Logs dir     : {result.logs_dir}")
-        print(f"Run log files: {len(result.run_log_files)}")
-        return result.exit_code
+        result = run_mock_automatic(str(base_dir))
+    else:
+        temp_dir = tempfile.mkdtemp(prefix="batch_mock_auto_")
+        result = run_mock_automatic(temp_dir)
 
-    with tempfile.TemporaryDirectory(prefix="batch_mock_auto_") as temp_dir:
-        temp_path = Path(temp_dir)
-        result = run_mock_automatic(temp_path)
-        print("Mock automatic run complete")
-        print(f"Exit code    : {result.exit_code}")
-        print(f"Base dir     : {result.base_dir}")
-        print(f"Database     : {result.database_path}")
-        print(f"Input dir    : {result.input_dir}")
-        print(f"Logs dir     : {result.logs_dir}")
-        print(f"Run log files: {len(result.run_log_files)}")
+    print("Mock automatic run complete")
+    print(f"Exit code    : {result.exit_code}")
+    print(f"Base dir     : {result.base_dir}")
+    print(f"Database     : {result.database_path}")
+    print(f"Input dir    : {result.input_dir}")
+    print(f"Logs dir     : {result.logs_dir}")
+    print(f"Processed    : {result.total_processed}")
+    print(f"Failed       : {result.total_failed}")
 
-        if args.keep:
-            retained_dir = Path(tempfile.mkdtemp(prefix="batch_mock_auto_kept_"))
-            for child in temp_path.iterdir():
-                target = retained_dir / child.name
-                if child.is_dir():
-                    target.mkdir(parents=True, exist_ok=True)
-                    for file_child in child.rglob("*"):
-                        rel = file_child.relative_to(child)
-                        destination = target / rel
-                        if file_child.is_dir():
-                            destination.mkdir(parents=True, exist_ok=True)
-                        else:
-                            destination.parent.mkdir(parents=True, exist_ok=True)
-                            destination.write_bytes(file_child.read_bytes())
-                else:
-                    target.write_bytes(child.read_bytes())
-            print(f"Artifacts kept at: {retained_dir}")
+    if args.keep and temp_dir:
+        retained_dir = Path(tempfile.mkdtemp(prefix="batch_mock_auto_kept_"))
+        for child in Path(temp_dir).iterdir():
+            target = retained_dir / child.name
+            if child.is_dir():
+                shutil.copytree(child, target)
+            else:
+                target.write_bytes(child.read_bytes())
+        print(f"Artifacts kept at: {retained_dir}")
 
-        return result.exit_code
+    return result.exit_code
 
 
 if __name__ == "__main__":

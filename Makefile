@@ -1,49 +1,32 @@
-# Makefile for batch-file-processor
+# Makefile for batch-file-processor (local webapp)
 # Usage: make <target>
 
 PYTEST := .venv/bin/pytest
 # -n 2 beats -n auto on this test suite: most tests are <100ms and the
-# per-worker setup cost (~6s each) dominates with 4 workers. Measured:
-# -n auto = 4:03, serial = 3:51, -n 2 = 2:39. Override via
+# per-worker setup cost (~6s each) dominates with 4 workers. Override via
 # PYTEST_XDIST_AUTO_NUM_WORKERS env var when more parallelism helps.
 PYTEST_XDIST := -n 2
-PYTEST_QT := -n0
 
-.PHONY: help test test test-unit test-unit-fast test-integration test-file test-parallel test-quick test-quick-parallel test-fast test-unit-parallel test-failfast test-all test-failfast test-qt test-qt-single test-no-qt lint type-check build-builder-image
+.PHONY: help test test-unit test-integration test-file test-func test-parallel test-fast test-failfast test-webapp test-meta lint type-check run webapp
 
 help:
 	@echo "Testing targets:"
 	@echo "  make test-unit        - Run unit tests (parallel)"
-	@echo "  make test-unit-fast   - Run fast unit tests only"
 	@echo "  make test-integration - Run integration tests"
 	@echo "  make test-file FILE=  - Run specific test file"
-	@echo "  make test-parallel    - Run all tests in parallel (excludes Qt tests)"
-	@echo "  make test-quick       - Fail-fast, short timeout"
-	@echo "  make test-all         - Run full suite"
+	@echo "  make test-func FILE= FUNC= - Run a single test function"
+	@echo "  make test-parallel    - Run all tests in parallel"
+	@echo "  make test-fast        - Fast dev loop (skips slow + meta tests)"
+	@echo "  make test-webapp      - Run the webapp test suite"
+	@echo "  make test-meta        - Run the meta-tests (hygiene, coverage, markers)"
 	@echo "  make test-failfast    - Stop at first failure"
 	@echo ""
-	@echo "Qt-specific targets (use -n0 to avoid parallel execution issues):"
-	@echo "  make test-qt          - Run all Qt tests (single-threaded)"
-	@echo "  make test-qt-single   - Run Qt tests from single file"
-	@echo "  make test-qt-file FILE= - Run Qt tests in specific file"
+	@echo "Webapp targets:"
+	@echo "  make run              - Start the webapp with uvicorn (BFS_BASE_DIR env)"
 	@echo ""
 	@echo "Linting targets:"
 	@echo "  make lint             - Run ruff linter"
 	@echo "  make type-check       - Run mypy type checker"
-
-
-# =============================================================================
-# Builder Image (Nuitka-on-Wine Docker image used by the `nuitka-wine` compose service)
-# =============================================================================
-# Build the Docker image used by docker-compose.yml's `nuitka-wine` service.
-# The image is built from the sibling project ../nuitka-wine-builder/.
-# Run this after pulling changes that touch the Dockerfile, pyproject.toml,
-# nuitka_wine_builder/, or fixtures/icu/ — anything baked into the image.
-# =============================================================================
-
-.PHONY: build-builder-image
-build-builder-image:
-	docker build -t nuitka-wine-builder:latest ../nuitka-wine-builder
 
 # Default: show available targets
 test:
@@ -52,10 +35,6 @@ test:
 # Unit tests (parallel)
 test-unit:
 	$(PYTEST) -m unit $(PYTEST_XDIST) -v
-
-# Fast unit tests only
-test-unit-fast:
-	$(PYTEST) -m "unit and fast" $(PYTEST_XDIST) -v
 
 # Integration tests
 test-integration:
@@ -83,66 +62,37 @@ else
 	$(PYTEST) $(FILE) $(PYTEST_XDIST) -v
 endif
 
-# Run all tests in parallel (excludes Qt tests)
-# Qt tests are excluded because PyQt5 + pytest-xdist parallel execution causes
-# flaky segfaults due to worker thread cleanup issues. Use 'make test-qt' for Qt tests.
+# Run all tests in parallel
 test-parallel:
-	$(PYTEST) -m "not qt" $(PYTEST_XDIST) -v
+	$(PYTEST) $(PYTEST_XDIST) -v
 
-# Quick iteration: fail-fast, short timeout
-test-quick:
-	$(PYTEST) -m "not qt" -x --timeout=30 $(PYTEST_XDIST) -v
-
-# Quick iteration with parallel execution
-test-quick-parallel:
-	$(PYTEST) -x --timeout=30 $(PYTEST_XDIST) -v
-
-# Fast dev loop: skip the migration cluster (~60s) and Qt tests,
-# failed-first so re-runs focus on what's broken. Measured ~1:51 on
-# this host (was 4:43 with the full suite + -n auto).
+# Fast dev loop: skip the migration cluster (~60s) and the meta-tests,
+# failed-first so re-runs focus on what's broken.
 test-fast:
-	$(PYTEST) -m "not slow and not qt" $(PYTEST_XDIST) -x --ff
+	$(PYTEST) -m "not slow" $(PYTEST_XDIST) -x --ff --ignore=tests/meta
 
-# Run unit tests in parallel with fail-fast
-test-unit-parallel:
-	$(PYTEST) -m unit $(PYTEST_XDIST) -v
+# Webapp suite (importer rebasing, runner, API endpoints)
+test-webapp:
+	$(PYTEST) tests/webapp -v
+
+# Meta-tests (test hygiene, module coverage, marker placement, ...)
+test-meta:
+	$(PYTEST) tests/meta -n 0 -v
 
 # Stop at first failure
 test-failfast:
 	$(PYTEST) -x $(PYTEST_XDIST) -v
 
-# Full test suite (all tests, single-threaded for Qt stability)
-test-all:
-	$(PYTEST) -m "not qt" $(PYTEST_XDIST) -v
-	$(PYTEST) tests/unit/interface/qt/ $(PYTEST_QT) -v
-
 # =============================================================================
-# Windows Test Targets (via Wine in Docker)
+# Webapp
 # =============================================================================
-# Run the test suite through Wine inside Docker to verify Windows compatibility.
-# This builds the Docker image on first run, then executes pytest through Wine.
-# =============================================================================
-
-# Run all non-Qt tests through Wine in Docker
-test-windows:
-	@./scripts/run_windows_tests.sh
-
-# Run Windows tests without rebuilding the Docker image
-test-windows-quick:
-	@SKIP_BUILD=1 ./scripts/run_windows_tests.sh
-
-# Rebuild the Windows test Docker image from scratch
-test-windows-rebuild:
-	@NO_CACHE=1 ./scripts/run_windows_tests.sh -m "not qt" --co
-
-# Run specific test file through Wine
-# Usage: make test-windows-file FILE=tests/unit/test_utils.py
-test-windows-file:
-ifndef FILE
-	@echo "Usage: make test-windows-file FILE=tests/unit/test_utils.py"
-	@exit 1
-endif
-	@./scripts/run_windows_tests.sh -x -v $(FILE)
+# Start the local webapp. BFS_BASE_DIR is the root all configured folder
+# paths resolve against (a Docker volume in production). Defaults to ./data.
+# BFS_DATA_DIR is where folders.db lives (default: <base-dir>/config).
+#   BFS_BASE_DIR=/srv/batch ./venv/bin/python -m webapp.main
+#   make run
+run:
+	@BFS_BASE_DIR=$${BFS_BASE_DIR:-./data} .venv/bin/python -m webapp.main
 
 # =============================================================================
 # Linting and Type Checking
@@ -152,7 +102,7 @@ lint:
 	.venv/bin/ruff check .
 
 type-check:
-	.venv/bin/mypy backend core dispatch interface
+	.venv/bin/mypy backend core dispatch interface webapp
 
 # =============================================================================
 # Run tests by marker (examples)
@@ -167,34 +117,3 @@ test-dispatch:
 
 test-database:
 	$(PYTEST) -m database $(PYTEST_XDIST) -v
-
-# =============================================================================
-# Qt Test Targets
-# =============================================================================
-# Qt tests MUST be run with -n0 (single-threaded) because PyQt5 widgets
-# with background threads (QThread workers) cause segfaults when pytest-xdist
-# runs them in parallel. The deleteLater() fix helps but doesn't fully resolve
-# the race conditions in test teardown.
-# =============================================================================
-
-# Run all Qt tests (single-threaded)
-test-qt:
-	$(PYTEST) tests/unit/interface/qt/ $(PYTEST_QT) -v
-
-# Run Qt tests from a single file
-# Usage: make test-qt-file FILE=tests/unit/interface/qt/test_resend_dialog.py
-test-qt-file:
-ifndef FILE
-	@echo "Usage: make test-qt-file FILE=tests/unit/interface/qt/test_resend_dialog.py"
-	@exit 1
-endif
-	$(PYTEST) $(FILE) $(PYTEST_QT) -v
-
-# Run Qt tests from a single file with fail-fast
-# Usage: make test-qt-single FILE=tests/unit/interface/qt/test_resend_dialog.py
-test-qt-single:
-ifndef FILE
-	@echo "Usage: make test-qt-single FILE=tests/unit/interface/qt/test_resend_dialog.py"
-	@exit 1
-endif
-	$(PYTEST) $(FILE) $(PYTEST_QT) -x -v

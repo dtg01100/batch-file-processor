@@ -1,7 +1,11 @@
-# Runtime dependencies for the Batch File Sender application.
+# Runtime dependencies for the Batch File Sender web application.
 # Toolchain (lint/format/test) lives in requirements-dev.txt.
 # Python 3.13 target (pyproject.toml requires-python = ">=3.11").
-altgraph>=0.17.2
+# Web stack (local webapp pivot, 2026-08-10): the Qt/PyInstaller/Nuitka
+# stack was removed with the desktop app; fastapi + uvicorn serve the UI.
+fastapi>=0.115.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9
 pytest>=9.0.3
 pytest-timeout>=2.2.0
 appdirs>=1.4.4
@@ -53,10 +57,3 @@ typing_extensions>=4.2.0
 tzdata>=2023.3
 urllib3>=2.7.0
 validate-email>=1.3
-PySide6>=6.8.0,<6.11  # 6.11.x shiboken binding-manager teardown segfaults pytest-qt when QThread workers leave signals in the event loop. 6.11.1 crashed the Qt suite on Py3.14; 6.10.3 verified stable (3/3 runs). abi3 wheels install on 3.14, so <6.11 is satisfiable everywhere. See .github/workflows/ci.yml (qt-tests job).
-# zstandard: required by Nuitka for onefile compression. Without it
-# the build emits a 178 MB uncompressed .exe; with it, ~80-100 MB.
-# Imported only at build time inside the embedded Windows Python;
-# the .exe bundles Python's stdlib zlib so end users don't need it.
-zstandard>=0.18.0
-pyinstaller>=6.0.0

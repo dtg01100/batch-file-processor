@@ -156,10 +156,10 @@ ALL_LAYERS: list[Layer] = [
         iter_files=lambda: _glob_test_files(Path("tests/integration")),
     ),
     Layer(
-        name="qt",
-        path=Path("tests/qt"),
-        description="Qt UI tests, PySide6 binding (single-threaded per AGENTS.md).",
-        iter_files=lambda: _glob_test_files(Path("tests/qt")),
+        name="webapp",
+        path=Path("tests/webapp"),
+        description="Webapp tests (FastAPI API, base-dir importer, runner).",
+        iter_files=lambda: _glob_test_files(Path("tests/webapp")),
     ),
     Layer(
         name="dispatch",

@@ -1,50 +1,22 @@
-FROM mcr.microsoft.com/devcontainers/python:1-3.11-bookworm
+# Batch File Sender — local webapp image.
+#
+# The desktop (Qt/PySide6) app and its frozen-binary build machinery were
+# removed in the webapp pivot; this image runs the FastAPI webapp that
+# drives the same dispatch pipeline.
+FROM python:3.12-slim
 
-# Fix yarn GPG key issue (key 62D54FD4003F6525 is missing in base image)
-RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/yarnkey.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" > /etc/apt/sources.list.d/yarn.list
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    BFS_BASE_DIR=/data \
+    BFS_DATA_DIR=/data/config
 
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get -f install -y
-RUN apt-get -y install \
-    build-essential \
-    sqlite3 \
-    python3-tk \
-    xvfb \
-    x11vnc \
-    websockify \
-    git \
-    openbox \
-    libegl1 \
-    libgl1 \
-    libglib2.0-0 \
-    libxkbcommon-x11-0 \
-    libdbus-1-3 \
-    libfontconfig1 \
-    libxrender1 \
-    libxcb-cursor0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-randr0 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-xfixes0 \
-    libxcb-xinerama0 \
-    libxcb-xkb1
-# Clone noVNC for browser-based X11 viewing
-RUN git clone https://github.com/novnc/noVNC.git /tmp/novnc
+WORKDIR /app
 
-COPY requirements.txt /tmp/pip-tmp/
-RUN pip3 --disable-pip-version-check --no-cache-dir install --break-system-packages -r /tmp/pip-tmp/requirements.txt \
-&& rm -rf /tmp/pip-tmp
-# Ensure git is available at /usr/bin/git (standard location for delegated sessions)
-RUN ln -sf /usr/bin/git /usr/bin/git || true
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Create profile.d script to ensure PATH includes critical binaries for all shell types
-RUN cat > /etc/profile.d/path-setup.sh << 'EOF'
-# Ensure /usr/bin and /usr/local/bin are always in PATH
-if ! echo "$PATH" | grep -q "/usr/bin"; then
-    export PATH="/usr/bin:/usr/local/bin:/usr/sbin:/usr/local/sbin:/sbin:/bin:$PATH"
-fi
-EOF
+COPY . /app
+
+EXPOSE 8000
+
+CMD ["python", "-m", "webapp.main"]

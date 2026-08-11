@@ -357,10 +357,6 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "interface/validation/folder_settings_validator.py",
         "tests/unit/test_settings_validation.py",
     ),  # 7/11 killed
-    (
-        "interface/form/form_generator.py",
-        "tests/unit/test_form_generator.py",
-    ),  # 4/8 killed
     # Batch 6 (also 2026-07-09): backend/database, dispatch/converters,
     # dispatch interfaces (companion pair), core EDI fetchers, and
     # interface/folder_configuration. Several 0-N entries expose tests
@@ -402,36 +398,12 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "interface/models/folder_configuration.py",
         "tests/unit/test_folder_db_roundtrip.py",
     ),  # 1/11 (same module, different test pair; the new tests in test_folder_configuration_pydantic.py don't apply here, but the underlying model mutations are not exercised by the db_roundtrip path either)
-    # Batch 7 (also 2026-07-09): interface/plugins/*, dispatch/converters/*
-    # (concrete converter modules: eStore, simplified CSV, fintech,
-    # scansheet_type_a), and core/edi/inv_fetcher pulled in via converter
-    # tests. High 0/N rates on the converter tests are real test-quality
-    # signals — these tests import the modules but mock around the
-    # behavior, so mutations don't reach the assertions.
-    (
-        "interface/plugins/config_schemas.py",
-        "tests/unit/test_plugins/test_configuration_plugin.py",
-    ),  # 8/9 (was 2/9 with wrong pair; now 8/9 with new TestFieldDefinitionValidate tests; 1 docstring survivor KNOWN_EQUIVALENT)
-    (
-        "interface/plugins/config_schemas.py",
-        "tests/unit/test_plugins/test_form_generator_plugins.py",
-    ),  # was mispaired as test_plugin_manager_configuration (1/9 was a DEFAULT_PAIRS bug)
-    (
-        "interface/plugins/configuration_plugin.py",
-        "tests/unit/test_plugins/test_configuration_plugin.py",
-    ),  # 2/3 killed
-    (
-        "interface/plugins/section_registry.py",
-        "tests/unit/test_plugins/test_section_registry.py",
-    ),  # 1/7 killed
-    (
-        "interface/operations/plugin_configuration_mapper.py",
-        "tests/unit/test_plugins/test_plugin_configuration_mapper.py",
-    ),  # 3/11 killed
-    (
-        "interface/plugins/csv_configuration_plugin.py",
-        "tests/unit/test_plugins/test_plugin_option_combinations.py",
-    ),  # 1/3 killed
+    # Batch 7 (also 2026-07-09): dispatch/converters/* (concrete converter
+    # modules: eStore, simplified CSV, fintech, scansheet_type_a), and
+    # core/edi/inv_fetcher pulled in via converter tests. High 0/N rates
+    # on the converter tests are real test-quality signals — these tests
+    # import the modules but mock around the behavior, so mutations don't
+    # reach the assertions.
     (
         "dispatch/converters/convert_to_simplified_csv.py",
         "tests/unit/test_convert_to_simplified_csv.py",
@@ -1027,15 +999,6 @@ KNOWN_EQUIVALENT: list[tuple[str, str, int, str]] = [
         "int_constant_off_by_one",
         24,
         "docstring 'Accepts a 2-tuple' — example tuple size, mutation has no runtime effect",
-    ),
-    # ------------------------------------------------------------------
-    # interface/plugins/config_schemas.py (test: test_configuration_plugin.py)
-    # ------------------------------------------------------------------
-    (
-        "interface/plugins/config_schemas.py",
-        "and_to_or",
-        4,
-        "module docstring 'configuration schemas and validation' — prose",
     ),
     # ------------------------------------------------------------------
     # dispatch/edi_validator.py (test: test_edi_validator.py)

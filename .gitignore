@@ -161,6 +161,7 @@ Copilot-Processing.md
 # Nuitka-on-Wine build cache + artifacts (Phase 5 — docker-compose.yml)
 .nuitka-wine-cache/
 build/nuitka-wine-dist/
+.probe-data/
 .env.docker
 nuitka-crash-report.xml
 

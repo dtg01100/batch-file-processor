@@ -21,54 +21,6 @@ from interface.services.resend_service import ResendService
 from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-
-# Force xdist off when the run includes Qt tests.
-# PySide6 6.11.1 has a binding-manager bug in libshiboken6.abi3.so
-# that triggers a Fatal Python error / Aborted when QThread +
-# pyqtSignal work happens during pytest-qt's _process_events
-# step. The abort reproduces:
-# - in xdist worker teardown (multi-process)
-# - in single-process runs that touch QThread subclasses
-#   that emit signals during event-loop iteration
-# (see e.g. FileExistenceWorker in resend_dialog.py)
-# Disabling xdist for Qt tests makes the abort deterministic
-# in xdist mode but does NOT fix the underlying PySide6 bug.
-# Bump to a PySide6 release with the binding-manager teardown
-# fix (and verify QThread+signal safety) to re-enable parallel
-# Qt runs and unblock the single-process crash. See
-# plans/QT6_AND_MODERN_PYTHON_MIGRATION_PLAN.md section 13.
-def pytest_xdist_auto_num_workers(config):
-    if _qt_tests_in_selection(config):
-        return 0
-    import os
-
-    env = os.environ.get("PYTEST_XDIST_AUTO_NUM_WORKERS")
-    if env:
-        try:
-            return int(env)
-        except ValueError:
-            pass
-    return -1  # xdist default (auto)
-
-
-# Qt test paths and the qt marker select tests that hit PySide6
-# runtime. If the user runs any of them, disable xdist.
-_QT_TEST_PATHS = ("tests/qt/", "tests/unit/interface/qt/", "tests/integration/")
-
-
-def _qt_tests_in_selection(config):
-    args = config.args
-    if any(a == "qt" or a.startswith("qt.") for a in args if isinstance(a, str)):
-        return True
-    for arg in args:
-        if isinstance(arg, str) and any(
-            arg.startswith(p) or p in arg for p in _QT_TEST_PATHS
-        ):
-            return True
-    marker_expr = config.getoption("-m") or ""
-    return "qt" in marker_expr.split() or "not qt" in marker_expr.split()
 
 
 project_root = Path(__file__).parent.parent.resolve()
@@ -462,13 +414,6 @@ class MockFactories:
     @staticmethod
     def resend_service() -> MagicMock:
         return MagicMock(spec=ResendService)
-
-    @staticmethod
-    def qt_pushbutton() -> MagicMock:
-        """Create a mock QPushButton with common methods."""
-        mock = MagicMock()
-        mock.setEnabled = MagicMock()
-        return mock
 
     @staticmethod
     def folders_table() -> MagicMock:

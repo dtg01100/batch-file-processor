@@ -1,98 +1,27 @@
-# Docker Compose for the Batch File Sender build pipeline.
+# Batch File Sender — local webapp (webapp-pivot branch).
 #
-# Phase 5 of plans/QT6_AND_MODERN_PYTHON_MIGRATION_PLAN.md.
-#
-# The `nuitka-wine` service builds Windows .exe binaries from a
-# Linux host, replacing the archived batonogov/pyinstaller-windows
-# image the project previously depended on (see build_windows.sh).
+# Runs the FastAPI webapp in Docker. The volume at ./data is the base
+# directory (BFS_BASE_DIR=/data inside the container): every configured
+# folder's relative path resolves against it. Imported databases and the
+# webapp's own folders.db live under /data/config (BFS_DATA_DIR).
 #
 # Usage:
-#   make build-builder-image    # one-time image build (see Makefile)
-#   docker compose run --rm nuitka-wine # onefile build (default)
-#   docker compose run --rm nuitka-wine --dry-run
-#   docker compose run --rm nuitka-wine --standalone
+#   docker compose up --build        # http://localhost:8000
+#   docker compose down              # stop (data persists in ./data)
 #
-# The source checkout is bind-mounted at /src. Build artifacts
-# land in ./build/nuitka-wine-dist/ on the host (see the
-# `dist:` volume mount below). Cache (downloaded Python, pip
-# cache) lives in ./build/.nuitka-wine-cache/.
-
-# Resource limits come from .env.docker (see that file for the math).
-# Compose auto-loads .env from the project root by default; we keep
-# the caps in a dedicated file so the intent is explicit and renaming
-# the build doesn't silently drop the limits. Pass MEM_LIMIT=... on
-# the command line to override per-run.
-
+# To process real files, drop them under ./data/<relative-path> matching
+# the imported folder layout, e.g.:
+#   mkdir -p data/incoming
+#   cp some_file.edi data/incoming/
 services:
-  # This image is built from the sibling project
-  # /var/mnt/Disk2/projects/nuitka-wine-builder. To rebuild the image
-  # after builder changes, run `make build-builder-image` (see Makefile).
-  nuitka-wine:
-    image: nuitka-wine-builder:latest
-    container_name: bfp-nuitka-wine
-    # Loads MEM_LIMIT / SHM_SIZE from .env.docker (auto-loaded by
-    # Compose from the project root). Required: false so the service
-    # still starts if the file is missing -- but the defaults below
-    # then take over instead of leaving the host uncapped.
-    env_file:
-      - path: ./.env.docker
-        required: false
+  webapp:
+    build: .
+    container_name: batch-file-sender
+    ports:
+      - "8000:8000"
+    environment:
+      BFS_BASE_DIR: /data
+      BFS_DATA_DIR: /data/config
     volumes:
-      # Source code (read-only; the build produces output under
-      # /build, not /src).
-      - ./:/src:ro
-      # Persist downloaded Python + pip cache between runs so the
-      # ~5-min setup only happens once.
-      - ./.nuitka-wine-cache:/build/nuitka-wine
-      # Final .exe (or onefile folder) lands here on the host.
-      # The `:z` suffix tells Docker to relabel the bind mount with
-      # a container-writable SELinux context (`container_file_t`).
-      # Without it, SELinux blocks the container from writing to
-      # the bind mount because /var/mnt/Disk2 on Fedora 44 carries
-      # an `unlabeled_t` type that `container_t` cannot access.
-      # The `:z` (shared) is correct here because the volume content
-      # outlives a single container; `:Z` would relabel with a private
-      # label and break subsequent runs.
-      - ./build/nuitka-wine-dist:/build/nuitka-wine/dist:z
-    # Run as root in the container. The Docker bind-mounted volumes
-    # (./.nuitka-wine-cache, ./build/nuitka-wine-dist) are auto-created
-    # as root when they don't exist on the host, so the container must
-    # also run as root to write into them. Artifacts land on the host as
-    # root-owned; chown to your uid if you need to modify them.
-    user: "0:0"
-
-    # Cap memory at MEM_LIMIT (from .env.docker, default 14g -- half
-    # of a 31 GiB workstation with a small floor). Wine + Nuitka C
-    # compile (gcc on ~900 files) can spike to 3-4 GiB; 14g leaves
-    # headroom without starving the host. The previous cap of 30g
-    # left ~1 GiB for the entire rest of the workstation -- the
-    # desktop OOM'd mid-build.
-    mem_limit: ${MEM_LIMIT:-14g}
-    # Wine's loader and the C compiler under Wine both want
-    # /dev/shm headroom; the 64m Docker default causes sporadic
-    # failures. SHM_SIZE is sourced from .env.docker.
-    shm_size: ${SHM_SIZE:-2g}
-    # Wine's child processes occasionally segfault on Ctrl-C; the
-    # init flag ensures clean shutdown and reaps zombies.
-    init: true
-    # TTY helps Wine progress output flush correctly.
-    tty: true
-    # Default: onefile, with the project source at /src. Override
-    # with the service `command:` or via
-    # `docker compose run --rm nuitka-wine --standalone`. Note: the
-    # Dockerfile's CMD also sets --src-dir /src, but docker compose
-    # `command:` REPLACES (not appends) the Dockerfile CMD, so we have
-    # to repeat --src-dir /src here.
-    #
-    # --output-dir defaults to <src-dir>/build/nuitka-wine-dist if not
-    # passed, which would land inside the read-only /src bind mount
-    # and fail with EROFS/WinError-5. Point it at the dedicated RW
-    # output volume instead.
-    command: ["--src-dir", "/src", "--output-dir", "/build/nuitka-wine/dist", "--onefile"]
-    # The Wine download is several hundred MB; bump the timeout.
-    healthcheck:
-      test: ["CMD", "wine", "--version"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      - ./data:/data
+    restart: unless-stopped
