@@ -8,6 +8,7 @@ const state = {
   config: null,
   pollHandle: null,
   lastRunId: null,
+  editingFolderId: null,
 };
 
 async function api(path, options) {
@@ -102,6 +103,7 @@ async function loadFolders() {
     console.error(err);
     return;
   }
+  state.folders = folders; // keep the list for the edit panel
   const empty = $("folders-empty");
   const wrap = $("folders-wrap");
   empty.hidden = folders.length !== 0;
@@ -113,7 +115,7 @@ async function loadFolders() {
     const pathCell = f.path_exists
       ? `<span class="exists">OK</span> <code>${esc(f.resolved_path)}</code>`
       : `<span class="missing">MISS</span> <code>${esc(f.resolved_path)}</code>`;
-    return `<tr>
+    return `<tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${esc(f.alias || f.folder_name)}">
       <td><b>${esc(f.alias || f.folder_name)}</b></td>
       <td><code>${esc(f.folder_name)}</code></td>
       <td>${pathCell}</td>
@@ -121,9 +123,281 @@ async function loadFolders() {
       <td>${f.is_active ? '<span class="state-on">● active</span>' : '<span class="state-off">○ inactive</span>'}</td>
     </tr>`;
   }).join("");
+
+  // Each row is a button: clicking opens the side panel.
+  body.querySelectorAll(".folder-row").forEach((row) => {
+    row.addEventListener("click", () => openFolderPanel(Number(row.dataset.folderId)));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openFolderPanel(Number(row.dataset.folderId));
+      }
+    });
+  });
 }
 
 $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProcessed(); });
+
+/* ---------------- folder edit panel ---------------- */
+
+function setByPath(obj, path, value) {
+  // path = "a.b.c" -> obj.a.b.c = value
+  const parts = path.split(".");
+  let cursor = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    if (cursor[k] === undefined || cursor[k] === null) cursor[k] = {};
+    cursor = cursor[k];
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function getByPath(obj, path) {
+  const parts = path.split(".");
+  let cursor = obj;
+  for (const k of parts) {
+    if (cursor === null || cursor === undefined) return undefined;
+    cursor = cursor[k];
+  }
+  return cursor;
+}
+
+function panelValue(name) {
+  const el = $("folder-panel-form").elements.namedItem(name);
+  if (!el) return undefined;
+  if (el.type === "checkbox") return el.checked;
+  if (el.tagName === "SELECT" || el.type === "text" || el.type === "password" ||
+      el.type === "number" || el.tagName === "TEXTAREA") {
+    return el.value === "" ? "" : (el.type === "number" ? Number(el.value) : el.value);
+  }
+  return el.value;
+}
+
+function setPanelValue(name, value) {
+  const el = $("folder-panel-form").elements.namedItem(name);
+  if (!el) return;
+  if (el.type === "checkbox") {
+    el.checked = Boolean(value);
+  } else if (value === null || value === undefined) {
+    el.value = "";
+  } else {
+    el.value = String(value);
+  }
+}
+
+function populateFolderPanel(schema) {
+  const form = $("folder-panel-form");
+  // Identity + backend toggles live at the top level
+  for (const k of ["alias", "folder_name", "process_backend_copy", "process_backend_ftp",
+                   "process_backend_email", "process_backend_http"]) {
+    setPanelValue(k, schema[k]);
+  }
+  // Backends (FTP/Email/Copy/HTTP) get a dedicated hidden <fieldset> that
+  // we show only when that backend is configured. The other groups
+  // (EDI/UPC/A-record/etc.) are always visible because they apply to
+  // every folder regardless of which backend is selected.
+  const backendGroups = [
+    ["ftp", "ftp"],
+    ["email", "email"],
+    ["copy_backend", "copy"],
+    ["http", "http"],
+  ];
+  for (const [grp, domId] of backendGroups) {
+    const obj = schema[grp];
+    $(`grp-${domId}`).hidden = !obj;
+    if (obj) {
+      for (const [k, v] of Object.entries(obj)) {
+        setPanelValue(`${grp}.${k}`, v);
+      }
+    } else {
+      const fields = form.querySelectorAll(`[name^="${grp}."]`);
+      fields.forEach((f) => {
+        if (f.type === "checkbox") f.checked = false;
+        else f.value = "";
+      });
+    }
+  }
+  // Other groups: just populate, don't toggle visibility.
+  for (const grp of [
+    "edi", "upc_override", "a_record_padding", "invoice_date",
+    "backend_specific", "csv",
+  ]) {
+    const obj = schema[grp];
+    if (obj) {
+      for (const [k, v] of Object.entries(obj)) {
+        setPanelValue(`${grp}.${k}`, v);
+      }
+    }
+  }
+  $("folder-panel-error").hidden = true;
+  $("folder-panel-error").textContent = "";
+  $("folder-panel-title").textContent =
+    `Edit: ${schema.alias || schema.folder_name || `folder ${schema.id}`}`;
+}
+
+function readFolderPanel() {
+  const schema = {
+    id: state.editingFolderId,
+    alert_on_failure: true, // not exposed in the UI yet; default
+    plugin_configurations: {},
+  };
+  for (const el of $("folder-panel-form").elements) {
+    if (!el.name) continue;
+    if (el.name.includes(".")) continue; // handled below by group
+    setByPath(schema, el.name, panelValue(el.name));
+  }
+  for (const grp of ["ftp", "email", "copy_backend", "http", "edi", "upc_override",
+                     "a_record_padding", "invoice_date", "backend_specific", "csv"]) {
+    const fields = $("folder-panel-form").querySelectorAll(`[name^="${grp}."]`);
+    if (fields.length === 0) continue;
+    // Include the group iff at least one field is filled or checked.
+    let anySet = false;
+    const obj = {};
+    fields.forEach((f) => {
+      const v = panelValue(f.name);
+      if (v !== undefined && v !== "" && v !== false) anySet = true;
+      const lastDot = f.name.lastIndexOf(".");
+      setByPath(obj, f.name.slice(lastDot + 1), v);
+    });
+    if (anySet) schema[grp] = obj;
+  }
+  return schema;
+}
+
+async function openFolderPanel(folderId) {
+  state.editingFolderId = folderId;
+  const errBox = $("folder-panel-error");
+  errBox.hidden = true;
+  errBox.textContent = "";
+  try {
+    const schema = await api(`/api/folders/${folderId}`);
+    populateFolderPanel(schema);
+    const panel = $("folder-panel");
+    panel.hidden = false;
+    panel.setAttribute("aria-hidden", "false");
+  } catch (err) {
+    // Show errors in the panel itself, not in the (far away) Run card —
+    // an operator opening a folder expects feedback in the same place
+    // they clicked.
+    errBox.hidden = false;
+    errBox.textContent = `Failed to load folder: ${err.message || String(err)}`;
+  }
+}
+
+function closeFolderPanel() {
+  const panel = $("folder-panel");
+  panel.hidden = true;
+  panel.setAttribute("aria-hidden", "true");
+  state.editingFolderId = null;
+}
+
+$("folder-panel-close").addEventListener("click", closeFolderPanel);
+$("folder-panel-cancel").addEventListener("click", closeFolderPanel);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("folder-panel").hidden) closeFolderPanel();
+});
+
+$("folder-panel-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const schema = readFolderPanel();
+  const errBox = $("folder-panel-error");
+  const saveBtn = $("folder-panel-save");
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Saving…";
+  try {
+    const updated = await api(`/api/folders/${schema.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(schema),
+    });
+    populateFolderPanel(updated);
+    errBox.hidden = true;
+    await loadFolders();
+    await refreshConfig();
+  } catch (err) {
+    errBox.hidden = false;
+    errBox.textContent = err.message || String(err);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save";
+  }
+});
+
+/* ---------------- folder-level maintenance ---------------- */
+
+function _showMaintenance(message, kind) {
+  const box = $("folder-panel-maintenance-result");
+  box.hidden = false;
+  box.className = "notice " + (kind === "err" ? "err" : "ok");
+  box.innerHTML = message;
+}
+
+async function runFolderMaintenance(action) {
+  const folderId = state.editingFolderId;
+  if (folderId == null) return;
+  if (action === "clear-processed") {
+    if (
+      !window.confirm(
+        `Clear every processed-files row for folder ${folderId}? The next run will re-process every EDI in this folder.`,
+      )
+    ) {
+      return;
+    }
+  }
+  const folderAlias = $("folder-panel-form").elements.namedItem("alias").value || "";
+  const result = $("folder-panel-maintenance-result");
+  result.hidden = true;
+  try {
+    if (action === "clear-processed") {
+      const r = await api(
+        `/api/maintenance/clear-processed?folder_id=${folderId}`,
+        { method: "POST" },
+      );
+      _showMaintenance(
+        `Cleared <b>${r.deleted}</b> processed-files row(s) for ${esc(folderAlias)}.`,
+        "ok",
+      );
+      await loadProcessed();
+    } else if (action === "mark-processed") {
+      const filePath = window.prompt(
+        "Absolute path of the file to mark as processed:",
+        "",
+      );
+      if (!filePath) return;
+      const invoiceNumbers = window.prompt(
+        "Invoice numbers (comma-separated, optional):",
+        "",
+      ) || "";
+      const r = await api("/api/maintenance/mark-processed", {
+        method: "POST",
+        params: { folder_id: folderId, folder_alias: folderAlias,
+                  file_path: filePath, invoice_numbers: invoiceNumbers },
+      });
+      _showMaintenance(
+        `Recorded processed-files row id <b>${r.id}</b>.`,
+        "ok",
+      );
+      await loadProcessed();
+    } else if (action === "export-processed") {
+      const r = await api("/api/maintenance/export-processed", {
+        method: "POST",
+        params: { folder_id: folderId },
+      });
+      const url = `/api/maintenance/download?path=${encodeURIComponent(r.path)}`;
+      _showMaintenance(
+        `Report written to <code>${esc(r.path)}</code> — ` +
+        `<a href="${url}" download>download</a>.`,
+        "ok",
+      );
+    }
+  } catch (err) {
+    _showMaintenance(`Failed: ${esc(err.message || String(err))}`, "err");
+  }
+}
+
+document.querySelectorAll("[data-maint]").forEach((btn) => {
+  btn.addEventListener("click", () => runFolderMaintenance(btn.dataset.maint));
+});
 
 /* ---------------- run ---------------- */
 

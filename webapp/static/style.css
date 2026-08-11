@@ -182,6 +182,9 @@ input[type="file"] { padding: 8px; }
 }
 .table td { padding: 10px; border-bottom: 1px solid rgba(42, 53, 80, 0.5); vertical-align: middle; }
 .table tr:hover td { background: rgba(79, 140, 255, 0.05); }
+.folder-row { cursor: pointer; }
+.folder-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.folder-row:hover td { background: rgba(79, 140, 255, 0.10); }
 .table code, .run-log code {
   font-family: ui-monospace, "Cascadia Code", monospace;
   font-size: 12px;
@@ -225,6 +228,115 @@ input[type="file"] { padding: 8px; }
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
+}
+
+/* ---------- folder edit side panel ---------- */
+
+.folder-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  background: linear-gradient(180deg, var(--card), var(--card-2));
+  border-left: 1px solid var(--border);
+  box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  overflow: hidden;
+  transform: translateX(0);
+  transition: transform 0.22s ease;
+}
+.folder-panel[hidden] {
+  /* When closed we keep the element in the DOM but slide it off-screen
+     so the open/close transition animates instead of disappearing. */
+  display: flex !important;
+  transform: translateX(100%);
+  pointer-events: none;
+}
+.folder-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.folder-panel__head h2 { margin: 0; font-size: 16px; }
+.folder-panel__body {
+  padding: 14px 22px 22px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+.folder-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+}
+.folder-panel__actions .btn { width: auto; }
+
+.folder-panel__section {
+  border-top: 1px solid var(--border);
+  padding: 18px 22px;
+  background: rgba(11, 15, 26, 0.3);
+}
+.folder-panel__section h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.folder-panel__maintenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.folder-panel__maintenance .btn {
+  width: auto;
+  font-size: 12.5px;
+  padding: 8px 14px;
+}
+
+.grp {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px 12px;
+  margin: 0 0 14px;
+  background: rgba(11, 15, 26, 0.4);
+}
+.grp legend {
+  padding: 0 8px;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.grp .field { margin-bottom: 10px; }
+.grp .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.grp textarea {
+  width: 100%;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 12.5px;
+  resize: vertical;
 }
 
 /* ---------- run results ---------- */

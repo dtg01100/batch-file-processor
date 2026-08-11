@@ -29,12 +29,24 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from core.domain.models.folder import FolderConfiguration
 from core.structured_logging import get_logger
 from webapp.config import Settings
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
+from webapp.folder_schema import (
+    FolderEditSchema,
+    folder_row_to_schema,
+    schema_to_folder_row,
+)
 from webapp.importer import ImportResult, import_database
+from webapp.maintenance import (
+    clear_processed_files,
+    export_processed_report,
+    mark_file_processed,
+)
 from webapp.paths import resolve
 from webapp.runner import RunReport, RunStore
 
@@ -213,6 +225,82 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return [_folder_summary(r, str(settings.base_dir)) for r in rows]
 
+    @app.get("/api/folders/{folder_id}", response_model=FolderEditSchema)
+    def api_get_folder(folder_id: int) -> FolderEditSchema:
+        """Return the full edit representation of one folder.
+
+        Raises:
+            HTTPException: 404 if no folder with this id exists, 503 if
+                the database is not yet imported.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                row = db.folders_table.find_one(id=folder_id)
+            finally:
+                db.close()
+        if row is None:
+            raise HTTPException(status_code=404, detail=f"Folder {folder_id} not found")
+        return folder_row_to_schema(row)
+
+    @app.put("/api/folders/{folder_id}", response_model=FolderEditSchema)
+    def api_put_folder(folder_id: int, schema: FolderEditSchema) -> FolderEditSchema:
+        """Replace one folder's editable fields with the request body.
+
+        The dataclass ``FolderConfiguration.validate_with_pydantic``
+        remains the source of truth for cross-field invariants; we
+        round-trip through it to surface any error as a 400 with the
+        message a human can act on.
+
+        Raises:
+            HTTPException: 404 if no folder with this id exists, 400 on
+                validation failure, 503 if no database imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        if schema.id != folder_id:
+            # Don't silently rewrite another folder's id.
+            raise HTTPException(
+                status_code=400,
+                detail=f"URL id {folder_id} does not match body id {schema.id}",
+            )
+        settings.ensure_dirs()
+        row = schema_to_folder_row(schema)
+        try:
+            # Round-trip through FolderConfiguration so the cross-field
+            # invariants (e.g. prepend_date_files requires split_edi)
+            # are checked the same way the desktop app checks them.
+            FolderConfiguration.from_dict(row)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        with lock():
+            db = open_database(settings)
+            try:
+                existing = db.folders_table.find_one(id=folder_id)
+                if existing is None:
+                    raise HTTPException(
+                        status_code=404, detail=f"Folder {folder_id} not found"
+                    )
+                db.folders_table.update(row, ["id"])
+                refreshed = db.folders_table.find_one(id=folder_id)
+            finally:
+                db.close()
+        if refreshed is None:
+            # Defensive: the row was visible above so it should still be
+            # visible right after the update. If it isn't, something has
+            # gone badly wrong (e.g. a hook deleted it).
+            raise HTTPException(
+                status_code=500,
+                detail=f"Folder {folder_id} disappeared during update",
+            )
+        return folder_row_to_schema(refreshed)
+
     @app.post("/api/run")
     def api_run() -> dict:
         settings = app.state.settings
@@ -239,21 +327,117 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
     @app.get("/api/processed-files")
     def api_processed_files() -> dict:
         settings = app.state.settings
-        try:
-            with lock():
-                db = open_database(settings)
-                with contextlib.suppress(Exception):
-                    raw = db.database_connection.query(
-                        "SELECT file_name, folder_alias, processed_at, status, "
-                        "sent_to, invoice_numbers FROM processed_files "
-                        "ORDER BY id DESC LIMIT 200"
-                    )
-                    rows = [dict(r) for r in raw] if raw else []
-                with contextlib.suppress(Exception):
-                    db.close()
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        with lock():
+            db = open_database(settings)
+            try:
+                raw = db.database_connection.query(
+                    "SELECT file_name, folder_alias, processed_at, status, "
+                    "sent_to, invoice_numbers FROM processed_files "
+                    "ORDER BY id DESC LIMIT 200"
+                )
+                rows = [dict(r) for r in raw] if raw else []
+            finally:
+                db.close()
         return {"count": len(rows), "files": rows}
+
+    @app.post("/api/maintenance/clear-processed")
+    def api_clear_processed(folder_id: int | None = None) -> dict:
+        """Bulk-delete ``processed_files`` rows.
+
+        Args (form/query params):
+            folder_id: optional — restrict to one folder.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                deleted = clear_processed_files(db, folder_id=folder_id)
+            finally:
+                db.close()
+        return {"deleted": deleted}
+
+    @app.post("/api/maintenance/mark-processed")
+    def api_mark_processed(
+        file_path: str,
+        folder_id: int,
+        folder_alias: str = "",
+        invoice_numbers: str = "",
+        sent_to: str = "",
+        status: str = "processed",
+    ) -> dict:
+        """Record a single file as already processed."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                # 404 if the folder doesn't exist.
+                folder = db.folders_table.find_one(id=folder_id)
+                if folder is None:
+                    raise HTTPException(
+                        status_code=404, detail=f"Folder {folder_id} not found"
+                    )
+                row_id = mark_file_processed(
+                    db,
+                    file_path=file_path,
+                    folder_id=folder_id,
+                    folder_alias=folder_alias or folder.get("alias", ""),
+                    invoice_numbers=invoice_numbers,
+                    status=status,
+                    sent_to=sent_to,
+                )
+            finally:
+                db.close()
+        return {"id": row_id}
+
+    @app.post("/api/maintenance/export-processed")
+    def api_export_processed(folder_id: int) -> dict:
+        """Write a CSV report for one folder. Returns the file path."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                try:
+                    path = export_processed_report(
+                        db, folder_id=folder_id, output_dir=str(settings.logs_dir)
+                    )
+                except ValueError as exc:
+                    # The maintenance helper raises ValueError when the
+                    # folder doesn't exist; surface that as 404 rather
+                    # than letting it bubble to a 500.
+                    raise HTTPException(status_code=404, detail=str(exc)) from exc
+            finally:
+                db.close()
+        return {"path": path}
+
+    @app.get("/api/maintenance/download")
+    def api_download_report(path: str):
+        """Stream a previously-exported report back to the browser."""
+        settings = app.state.settings
+        # Only allow downloading files that live under the data dir —
+        # an operator-supplied path elsewhere would be a path-traversal
+        # vector.
+        resolved = Path(path).resolve()
+        allowed_root = settings.data_dir.resolve()
+        try:
+            resolved.relative_to(allowed_root)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Path not allowed") from exc
+        if not resolved.is_file():
+            raise HTTPException(status_code=404, detail="Report not found")
+        return FileResponse(
+            path=str(resolved),
+            filename=resolved.name,
+            media_type="text/csv",
+        )
 
     # Static UI (served last so /api/* routes win).
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

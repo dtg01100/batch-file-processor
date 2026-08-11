@@ -73,8 +73,177 @@
           </thead>
           <tbody id="folders-body"></tbody>
         </table>
+        <p class="card__hint">Click any row to edit the folder.</p>
       </div>
     </section>
+
+    <aside id="folder-panel" class="folder-panel" hidden aria-hidden="true">
+      <div class="folder-panel__head">
+        <h2 id="folder-panel-title">Folder</h2>
+        <button id="folder-panel-close" class="btn btn--ghost" title="Close">×</button>
+      </div>
+      <div id="folder-panel-error" class="notice err" hidden></div>
+      <form id="folder-panel-form" class="folder-panel__body" autocomplete="off">
+        <fieldset class="grp">
+          <legend>Identity</legend>
+          <label class="field">
+            <span>Alias</span>
+            <input type="text" name="alias" />
+          </label>
+          <label class="field">
+            <span>Folder path (relative to base)</span>
+            <input type="text" name="folder_name" />
+            <small>Paths are stored relative to the base directory.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Backends</legend>
+          <p class="card__hint">Enable the backends this folder should deliver to.</p>
+          <label class="check"><input type="checkbox" name="process_backend_copy" /> Copy</label>
+          <label class="check"><input type="checkbox" name="process_backend_ftp" /> FTP</label>
+          <label class="check"><input type="checkbox" name="process_backend_email" /> Email</label>
+          <label class="check"><input type="checkbox" name="process_backend_http" /> HTTP</label>
+        </fieldset>
+
+        <fieldset class="grp" id="grp-ftp" hidden>
+          <legend>FTP</legend>
+          <label class="field"><span>Server</span><input type="text" name="ftp.server" /></label>
+          <label class="field"><span>Port</span><input type="number" name="ftp.port" min="1" max="65535" /></label>
+          <label class="field"><span>Username</span><input type="text" name="ftp.username" /></label>
+          <label class="field"><span>Password</span><input type="password" name="ftp.password" /></label>
+          <label class="field"><span>Remote folder (must end in /)</span><input type="text" name="ftp.folder" /></label>
+        </fieldset>
+
+        <fieldset class="grp" id="grp-email" hidden>
+          <legend>Email</legend>
+          <label class="field"><span>Recipients (comma-separated)</span><input type="text" name="email.recipients" /></label>
+          <label class="field"><span>Subject line</span><input type="text" name="email.subject_line" /></label>
+        </fieldset>
+
+        <fieldset class="grp" id="grp-copy" hidden>
+          <legend>Copy</legend>
+          <label class="field"><span>Destination directory (relative to base)</span><input type="text" name="copy_backend.destination_directory" /></label>
+        </fieldset>
+
+        <fieldset class="grp" id="grp-http" hidden>
+          <legend>HTTP</legend>
+          <label class="field"><span>URL</span><input type="text" name="http.url" /></label>
+          <label class="field"><span>Headers (one per line)</span><textarea name="http.headers" rows="3"></textarea></label>
+          <label class="field"><span>Field name</span><input type="text" name="http.field_name" /></label>
+          <label class="field">
+            <span>Auth type</span>
+            <select name="http.auth_type">
+              <option value="">none</option>
+              <option value="bearer">bearer</option>
+              <option value="query">query</option>
+            </select>
+          </label>
+          <label class="field"><span>API key</span><input type="text" name="http.api_key" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>EDI processing</legend>
+          <label class="check"><input type="checkbox" name="edi.process_edi" /> Process EDI</label>
+          <label class="check"><input type="checkbox" name="edi.split_edi" /> Split EDI</label>
+          <label class="check"><input type="checkbox" name="edi.split_edi_include_invoices" /> Include invoices in split</label>
+          <label class="check"><input type="checkbox" name="edi.split_edi_include_credits" /> Include credits in split</label>
+          <label class="check"><input type="checkbox" name="edi.prepend_date_files" /> Prepend dates to split files</label>
+          <label class="check"><input type="checkbox" name="edi.tweak_edi" /> Apply EDI tweaks</label>
+          <label class="check"><input type="checkbox" name="edi.force_edi_validation" /> Force EDI validation</label>
+          <label class="field"><span>Convert to format</span><input type="text" name="edi.convert_to_format" placeholder="e.g. csv, ScannerWare, ..." /></label>
+          <label class="field"><span>Rename file (template)</span><input type="text" name="edi.rename_file" /></label>
+          <label class="field"><span>Split filter categories</span><input type="text" name="edi.split_edi_filter_categories" placeholder="ALL or 1,2,3" /></label>
+          <label class="field">
+            <span>Split filter mode</span>
+            <select name="edi.split_edi_filter_mode">
+              <option value="include">include</option>
+              <option value="exclude">exclude</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>UPC override</legend>
+          <label class="check"><input type="checkbox" name="upc_override.enabled" /> Enabled</label>
+          <label class="field"><span>Level</span><input type="number" name="upc_override.level" min="1" /></label>
+          <label class="field"><span>Category filter</span><input type="text" name="upc_override.category_filter" /></label>
+          <label class="field"><span>Target length</span><input type="number" name="upc_override.target_length" /></label>
+          <label class="field"><span>Padding pattern</span><input type="text" name="upc_override.padding_pattern" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>A-record padding</legend>
+          <label class="check"><input type="checkbox" name="a_record_padding.enabled" /> Enabled</label>
+          <label class="field"><span>Padding text</span><input type="text" name="a_record_padding.padding_text" /></label>
+          <label class="field"><span>Padding length</span><input type="number" name="a_record_padding.padding_length" min="1" /></label>
+          <label class="field"><span>Append text</span><input type="text" name="a_record_padding.append_text" /></label>
+          <label class="check"><input type="checkbox" name="a_record_padding.append_enabled" /> Append enabled</label>
+          <label class="check"><input type="checkbox" name="a_record_padding.force_txt_extension" /> Force .txt extension</label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Invoice date</legend>
+          <label class="field"><span>Offset (days)</span><input type="number" name="invoice_date.offset" min="-14" max="14" /></label>
+          <label class="check"><input type="checkbox" name="invoice_date.custom_format_enabled" /> Use custom format</label>
+          <label class="field"><span>Custom format string</span><input type="text" name="invoice_date.custom_format_string" /></label>
+          <label class="check"><input type="checkbox" name="invoice_date.retail_uom" /> Retail UoM</label>
+          <label class="field"><span>Each-UoM categories</span><input type="text" name="invoice_date.each_uom_categories" /></label>
+          <label class="field">
+            <span>Each-UoM mode</span>
+            <select name="invoice_date.each_uom_mode">
+              <option value="include">include</option>
+              <option value="exclude">exclude</option>
+            </select>
+          </label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Vendor-specific</legend>
+          <label class="field"><span>Estore store number</span><input type="text" name="backend_specific.estore_store_number" /></label>
+          <label class="field"><span>Estore vendor OID</span><input type="text" name="backend_specific.estore_vendor_oid" /></label>
+          <label class="field"><span>Estore vendor name OID</span><input type="text" name="backend_specific.estore_vendor_namevendoroid" /></label>
+          <label class="field"><span>Estore C-record OID</span><input type="text" name="backend_specific.estore_c_record_oid" /></label>
+          <label class="field"><span>Fintech division ID</span><input type="text" name="backend_specific.fintech_division_id" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>CSV</legend>
+          <label class="check"><input type="checkbox" name="csv.include_headers" /> Include headers</label>
+          <label class="check"><input type="checkbox" name="csv.filter_ampersand" /> Filter ampersand</label>
+          <label class="check"><input type="checkbox" name="csv.include_item_numbers" /> Include item numbers</label>
+          <label class="check"><input type="checkbox" name="csv.include_item_description" /> Include item description</label>
+          <label class="field"><span>Sort order</span><input type="text" name="csv.simple_csv_sort_order" /></label>
+          <label class="check"><input type="checkbox" name="csv.split_prepaid_sales_tax_crec" /> Split prepaid sales-tax C-records</label>
+        </fieldset>
+
+        <div class="folder-panel__actions">
+          <button type="button" id="folder-panel-cancel" class="btn btn--ghost">Cancel</button>
+          <button type="submit" id="folder-panel-save" class="btn btn--primary">Save</button>
+        </div>
+      </form>
+
+      <div class="folder-panel__section">
+        <h3>Maintenance</h3>
+        <p class="card__hint">
+          These actions affect this folder's processed-files history.
+          Use them when an EDI needs to be re-sent or a file was
+          processed externally and should be skipped on the next run.
+        </p>
+        <div class="folder-panel__maintenance">
+          <button type="button" class="btn btn--ghost" data-maint="mark-processed">
+            Mark file processed
+          </button>
+          <button type="button" class="btn btn--ghost" data-maint="clear-processed">
+            Clear processed history
+          </button>
+          <button type="button" class="btn btn--ghost" data-maint="export-processed">
+            Export CSV report
+          </button>
+        </div>
+        <div id="folder-panel-maintenance-result" class="notice" hidden></div>
+      </div>
+    </aside>
 
     <section class="card run-card">
       <div class="card__head">
