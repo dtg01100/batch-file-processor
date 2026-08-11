@@ -520,6 +520,44 @@ document.querySelectorAll("[data-maint]").forEach((btn) => {
   btn.addEventListener("click", () => runFolderMaintenance(btn.dataset.maint));
 });
 
+/* ---------------- EDI preview ---------------- */
+
+$("edi-preview-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const file = $("edi-preview-file").files[0];
+  if (!file) return;
+  const result = $("edi-preview-result");
+  result.hidden = false;
+  result.textContent = "Parsing…";
+  try {
+    const data = await api("/api/preview/edi", {
+      method: "POST",
+      body: (() => {
+        const fd = new FormData();
+        fd.append("file", file);
+        return fd;
+      })(),
+    });
+    const s = data.summary;
+    result.innerHTML = `
+      <div class="summary">
+        <span><b>${s.total}</b> total</span>
+        <span><b>${s.a}</b> A records</span>
+        <span><b>${s.b}</b> B records</span>
+        <span><b>${s.c}</b> C records</span>
+        <span><b>${s.trailer}</b> trailer</span>
+        ${s.unknown ? `<span style="color: var(--bad)"><b>${s.unknown}</b> unknown</span>` : ""}
+      </div>
+      <table>
+        ${data.lines.map((l) => `
+          <tr class="${l.type}"><td>${l.num}</td><td>${l.type.toUpperCase()}</td><td>${esc(l.raw)}</td></tr>
+        `).join("")}
+      </table>`;
+  } catch (err) {
+    result.textContent = `Failed: ${err.message || err}`;
+  }
+});
+
 /* ---------------- run ---------------- */
 
 $("run-btn").addEventListener("click", async () => {

@@ -68,6 +68,7 @@ from webapp.maintenance import (
     mark_file_processed,
 )
 from webapp.paths import resolve
+from webapp.preview import preview_edi
 from webapp.resend import (
     clear_resend_flags,
     list_processed_files,
@@ -255,6 +256,28 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             raise HTTPException(
                 status_code=500, detail=f"Import failed: {exc}"
             ) from exc
+        finally:
+            with contextlib.suppress(Exception):
+                Path(tmp_path).unlink(missing_ok=True)
+
+    @app.post("/api/preview/edi")
+    async def api_preview_edi(file: Annotated[UploadFile, File()]) -> dict:
+        """Classify an EDI upload and return per-line structure.
+
+        This is a parse-only preview; the full conversion pipeline
+        (which writes its output to disk and needs UPC + DB2) is
+        not run here.
+        """
+        suffix = Path(file.filename or "sample.edi").suffix or ".edi"
+        with tempfile.NamedTemporaryFile(
+            suffix=suffix, delete=False, mode="w+b"
+        ) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+        try:
+            return preview_edi(tmp_path)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="File not found") from exc
         finally:
             with contextlib.suppress(Exception):
                 Path(tmp_path).unlink(missing_ok=True)

@@ -244,6 +244,27 @@
         </div>
         <div id="folder-panel-maintenance-result" class="notice" hidden></div>
       </div>
+
+      <div class="folder-panel__section">
+        <h3>EDI preview</h3>
+        <p class="card__hint">
+          Upload a sample EDI file to see its record structure. This is
+          a parse-only check — it does not run the configured
+          converter against the file (the converter writes its output
+          to disk and needs UPC + DB2 access that the webapp doesn't
+          have).
+        </p>
+        <form id="edi-preview-form" class="schedule-form">
+          <label class="field">
+            <span>Sample EDI file</span>
+            <input type="file" id="edi-preview-file" accept=".edi,.txt,.dat" required />
+          </label>
+          <div class="schedule-form__buttons">
+            <button type="submit" class="btn btn--ghost">Preview</button>
+          </div>
+        </form>
+        <div id="edi-preview-result" class="edi-preview-result" hidden></div>
+      </div>
     </aside>
 
     <section class="card run-card">
