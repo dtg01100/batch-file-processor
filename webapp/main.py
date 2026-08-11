@@ -373,6 +373,32 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"run_id": run_id}
 
+    @app.post("/api/folders/{folder_id}/run")
+    def api_run_folder(folder_id: int) -> dict:
+        """Run the dispatcher against a single folder."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=400, detail="No database imported yet")
+        # Validate the folder exists up-front so a bad id returns
+        # 404 immediately rather than spawning a worker that just
+        # reports a failure.
+        try:
+            with lock():
+                db = open_database(settings)
+                try:
+                    existing = db.folders_table.find_one(id=folder_id)
+                finally:
+                    db.close()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        if existing is None:
+            raise HTTPException(status_code=404, detail=f"Folder {folder_id} not found")
+        try:
+            run_id = app.state.run_store.start_folder(settings, folder_id)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"run_id": run_id}
+
     @app.get("/api/schedule")
     def api_get_schedule() -> dict:
         """Return the persisted schedule state + last/next run timestamps."""

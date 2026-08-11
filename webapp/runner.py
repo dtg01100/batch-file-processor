@@ -293,6 +293,88 @@ def run_resend(settings: Settings, db=None) -> RunReport:
     return report
 
 
+def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
+    """Process a single folder by id (background worker; same shape as run_folders).
+
+    The folder is loaded fresh from the DB on every call so a stale
+    in-memory copy doesn't bypass a recent PUT /api/folders/{id} save.
+
+    Args:
+        settings: Webapp settings.
+        folder_id: Primary key in the folders table.
+        db: Optional already-open ``DatabaseObj``.
+
+    Returns:
+        A ``RunReport`` with exactly one ``FolderRunReport``.
+
+    """
+    report = RunReport(
+        run_id=uuid.uuid4().hex[:12],
+        status="running",
+        started_at=datetime.datetime.now().isoformat(),
+    )
+    owns_db = db is None
+    if owns_db:
+        db = open_database(settings)
+    try:
+        with lock():
+            settings.ensure_dirs()
+            row = db.folders_table.find_one(id=folder_id)
+            if row is None:
+                raise ValueError(f"Folder {folder_id} not found")
+            resolved = resolve_row(row, settings.base_dir)
+            settings_dict = db.get_settings_or_default() or {}
+            error_handler = ErrorHandler(
+                errors_folder=str(settings.errors_dir),
+                run_log_directory=str(settings.logs_dir),
+            )
+            config = create_standard_pipeline(
+                settings=settings_dict,
+                version="webapp",
+                error_handler=error_handler,
+                backends={},
+                upc_dict={"_mock": []},
+            )
+            orchestrator = DispatchOrchestrator(config)
+            run_log = io.StringIO()
+            folder_report = FolderRunReport(
+                alias=str(row.get("alias") or _folder_relative_path(row)),
+                relative_path=_folder_relative_path(row),
+                resolved_path=str(resolved.get("folder_name", "")),
+            )
+            try:
+                result = orchestrator.process_folder(
+                    resolved,
+                    run_log,
+                    processed_files=db.processed_files,
+                )
+                folder_report.files_processed = result.files_processed
+                folder_report.files_failed = result.files_failed
+                folder_report.success = result.success
+                folder_report.errors = list(result.errors)
+            except Exception as exc:
+                folder_report.success = False
+                folder_report.files_failed = 1
+                folder_report.errors.append(f"{type(exc).__name__}: {exc}")
+            folder_report.run_log = run_log.getvalue()
+            report.folders.append(folder_report)
+            report.total_processed = folder_report.files_processed
+            report.total_failed = folder_report.files_failed
+            report.status = "completed"
+    except ValueError as exc:
+        report.status = "failed"
+        report.error = str(exc)
+    except Exception as exc:
+        report.status = "failed"
+        report.error = f"{type(exc).__name__}: {exc}"
+    finally:
+        if owns_db:
+            with contextlib.suppress(Exception):
+                db.close()
+        report.finished_at = datetime.datetime.now().isoformat()
+    return report
+
+
 class RunStore:
     """In-memory store of background runs (single-user local webapp).
 
@@ -393,6 +475,38 @@ class RunStore:
 
         threading.Thread(
             target=_work, name=f"webapp-resend-{run_id}", daemon=True
+        ).start()
+        return run_id
+
+    def start_folder(self, settings: Settings, folder_id: int) -> str:
+        """Start a background single-folder run.
+
+        Raises:
+            RuntimeError: If a previous run is still in flight.
+            ValueError: If the folder id doesn't exist.
+        """
+        with self._lock:
+            if self._active > 0:
+                raise RuntimeError("A run is already in progress")
+            self._active += 1
+        run_id = uuid.uuid4().hex[:12]
+        placeholder = RunReport(run_id=run_id, status="running")
+        with self._lock:
+            self._runs[run_id] = placeholder
+
+        def _work() -> None:
+            try:
+                report = run_folder(settings, folder_id)
+                report.run_id = run_id
+                with self._lock:
+                    self._runs[run_id] = report
+                self._persist(report, kind="folder")
+            finally:
+                with self._lock:
+                    self._active -= 1
+
+        threading.Thread(
+            target=_work, name=f"webapp-folder-{run_id}", daemon=True
         ).start()
         return run_id
 

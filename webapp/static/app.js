@@ -483,6 +483,39 @@ async function runFolderMaintenance(action) {
   }
 }
 
+async function _runFolderFromPanel() {
+  const folderId = state.editingFolderId;
+  if (folderId == null) return;
+  const btn = $("folder-panel-run");
+  btn.disabled = true;
+  btn.textContent = "Running…";
+  try {
+    const { run_id } = await api(`/api/folders/${folderId}/run`, { method: "POST" });
+    // Poll the run to completion and render the result in the Run card.
+    const report = await _pollFolderRun(run_id);
+    renderRun(report);
+    await loadProcessed();
+  } catch (err) {
+    const errBox = $("folder-panel-error");
+    errBox.hidden = false;
+    errBox.textContent = `Run failed: ${err.message || String(err)}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run this folder";
+  }
+}
+
+async function _pollFolderRun(runId) {
+  for (let i = 0; i < 60; i++) {
+    const report = await api(`/api/runs/${runId}`);
+    if (report.status !== "running") return report;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return await api(`/api/runs/${runId}`);
+}
+
+$("folder-panel-run").addEventListener("click", () => _runFolderFromPanel());
+
 document.querySelectorAll("[data-maint]").forEach((btn) => {
   btn.addEventListener("click", () => runFolderMaintenance(btn.dataset.maint));
 });
