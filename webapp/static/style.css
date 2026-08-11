@@ -396,6 +396,17 @@ input[type="file"] { padding: 8px; }
 }
 .processed-card__actions .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.backup-card__actions {
+  display: flex;
+  gap: 8px;
+}
+.backup-card__actions .btn {
+  width: auto;
+  font-size: 12.5px;
+  padding: 8px 14px;
+}
+.backup-card .table-wrap { overflow-x: auto; margin-top: 10px; }
+
 /* ---------- schedule card ---------- */
 
 .schedule-form {

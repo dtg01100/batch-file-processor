@@ -290,6 +290,28 @@
       </div>
     </section>
 
+    <section class="card backup-card">
+      <div class="card__head">
+        <h2>Backups</h2>
+        <div class="backup-card__actions">
+          <button id="backup-create" class="btn btn--ghost">Create backup</button>
+        </div>
+      </div>
+      <p class="card__hint">
+        The importer snapshots the active database before every import.
+        Use these to roll back to a previous configuration.
+      </p>
+      <div id="backups-empty" class="empty">No backups yet.</div>
+      <div id="backups-wrap" hidden>
+        <table class="table table--compact">
+          <thead>
+            <tr><th>When</th><th>Size</th><th></th></tr>
+          </thead>
+          <tbody id="backups-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card runs-card">
       <h2>Recent runs</h2>
       <div id="runs-empty" class="empty">No runs yet.</div>

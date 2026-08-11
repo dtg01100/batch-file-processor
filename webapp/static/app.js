@@ -84,6 +84,57 @@ async function _postSchedule(enabled) {
   }
 }
 
+async function loadBackups() {
+  try {
+    const { backups } = await api("/api/backups");
+    const empty = $("backups-empty");
+    const wrap = $("backups-wrap");
+    empty.hidden = backups.length !== 0;
+    wrap.hidden = backups.length === 0;
+    $("backups-body").innerHTML = backups.map((b) => `
+      <tr data-backup-path="${esc(b.path)}">
+        <td><code>${esc(b.modified_at.replace("T", " ").slice(0, 19))}</code></td>
+        <td>${(b.size_bytes / 1024).toFixed(1)} KB</td>
+        <td>
+          <button class="btn btn--ghost backup-download">Download</button>
+          <button class="btn btn--ghost backup-restore">Restore</button>
+        </td>
+      </tr>`).join("");
+    $("backups-body").querySelectorAll(".backup-download").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const tr = e.target.closest("tr");
+        const path = tr.dataset.backupPath;
+        const url = `/api/backup/download?path=${encodeURIComponent(path)}`;
+        window.open(url, "_blank");
+      });
+    });
+    $("backups-body").querySelectorAll(".backup-restore").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        const tr = e.target.closest("tr");
+        const path = tr.dataset.backupPath;
+        if (!window.confirm(`Restore ${tr.querySelector("code").textContent} as the active database? The current database will be backed up first.`)) return;
+        try {
+          await api("/api/backup/restore", { method: "POST", params: { path } });
+          await loadBackups();
+          await refreshConfig();
+          await loadFolders();
+        } catch (err) {
+          alert(`Restore failed: ${err.message || err}`);
+        }
+      });
+    });
+  } catch (_e) { return; }
+}
+
+$("backup-create").addEventListener("click", async () => {
+  try {
+    await api("/api/backup/create", { method: "POST" });
+    await loadBackups();
+  } catch (err) {
+    alert(`Failed: ${err.message || err}`);
+  }
+});
+
 $("schedule-form").addEventListener("submit", (e) => {
   e.preventDefault();
   _postSchedule(true);
@@ -670,6 +721,7 @@ $("clear-flags-btn").addEventListener("click", async () => {
   await loadFolders();
   await loadRuns();
   await loadProcessed();
+  await loadBackups();
   window.setInterval(async () => {
     await refreshConfig();
     await loadRuns();

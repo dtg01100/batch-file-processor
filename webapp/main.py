@@ -48,6 +48,11 @@ from fastapi.staticfiles import StaticFiles
 
 from core.domain.models.folder import FolderConfiguration
 from core.structured_logging import get_logger
+from webapp.backup import (
+    list_backups,
+    make_backup,
+    restore_backup,
+)
 from webapp.config import Settings
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
 from webapp.folder_schema import (
@@ -640,6 +645,57 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             filename=resolved.name,
             media_type="text/csv",
         )
+
+    @app.get("/api/backup/download")
+    def api_download_backup(path: str):
+        """Stream a backup file back to the browser."""
+        settings = app.state.settings
+        resolved = Path(path).resolve()
+        allowed_root = settings.data_dir.resolve()
+        try:
+            resolved.relative_to(allowed_root)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Path not allowed") from exc
+        if not resolved.is_file():
+            raise HTTPException(status_code=404, detail="Backup not found")
+        return FileResponse(
+            path=str(resolved),
+            filename=resolved.name,
+            media_type="application/octet-stream",
+        )
+
+    @app.get("/api/backups")
+    def api_list_backups() -> dict:
+        """Return the list of timestamped backup files."""
+        return {"backups": list_backups(app.state.settings.data_dir)}
+
+    @app.post("/api/backup/create")
+    def api_create_backup() -> dict:
+        """Snapshot the active DB to a new ``folders.db.bak-<ts>`` file."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        path = make_backup(settings)
+        if not path:
+            raise HTTPException(status_code=500, detail="Backup failed")
+        return {"path": path}
+
+    @app.post("/api/backup/restore")
+    def api_restore_backup(path: str) -> dict:
+        """Restore the named backup as the active DB.
+
+        Args (form):
+            path: absolute path of the backup file (must live under
+                the data directory).
+        """
+        settings = app.state.settings
+        try:
+            pre_restore = restore_backup(settings, path)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"restored_from": path, "pre_restore_backup": pre_restore}
 
     # Static UI (served last so /api/* routes win).
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
