@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Batch File Sender</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="logo">⇥</span>
+      <div>
+        <h1>Batch File Sender</h1>
+        <p class="topbar__sub">local webapp · dispatch pipeline</p>
+      </div>
+    </div>
+    <div class="topbar__status">
+      <span id="health-dot" class="dot" title="server status"></span>
+      <span id="base-dir-pill" class="pill" title="base directory"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card import-card">
+      <h2>Import configuration</h2>
+      <p class="card__hint">
+        Upload a legacy <code>folders.db</code> from the desktop app. Folder
+        paths are stripped of their roots and stored relative to the base
+        directory below.
+      </p>
+      <form id="import-form">
+        <label class="field">
+          <span>Database file</span>
+          <input type="file" id="import-file" accept=".db" required />
+        </label>
+        <label class="field">
+          <span>Source platform</span>
+          <select id="import-platform">
+            <option value="">Detect from database</option>
+            <option value="Windows">Windows</option>
+            <option value="Linux">Linux</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Base directory</span>
+          <input type="text" id="import-base-dir" placeholder="e.g. /data or C:\batch" />
+          <small>Configured folders will resolve relative to this root.</small>
+        </label>
+        <button type="submit" id="import-btn" class="btn btn--primary">Import</button>
+        <div id="import-result" class="notice" hidden></div>
+      </form>
+    </section>
+
+    <section class="card folders-card">
+      <div class="card__head">
+        <h2>Configured folders</h2>
+        <button id="refresh-folders" class="btn btn--ghost" title="Refresh">↻</button>
+      </div>
+      <div id="folders-empty" class="empty" hidden>
+        No folders yet — import a database above.
+      </div>
+      <div class="table-wrap" id="folders-wrap" hidden>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Alias</th>
+              <th>Path (relative)</th>
+              <th>Resolved</th>
+              <th>Backends</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody id="folders-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card run-card">
+      <div class="card__head">
+        <h2>Run</h2>
+        <button id="run-btn" class="btn btn--primary" disabled>Process all folders</button>
+      </div>
+      <div id="run-progress" class="run-progress" hidden>
+        <span class="spinner"></span> Running… <span id="run-elapsed"></span>
+      </div>
+      <div id="run-results"></div>
+      <div id="run-log" class="run-log" hidden>
+        <div class="run-log__head">
+          <h3>Run log</h3>
+          <button id="log-toggle" class="btn btn--ghost">show</button>
+        </div>
+        <pre id="run-log-body" hidden></pre>
+      </div>
+    </section>
+
+    <section class="card runs-card">
+      <h2>Recent runs</h2>
+      <div id="runs-empty" class="empty">No runs yet.</div>
+      <ul id="runs-list" class="runs-list"></ul>
+    </section>
+
+    <section class="card processed-card">
+      <h2>Recently processed files</h2>
+      <div id="processed-empty" class="empty">Nothing processed yet.</div>
+      <div class="table-wrap" id="processed-wrap" hidden>
+        <table class="table table--compact">
+          <thead>
+            <tr><th>File</th><th>Folder</th><th>Status</th><th>Sent to</th><th>When</th></tr>
+          </thead>
+          <tbody id="processed-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Batch File Sender webapp · files are processed where the base directory points
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
