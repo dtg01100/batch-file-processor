@@ -14,10 +14,23 @@ Endpoints
 - ``POST /api/import``            multipart: file (legacy folders.db),
                                   base_dir (optional), platform (optional)
 - ``GET  /api/folders``           configured folders (relative + resolved)
+- ``GET  /api/folders/{id}``      one folder (full edit schema)
+- ``PUT  /api/folders/{id}``      save one folder
 - ``POST /api/run``               start a background run
+- ``POST /api/resend``            start a background resend run
 - ``GET  /api/runs``              recent runs
 - ``GET  /api/runs/{run_id}``     one run (poll this while running)
 - ``GET  /api/processed-files``   recently processed files
+- ``GET  /api/processed-files/flagged``  same, with resend_flag info
+- ``POST /api/processed-files/{id}/resend``  flag a row for resend
+- ``POST /api/processed-files/resend-batch``  flag many rows
+- ``POST /api/processed-files/clear-flags``   clear every resend flag
+- ``POST /api/maintenance/clear-processed``   bulk-delete processed rows
+- ``POST /api/maintenance/mark-processed``    record a single file as processed
+- ``POST /api/maintenance/export-processed``  write CSV report
+- ``GET  /api/maintenance/download``          download a previously-written report
+- ``GET  /api/schedule``           current schedule state
+- ``POST /api/schedule``           enable/disable the scheduler + set interval
 """
 
 from __future__ import annotations
@@ -25,6 +38,7 @@ from __future__ import annotations
 import contextlib
 import platform as _platform
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -55,12 +69,29 @@ from webapp.resend import (
     set_resend_flag_batch,
 )
 from webapp.runner import RunReport, RunStore
+from webapp.scheduler import (
+    Scheduler,
+    get_schedule_summary,
+    write_schedule_state,
+)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
 logger = get_logger(__name__)
 
 _run_store = RunStore()
+_scheduler = Scheduler()
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """Start/stop the background scheduler alongside the app."""
+    _scheduler.attach_run_store(_run_store)
+    _scheduler.start()
+    try:
+        yield
+    finally:
+        _scheduler.stop()
 
 
 def _folder_summary(row: dict, base_dir: str) -> dict:
@@ -168,7 +199,7 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
     settings: Settings | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. ``settings`` is injectable for tests."""
-    app = FastAPI(title="Batch File Sender", version="0.1.0")
+    app = FastAPI(title="Batch File Sender", version="0.1.0", lifespan=_lifespan)
     app.state.settings = settings or Settings.from_env()
     app.state.run_store = _run_store
 
@@ -330,6 +361,24 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         except RuntimeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"run_id": run_id}
+
+    @app.get("/api/schedule")
+    def api_get_schedule() -> dict:
+        """Return the persisted schedule state + last/next run timestamps."""
+        return get_schedule_summary(app.state.settings)
+
+    @app.post("/api/schedule")
+    def api_set_schedule(
+        enabled: bool,  # noqa: FBT001
+        interval_seconds: int | None = None,
+    ) -> dict:
+        """Persist the schedule and re-read it for the response."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        interval = interval_seconds if interval_seconds is not None else 60
+        write_schedule_state(settings, enabled=enabled, interval=interval)
+        return get_schedule_summary(settings)
 
     @app.get("/api/processed-files/flagged")
     def api_processed_files_flagged(folder_id: int | None = None) -> dict:

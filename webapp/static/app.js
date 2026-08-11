@@ -35,9 +35,10 @@ const esc = (s) =>
 
 async function refreshConfig() {
   try {
-    const [health, config] = await Promise.all([
+    const [health, config, sched] = await Promise.all([
       api("/api/health"),
       api("/api/config"),
+      api("/api/schedule").catch(() => null),
     ]);
     state.config = config;
     $("health-dot").className = "dot " + (health.status === "ok" ? "ok" : "err");
@@ -46,6 +47,7 @@ async function refreshConfig() {
       $("import-base-dir").value = config.imported_base_dir;
     }
     $("run-btn").disabled = !config.database_exists || config.active_count === 0;
+    if (sched) _renderSchedule(sched);
     return config;
   } catch (err) {
     $("health-dot").className = "dot err";
@@ -54,6 +56,41 @@ async function refreshConfig() {
     return null;
   }
 }
+
+function _renderSchedule(s) {
+  $("schedule-status").textContent = s.enabled ? "enabled" : "disabled";
+  $("schedule-status").className = s.enabled ? "state-on" : "state-off";
+  if (!$("schedule-interval").value || document.activeElement !== $("schedule-interval")) {
+    $("schedule-interval").value = s.interval_seconds;
+  }
+  $("schedule-last-run").textContent = s.last_run_at
+    ? s.last_run_at.replace("T", " ").slice(0, 19)
+    : "never";
+  $("schedule-next-run").textContent = s.next_run_at
+    ? s.next_run_at.replace("T", " ").slice(0, 19)
+    : s.enabled ? "—" : "—";
+}
+
+async function _postSchedule(enabled) {
+  const interval = Number($("schedule-interval").value) || 60;
+  try {
+    const s = await api("/api/schedule", {
+      method: "POST",
+      params: { enabled, interval_seconds: interval },
+    });
+    _renderSchedule(s);
+  } catch (err) {
+    alert(`Failed: ${err.message || err}`);
+  }
+}
+
+$("schedule-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  _postSchedule(true);
+});
+$("schedule-disable").addEventListener("click", () => {
+  _postSchedule(false);
+});
 
 /* ---------------- import ---------------- */
 

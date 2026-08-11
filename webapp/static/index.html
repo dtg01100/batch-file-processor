@@ -263,6 +263,33 @@
       </div>
     </section>
 
+    <section class="card schedule-card">
+      <div class="card__head">
+        <h2>Schedule</h2>
+        <span id="schedule-status" class="state-off">disabled</span>
+      </div>
+      <p class="card__hint">
+        Run the dispatcher automatically at a fixed interval. Useful for
+        unattended overnight processing. The scheduler is disabled by
+        default; toggle it on below.
+      </p>
+      <form id="schedule-form" class="schedule-form">
+        <label class="field">
+          <span>Interval (seconds)</span>
+          <input type="number" id="schedule-interval" min="5" max="86400" step="1" />
+          <small>Minimum 5 seconds, maximum 24 hours.</small>
+        </label>
+        <div class="schedule-form__buttons">
+          <button type="submit" id="schedule-enable" class="btn btn--primary">Enable</button>
+          <button type="button" id="schedule-disable" class="btn btn--ghost">Disable</button>
+        </div>
+      </form>
+      <div class="schedule-form__meta">
+        <small>Last run: <span id="schedule-last-run">never</span></small>
+        <small>Next run: <span id="schedule-next-run">—</span></small>
+      </div>
+    </section>
+
     <section class="card runs-card">
       <h2>Recent runs</h2>
       <div id="runs-empty" class="empty">No runs yet.</div>
