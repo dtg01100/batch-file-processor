@@ -48,6 +48,12 @@ from webapp.maintenance import (
     mark_file_processed,
 )
 from webapp.paths import resolve
+from webapp.resend import (
+    clear_resend_flags,
+    list_processed_files,
+    set_resend_flag,
+    set_resend_flag_batch,
+)
 from webapp.runner import RunReport, RunStore
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -312,6 +318,82 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             # Guardrail: refuse to start a second concurrent run.
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"run_id": run_id}
+
+    @app.post("/api/resend")
+    def api_resend() -> dict:
+        """Run the dispatcher against every flagged processed-files row."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=400, detail="No database imported yet")
+        try:
+            run_id = app.state.run_store.start_resend(settings)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"run_id": run_id}
+
+    @app.get("/api/processed-files/flagged")
+    def api_processed_files_flagged(folder_id: int | None = None) -> dict:
+        """List every processed-files row, optionally filtered by folder."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                rows = list_processed_files(db, folder_id=folder_id, limit=500)
+            finally:
+                db.close()
+        return {"count": len(rows), "files": rows}
+
+    @app.post("/api/processed-files/{file_id}/resend")
+    def api_flag_for_resend(file_id: int, resend: bool = True) -> dict:  # noqa: FBT001,FBT002
+        """Set or clear the resend flag on one processed-files row."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                ok = set_resend_flag(db, file_id, resend=resend)
+            finally:
+                db.close()
+        if not ok:
+            raise HTTPException(status_code=404, detail=f"Row {file_id} not found")
+        return {"id": file_id, "resend_flag": resend}
+
+    @app.post("/api/processed-files/resend-batch")
+    def api_flag_batch(file_ids: list[int], resend: bool = True) -> dict:  # noqa: FBT001,FBT002
+        """Set/clear the resend flag on many rows in one call."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                updated = set_resend_flag_batch(db, file_ids, resend=resend)
+            finally:
+                db.close()
+        return {"updated": updated}
+
+    @app.post("/api/processed-files/clear-flags")
+    def api_clear_flags() -> dict:
+        """Clear every resend_flag in the database."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                rows = list_processed_files(db, limit=10000)
+                ids = [r["id"] for r in rows if r.get("resend_flag")]
+                cleared = clear_resend_flags(db, ids)
+            finally:
+                db.close()
+        return {"cleared": cleared}
 
     @app.get("/api/runs")
     def api_runs() -> list[dict]:

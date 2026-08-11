@@ -270,12 +270,18 @@
     </section>
 
     <section class="card processed-card">
-      <h2>Recently processed files</h2>
+      <div class="card__head">
+        <h2>Recently processed files</h2>
+        <div class="processed-card__actions">
+          <button id="resend-btn" class="btn btn--ghost" disabled>Resend flagged</button>
+          <button id="clear-flags-btn" class="btn btn--ghost">Clear all flags</button>
+        </div>
+      </div>
       <div id="processed-empty" class="empty">Nothing processed yet.</div>
       <div class="table-wrap" id="processed-wrap" hidden>
         <table class="table table--compact">
           <thead>
-            <tr><th>File</th><th>Folder</th><th>Status</th><th>Sent to</th><th>When</th></tr>
+            <tr><th class="resend-cell">Resend</th><th>File</th><th>Folder</th><th>Status</th><th>Sent to</th><th>When</th></tr>
           </thead>
           <tbody id="processed-body"></tbody>
         </table>

@@ -509,19 +509,88 @@ async function loadRuns() {
 async function loadProcessed() {
   let data;
   try {
-    data = await api("/api/processed-files");
+    data = await api("/api/processed-files/flagged");
   } catch (_e) { return; }
   $("processed-empty").hidden = data.count !== 0;
   $("processed-wrap").hidden = data.count === 0;
+  state.processedFiles = data.files;
   $("processed-body").innerHTML = data.files.map((f) => `
-    <tr>
+    <tr data-row-id="${f.id}" class="${f.resend_flag ? "resend-row-flagged" : ""}">
+      <td class="resend-cell"><input type="checkbox" data-flag-id="${f.id}" ${f.resend_flag ? "checked" : ""} /></td>
       <td><code>${esc(f.file_name)}</code></td>
       <td>${esc(f.folder_alias || "")}</td>
       <td>${esc(f.status || "")}</td>
       <td>${esc(f.sent_to || "")}</td>
       <td>${esc((f.processed_at || "").replace("T", " ").slice(0, 19))}</td>
     </tr>`).join("");
+  // Attach per-row checkbox handler.
+  $("processed-body").querySelectorAll("input[data-flag-id]").forEach((cb) => {
+    cb.addEventListener("change", async () => {
+      const id = Number(cb.dataset.flagId);
+      const resend = cb.checked;
+      try {
+        await api(`/api/processed-files/${id}/resend`, {
+          method: "POST",
+          params: { resend },
+        });
+        cb.closest("tr").classList.toggle("resend-row-flagged", resend);
+        _updateResendButton();
+      } catch (err) {
+        // Revert on failure.
+        cb.checked = !resend;
+        alert(`Failed to update flag: ${err.message || err}`);
+      }
+    });
+  });
+  _updateResendButton();
 }
+
+function _updateResendButton() {
+  const count = (state.processedFiles || []).filter((f) => f.resend_flag).length;
+  $("resend-btn").disabled = count === 0;
+  $("resend-btn").textContent = count > 0
+    ? `Resend flagged (${count})`
+    : "Resend flagged";
+}
+
+$("resend-btn").addEventListener("click", async () => {
+  const flagged = (state.processedFiles || []).filter((f) => f.resend_flag);
+  if (flagged.length === 0) return;
+  if (!window.confirm(
+    `Re-send ${flagged.length} flagged file(s) through their original backends?`,
+  )) return;
+  try {
+    const { run_id } = await api("/api/resend", { method: "POST" });
+    $("resend-btn").disabled = true;
+    $("resend-btn").textContent = "Resending…";
+    await _pollResend(run_id);
+  } catch (err) {
+    alert(`Resend failed: ${err.message || err}`);
+    _updateResendButton();
+  }
+});
+
+async function _pollResend(runId) {
+  const report = await api(`/api/runs/${runId}`);
+  if (report.status === "running") {
+    setTimeout(() => _pollResend(runId), 1200);
+    return;
+  }
+  await loadProcessed();
+  await loadRuns();
+}
+
+$("clear-flags-btn").addEventListener("click", async () => {
+  const count = (state.processedFiles || []).filter((f) => f.resend_flag).length;
+  if (count === 0) return;
+  if (!window.confirm(`Clear ${count} resend flag(s)?`)) return;
+  try {
+    await api("/api/processed-files/clear-flags", { method: "POST" });
+    await loadProcessed();
+  } catch (err) {
+    alert(`Failed: ${err.message || err}`);
+  }
+});
 
 /* ---------------- boot ---------------- */
 

@@ -167,6 +167,132 @@ def run_folders(settings: Settings, db=None) -> RunReport:
     return report
 
 
+def run_resend(settings: Settings, db=None) -> RunReport:
+    """Re-process every row whose resend_flag is set, scoped per folder.
+
+    Behaviour:
+    1. Collect every flagged row.
+    2. Group by folder_id.
+    3. For each folder: delete the flagged rows (so the dispatcher
+       doesn't see them as already-processed), then call the
+       orchestrator with ``pre_discovered_files`` set to the
+       row's stored file paths. The dispatcher will then validate,
+       convert, and re-send them like a fresh run.
+    4. The deleted rows are replaced by new processed-files rows
+       written by the dispatcher (with fresh resend_flag=False).
+
+    Args:
+        settings: Webapp settings.
+        db: Optional already-open ``DatabaseObj``.
+
+    Returns:
+        A ``RunReport`` with one FolderRunReport per folder that
+        had at least one flagged row.
+
+    """
+    from webapp.resend import delete_processed_rows, list_processed_files
+
+    report = RunReport(
+        run_id=uuid.uuid4().hex[:12],
+        status="running",
+        started_at=datetime.datetime.now().isoformat(),
+    )
+    owns_db = db is None
+    if owns_db:
+        db = open_database(settings)
+
+    try:
+        with lock():
+            settings.ensure_dirs()
+            flagged = list_processed_files(
+                db, only_resend_flagged=True, limit=10000
+            )
+            if not flagged:
+                report.status = "completed"
+                report.finished_at = datetime.datetime.now().isoformat()
+                return report
+
+            # Group by folder_id.
+            by_folder: dict[int, list[dict]] = {}
+            for row in flagged:
+                by_folder.setdefault(row["folder_id"], []).append(row)
+
+            folders_by_id = {
+                r["id"]: r for r in (db.folders_table.all() or [])
+            }
+            settings_dict = db.get_settings_or_default() or {}
+
+            error_handler = ErrorHandler(
+                errors_folder=str(settings.errors_dir),
+                run_log_directory=str(settings.logs_dir),
+            )
+            config = create_standard_pipeline(
+                settings=settings_dict,
+                version="webapp",
+                error_handler=error_handler,
+                backends={},
+                upc_dict={"_mock": []},
+            )
+            orchestrator = DispatchOrchestrator(config)
+
+            folder_total = len(by_folder)
+            for folder_num, (folder_id, rows) in enumerate(by_folder.items(), start=1):
+                original_row = folders_by_id.get(folder_id)
+                if original_row is None:
+                    # Folder deleted but rows remain — drop them.
+                    delete_processed_rows(db, [r["id"] for r in rows])
+                    continue
+                resolved = resolve_row(original_row, settings.base_dir)
+                run_log = io.StringIO()
+                folder_report = FolderRunReport(
+                    alias=str(
+                        original_row.get("alias") or _folder_relative_path(original_row)
+                    ),
+                    relative_path=_folder_relative_path(original_row),
+                    resolved_path=str(resolved.get("folder_name", "")),
+                )
+                # Free the flagged rows so the dispatcher's checksum
+                # dedup doesn't skip them.
+                row_ids = [r["id"] for r in rows]
+                delete_processed_rows(db, row_ids)
+                file_paths = [
+                    r["file_name"] for r in rows if r.get("file_name")
+                ]
+                try:
+                    result = orchestrator.process_folder(
+                        resolved,
+                        run_log,
+                        processed_files=db.processed_files,
+                        pre_discovered_files=file_paths,
+                        folder_num=folder_num,
+                        folder_total=folder_total,
+                    )
+                    folder_report.files_processed = result.files_processed
+                    folder_report.files_failed = result.files_failed
+                    folder_report.success = result.success
+                    folder_report.errors = list(result.errors)
+                except Exception as exc:
+                    folder_report.success = False
+                    folder_report.files_failed = 1
+                    folder_report.errors.append(f"{type(exc).__name__}: {exc}")
+                folder_report.run_log = run_log.getvalue()
+                report.folders.append(folder_report)
+                report.total_processed += folder_report.files_processed
+                report.total_failed += folder_report.files_failed
+
+            report.status = "completed"
+    except Exception as exc:
+        report.status = "failed"
+        report.error = f"{type(exc).__name__}: {exc}"
+    finally:
+        if owns_db:
+            with contextlib.suppress(Exception):
+                db.close()
+        report.finished_at = datetime.datetime.now().isoformat()
+
+    return report
+
+
 class RunStore:
     """In-memory store of background runs (single-user local webapp).
 
@@ -217,6 +343,39 @@ class RunStore:
                     self._active -= 1
 
         threading.Thread(target=_work, name=f"webapp-run-{run_id}", daemon=True).start()
+        return run_id
+
+    def start_resend(self, settings: Settings) -> str:
+        """Start a background resend run and return its id immediately.
+
+        Same active-run guard as ``start()`` so a normal run and a
+        resend can't be in flight at the same time.
+
+        Raises:
+            RuntimeError: If a previous run is still in flight.
+        """
+        with self._lock:
+            if self._active > 0:
+                raise RuntimeError("A run is already in progress")
+            self._active += 1
+        run_id = uuid.uuid4().hex[:12]
+        placeholder = RunReport(run_id=run_id, status="running")
+        with self._lock:
+            self._runs[run_id] = placeholder
+
+        def _work() -> None:
+            try:
+                report = run_resend(settings)
+                report.run_id = run_id
+                with self._lock:
+                    self._runs[run_id] = report
+            finally:
+                with self._lock:
+                    self._active -= 1
+
+        threading.Thread(
+            target=_work, name=f"webapp-resend-{run_id}", daemon=True
+        ).start()
         return run_id
 
     def get(self, run_id: str) -> RunReport | None:
