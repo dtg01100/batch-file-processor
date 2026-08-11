@@ -9,8 +9,10 @@ which is the safe pattern for a threaded FastAPI process.
 
 from __future__ import annotations
 
+import contextlib
 import platform as _platform
 import threading
+from typing import Any
 
 from backend.database.database_obj import DatabaseObj
 from core.constants import CURRENT_DATABASE_VERSION
@@ -28,6 +30,27 @@ def lock() -> threading.RLock:
     return _DB_LOCK
 
 
+def _ensure_columns(db: Any) -> None:
+    """Idempotent column additions for newer features.
+
+    Older database files (pre-v52 webapp) lack columns that the
+    webapp now writes to. This helper ALTER TABLEs them in if
+    they're missing, so the schema migrates in place without
+    forcing a full migration cycle.
+    """
+    needed = [
+        ("watch_enabled", "TEXT DEFAULT ''"),
+        ("watch_interval_seconds", "INTEGER DEFAULT 30"),
+    ]
+    with contextlib.suppress(Exception):
+        con = db.database_connection.raw_connection
+        existing = {row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()}
+        for col, decl in needed:
+            if col not in existing:
+                con.execute(f"ALTER TABLE folders ADD COLUMN {col} {decl}")
+        con.commit()
+
+
 def open_database(settings: Settings) -> DatabaseObj:
     """Open (creating + migrating if needed) the webapp's ``folders.db``.
 
@@ -39,12 +62,15 @@ def open_database(settings: Settings) -> DatabaseObj:
 
     """
     settings.ensure_dirs()
-    return DatabaseObj(
+    obj = DatabaseObj(
         database_path=str(settings.database_path),
         database_version=CURRENT_DATABASE_VERSION,
         config_folder=str(settings.data_dir),
         running_platform=_platform.system(),
     )
+    # Idempotent column additions for newer features.
+    _ensure_columns(obj)
+    return obj
 
 
 def get_source_platform(db: DatabaseObj, default: str = "Windows") -> str:

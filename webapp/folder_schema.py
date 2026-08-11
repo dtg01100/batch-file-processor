@@ -153,6 +153,12 @@ class FolderEditSchema(BaseModel):
     # Alerting
     alert_on_failure: bool = True
 
+    # Folder watcher: when watch_enabled is True, the dispatcher
+    # polls folder_name every watch_interval_seconds and runs only
+    # when a new file lands.
+    watch_enabled: bool = False
+    watch_interval_seconds: int = 30
+
     # Backend configurations (nested on the wire; flat in the DB)
     ftp: FTPConfig | None = None
     email: EmailConfig | None = None
@@ -201,6 +207,13 @@ def folder_row_to_schema(row: dict[str, Any]) -> FolderEditSchema:
 
     def _has_any(keys: tuple[str, ...]) -> bool:
         return any(k in row for k in keys)
+
+
+    def _to_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
     ftp = None
     ftp_keys = ("ftp_server", "ftp_port", "ftp_username", "ftp_password", "ftp_folder")
@@ -311,6 +324,8 @@ def folder_row_to_schema(row: dict[str, Any]) -> FolderEditSchema:
         process_backend_email=bool(row.get("process_backend_email")),
         process_backend_http=bool(row.get("process_backend_http")),
         alert_on_failure=bool(row.get("alert_on_failure", True)),
+        watch_enabled=str(row.get("watch_enabled", "")).lower() in ("1", "true", "yes"),
+        watch_interval_seconds=_to_int(row.get("watch_interval_seconds"), 30),
         ftp=ftp,
         email=email,
         copy_backend=copy_cfg,
@@ -495,6 +510,8 @@ def schema_to_folder_row(schema: FolderEditSchema) -> dict[str, Any]:
         "process_backend_email": schema.process_backend_email,
         "process_backend_http": schema.process_backend_http,
         "alert_on_failure": schema.alert_on_failure,
+        "watch_enabled": schema.watch_enabled,
+        "watch_interval_seconds": schema.watch_interval_seconds,
     }
     for emitter in (
         _emit_ftp,

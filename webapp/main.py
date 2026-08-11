@@ -81,6 +81,7 @@ from webapp.scheduler import (
     get_schedule_summary,
     write_schedule_state,
 )
+from webapp.watcher import WatcherSupervisor, list_watched
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -89,21 +90,26 @@ logger = get_logger(__name__)
 _run_store = RunStore()
 _history: RunHistory | None = None
 _scheduler = Scheduler()
+_watcher_supervisor: WatcherSupervisor | None = None
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    """Start/stop the background scheduler alongside the app."""
-    global _history
+    """Start/stop the background scheduler + folder watcher."""
+    global _history, _watcher_supervisor
     settings = _app.state.settings
     _history = RunHistory(settings)
     _run_store.attach_history(_history)
     _scheduler.attach_run_store(_run_store)
     _scheduler.start()
+    _watcher_supervisor = WatcherSupervisor(settings, _run_store)
+    _watcher_supervisor.start()
     try:
         yield
     finally:
         _scheduler.stop()
+        if _watcher_supervisor is not None:
+            _watcher_supervisor.stop()
 
 
 def _folder_summary(row: dict, base_dir: str) -> dict:
@@ -439,6 +445,23 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         interval = interval_seconds if interval_seconds is not None else 60
         write_schedule_state(settings, enabled=enabled, interval=interval)
         return get_schedule_summary(settings)
+
+    @app.get("/api/watched")
+    def api_list_watched() -> dict:
+        """Return the folders whose watcher is enabled."""
+        return {"folders": list_watched(app.state.settings)}
+
+    @app.post("/api/watcher/refresh")
+    def api_refresh_watcher() -> dict:
+        """Force the watcher supervisor to re-read the watch list.
+
+        The supervisor refreshes every 30 seconds automatically; this
+        endpoint is for operators who just toggled watch_enabled via
+        the folder editor and don't want to wait.
+        """
+        if _watcher_supervisor is not None:
+            _watcher_supervisor._refresh()
+        return {"refreshed": True}
 
     @app.get("/api/processed-files/flagged")
     def api_processed_files_flagged(folder_id: int | None = None) -> dict:

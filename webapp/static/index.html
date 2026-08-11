@@ -98,6 +98,18 @@
         </fieldset>
 
         <fieldset class="grp">
+          <legend>Watcher</legend>
+          <label class="check">
+            <input type="checkbox" name="watch_enabled" />
+            Poll this folder and run the dispatcher when new files arrive
+          </label>
+          <label class="field">
+            <span>Poll interval (seconds)</span>
+            <input type="number" name="watch_interval_seconds" min="5" step="1" />
+          </label>
+        </fieldset>
+
+        <fieldset class="grp">
           <legend>Backends</legend>
           <p class="card__hint">Enable the backends this folder should deliver to.</p>
           <label class="check"><input type="checkbox" name="process_backend_copy" /> Copy</label>

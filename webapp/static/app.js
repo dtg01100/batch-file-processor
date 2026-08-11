@@ -275,9 +275,13 @@ function setPanelValue(name, value) {
 
 function populateFolderPanel(schema) {
   const form = $("folder-panel-form");
-  // Identity + backend toggles live at the top level
-  for (const k of ["alias", "folder_name", "process_backend_copy", "process_backend_ftp",
-                   "process_backend_email", "process_backend_http"]) {
+  // Identity + backend toggles + watcher live at the top level
+  for (const k of [
+    "alias", "folder_name",
+    "process_backend_copy", "process_backend_ftp",
+    "process_backend_email", "process_backend_http",
+    "watch_enabled", "watch_interval_seconds",
+  ]) {
     setPanelValue(k, schema[k]);
   }
   // Backends (FTP/Email/Copy/HTTP) get a dedicated hidden <fieldset> that
@@ -402,6 +406,11 @@ $("folder-panel-form").addEventListener("submit", async (e) => {
     errBox.hidden = true;
     await loadFolders();
     await refreshConfig();
+    // If watch_enabled changed, kick the supervisor so the change
+    // takes effect immediately rather than waiting up to 30s.
+    if ("watch_enabled" in schema) {
+      await api("/api/watcher/refresh", { method: "POST" }).catch(() => {});
+    }
   } catch (err) {
     errBox.hidden = false;
     errBox.textContent = err.message || String(err);
