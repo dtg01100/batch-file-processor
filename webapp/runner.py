@@ -23,6 +23,7 @@ from dispatch.orchestrator import DispatchOrchestrator
 from dispatch.pipeline.factory import create_standard_pipeline
 from webapp.config import Settings
 from webapp.database import lock, open_database
+from webapp.errors import LedgerDatabase
 from webapp.paths import resolve_row
 
 
@@ -108,9 +109,14 @@ def run_folders(settings: Settings, db=None) -> RunReport:
 
             settings_dict = db.get_settings_or_default() or {}
 
+            # Phase 5.1: hand the pipeline's error handler a database so
+            # every ``record_error`` also lands in the ``dispatch_errors``
+            # ledger (queryable via GET /api/errors) instead of only the
+            # flat error files under data/config/errors.
             error_handler = ErrorHandler(
                 errors_folder=str(settings.errors_dir),
                 run_log_directory=str(settings.logs_dir),
+                database=LedgerDatabase(db),
             )
             config = create_standard_pipeline(
                 settings=settings_dict,
@@ -222,9 +228,14 @@ def run_resend(settings: Settings, db=None) -> RunReport:
             }
             settings_dict = db.get_settings_or_default() or {}
 
+            # Phase 5.1: hand the pipeline's error handler a database so
+            # every ``record_error`` also lands in the ``dispatch_errors``
+            # ledger (queryable via GET /api/errors) instead of only the
+            # flat error files under data/config/errors.
             error_handler = ErrorHandler(
                 errors_folder=str(settings.errors_dir),
                 run_log_directory=str(settings.logs_dir),
+                database=LedgerDatabase(db),
             )
             config = create_standard_pipeline(
                 settings=settings_dict,
@@ -324,9 +335,14 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
                 raise ValueError(f"Folder {folder_id} not found")
             resolved = resolve_row(row, settings.base_dir)
             settings_dict = db.get_settings_or_default() or {}
+            # Phase 5.1: hand the pipeline's error handler a database so
+            # every ``record_error`` also lands in the ``dispatch_errors``
+            # ledger (queryable via GET /api/errors) instead of only the
+            # flat error files under data/config/errors.
             error_handler = ErrorHandler(
                 errors_folder=str(settings.errors_dir),
                 run_log_directory=str(settings.logs_dir),
+                database=LedgerDatabase(db),
             )
             config = create_standard_pipeline(
                 settings=settings_dict,

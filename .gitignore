@@ -166,5 +166,13 @@ build/nuitka-wine-dist/
 nuitka-crash-report.xml
 
 # Mutation testing artifacts (mutmut / mutant assertions)
-.mutmut-cache/
+.mutmut-cache
 mutants_assertions/
+
+# Other local scratch / UI test artifacts
+.dialog_test_shots/
+.kilo/
+.freebuff/
+
+# Node.js — webapp JS test harness (npm install)
+node_modules/

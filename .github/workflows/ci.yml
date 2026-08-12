@@ -18,6 +18,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Node dependencies
+        run: npm ci
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -34,3 +40,9 @@ jobs:
         # (tests/meta) are their own suite and are excluded here; run them
         # locally with `make test-meta`. Integration tests are included.
         run: pytest -n0 -m "not slow" --timeout=120 --ignore=tests/meta
+      - name: Run webapp JS tests
+        # The webapp dashboard's fetch helper (static/api.js), pure
+        # helpers (static/helpers.js) and row templates
+        # (static/templates.js) are tested with node:test; the DOM
+        # integration test loads the full dashboard in jsdom.
+        run: node --test tests/webapp/api.test.js tests/webapp/helpers.test.js tests/webapp/templates.test.js tests/webapp/dom.test.js

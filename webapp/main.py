@@ -31,6 +31,8 @@ Endpoints
 - ``GET  /api/maintenance/download``          download a previously-written report
 - ``GET  /api/schedule``           current schedule state
 - ``POST /api/schedule``           enable/disable the scheduler + set interval
+- ``GET  /api/errors``             error-ledger rows (optionally per folder)
+- ``POST /api/errors/clear``       delete error-ledger rows
 """
 
 from __future__ import annotations
@@ -55,6 +57,7 @@ from webapp.backup import (
 )
 from webapp.config import Settings
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
+from webapp.errors import clear_errors, list_errors
 from webapp.folder_schema import (
     FolderEditSchema,
     folder_row_to_schema,
@@ -462,6 +465,41 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         if _watcher_supervisor is not None:
             _watcher_supervisor._refresh()
         return {"refreshed": True}
+
+    @app.get("/api/errors")
+    def api_list_errors(folder_id: int | None = None, limit: int = 200) -> dict:
+        """Return error-ledger rows, newest first, optionally per folder.
+
+        ``folder_id`` filters by the folder whose relative path the
+        pipeline recorded; ``limit`` caps the page (bounded to 10000 so
+        an accidental huge request can't return the whole table).
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                rows = list_errors(db, folder_id=folder_id, limit=limit)
+            finally:
+                db.close()
+        return {"count": len(rows), "errors": rows}
+
+    @app.post("/api/errors/clear")
+    def api_clear_errors(folder_id: int | None = None) -> dict:
+        """Delete error-ledger rows, optionally for one folder."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                cleared = clear_errors(db, folder_id=folder_id)
+            finally:
+                db.close()
+        return {"cleared": cleared}
 
     @app.get("/api/processed-files/flagged")
     def api_processed_files_flagged(folder_id: int | None = None) -> dict:

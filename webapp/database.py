@@ -31,12 +31,16 @@ def lock() -> threading.RLock:
 
 
 def _ensure_columns(db: Any) -> None:
-    """Idempotent column additions for newer features.
+    """Idempotent column/table additions for newer features.
 
     Older database files (pre-v52 webapp) lack columns that the
     webapp now writes to. This helper ALTER TABLEs them in if
     they're missing, so the schema migrates in place without
     forcing a full migration cycle.
+
+    It also creates the error ledger table (``dispatch_errors``),
+    which the webapp writes through ``ErrorHandler._persist_to_database``
+    but which no migration version has ever created.
     """
     needed = [
         ("watch_enabled", "TEXT DEFAULT ''"),
@@ -44,6 +48,21 @@ def _ensure_columns(db: Any) -> None:
     ]
     with contextlib.suppress(Exception):
         con = db.database_connection.raw_connection
+        # Phase 5.1 error ledger — the dispatch pipeline INSERTs into this
+        # table whenever ``ErrorHandler`` is given a ``database``. Created
+        # idempotently so pre-5.1 databases pick it up on next open.
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS dispatch_errors ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "timestamp TEXT, "
+            "folder TEXT, "
+            "filename TEXT, "
+            "error_message TEXT, "
+            "error_type TEXT, "
+            "error_source TEXT, "
+            "stack_trace TEXT, "
+            "created_at TEXT)"
+        )
         existing = {row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()}
         for col, decl in needed:
             if col not in existing:

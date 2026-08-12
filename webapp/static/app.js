@@ -2,6 +2,9 @@
 
 /* Batch File Sender webapp — dashboard logic (vanilla JS). */
 
+// ``api`` itself lives in api.js (loaded before this file); see there
+// for the fetch wrapper that serializes ``params`` into the URL.
+
 const $ = (id) => document.getElementById(id);
 
 const state = {
@@ -9,27 +12,11 @@ const state = {
   pollHandle: null,
   lastRunId: null,
   editingFolderId: null,
+  errorsFilterId: null, // folder id the Errors card is narrowed to, or null
 };
 
-async function api(path, options) {
-  const resp = await fetch(path, options);
-  if (!resp.ok) {
-    let detail = resp.statusText;
-    try {
-      const body = await resp.json();
-      detail = body.detail || detail;
-    } catch (_e) { /* non-JSON error body */ }
-    const err = new Error(detail);
-    err.status = resp.status;
-    throw err;
-  }
-  return resp.json();
-}
-
-const esc = (s) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]));
+// ``esc`` and ``folderIdForPath`` live in helpers.js (loaded before this
+// file); see there for the HTML-escaper and the folder-path matcher.
 
 /* ---------------- health + config ---------------- */
 
@@ -91,15 +78,7 @@ async function loadBackups() {
     const wrap = $("backups-wrap");
     empty.hidden = backups.length !== 0;
     wrap.hidden = backups.length === 0;
-    $("backups-body").innerHTML = backups.map((b) => `
-      <tr data-backup-path="${esc(b.path)}">
-        <td><code>${esc(b.modified_at.replace("T", " ").slice(0, 19))}</code></td>
-        <td>${(b.size_bytes / 1024).toFixed(1)} KB</td>
-        <td>
-          <button class="btn btn--ghost backup-download">Download</button>
-          <button class="btn btn--ghost backup-restore">Restore</button>
-        </td>
-      </tr>`).join("");
+    $("backups-body").innerHTML = backupRows(backups);
     $("backups-body").querySelectorAll(".backup-download").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         const tr = e.target.closest("tr");
@@ -119,6 +98,7 @@ async function loadBackups() {
           await refreshConfig();
           await loadFolders();
           await loadWatched();
+          await loadErrors();
         } catch (err) {
           alert(`Restore failed: ${err.message || err}`);
         }
@@ -165,14 +145,12 @@ $("import-form").addEventListener("submit", async (e) => {
     const result = await api("/api/import", { method: "POST", body: form });
     resultBox.className = "notice ok";
     resultBox.hidden = false;
-    resultBox.innerHTML =
-      `Imported <b>${result.folders_imported}</b> folder(s) ` +
-      `(<b>${result.active_folders}</b> active), rebased <b>${result.rebased_paths}</b> ` +
-      `path field(s) to <code>${esc(result.base_directory)}</code>.`;
+    resultBox.innerHTML = importResultNotice(result);
     await refreshConfig();
     await loadFolders();
     await loadWatched();
     await loadProcessed();
+    await loadErrors();
   } catch (err) {
     resultBox.className = "notice err";
     resultBox.hidden = false;
@@ -200,19 +178,7 @@ async function loadFolders() {
   wrap.hidden = folders.length === 0;
 
   const body = $("folders-body");
-  body.innerHTML = folders.map((f) => {
-    const tags = f.backends.map((b) => `<span class="tag tag--${b}">${b}</span>`).join("");
-    const pathCell = f.path_exists
-      ? `<span class="exists">OK</span> <code>${esc(f.resolved_path)}</code>`
-      : `<span class="missing">MISS</span> <code>${esc(f.resolved_path)}</code>`;
-    return `<tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${esc(f.alias || f.folder_name)}">
-      <td><b>${esc(f.alias || f.folder_name)}</b></td>
-      <td><code>${esc(f.folder_name)}</code></td>
-      <td>${pathCell}</td>
-      <td>${tags || '<span class="state-off">—</span>'}</td>
-      <td>${f.is_active ? '<span class="state-on">● active</span>' : '<span class="state-off">○ inactive</span>'}</td>
-    </tr>`;
-  }).join("");
+  body.innerHTML = folderRows(folders);
 
   // Each row is a button: clicking opens the side panel.
   body.querySelectorAll(".folder-row").forEach((row) => {
@@ -230,7 +196,7 @@ $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProces
 
 /* ---------------- watching overview ---------------- */
 
-const fmtInterval = (s) => (s < 60 ? `${s}s` : `${Math.round(s / 60)}m`);
+// ``fmtInterval`` lives in helpers.js; the row builders in templates.js.
 
 async function loadWatched() {
   let data;
@@ -247,13 +213,7 @@ async function loadWatched() {
   count.textContent = folders.length === 1 ? "1 folder" : `${folders.length} folders`;
 
   const body = $("watching-body");
-  body.innerHTML = folders.map((f) => `
-    <tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${esc(f.alias || `folder ${f.id}`)}">
-      <td><b>${esc(f.alias || `folder ${f.id}`)}</b></td>
-      <td>${f.watch_path ? `<code>${esc(f.watch_path)}</code>` : '<span class="state-off">—</span>'}</td>
-      <td>${fmtInterval(Number(f.watch_interval_seconds) || 0)}</td>
-      <td><span class="state-on">● watching</span></td>
-    </tr>`).join("");
+  body.innerHTML = watchingRows(folders);
 
   // Clicking a watched row opens the folder editor (same as the
   // folders table) so the interval / toggle can be adjusted in place.
@@ -267,6 +227,121 @@ async function loadWatched() {
     });
   });
 }
+
+/* ---------------- errors overview ---------------- */
+
+// The row-template builders (``folderRows`` / ``errorRows`` /
+// ``processedRows``) live in templates.js (loaded before this file);
+// ``fmtErrorStamp`` lives in helpers.js.
+
+function setErrorsFilter(folderId) {
+  const id = folderId == null || folderId === "" ? null : Number(folderId);
+  if (id === state.errorsFilterId) return;
+  state.errorsFilterId = id;
+  _renderErrorsFilterUI();
+  loadErrors();
+}
+
+function _renderErrorsFilterOptions() {
+  const folders = state.folders || [];
+  const select = $("errors-filter");
+  $("errors-filter-wrap").hidden = folders.length === 0;
+  // Rebuild only when the folder set changed, so the 8s poll doesn't
+  // disturb a dropdown the operator has open.
+  const key = folders.map((f) => f.id).join(",");
+  if (select.dataset.foldersKey !== key) {
+    select.dataset.foldersKey = key;
+    select.innerHTML =
+      '<option value="">All folders</option>' +
+      folders.map((f) =>
+        `<option value="${f.id}" title="${esc(f.folder_name || "")}">` +
+        `${esc(f.alias || f.folder_name || `folder ${f.id}`)}</option>`
+      ).join("");
+  }
+  // Drop a filter whose folder no longer exists (e.g. after a restore).
+  if (state.errorsFilterId != null && !folders.some((f) => f.id === state.errorsFilterId)) {
+    state.errorsFilterId = null;
+  }
+  _renderErrorsFilterUI();
+}
+
+function _renderErrorsFilterUI() {
+  const folder = state.errorsFilterId != null
+    ? (state.folders || []).find((f) => f.id === state.errorsFilterId)
+    : null;
+  $("errors-filter").value = folder ? String(folder.id) : "";
+  $("errors-filter-state").hidden = !folder;
+  $("errors-filter-name").textContent = folder
+    ? (folder.alias || folder.folder_name || `folder ${folder.id}`)
+    : "";
+  $("errors-clear").textContent = folder ? "Clear folder" : "Clear all";
+}
+
+$("errors-filter").addEventListener("change", () => {
+  setErrorsFilter($("errors-filter").value);
+});
+$("errors-filter-clear").addEventListener("click", () => setErrorsFilter(null));
+
+async function loadErrors() {
+  _renderErrorsFilterOptions();
+  const filterId = state.errorsFilterId;
+  let data;
+  try {
+    data = await api(
+      "/api/errors" + (filterId != null ? `?folder_id=${filterId}&limit=50` : "?limit=50")
+    );
+  } catch (_e) { return; }
+  const errors = data.errors || [];
+  const empty = $("errors-empty");
+  const wrap = $("errors-wrap");
+  const count = $("errors-count");
+  empty.hidden = errors.length !== 0;
+  wrap.hidden = errors.length === 0;
+  count.hidden = errors.length === 0;
+  count.textContent = errors.length === 1 ? "1 error" : `${errors.length} errors`;
+  $("errors-clear").disabled = errors.length === 0;
+
+  const folder = filterId != null
+    ? (state.folders || []).find((f) => f.id === filterId)
+    : null;
+  empty.textContent = folder
+    ? `No errors recorded for ${folder.alias || folder.folder_name || `folder ${filterId}`}.`
+    : "No errors recorded.";
+
+  $("errors-body").innerHTML = errorRows(errors, state.folders);
+
+  $("errors-body").querySelectorAll(".error-row").forEach((row) => {
+    row.addEventListener("click", () => setErrorsFilter(Number(row.dataset.folderId)));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setErrorsFilter(Number(row.dataset.folderId));
+      }
+    });
+  });
+}
+
+$("errors-clear").addEventListener("click", async () => {
+  const filterId = state.errorsFilterId;
+  const folder = filterId != null
+    ? (state.folders || []).find((f) => f.id === filterId)
+    : null;
+  // With a filter active, clear only that folder so the operator can't
+  // accidentally wipe every folder's errors while investigating one.
+  const what = folder
+    ? `all errors for ${folder.alias || folder.folder_name || `folder ${filterId}`}`
+    : "the entire error ledger";
+  if (!window.confirm(`Clear ${what}? This cannot be undone.`)) return;
+  try {
+    await api(
+      "/api/errors/clear" + (filterId != null ? `?folder_id=${filterId}` : ""),
+      { method: "POST" },
+    );
+    await loadErrors();
+  } catch (err) {
+    alert(`Failed: ${err.message || err}`);
+  }
+});
 
 /* ---------------- folder edit panel ---------------- */
 
@@ -493,10 +568,7 @@ async function runFolderMaintenance(action) {
         `/api/maintenance/clear-processed?folder_id=${folderId}`,
         { method: "POST" },
       );
-      _showMaintenance(
-        `Cleared <b>${r.deleted}</b> processed-files row(s) for ${esc(folderAlias)}.`,
-        "ok",
-      );
+      _showMaintenance(maintenanceClearedNotice(r.deleted, folderAlias), "ok");
       await loadProcessed();
     } else if (action === "mark-processed") {
       const filePath = window.prompt(
@@ -513,10 +585,7 @@ async function runFolderMaintenance(action) {
         params: { folder_id: folderId, folder_alias: folderAlias,
                   file_path: filePath, invoice_numbers: invoiceNumbers },
       });
-      _showMaintenance(
-        `Recorded processed-files row id <b>${r.id}</b>.`,
-        "ok",
-      );
+      _showMaintenance(maintenanceRecordedNotice(r.id), "ok");
       await loadProcessed();
     } else if (action === "export-processed") {
       const r = await api("/api/maintenance/export-processed", {
@@ -524,14 +593,10 @@ async function runFolderMaintenance(action) {
         params: { folder_id: folderId },
       });
       const url = `/api/maintenance/download?path=${encodeURIComponent(r.path)}`;
-      _showMaintenance(
-        `Report written to <code>${esc(r.path)}</code> — ` +
-        `<a href="${url}" download>download</a>.`,
-        "ok",
-      );
+      _showMaintenance(maintenanceExportNotice(r.path, url), "ok");
     }
   } catch (err) {
-    _showMaintenance(`Failed: ${esc(err.message || String(err))}`, "err");
+    _showMaintenance(maintenanceErrorNotice(err.message || String(err)), "err");
   }
 }
 
@@ -547,6 +612,7 @@ async function _runFolderFromPanel() {
     const report = await _pollFolderRun(run_id);
     renderRun(report);
     await loadProcessed();
+    await loadErrors();
   } catch (err) {
     const errBox = $("folder-panel-error");
     errBox.hidden = false;
@@ -590,21 +656,7 @@ $("edi-preview-form").addEventListener("submit", async (e) => {
         return fd;
       })(),
     });
-    const s = data.summary;
-    result.innerHTML = `
-      <div class="summary">
-        <span><b>${s.total}</b> total</span>
-        <span><b>${s.a}</b> A records</span>
-        <span><b>${s.b}</b> B records</span>
-        <span><b>${s.c}</b> C records</span>
-        <span><b>${s.trailer}</b> trailer</span>
-        ${s.unknown ? `<span style="color: var(--bad)"><b>${s.unknown}</b> unknown</span>` : ""}
-      </div>
-      <table>
-        ${data.lines.map((l) => `
-          <tr class="${l.type}"><td>${l.num}</td><td>${l.type.toUpperCase()}</td><td>${esc(l.raw)}</td></tr>
-        `).join("")}
-      </table>`;
+    result.innerHTML = ediPreviewResult(data);
   } catch (err) {
     result.textContent = `Failed: ${err.message || err}`;
   }
@@ -624,12 +676,12 @@ $("run-btn").addEventListener("click", async () => {
       $("run-elapsed").textContent = ((Date.now() - started) / 1000).toFixed(1) + "s";
     }, 200);
     streamRunLog(run_id);  // fire-and-forget; the polling loop below still drives status
-    await pollRun(run_id);
+    await _pollRun(run_id);
   } catch (err) {
     flashRunError(err.message);
   } finally {
     // The button stays disabled while a run is in flight; once the poll
-    // loop finishes, refreshConfig() re-enables it (see pollRun).
+    // loop finishes, refreshConfig() re-enables it (see _pollRun).
   }
 });
 
@@ -644,6 +696,7 @@ async function _pollRun(runId) {
   $("run-btn").disabled = false;
   renderRun(report);
   await loadProcessed();
+  await loadErrors();
 }
 
 async function streamRunLog(runId) {
@@ -681,24 +734,8 @@ async function streamRunLog(runId) {
 
 function renderRun(report) {
   const box = $("run-results");
-  if (report.status === "failed") {
-    box.innerHTML = `<div class="folder-result"><div class="folder-result__head">
-      <h3>Run failed</h3></div><div class="folder-result__errors">${esc(report.error)}</div></div>`;
-    return;
-  }
-  box.innerHTML = report.folders.map((f) => `
-    <div class="folder-result">
-      <div class="folder-result__head">
-        <h3>${esc(f.alias)}</h3>
-        <span class="folder-result__meta">${esc(f.relative_path)}</span>
-      </div>
-      <div class="folder-result__stats">
-        <span class="stat stat--good">processed <b>${f.files_processed}</b></span>
-        <span class="stat ${f.files_failed ? "stat--bad" : "stat--good"}">failed <b>${f.files_failed}</b></span>
-        <span class="stat">${f.success ? '<span class="state-on">✓ ok</span>' : '<span class="state-off">⚠</span>'}</span>
-      </div>
-      ${f.errors.length ? `<div class="folder-result__errors">${f.errors.map(esc).join("<br>")}</div>` : ""}
-    </div>`).join("");
+  box.innerHTML = runResults(report);
+  if (report.status === "failed") return;
 
   const log = $("run-log");
   const logBody = $("run-log-body");
@@ -715,8 +752,7 @@ $("log-toggle").addEventListener("click", () => {
 });
 
 function flashRunError(message) {
-  const box = $("run-results");
-  box.innerHTML = `<div class="folder-result"><div class="folder-result__errors">${esc(message)}</div></div>`;
+  $("run-results").innerHTML = runErrorBox(message);
 }
 
 /* ---------------- runs list ---------------- */
@@ -728,15 +764,7 @@ async function loadRuns() {
   } catch (_e) { return; }
   $("runs-empty").hidden = runs.length !== 0;
   const list = $("runs-list");
-  list.innerHTML = runs.slice().reverse().map((r) => `
-    <li data-run="${r.run_id}">
-      <span class="run-status">
-        <span class="dot ${r.status === "running" ? "ok" : r.status === "completed" ? "ok" : "err"}"></span>
-        <b>${esc(r.run_id)}</b>
-        <span class="state-off">${esc(r.started_at.replace("T", " ").slice(0, 19))}</span>
-      </span>
-      <span class="state-off">${r.total_processed} ok · ${r.total_failed} fail</span>
-    </li>`).join("");
+  list.innerHTML = runRows(runs.slice().reverse());
 
   list.querySelectorAll("li").forEach((li) => {
     li.addEventListener("click", async () => {
@@ -759,15 +787,7 @@ async function loadProcessed() {
   $("processed-empty").hidden = data.count !== 0;
   $("processed-wrap").hidden = data.count === 0;
   state.processedFiles = data.files;
-  $("processed-body").innerHTML = data.files.map((f) => `
-    <tr data-row-id="${f.id}" class="${f.resend_flag ? "resend-row-flagged" : ""}">
-      <td class="resend-cell"><input type="checkbox" data-flag-id="${f.id}" ${f.resend_flag ? "checked" : ""} /></td>
-      <td><code>${esc(f.file_name)}</code></td>
-      <td>${esc(f.folder_alias || "")}</td>
-      <td>${esc(f.status || "")}</td>
-      <td>${esc(f.sent_to || "")}</td>
-      <td>${esc((f.processed_at || "").replace("T", " ").slice(0, 19))}</td>
-    </tr>`).join("");
+  $("processed-body").innerHTML = processedRows(data.files);
   // Attach per-row checkbox handler.
   $("processed-body").querySelectorAll("input[data-flag-id]").forEach((cb) => {
     cb.addEventListener("change", async () => {
@@ -823,6 +843,7 @@ async function _pollResend(runId) {
   }
   await loadProcessed();
   await loadRuns();
+  await loadErrors();
 }
 
 $("clear-flags-btn").addEventListener("click", async () => {
@@ -843,12 +864,14 @@ $("clear-flags-btn").addEventListener("click", async () => {
   await refreshConfig();
   await loadFolders();
   await loadWatched();
+  await loadErrors();
   await loadRuns();
   await loadProcessed();
   await loadBackups();
   window.setInterval(async () => {
     await refreshConfig();
     await loadWatched();
+    await loadErrors();
     await loadRuns();
   }, 8000);
 })();

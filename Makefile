@@ -7,7 +7,7 @@ PYTEST := .venv/bin/pytest
 # PYTEST_XDIST_AUTO_NUM_WORKERS env var when more parallelism helps.
 PYTEST_XDIST := -n 2
 
-.PHONY: help test test-unit test-integration test-file test-func test-parallel test-fast test-failfast test-webapp test-meta lint type-check run webapp
+.PHONY: help test test-unit test-integration test-file test-func test-parallel test-fast test-failfast test-webapp test-js test-meta lint type-check run webapp
 
 help:
 	@echo "Testing targets:"
@@ -18,6 +18,7 @@ help:
 	@echo "  make test-parallel    - Run all tests in parallel"
 	@echo "  make test-fast        - Fast dev loop (skips slow + meta tests)"
 	@echo "  make test-webapp      - Run the webapp test suite"
+	@echo "  make test-js          - Run the webapp JS unit tests (node:test)"
 	@echo "  make test-meta        - Run the meta-tests (hygiene, coverage, markers)"
 	@echo "  make test-failfast    - Stop at first failure"
 	@echo ""
@@ -74,6 +75,12 @@ test-fast:
 # Webapp suite (importer rebasing, runner, API endpoints)
 test-webapp:
 	$(PYTEST) tests/webapp -v
+
+# Webapp JS tests: unit tests for static/api.js + static/helpers.js +
+# static/templates.js (node:test, no deps) plus the jsdom DOM
+# integration test (needs `npm install` once for node_modules/jsdom).
+test-js:
+	node --test tests/webapp/api.test.js tests/webapp/helpers.test.js tests/webapp/templates.test.js tests/webapp/dom.test.js
 
 # Meta-tests (test hygiene, module coverage, marker placement, ...)
 test-meta:

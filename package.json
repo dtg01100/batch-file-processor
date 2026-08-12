@@ -1,0 +1,12 @@
+{
+  "name": "batch-file-processor-webapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node test harness for the webapp dashboard (static JS) — jsdom for the DOM integration test, node:test otherwise",
+  "scripts": {
+    "test": "node --test tests/webapp/api.test.js tests/webapp/helpers.test.js tests/webapp/templates.test.js tests/webapp/dom.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  }
+}

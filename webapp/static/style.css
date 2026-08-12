@@ -75,6 +75,10 @@ body {
   padding: 5px 12px;
   border-radius: 999px;
 }
+.pill--bad {
+  color: var(--bad);
+  border-color: rgba(255, 93, 108, 0.45);
+}
 
 /* ---------- layout ---------- */
 
@@ -207,6 +211,35 @@ input[type="file"] { padding: 8px; }
 .tag--ftp { background: rgba(124, 92, 255, 0.16); color: #b4a0ff; }
 .tag--email { background: rgba(245, 181, 61, 0.14); color: #f5d08a; }
 .tag--http { background: rgba(46, 204, 113, 0.14); color: #8ae6b0; }
+.tag--err { background: rgba(255, 93, 108, 0.16); color: var(--bad); }
+.errors-card__head-actions { display: flex; align-items: center; gap: 10px; }
+.errors-card__filter { display: inline-flex; align-items: center; gap: 6px; }
+.errors-card__filter-label {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.errors-card__filter select { padding: 6px 10px; font-size: 12.5px; max-width: 220px; }
+.errors-card__filter-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  background: rgba(79, 140, 255, 0.10);
+  border: 1px solid rgba(79, 140, 255, 0.4);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.errors-card__filter-state .btn { width: auto; font-size: 12px; padding: 6px 12px; margin-left: auto; }
+.error-row { cursor: pointer; }
+.error-row:hover td { background: rgba(79, 140, 255, 0.10); }
+.error-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.error-row__filterable { border-bottom: 1px dotted var(--accent); }
+.errors-card__actions { margin-top: 14px; }
+.errors-card__actions .btn { width: auto; font-size: 12.5px; padding: 8px 14px; }
 .state-on { color: var(--good); }
 .state-off { color: var(--text-dim); }
 .exists {
