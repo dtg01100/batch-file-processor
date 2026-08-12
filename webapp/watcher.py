@@ -34,6 +34,10 @@ from webapp.runner import RunStore
 
 # Default poll interval when a folder doesn't override it.
 DEFAULT_INTERVAL_SECONDS = 30
+# Intervals below this are pointless (sub-second polling just spins)
+# and are clamped everywhere so the supervisor's restart comparison
+# stays consistent between ``list_watched`` and ``FolderWatcher``.
+MIN_INTERVAL_SECONDS = 5
 # How many files per tick to process. A burst arrival shouldn't
 # make one watcher tick hold the dispatcher for an hour.
 MAX_FILES_PER_TICK = 200
@@ -65,6 +69,11 @@ def list_watched(settings: Settings) -> list[dict[str, Any]]:
                     interval = int(raw_interval or DEFAULT_INTERVAL_SECONDS)
                 except (TypeError, ValueError):
                     interval = DEFAULT_INTERVAL_SECONDS
+                # Clamp the same way ``FolderWatcher`` does so the
+                # supervisor's ``_interval`` comparison never sees a
+                # mismatch (a clamped 5 vs an unclamped 2 would
+                # otherwise restart the watcher every refresh cycle).
+                interval = max(MIN_INTERVAL_SECONDS, interval)
                 out.append(
                     {
                         "id": row["id"],
@@ -97,7 +106,7 @@ class FolderWatcher:
         self._settings = settings
         self._folder_id = folder_id
         self._run_store = run_store
-        self._interval = max(5, int(interval_seconds))
+        self._interval = max(MIN_INTERVAL_SECONDS, int(interval_seconds))
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -259,6 +268,7 @@ class WatcherSupervisor:
 __all__ = [
     "DEFAULT_INTERVAL_SECONDS",
     "MAX_FILES_PER_TICK",
+    "MIN_INTERVAL_SECONDS",
     "FolderWatcher",
     "WatcherSupervisor",
     "list_watched",

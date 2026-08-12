@@ -118,6 +118,7 @@ async function loadBackups() {
           await loadBackups();
           await refreshConfig();
           await loadFolders();
+          await loadWatched();
         } catch (err) {
           alert(`Restore failed: ${err.message || err}`);
         }
@@ -170,6 +171,7 @@ $("import-form").addEventListener("submit", async (e) => {
       `path field(s) to <code>${esc(result.base_directory)}</code>.`;
     await refreshConfig();
     await loadFolders();
+    await loadWatched();
     await loadProcessed();
   } catch (err) {
     resultBox.className = "notice err";
@@ -225,6 +227,46 @@ async function loadFolders() {
 }
 
 $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProcessed(); });
+
+/* ---------------- watching overview ---------------- */
+
+const fmtInterval = (s) => (s < 60 ? `${s}s` : `${Math.round(s / 60)}m`);
+
+async function loadWatched() {
+  let data;
+  try {
+    data = await api("/api/watched");
+  } catch (_e) { return; }
+  const folders = data.folders || [];
+  const empty = $("watching-empty");
+  const wrap = $("watching-wrap");
+  const count = $("watching-count");
+  empty.hidden = folders.length !== 0;
+  wrap.hidden = folders.length === 0;
+  count.hidden = folders.length === 0;
+  count.textContent = folders.length === 1 ? "1 folder" : `${folders.length} folders`;
+
+  const body = $("watching-body");
+  body.innerHTML = folders.map((f) => `
+    <tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${esc(f.alias || `folder ${f.id}`)}">
+      <td><b>${esc(f.alias || `folder ${f.id}`)}</b></td>
+      <td>${f.watch_path ? `<code>${esc(f.watch_path)}</code>` : '<span class="state-off">—</span>'}</td>
+      <td>${fmtInterval(Number(f.watch_interval_seconds) || 0)}</td>
+      <td><span class="state-on">● watching</span></td>
+    </tr>`).join("");
+
+  // Clicking a watched row opens the folder editor (same as the
+  // folders table) so the interval / toggle can be adjusted in place.
+  body.querySelectorAll(".folder-row").forEach((row) => {
+    row.addEventListener("click", () => openFolderPanel(Number(row.dataset.folderId)));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openFolderPanel(Number(row.dataset.folderId));
+      }
+    });
+  });
+}
 
 /* ---------------- folder edit panel ---------------- */
 
@@ -411,6 +453,7 @@ $("folder-panel-form").addEventListener("submit", async (e) => {
     if ("watch_enabled" in schema) {
       await api("/api/watcher/refresh", { method: "POST" }).catch(() => {});
     }
+    await loadWatched();
   } catch (err) {
     errBox.hidden = false;
     errBox.textContent = err.message || String(err);
@@ -799,11 +842,13 @@ $("clear-flags-btn").addEventListener("click", async () => {
 (async function init() {
   await refreshConfig();
   await loadFolders();
+  await loadWatched();
   await loadRuns();
   await loadProcessed();
   await loadBackups();
   window.setInterval(async () => {
     await refreshConfig();
+    await loadWatched();
     await loadRuns();
   }, 8000);
 })();

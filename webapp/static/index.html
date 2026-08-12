@@ -77,6 +77,35 @@
       </div>
     </section>
 
+    <section class="card watching-card">
+      <div class="card__head">
+        <h2>Watching</h2>
+        <span id="watching-count" class="pill" hidden></span>
+      </div>
+      <p class="card__hint">
+        Folders with the watcher enabled poll their input directory and
+        run the dispatcher automatically when new files arrive. Intervals
+        are clamped to a 5-second minimum. Click a row to edit the folder.
+      </p>
+      <div id="watching-empty" class="empty">
+        No folders are being watched — enable the Watcher toggle in a
+        folder's editor.
+      </div>
+      <div class="table-wrap" id="watching-wrap" hidden>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Alias</th>
+              <th>Watched path</th>
+              <th>Interval</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody id="watching-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <aside id="folder-panel" class="folder-panel" hidden aria-hidden="true">
       <div class="folder-panel__head">
         <h2 id="folder-panel-title">Folder</h2>
