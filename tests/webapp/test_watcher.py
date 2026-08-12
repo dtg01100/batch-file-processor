@@ -471,6 +471,30 @@ def test_maybe_run_records_missing_folder_error(settings):
     assert rows[0]["folder"].endswith("inbox/test")
 
 
+def test_maybe_run_dedupes_repeated_scan_errors(settings):
+    """A permanent failure keeps updating last_tick_at but writes only one
+    ledger row instead of one per tick (phase 5.2 spam guard)."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    # The configured directory is never created → same error every tick.
+
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()
+    first_tick = _read_health(settings, fid)["last_tick_at"]
+    watcher._maybe_run()
+    watcher._maybe_run()
+
+    health = _read_health(settings, fid)
+    assert health["last_tick_at"] >= first_tick  # still ticking
+    assert "missing" in health["last_error"]
+    db = open_database(settings)
+    try:
+        rows = list_errors(db, folder_id=fid)
+    finally:
+        db.close()
+    assert len(rows) == 1
+
+
 def test_maybe_run_records_scan_oserror(settings, monkeypatch):
     """An OSError while scanning the directory records the failure."""
     fid = _insert_folder(settings, watch_enabled=True)

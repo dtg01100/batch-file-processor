@@ -25,7 +25,7 @@ from fastapi.testclient import TestClient
 from dispatch.error_handler import ErrorHandler
 from webapp.config import Settings
 from webapp.database import open_database
-from webapp.errors import LedgerDatabase, clear_errors, list_errors
+from webapp.errors import LedgerDatabase, clear_errors, insert_error, list_errors
 from webapp.main import create_app
 
 pytestmark = [pytest.mark.integration]
@@ -259,6 +259,129 @@ def test_clear_errors_filters_by_folder_id(settings):
 
     assert cleared == 1
     assert [r["filename"] for r in rows] == ["b.edi"]
+
+
+# ---------------------------------------------------------------------------
+# insert_error: dedupe + MAX_ERROR_ROWS trim
+# ---------------------------------------------------------------------------
+
+
+def test_insert_error_records_a_row(settings):
+    db = open_database(settings)
+    try:
+        inserted = insert_error(
+            db, folder="/data/inbox/test", error_message="folder missing"
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert inserted is True
+    assert len(rows) == 1
+    assert rows[0]["error_message"] == "folder missing"
+
+
+def test_insert_error_dedupes_consecutive_identical(settings):
+    """The same failure twice in a row records only one row (the watcher
+    ticks every few seconds; a permanent failure must not spam the
+    ledger)."""
+    db = open_database(settings)
+    try:
+        first = insert_error(
+            db, folder="/data/inbox/test", error_message="folder missing", dedupe=True
+        )
+        second = insert_error(
+            db, folder="/data/inbox/test", error_message="folder missing", dedupe=True
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert first is True
+    assert second is False
+    assert len(rows) == 1
+
+
+def test_insert_error_records_when_message_changes(settings):
+    """A *different* failure is a new episode and gets its own row."""
+    db = open_database(settings)
+    try:
+        insert_error(
+            db, folder="/data/inbox/test", error_message="folder missing", dedupe=True
+        )
+        insert_error(
+            db,
+            folder="/data/inbox/test",
+            error_message="permission denied",
+            dedupe=True,
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert len(rows) == 2
+    assert [r["error_message"] for r in rows] == [
+        "permission denied",
+        "folder missing",
+    ]
+
+
+def test_insert_error_dedupe_is_per_folder(settings):
+    """Identical messages for different folders are separate rows."""
+    db = open_database(settings)
+    try:
+        insert_error(
+            db, folder="/data/inbox/acme", error_message="folder missing", dedupe=True
+        )
+        insert_error(
+            db, folder="/data/inbox/gamma", error_message="folder missing", dedupe=True
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert len(rows) == 2
+
+
+def test_insert_error_records_again_after_clear(settings):
+    """Dedupe compares against the ledger, so clearing resets the episode."""
+    db = open_database(settings)
+    try:
+        insert_error(
+            db, folder="/data/inbox/test", error_message="folder missing", dedupe=True
+        )
+        clear_errors(db)
+        again = insert_error(
+            db,
+            folder="/data/inbox/test",
+            error_message="folder missing",
+            dedupe=True,
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert again is True
+    assert len(rows) == 1
+
+
+def test_insert_error_trims_oldest_rows_beyond_cap(settings, monkeypatch):
+    """The ledger is bounded by MAX_ERROR_ROWS (mirroring history.py's
+    trim-on-write); the newest rows survive."""
+    monkeypatch.setattr("webapp.errors.MAX_ERROR_ROWS", 5)
+    db = open_database(settings)
+    try:
+        for i in range(7):
+            insert_error(
+                db, folder=f"/data/inbox/f{i}", error_message=f"error {i}"
+            )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert len(rows) == 5
+    # Newest five survive, in newest-first order.
+    assert [r["error_message"] for r in rows] == [
+        "error 6",
+        "error 5",
+        "error 4",
+        "error 3",
+        "error 2",
+    ]
 
 
 def test_clear_errors_unknown_folder_id_returns_zero(settings):

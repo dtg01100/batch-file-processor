@@ -25,6 +25,12 @@ from __future__ import annotations
 import time
 from typing import Any
 
+# Maximum number of rows kept in the ledger; the oldest rows beyond the
+# cap are deleted when a new one is inserted (mirrors
+# ``webapp.history.MAX_HISTORY_ROWS``). Bounds the unbounded-growth risk
+# of an unattended watcher or a permanently broken folder.
+MAX_ERROR_ROWS = 10_000
+
 # Columns ``_persist_to_database`` actually writes. ``stack_trace`` and
 # ``created_at`` exist in the schema for future use (e.g. watcher scan
 # errors) but the dispatch layer does not populate them today.
@@ -99,15 +105,40 @@ def insert_error(
     error_type: str = "WatcherScanError",
     error_source: str = "FolderWatcher",
     timestamp: str | None = None,
-) -> None:
+    dedupe: bool = False,
+) -> bool:
     """Insert one error-ledger row directly.
 
     The dispatch pipeline writes through ``ErrorHandler``; the watcher
     (phase 5.2) writes scan failures through this helper so they share
     the same ``dispatch_errors`` table and the Errors card / folder
     filter pick them up unchanged.
+
+    With ``dedupe=True`` the row is skipped when it is identical
+    (same message/type/source) to the latest row already recorded for
+    the same ``folder`` — a watcher that fails the same way every
+    tick would otherwise spam one row per interval.
+
+    After a successful insert the oldest rows beyond ``MAX_ERROR_ROWS``
+    are trimmed (same trim-on-write pattern as ``history.py``).
+
+    Returns:
+        True if a row was inserted, False if it was deduped away.
+
     """
     con = db.database_connection.raw_connection
+    if dedupe:
+        last = con.execute(
+            "SELECT error_message, error_type, error_source "
+            "FROM dispatch_errors WHERE folder = ? ORDER BY id DESC LIMIT 1",
+            (folder,),
+        ).fetchone()
+        if last is not None and (
+            last[0] == error_message
+            and last[1] == error_type
+            and last[2] == error_source
+        ):
+            return False
     con.execute(
         "INSERT INTO dispatch_errors "
         "(timestamp, folder, filename, error_message, error_type, error_source) "
@@ -122,6 +153,14 @@ def insert_error(
         ),
     )
     con.commit()
+    # Trim the oldest rows beyond the cap.
+    con.execute(
+        "DELETE FROM dispatch_errors WHERE id NOT IN "
+        "(SELECT id FROM dispatch_errors ORDER BY id DESC LIMIT ?)",
+        (MAX_ERROR_ROWS,),
+    )
+    con.commit()
+    return True
 
 
 def list_errors(
@@ -198,6 +237,7 @@ def clear_errors(db: Any, *, folder_id: int | None = None) -> int:
 
 __all__ = [
     "LEDGER_COLUMNS",
+    "MAX_ERROR_ROWS",
     "LedgerDatabase",
     "clear_errors",
     "insert_error",

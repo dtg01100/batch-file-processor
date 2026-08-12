@@ -256,12 +256,16 @@ class FolderWatcher:
                         data["last_run_id"] = run_id
                     db.folders_table.update(data, ["id"])
                     if last_error:
+                        # Dedupe: a failure that repeats every tick (e.g.
+                        # a permanently missing folder) writes one ledger
+                        # row, not one per interval.
                         insert_error(
                             db,
                             folder=str(folder_path) if folder_path is not None else "",
                             error_message=last_error,
                             error_type="WatcherScanError",
                             error_source="FolderWatcher",
+                            dedupe=True,
                         )
                 finally:
                     db.close()
