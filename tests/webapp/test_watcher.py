@@ -23,6 +23,7 @@ from fastapi.testclient import TestClient
 
 from webapp.config import Settings
 from webapp.database import open_database
+from webapp.errors import list_errors
 from webapp.main import create_app
 from webapp.watcher import (
     DEFAULT_INTERVAL_SECONDS,
@@ -354,6 +355,162 @@ def test_maybe_run_handles_corrupt_database(settings):
     watcher._maybe_run()  # must not raise
 
     assert store.started == []
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.2 watcher health (last_tick_at / last_run_id / last_error)
+# ---------------------------------------------------------------------------
+
+
+def _read_health(settings, fid) -> dict:
+    """Read the watcher-health columns straight off the folders row."""
+    db = open_database(settings)
+    try:
+        row = db.folders_table.find_one(id=fid)
+        return {
+            "last_tick_at": row.get("last_tick_at", ""),
+            "last_run_id": row.get("last_run_id", ""),
+            "last_error": row.get("last_error", ""),
+        }
+    finally:
+        db.close()
+
+
+def test_list_watched_includes_health_fields(settings):
+    fid = _insert_folder(
+        settings,
+        watch_enabled=True,
+        last_tick_at="2026-08-12T14:00:00.000000",
+        last_run_id="run-abc123",
+        last_error="",
+    )
+
+    result = list_watched(settings)[0]
+
+    assert result["id"] == fid
+    assert result["last_tick_at"] == "2026-08-12T14:00:00.000000"
+    assert result["last_run_id"] == "run-abc123"
+    assert result["last_error"] == ""
+
+
+def test_list_watched_health_fields_default_to_empty(settings):
+    """Pre-5.2 rows (columns absent or NULL) report empty strings."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    # Columns added by _ensure_columns default to ''.
+    result = list_watched(settings)[0]
+
+    assert result["id"] == fid
+    assert result["last_tick_at"] == ""
+    assert result["last_run_id"] == ""
+    assert result["last_error"] == ""
+
+
+def test_maybe_run_persists_health_on_healthy_tick(settings):
+    """A tick that starts a run records the tick time + run id, no error."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    folder_path = settings.base_dir / "inbox/test"
+    folder_path.mkdir(parents=True)
+    _make_file(folder_path, "new.edi")
+
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()
+
+    health = _read_health(settings, fid)
+    assert health["last_tick_at"]
+    assert health["last_run_id"] == "fake-run-id"
+    assert health["last_error"] == ""
+
+
+def test_maybe_run_keeps_last_run_id_across_noop_ticks(settings):
+    """The run id survives later ticks that don't trigger a run, so the
+    card keeps showing the most recent run the watcher started."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    folder_path = settings.base_dir / "inbox/test"
+    folder_path.mkdir(parents=True)
+    _make_file(folder_path, "new.edi")
+
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()
+    assert _read_health(settings, fid)["last_run_id"] == "fake-run-id"
+
+    # File is now processed (fake store records the run), so the next
+    # tick is a no-op — but last_run_id must be preserved.
+    watcher._maybe_run()
+    health = _read_health(settings, fid)
+    assert health["last_run_id"] == "fake-run-id"
+    assert health["last_tick_at"]
+
+
+def test_maybe_run_records_missing_folder_error(settings):
+    """A watched folder whose directory vanished records last_error and a
+    ledger row (phase 5.2) instead of failing silently."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    # The configured directory is never created.
+
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()
+
+    assert store.started == []
+    health = _read_health(settings, fid)
+    assert health["last_tick_at"]
+    assert "missing" in health["last_error"]
+
+    # The failure lands in the error ledger, filterable by folder.
+    db = open_database(settings)
+    try:
+        rows = list_errors(db, folder_id=fid)
+    finally:
+        db.close()
+    assert len(rows) == 1
+    assert rows[0]["error_type"] == "WatcherScanError"
+    assert rows[0]["error_source"] == "FolderWatcher"
+    assert "missing" in rows[0]["error_message"]
+    assert rows[0]["folder"].endswith("inbox/test")
+
+
+def test_maybe_run_records_scan_oserror(settings, monkeypatch):
+    """An OSError while scanning the directory records the failure."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    folder_path = settings.base_dir / "inbox/test"
+    folder_path.mkdir(parents=True)
+    _make_file(folder_path, "new.edi")
+
+    def _deny(self):
+        raise PermissionError("permission denied")
+
+    monkeypatch.setattr("webapp.watcher.Path.iterdir", _deny)
+
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()  # must not raise
+
+    assert store.started == []
+    health = _read_health(settings, fid)
+    assert "permission denied" in health["last_error"]
+
+
+def test_maybe_run_clears_last_error_on_recovery(settings):
+    """A healthy tick after a failure clears last_error and re-enables runs."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    folder_path = settings.base_dir / "inbox/test"
+    # First tick: folder missing → error recorded.
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+    watcher._maybe_run()
+    assert _read_health(settings, fid)["last_error"]
+
+    # Operator recreates the directory with a file → healthy tick.
+    folder_path.mkdir(parents=True)
+    _make_file(folder_path, "new.edi")
+    watcher._maybe_run()
+
+    health = _read_health(settings, fid)
+    assert health["last_error"] == ""
+    assert health["last_run_id"] == "fake-run-id"
+    assert store.started == [(settings, fid)]
 
 
 # ---------------------------------------------------------------------------

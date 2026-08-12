@@ -48,8 +48,15 @@ const folders = [
 ];
 
 const watched = [
-  { id: 1, alias: "ACME", watch_path: "/data/inbox/acme", watch_interval_seconds: 120 },
-  { id: 2, alias: "GAMMA", watch_path: "/data/inbox/gamma", watch_interval_seconds: 30 },
+  {
+    id: 1, alias: "ACME", watch_path: "/data/inbox/acme", watch_interval_seconds: 120,
+    last_tick_at: "2026-08-12T14:00:00.000000", last_run_id: "run-watch-1111", last_error: "",
+  },
+  {
+    id: 2, alias: "GAMMA", watch_path: "/data/inbox/gamma", watch_interval_seconds: 30,
+    last_tick_at: "2026-08-12T14:05:00.000000", last_run_id: "",
+    last_error: "Watched folder is missing: /data/inbox/gamma",
+  },
 ];
 
 const errors = [
@@ -194,6 +201,7 @@ function buildRoutes() {
     interval_seconds: 60,
     last_run_at: null,
     next_run_at: null,
+    runs_triggered: 3,
   };
   // Mutable copy of the processed-files rows: flag toggles and the resend
   // sweep update this, and loadProcessed re-reads it after each run.
@@ -365,12 +373,22 @@ test("boots and renders the full dashboard from the stubbed API", async () => {
   assert.equal(document.getElementById("folders-empty").hidden, true);
   assert.equal(document.getElementById("folders-wrap").hidden, false);
 
-  // Watching table.
+  // Watching table: health states + last tick (phase 5.2).
   const watchingRows = document.querySelectorAll("#watching-body tr");
   assert.equal(watchingRows.length, 2);
   assert.equal(watchingRows[0].querySelector("td:nth-child(3)").textContent, "2m");
   assert.equal(watchingRows[1].querySelector("td:nth-child(3)").textContent, "30s");
   assert.equal(document.getElementById("watching-count").textContent, "2 folders");
+  assert.ok(watchingRows[0].textContent.includes("ticking"));
+  assert.ok(watchingRows[0].querySelector(".dot").classList.contains("ok"));
+  assert.ok(watchingRows[0].textContent.includes("· run run-watc"));
+  assert.equal(
+    watchingRows[0].querySelector("td:nth-child(5)").textContent.trim(),
+    "2026-08-12 14:00:00",
+  );
+  assert.ok(watchingRows[1].textContent.includes("error"));
+  assert.ok(watchingRows[1].querySelector(".dot").classList.contains("err"));
+  assert.ok(watchingRows[1].textContent.includes("Watched folder is missing"));
 
   // Errors table + folder filter dropdown.
   assert.equal(document.getElementById("errors-count").textContent, "3 errors");
@@ -518,6 +536,7 @@ test("schedule card: enable, persist interval, show run times, disable", async (
   const intervalInput = document.getElementById("schedule-interval");
   const lastRun = document.getElementById("schedule-last-run");
   const nextRun = document.getElementById("schedule-next-run");
+  const runs = document.getElementById("schedule-runs");
 
   // Disabled by default: pill, interval, no run times yet.
   assert.equal(status.textContent, "disabled");
@@ -525,6 +544,7 @@ test("schedule card: enable, persist interval, show run times, disable", async (
   assert.equal(intervalInput.value, "60");
   assert.equal(lastRun.textContent, "never");
   assert.equal(nextRun.textContent, "—");
+  assert.equal(runs.textContent, "3"); // runs_triggered from the API
 
   // Change the interval and enable via the form submit.
   intervalInput.value = "120";
@@ -539,9 +559,11 @@ test("schedule card: enable, persist interval, show run times, disable", async (
 
   // Simulate a scheduled tick, then refresh the way the 8s poll does.
   schedule.last_run_at = "2026-08-12T14:00:00.000000";
+  schedule.runs_triggered = 4; // the tick bumped the counter
   await window.refreshConfig();
   assert.equal(lastRun.textContent, "2026-08-12 14:00:00");
   assert.equal(nextRun.textContent, "2026-08-12 14:02:00");
+  assert.equal(runs.textContent, "4");
 
   // Disable: pill flips back, interval is kept, next run clears.
   document.getElementById("schedule-disable").click();

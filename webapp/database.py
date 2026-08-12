@@ -45,6 +45,11 @@ def _ensure_columns(db: Any) -> None:
     needed = [
         ("watch_enabled", "TEXT DEFAULT ''"),
         ("watch_interval_seconds", "INTEGER DEFAULT 30"),
+        # Phase 5.2 watcher health — updated every tick by the watcher
+        # thread; the Watching card reads them via ``list_watched``.
+        ("last_tick_at", "TEXT DEFAULT ''"),
+        ("last_run_id", "TEXT DEFAULT ''"),
+        ("last_error", "TEXT DEFAULT ''"),
     ]
     with contextlib.suppress(Exception):
         con = db.database_connection.raw_connection

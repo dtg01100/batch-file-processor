@@ -14,6 +14,7 @@ from webapp.scheduler import (
     MIN_INTERVAL_SECONDS,
     Scheduler,
     get_schedule_summary,
+    increment_runs_triggered,
     read_schedule_state,
     write_last_run,
     write_schedule_state,
@@ -85,6 +86,34 @@ def test_get_schedule_summary_includes_next_run(settings):
     assert summary["interval_seconds"] == 60
     assert summary["last_run_at"] != ""
     assert summary["next_run_at"] != ""
+
+
+def test_get_schedule_summary_defaults_runs_triggered_to_zero(settings):
+    summary = get_schedule_summary(settings)
+    assert summary["runs_triggered"] == 0
+
+
+def test_increment_runs_triggered_persists_and_accumulates(settings):
+    increment_runs_triggered(settings)
+    increment_runs_triggered(settings)
+    increment_runs_triggered(settings)
+
+    summary = get_schedule_summary(settings)
+    assert summary["runs_triggered"] == 3
+
+
+def test_increment_runs_triggered_tolerates_corrupt_value(settings):
+    """A non-numeric persisted value counts as 0 and gets replaced."""
+    db = open_database(settings)
+    db.kv_settings.upsert(
+        {"key": "webapp.schedule_runs_triggered", "value": "garbage"},
+        ["key"],
+    )
+    db.close()
+
+    increment_runs_triggered(settings)
+
+    assert get_schedule_summary(settings)["runs_triggered"] == 1
 
 
 def test_get_schedule_summary_tolerates_missing_db(settings):
@@ -161,6 +190,41 @@ def test_scheduler_starts_run_when_enabled(settings):
     try:
         sched._maybe_run()
         assert store.start_count == 1
+    finally:
+        Scheduler.configure_settings(None)
+
+
+def test_scheduler_increments_runs_triggered_on_fire(settings):
+    """Phase 5.2: every scheduler-fired run bumps the counter (and only
+    then — a disabled schedule or a skipped tick leaves it untouched)."""
+    write_schedule_state(settings, enabled=True, interval=60)
+    sched = Scheduler()
+    store = _FakeRunStore()
+    sched.attach_run_store(store)
+    Scheduler.configure_settings(settings)
+    try:
+        # Two intervals → two fired runs.
+        sched._maybe_run()
+        sched._maybe_run()
+        assert store.start_count == 2
+        assert get_schedule_summary(settings)["runs_triggered"] == 2
+
+        # A skipped tick (run in flight) must not increment.
+        store._raise = RuntimeError("already in progress")
+        sched._maybe_run()
+        assert get_schedule_summary(settings)["runs_triggered"] == 2
+    finally:
+        Scheduler.configure_settings(None)
+
+
+def test_scheduler_does_not_increment_when_disabled(settings):
+    sched = Scheduler()
+    store = _FakeRunStore()
+    sched.attach_run_store(store)
+    Scheduler.configure_settings(settings)
+    try:
+        sched._maybe_run()
+        assert get_schedule_summary(settings)["runs_triggered"] == 0
     finally:
         Scheduler.configure_settings(None)
 

@@ -242,6 +242,17 @@ input[type="file"] { padding: 8px; }
 .errors-card__actions .btn { width: auto; font-size: 12.5px; padding: 8px 14px; }
 .state-on { color: var(--good); }
 .state-off { color: var(--text-dim); }
+/* Watcher scan-failure detail in the Watching table State cell (phase 5.2):
+   truncated inline with the full message on hover. */
+.watcher-error {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-size: 12px;
+}
 .exists {
   display: inline-block;
   color: var(--good);

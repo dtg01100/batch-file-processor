@@ -55,7 +55,8 @@ function _renderSchedule(s) {
     : "never";
   $("schedule-next-run").textContent = s.next_run_at
     ? s.next_run_at.replace("T", " ").slice(0, 19)
-    : s.enabled ? "—" : "—";
+    : "—";
+  $("schedule-runs").textContent = s.runs_triggered ?? 0;
 }
 
 async function _postSchedule(enabled) {

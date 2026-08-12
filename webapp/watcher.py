@@ -24,13 +24,18 @@ column is overkill; we just use the folders table directly):
 from __future__ import annotations
 
 import contextlib
+import datetime
 import threading
 from pathlib import Path
 from typing import Any
 
+from core.structured_logging import get_logger
 from webapp.config import Settings
 from webapp.database import lock, open_database
+from webapp.errors import insert_error
 from webapp.runner import RunStore
+
+logger = get_logger(__name__)
 
 # Default poll interval when a folder doesn't override it.
 DEFAULT_INTERVAL_SECONDS = 30
@@ -85,6 +90,12 @@ def list_watched(settings: Settings) -> list[dict[str, Any]]:
                         )
                         if row.get("folder_name")
                         else "",
+                        # Phase 5.2 watcher health, written every tick by
+                        # the watcher thread; the Watching card renders the
+                        # live state from these three fields.
+                        "last_tick_at": str(row.get("last_tick_at") or ""),
+                        "last_run_id": str(row.get("last_run_id") or ""),
+                        "last_error": str(row.get("last_error") or ""),
                     }
                 )
         finally:
@@ -136,8 +147,20 @@ class FolderWatcher:
                 return
 
     def _maybe_run(self) -> None:  # noqa: C901 - intentional complexity
-        """Scan the folder and start a run if there are new files."""
+        """Scan the folder and start a run if there are new files.
+
+        Phase 5.2: every tick also persists watcher health on the
+        folders row (``last_tick_at`` / ``last_run_id`` / ``last_error``)
+        so the Watching card can distinguish a healthy watcher from one
+        that is failing, and scan failures are recorded in the error
+        ledger via ``insert_error``.
+        """
         settings = self._settings
+        now = datetime.datetime.now().isoformat()
+        tick_error = ""
+        run_id = ""
+        folder_path: Path | None = None
+        already: set[str] = set()
         try:
             settings.ensure_dirs()
             with lock():
@@ -159,39 +182,93 @@ class FolderWatcher:
                         return
                     folder_path = settings.base_dir / rel
                     if not folder_path.is_dir():
-                        return
+                        tick_error = f"Watched folder is missing: {folder_path}"
                     already = {
                         Path(r.get("file_name", "")).name
                         for r in db.processed_files.find(folder_id=self._folder_id)
                     }
                 finally:
                     db.close()
-        except Exception:
-            return
+        except Exception as exc:
+            # A broken DB read must not take down the tick; record it.
+            tick_error = f"Watcher scan failed: {exc}"
 
+        if folder_path is not None and not tick_error:
+            try:
+                candidates = []
+                for entry in folder_path.iterdir():
+                    if not entry.is_file():
+                        continue
+                    if entry.stat().st_size < MIN_FILE_BYTES:
+                        continue
+                    if entry.name in already:
+                        continue
+                    candidates.append(entry)
+            except OSError as exc:
+                tick_error = f"Watcher scan failed: {exc}"
+
+            if candidates and not tick_error:
+                # Truncate to MAX_FILES_PER_TICK so one tick can't get
+                # stuck processing forever.
+                if len(candidates) > MAX_FILES_PER_TICK:
+                    candidates = candidates[:MAX_FILES_PER_TICK]
+                # Only start a run if no other run is in flight; when it
+                # is, run_id stays "" and we try again on the next tick.
+                with contextlib.suppress(RuntimeError):
+                    run_id = self._run_store.start_folder(settings, self._folder_id)
+
+        self._persist_health(
+            now,
+            run_id=run_id,
+            last_error=tick_error,
+            folder_path=folder_path,
+        )
+
+    def _persist_health(
+        self,
+        now: str,
+        *,
+        run_id: str = "",
+        last_error: str = "",
+        folder_path: Path | None = None,
+    ) -> None:
+        """Persist one tick's watcher health on the folders row.
+
+        ``last_tick_at`` and ``last_error`` are written every tick (a
+        healthy tick clears a stale error); ``last_run_id`` only when a
+        run actually started this tick, so the field keeps meaning "the
+        most recent run this watcher triggered". Scan failures also land
+        in the error ledger (phase 5.2) with the folder's resolved path
+        so the Errors card folder filter matches them.
+        """
         try:
-            candidates = []
-            for entry in folder_path.iterdir():
-                if not entry.is_file():
-                    continue
-                if entry.stat().st_size < MIN_FILE_BYTES:
-                    continue
-                if entry.name in already:
-                    continue
-                candidates.append(entry)
-        except OSError:
-            return
-
-        if not candidates:
-            return
-        # Truncate to MAX_FILES_PER_TICK so one tick can't get
-        # stuck processing forever.
-        if len(candidates) > MAX_FILES_PER_TICK:
-            candidates = candidates[:MAX_FILES_PER_TICK]
-        # Only start a run if no other run is in flight.
-        with contextlib.suppress(RuntimeError):
-            # Another run is in progress; try again on the next tick.
-            self._run_store.start_folder(settings, self._folder_id)
+            settings = self._settings
+            settings.ensure_dirs()
+            with lock():
+                db = open_database(settings)
+                try:
+                    data = {
+                        "id": self._folder_id,
+                        "last_tick_at": now,
+                        "last_error": last_error,
+                    }
+                    if run_id:
+                        data["last_run_id"] = run_id
+                    db.folders_table.update(data, ["id"])
+                    if last_error:
+                        insert_error(
+                            db,
+                            folder=str(folder_path) if folder_path is not None else "",
+                            error_message=last_error,
+                            error_type="WatcherScanError",
+                            error_source="FolderWatcher",
+                        )
+                finally:
+                    db.close()
+        except Exception:
+            # Watcher health is best-effort; never let a failed write
+            # take down the tick loop.
+            logger.debug("Failed to persist watcher health (non-fatal)", exc_info=True)
 
 
 class WatcherSupervisor:

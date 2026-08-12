@@ -83,14 +83,36 @@ function processedRows(files) {
 
 // Watching overview table. Rows open the folder editor like the folders
 // table (same folder-row class); app.js wires the click handlers.
+//
+// The State cell reflects phase-5.2 watcher health: a non-empty
+// last_error means the last scan failed, an empty last_tick_at means
+// the watcher hasn't ticked yet (idle), otherwise it is ticking.
+// last_run_id is the most recent run this watcher triggered.
 function watchingRows(folders) {
-  return (folders || []).map((f) => `
+  return (folders || []).map((f) => {
+    const err = String(f.last_error || "");
+    const tick = f.last_tick_at ? String(f.last_tick_at).replace("T", " ").slice(0, 19) : "";
+    const state = err
+      ? { cls: "err", label: "error", title: err }
+      : tick
+        ? { cls: "ok", label: "ticking", title: "" }
+        : { cls: "", label: "idle", title: "Waiting for the first scan" };
+    const dotTitle = state.title ? ` title="${H.esc(state.title)}"` : "";
+    const run = f.last_run_id
+      ? ` <span class="state-off">· run ${H.esc(String(f.last_run_id).slice(0, 8))}</span>`
+      : "";
+    const errorDetail = err
+      ? ` <span class="state-off watcher-error" title="${H.esc(err)}">${H.esc(err.length > 60 ? err.slice(0, 60) + "…" : err)}</span>`
+      : "";
+    return `
     <tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${H.esc(f.alias || `folder ${f.id}`)}">
       <td><b>${H.esc(f.alias || `folder ${f.id}`)}</b></td>
       <td>${f.watch_path ? `<code>${H.esc(f.watch_path)}</code>` : '<span class="state-off">—</span>'}</td>
       <td>${H.fmtInterval(Number(f.watch_interval_seconds) || 0)}</td>
-      <td><span class="state-on">● watching</span></td>
-    </tr>`).join("");
+      <td><span class="dot${state.cls ? " " + state.cls : ""}"${dotTitle}></span> ${state.label}${run}${errorDetail}</td>
+      <td>${tick ? `<code>${H.esc(tick)}</code>` : '<span class="state-off">—</span>'}</td>
+    </tr>`;
+  }).join("");
 }
 
 // Backups table. The Download/Restore buttons carry data-* markers that

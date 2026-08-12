@@ -14,6 +14,8 @@ Settings persisted in kv_settings:
   considers running.
 - ``webapp.schedule_last_run_at`` (ISO timestamp): when the scheduler
   last triggered a run. Used to compute "next run at" in the UI.
+- ``webapp.schedule_runs_triggered`` (integer string): monotonic
+  counter of scheduler-fired runs (phase 5.2).
 
 The scheduler is intentionally simple:
 
@@ -42,6 +44,7 @@ from webapp.runner import RunStore
 SCHEDULE_ENABLED_KEY = "webapp.schedule_enabled"
 SCHEDULE_INTERVAL_KEY = "webapp.schedule_interval_seconds"
 SCHEDULE_LAST_RUN_KEY = "webapp.schedule_last_run_at"
+SCHEDULE_RUNS_KEY = "webapp.schedule_runs_triggered"
 
 DEFAULT_INTERVAL_SECONDS = 60
 MIN_INTERVAL_SECONDS = 5
@@ -116,6 +119,10 @@ class Scheduler:
             if run_store is None or not run_store.active_count:
                 run_store.start(settings)
                 write_last_run(settings)
+                # Phase 5.2: the monotonic counter tracks how many runs
+                # the scheduler has fired since the database was
+                # imported (kv_settings, so it survives restarts).
+                increment_runs_triggered(settings)
         except RuntimeError:
             # Another run is in flight; try again later.
             pass
@@ -222,15 +229,45 @@ def write_last_run(settings: Settings) -> None:
         db.close()
 
 
+def increment_runs_triggered(settings: Settings) -> None:
+    """Bump the scheduler's monotonic run counter (kv_settings).
+
+    Phase 5.2: the Schedule card shows how many runs the scheduler has
+    fired. The counter is persisted in ``kv_settings`` so it survives
+    scheduler-thread restarts; a missing or corrupt value counts as 0.
+    """
+    settings.ensure_dirs()
+    db = open_database(settings)
+    try:
+        kv = db.kv_settings
+        current = db.get_setting(SCHEDULE_RUNS_KEY) or "0"
+        try:
+            count = int(current)
+        except (TypeError, ValueError):
+            count = 0
+        kv.upsert(
+            {"key": SCHEDULE_RUNS_KEY, "value": str(count + 1)},
+            ["key"],
+        )
+    finally:
+        db.close()
+
+
 def get_schedule_summary(settings: Settings) -> dict[str, Any]:
     """Read everything needed to render the schedule UI section."""
     enabled, interval = read_schedule_state(settings)
     last_run = ""
+    runs_triggered = 0
     if settings.database_path.is_file():
         try:
             db = open_database(settings)
             try:
                 last_run = db.get_setting(SCHEDULE_LAST_RUN_KEY) or ""
+                raw_runs = db.get_setting(SCHEDULE_RUNS_KEY) or "0"
+                try:
+                    runs_triggered = int(raw_runs)
+                except (TypeError, ValueError):
+                    runs_triggered = 0
             finally:
                 db.close()
         except Exception:
@@ -247,6 +284,7 @@ def get_schedule_summary(settings: Settings) -> dict[str, Any]:
         "interval_seconds": interval,
         "last_run_at": last_run,
         "next_run_at": next_run,
+        "runs_triggered": runs_triggered,
     }
 
 
@@ -256,6 +294,7 @@ __all__ = [
     "MIN_INTERVAL_SECONDS",
     "Scheduler",
     "get_schedule_summary",
+    "increment_runs_triggered",
     "read_schedule_state",
     "write_last_run",
     "write_schedule_state",

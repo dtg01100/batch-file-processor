@@ -279,7 +279,7 @@ test("processedRows returns empty string for no files", () => {
 
 /* ---------------- watchingRows ---------------- */
 
-test("watchingRows renders a watched folder with its interval", () => {
+test("watchingRows renders an idle watcher with its interval and no tick yet", () => {
   const out = watchingRows([
     { id: 2, alias: "GAMMA", watch_path: "/data/inbox/gamma", watch_interval_seconds: 30 },
   ]);
@@ -290,7 +290,8 @@ test("watchingRows renders a watched folder with its interval", () => {
       <td><b>GAMMA</b></td>
       <td><code>/data/inbox/gamma</code></td>
       <td>30s</td>
-      <td><span class="state-on">● watching</span></td>
+      <td><span class="dot" title="Waiting for the first scan"></span> idle</td>
+      <td><span class="state-off">—</span></td>
     </tr>`,
   );
 });
@@ -306,9 +307,82 @@ test("watchingRows formats minute-long intervals and falls back without a path",
       <td><b>folder 3</b></td>
       <td><span class="state-off">—</span></td>
       <td>2m</td>
-      <td><span class="state-on">● watching</span></td>
+      <td><span class="dot" title="Waiting for the first scan"></span> idle</td>
+      <td><span class="state-off">—</span></td>
     </tr>`,
   );
+});
+
+test("watchingRows renders a ticking watcher with its last tick and run", () => {
+  const out = watchingRows([
+    {
+      id: 4, alias: "ACME", watch_path: "/data/inbox/acme", watch_interval_seconds: 120,
+      last_tick_at: "2026-08-12T14:00:00.000000", last_run_id: "run-watch-12345678",
+      last_error: "",
+    },
+  ]);
+  assert.equal(
+    out,
+    `
+    <tr data-folder-id="4" class="folder-row" tabindex="0" role="button" aria-label="Edit ACME">
+      <td><b>ACME</b></td>
+      <td><code>/data/inbox/acme</code></td>
+      <td>2m</td>
+      <td><span class="dot ok"></span> ticking <span class="state-off">· run run-watc</span></td>
+      <td><code>2026-08-12 14:00:00</code></td>
+    </tr>`,
+  );
+});
+
+test("watchingRows renders an error state with the scan failure message", () => {
+  const out = watchingRows([
+    {
+      id: 5, alias: "GAMMA", watch_path: "/data/inbox/gamma", watch_interval_seconds: 30,
+      last_tick_at: "2026-08-12T14:05:00.000000", last_run_id: "",
+      last_error: "Watched folder is missing: /data/inbox/gamma",
+    },
+  ]);
+  assert.equal(
+    out,
+    `
+    <tr data-folder-id="5" class="folder-row" tabindex="0" role="button" aria-label="Edit GAMMA">
+      <td><b>GAMMA</b></td>
+      <td><code>/data/inbox/gamma</code></td>
+      <td>30s</td>
+      <td><span class="dot err" title="Watched folder is missing: /data/inbox/gamma"></span> error <span class="state-off watcher-error" title="Watched folder is missing: /data/inbox/gamma">Watched folder is missing: /data/inbox/gamma</span></td>
+      <td><code>2026-08-12 14:05:00</code></td>
+    </tr>`,
+  );
+});
+
+test("watchingRows truncates long error messages but keeps the full tooltip", () => {
+  const longError =
+    "Watcher scan failed: [Errno 13] Permission denied: '/data/inbox/gamma/archive/2026/very/deep/nested/path'";
+  const out = watchingRows([
+    {
+      id: 6, alias: "GAMMA", watch_path: "/data/inbox/gamma", watch_interval_seconds: 30,
+      last_tick_at: "2026-08-12T14:05:00.000000", last_run_id: "", last_error: longError,
+    },
+  ]);
+  // esc() renders apostrophes as &#39;, so the tooltip carries the
+  // escaped full message while the inline text is truncated.
+  const escapedFull = longError.replace(/'/g, "&#39;");
+  assert.ok(out.includes(`title="${escapedFull}"`), "full message stays in the tooltip");
+  const escapedSlice = (longError.slice(0, 60) + "…").replace(/'/g, "&#39;");
+  assert.ok(out.includes(escapedSlice), "inline text is truncated");
+  assert.ok(out.includes("class=\"dot err\""));
+});
+
+test("watchingRows escapes error messages containing markup", () => {
+  const out = watchingRows([
+    {
+      id: 7, alias: "X", watch_path: "", watch_interval_seconds: 30,
+      last_tick_at: "2026-08-12T14:05:00.000000", last_run_id: "",
+      last_error: "scan broke <script>alert(1)</script> & went 'off'",
+    },
+  ]);
+  assert.ok(out.includes("scan broke &lt;script&gt;alert(1)&lt;/script&gt; &amp; went &#39;off&#39;"));
+  assert.ok(!out.includes("<script>"));
 });
 
 test("watchingRows returns empty string for no folders", () => {

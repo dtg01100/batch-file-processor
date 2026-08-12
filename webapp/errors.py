@@ -1,5 +1,9 @@
 """Error ledger access for the webapp (phase 5.1).
 
+Phase 5.2 extends the module with ``insert_error``, used by the folder
+watcher to record scan failures into the same ledger.
+
+
 The dispatch pipeline already captures processing failures through
 ``dispatch.error_handler.ErrorHandler``; before phase 5.1 those errors
 only landed in flat files under ``data/config/errors/`` because the
@@ -18,6 +22,7 @@ same pattern the watcher columns use).
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 # Columns ``_persist_to_database`` actually writes. ``stack_trace`` and
@@ -83,6 +88,40 @@ def _folder_clause(folder_name: str) -> tuple[str, list[Any]]:
         "(folder = ? OR folder LIKE ?)",
         [folder_name, f"%/{folder_name}"],
     )
+
+
+def insert_error(
+    db: Any,
+    *,
+    folder: str = "",
+    filename: str = "",
+    error_message: str,
+    error_type: str = "WatcherScanError",
+    error_source: str = "FolderWatcher",
+    timestamp: str | None = None,
+) -> None:
+    """Insert one error-ledger row directly.
+
+    The dispatch pipeline writes through ``ErrorHandler``; the watcher
+    (phase 5.2) writes scan failures through this helper so they share
+    the same ``dispatch_errors`` table and the Errors card / folder
+    filter pick them up unchanged.
+    """
+    con = db.database_connection.raw_connection
+    con.execute(
+        "INSERT INTO dispatch_errors "
+        "(timestamp, folder, filename, error_message, error_type, error_source) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            timestamp or time.ctime(),
+            folder,
+            filename,
+            error_message,
+            error_type,
+            error_source,
+        ),
+    )
+    con.commit()
 
 
 def list_errors(
@@ -157,4 +196,10 @@ def clear_errors(db: Any, *, folder_id: int | None = None) -> int:
     return count
 
 
-__all__ = ["LEDGER_COLUMNS", "LedgerDatabase", "clear_errors", "list_errors"]
+__all__ = [
+    "LEDGER_COLUMNS",
+    "LedgerDatabase",
+    "clear_errors",
+    "insert_error",
+    "list_errors",
+]
