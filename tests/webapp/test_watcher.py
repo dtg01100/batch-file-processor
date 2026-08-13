@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import datetime
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -469,6 +470,40 @@ def test_maybe_run_records_missing_folder_error(settings):
     assert rows[0]["error_source"] == "FolderWatcher"
     assert "missing" in rows[0]["error_message"]
     assert rows[0]["folder"].endswith("inbox/test")
+
+    # The row links a raw error-text artifact the watcher wrote
+    # (open question #2), named like the dispatch ones.
+    artifact = rows[0]["error_file"]
+    assert artifact, "scan-failure row should link its raw artifact"
+    artifact_path = Path(artifact)
+    assert artifact_path.is_file()
+    assert artifact_path.parent == settings.errors_dir / "test"
+    assert "TEST errors." in artifact_path.name
+    raw = artifact_path.read_text(encoding="utf-8")
+    assert "Error Message is:" in raw
+    assert "missing" in raw
+
+
+def test_maybe_run_writes_one_artifact_per_scan_error_episode(settings):
+    """A repeating failure keeps one ledger row AND one artifact file —
+    the second tick sees a dedupe match and must not orphan a new file."""
+    fid = _insert_folder(settings, watch_enabled=True)
+    store = _FakeRunStore()
+    watcher = FolderWatcher(settings, fid, store, interval_seconds=5)
+
+    watcher._maybe_run()
+    watcher._maybe_run()  # same missing-folder error again
+
+    db = open_database(settings)
+    try:
+        rows = list_errors(db, folder_id=fid)
+    finally:
+        db.close()
+    assert len(rows) == 1
+    assert rows[0]["error_file"], "first tick linked its artifact"
+    assert Path(rows[0]["error_file"]).is_file()
+    artifacts = list((settings.errors_dir / "test").glob("TEST errors.*.txt"))
+    assert len(artifacts) == 1, "repeating failures must not write extra files"
 
 
 def test_maybe_run_dedupes_repeated_scan_errors(settings):

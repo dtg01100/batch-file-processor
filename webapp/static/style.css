@@ -238,6 +238,14 @@ input[type="file"] { padding: 8px; }
 .error-row:hover td { background: rgba(79, 140, 255, 0.10); }
 .error-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .error-row__filterable { border-bottom: 1px dotted var(--accent); }
+.error-row__raw {
+  font-size: 0.85em;
+  white-space: nowrap;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--accent);
+}
+.error-row__raw:hover { text-decoration: underline; }
 .errors-card__actions { margin-top: 14px; }
 .errors-card__actions .btn { width: auto; font-size: 12.5px; padding: 8px 14px; }
 .state-on { color: var(--good); }

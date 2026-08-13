@@ -23,7 +23,12 @@ from dispatch.orchestrator import DispatchOrchestrator
 from dispatch.pipeline.factory import create_standard_pipeline
 from webapp.config import Settings
 from webapp.database import lock, open_database
-from webapp.errors import LedgerDatabase
+from webapp.errors import (
+    LedgerDatabase,
+    link_error_files,
+    max_error_id,
+    write_error_artifact,
+)
 from webapp.paths import resolve_row
 
 
@@ -61,6 +66,48 @@ def _is_active(row: dict[str, Any]) -> bool:
 
 def _folder_relative_path(row: dict[str, Any]) -> str:
     return str(row.get("folder_name", "") or "")
+
+
+def _write_folder_error_artifact(
+    settings: Settings,
+    error_handler: ErrorHandler,
+    db: Any,
+    *,
+    folder_report: FolderRunReport,
+    started_at: str,
+    after_id: int,
+    before_log_len: int,
+) -> str:
+    """Write one folder-run's raw error text to ``errors_dir`` and link it.
+
+    The dispatch layer records errors to the in-memory ``error_log``
+    buffer as well as the ledger; this helper snapshots the buffer
+    position before the folder ran (``before_log_len``) so the slice
+    written here is exactly this folder's error text, named with the
+    legacy ``<alias> errors.<timestamp>.txt`` convention under
+    ``errors_dir/<folder>/``. Every ledger row the folder's run produced
+    (``id > after_id``) is then pointed at the file.
+
+    Returns the artifact path, or "" when the folder had no error text.
+
+    """
+    raw = error_handler.get_error_log()[before_log_len:]
+    if not raw.strip():
+        return ""
+    path = write_error_artifact(
+        str(settings.errors_dir),
+        alias=folder_report.alias,
+        folder_path=folder_report.resolved_path,
+        timestamp=started_at,
+        text=raw,
+    )
+    link_error_files(
+        db,
+        after_id=after_id,
+        folder=folder_report.resolved_path,
+        error_file=path,
+    )
+    return path
 
 
 def _snapshot(report: RunReport) -> RunReport:
@@ -132,6 +179,10 @@ def run_folders(settings: Settings, db=None) -> RunReport:
             folder_total = len(active_pairs)
             for folder_num, (original_row, folder) in enumerate(active_pairs, start=1):
                 run_log = io.StringIO()
+                # Open question #2: snapshot the ledger + error-log buffer
+                # so this folder's rows can be linked to its raw file.
+                before_error_id = max_error_id(db)
+                before_log_len = len(error_handler.get_error_log())
                 folder_report = FolderRunReport(
                     alias=str(
                         original_row.get("alias") or _folder_relative_path(original_row)
@@ -159,6 +210,15 @@ def run_folders(settings: Settings, db=None) -> RunReport:
                 report.folders.append(folder_report)
                 report.total_processed += folder_report.files_processed
                 report.total_failed += folder_report.files_failed
+                _write_folder_error_artifact(
+                    settings,
+                    error_handler,
+                    db,
+                    folder_report=folder_report,
+                    started_at=report.started_at,
+                    after_id=before_error_id,
+                    before_log_len=before_log_len,
+                )
 
             report.status = "completed"
     except Exception as exc:
@@ -254,6 +314,8 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                     delete_processed_rows(db, [r["id"] for r in rows])
                     continue
                 resolved = resolve_row(original_row, settings.base_dir)
+                before_error_id = max_error_id(db)
+                before_log_len = len(error_handler.get_error_log())
                 run_log = io.StringIO()
                 folder_report = FolderRunReport(
                     alias=str(
@@ -290,6 +352,15 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                 report.folders.append(folder_report)
                 report.total_processed += folder_report.files_processed
                 report.total_failed += folder_report.files_failed
+                _write_folder_error_artifact(
+                    settings,
+                    error_handler,
+                    db,
+                    folder_report=folder_report,
+                    started_at=report.started_at,
+                    after_id=before_error_id,
+                    before_log_len=before_log_len,
+                )
 
             report.status = "completed"
     except Exception as exc:
@@ -352,6 +423,8 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
                 upc_dict={"_mock": []},
             )
             orchestrator = DispatchOrchestrator(config)
+            before_error_id = max_error_id(db)
+            before_log_len = len(error_handler.get_error_log())
             run_log = io.StringIO()
             folder_report = FolderRunReport(
                 alias=str(row.get("alias") or _folder_relative_path(row)),
@@ -376,6 +449,15 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
             report.folders.append(folder_report)
             report.total_processed = folder_report.files_processed
             report.total_failed = folder_report.files_failed
+            _write_folder_error_artifact(
+                settings,
+                error_handler,
+                db,
+                folder_report=folder_report,
+                started_at=report.started_at,
+                after_id=before_error_id,
+                before_log_len=before_log_len,
+            )
             report.status = "completed"
     except ValueError as exc:
         report.status = "failed"

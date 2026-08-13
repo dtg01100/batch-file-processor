@@ -144,7 +144,31 @@ test("errorRows renders a filterable row for a known folder", () => {
         <span class="tag tag--err">ValueError</span>
         <span>boom</span>
       </td>
+      <td></td>
     </tr>`,
+  );
+});
+
+test("errorRows renders a raw-download link when the row links an artifact", () => {
+  const out = errorRows(
+    [
+      {
+        timestamp: "Tue Aug 12 10:00:00 2026",
+        folder: "/data/inbox/acme",
+        filename: "/data/inbox/acme/bad.edi",
+        error_type: "ValueError",
+        error_message: "boom",
+        error_file: "/data/errors/acme/ACME errors.2026-08-12_10-00-00.txt",
+      },
+    ],
+    folders,
+  );
+  assert.ok(
+    out.includes(
+      '<a class="error-row__raw" href="/api/errors/file?path=%2Fdata%2Ferrors%2Facme%2FACME%20errors.2026-08-12_10-00-00.txt" ' +
+      'title="Download raw error text" download>raw</a>',
+    ),
+    "path is URL-encoded so the href survives HTML escaping",
   );
 });
 
@@ -171,6 +195,7 @@ test("errorRows renders a plain row for a folder that no longer exists", () => {
         <span class="tag tag--err">RuntimeError</span>
         <span>gone</span>
       </td>
+      <td></td>
     </tr>`,
   );
 });
@@ -193,6 +218,7 @@ test("errorRows falls back for missing fields and escapes markup", () => {
   assert.ok(out.includes("<td><code>—</code></td>"));
   assert.ok(out.includes('<span class="tag tag--err">Error</span>'));
   assert.ok(out.includes("<span>x &lt; y &amp; z</span>"));
+  assert.ok(!out.includes("error-row__raw"), "no raw link without error_file");
 });
 
 test("errorRows returns empty string for no errors", () => {

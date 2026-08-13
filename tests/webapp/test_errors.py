@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import datetime
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,7 +26,18 @@ from fastapi.testclient import TestClient
 from dispatch.error_handler import ErrorHandler
 from webapp.config import Settings
 from webapp.database import open_database
-from webapp.errors import LedgerDatabase, clear_errors, insert_error, list_errors
+from webapp.errors import (
+    LedgerDatabase,
+    clear_errors,
+    dedupe_matches,
+    error_counts,
+    folder_error_text,
+    insert_error,
+    link_error_files,
+    list_errors,
+    max_error_id,
+    write_error_artifact,
+)
 from webapp.main import create_app
 
 pytestmark = [pytest.mark.integration]
@@ -360,6 +372,225 @@ def test_insert_error_records_again_after_clear(settings):
     assert len(rows) == 1
 
 
+def test_insert_error_records_error_file(settings):
+    """Open question #2: an insert can carry the raw artifact path."""
+    db = open_database(settings)
+    try:
+        insert_error(
+            db,
+            folder="/data/inbox/test",
+            error_message="boom",
+            error_file="/tmp/errs/test errors.2026-08-12_14-00-00.txt",
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert rows[0]["error_file"] == "/tmp/errs/test errors.2026-08-12_14-00-00.txt"
+
+
+def test_write_error_artifact_uses_legacy_naming(settings):
+    """Watcher artifacts reuse the dispatch naming so the Errors card
+    treats them identically: ``errors/<folder>/<alias> errors.<ts>.txt``."""
+    path = write_error_artifact(
+        str(settings.errors_dir),
+        alias="GAMMA",
+        folder_path="/data/inbox/gamma",
+        timestamp="2026-08-12T14:05:00.000000",
+        text="At: now\nError Message is:\nboom\n",
+    )
+    assert path == str(
+        settings.errors_dir / "gamma" / "GAMMA errors.2026-08-12_14-05-00.txt"
+    )
+    assert Path(path).is_file()
+    assert "boom" in Path(path).read_text(encoding="utf-8")
+
+
+def test_dedupe_matches_tracks_latest_row(settings):
+    """The watcher uses this to skip writing an artifact when the failure
+    is a repeat of the latest row for the same folder."""
+    db = open_database(settings)
+    try:
+        insert_error(
+            db,
+            folder="/d/inbox/test",
+            error_message="folder missing",
+            error_type="WatcherScanError",
+            error_source="FolderWatcher",
+        )
+        assert dedupe_matches(
+            db,
+            folder="/d/inbox/test",
+            error_message="folder missing",
+            error_type="WatcherScanError",
+            error_source="FolderWatcher",
+        ) is True
+        # A changed message / different folder is a new episode.
+        assert dedupe_matches(
+            db,
+            folder="/d/inbox/test",
+            error_message="permission denied",
+            error_type="WatcherScanError",
+            error_source="FolderWatcher",
+        ) is False
+        assert dedupe_matches(
+            db,
+            folder="/d/inbox/other",
+            error_message="folder missing",
+            error_type="WatcherScanError",
+            error_source="FolderWatcher",
+        ) is False
+    finally:
+        db.close()
+
+
+def test_max_error_id_tracks_ledger_watermark(settings):
+    """The runner snapshots MAX(id) before a folder run so it can link
+    exactly that run's rows to the raw artifact afterwards."""
+    db = open_database(settings)
+    try:
+        assert max_error_id(db) == 0  # empty ledger
+        insert_error(db, folder="/d/x", error_message="a")
+        first = max_error_id(db)
+        assert first >= 1
+        insert_error(db, folder="/d/x", error_message="b")
+        assert max_error_id(db) == first + 1
+    finally:
+        db.close()
+
+
+def test_link_error_files_updates_only_new_rows_for_folder(settings):
+    """link_error_files points the rows a run produced (id > after_id,
+    matching folder) at the raw file, leaving older/other rows alone."""
+    db = open_database(settings)
+    try:
+        insert_error(db, folder="/d/inbox/test", error_message="old")
+        before = max_error_id(db)
+        insert_error(db, folder="/d/inbox/test", error_message="new1")
+        insert_error(db, folder="/d/inbox/other", error_message="other")
+        insert_error(db, folder="/d/inbox/test", error_message="new2")
+        path = "/data/errors/test/ACME errors.2026-08-12_14-00-00.txt"
+
+        linked = link_error_files(
+            db, after_id=before, folder="/d/inbox/test", error_file=path
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert linked == 2  # new1 + new2, not the old row, not the other folder
+    linked_rows = {r["error_message"] for r in rows if r["error_file"] == path}
+    assert linked_rows == {"new1", "new2"}
+
+
+def test_link_error_files_skips_already_linked_rows(settings):
+    """Re-linking a row (e.g. an idempotent retry) must not clobber it."""
+    db = open_database(settings)
+    try:
+        insert_error(db, folder="/d/x", error_message="a")
+        before = max_error_id(db)
+        insert_error(db, folder="/d/x", error_message="b")
+        first_path = "/data/errors/x/one.txt"
+        link_error_files(
+            db, after_id=before, folder="/d/x", error_file=first_path
+        )
+        second = link_error_files(
+            db, after_id=before, folder="/d/x", error_file="/data/errors/x/two.txt"
+        )
+        rows = list_errors(db, limit=100)
+    finally:
+        db.close()
+    assert second == 0
+    assert {r["error_file"] for r in rows if r["error_file"]} == {first_path}
+
+
+def test_folder_error_text_concatenates_artifacts_and_falls_back(settings):
+    """The folder-level download includes each row's raw artifact when
+    linked, and synthesizes a block for rows without one."""
+    fid = _insert_folder(settings, folder_name="inbox/test", alias="TEST")
+    db = open_database(settings)
+    try:
+        artifact = write_error_artifact(
+            str(settings.errors_dir),
+            alias="TEST",
+            folder_path=str(settings.base_dir / "inbox" / "test"),
+            timestamp="2026-08-12T10:00:00.000000",
+            text="At: t1\nError Message is:\nartifact boom\n",
+        )
+        insert_error(
+            db,
+            folder=str(settings.base_dir / "inbox" / "test"),
+            error_message="artifact boom",
+            error_file=artifact,
+        )
+        insert_error(
+            db,
+            folder=str(settings.base_dir / "inbox" / "test"),
+            error_message="plain boom",
+            error_type="ValueError",
+        )
+        text = folder_error_text(
+            db, folder_id=fid, errors_dir=str(settings.errors_dir)
+        )
+    finally:
+        db.close()
+    # Both rows included, newest first (the plain row is newer).
+    assert "artifact boom" in text
+    assert "plain boom" in text
+    assert text.index("plain boom") < text.index("artifact boom")
+    # The row without a linked file still gets a synthesized block.
+    assert "=== ValueError" in text
+    assert "For object:" in text
+
+
+def test_folder_error_text_skips_artifacts_outside_errors_dir(settings):
+    """A tampered error_file must never be read — the folder download
+    falls back to the synthesized block instead."""
+    fid = _insert_folder(settings, folder_name="inbox/test", alias="TEST")
+    db = open_database(settings)
+    try:
+        secret = settings.data_dir / "folders.db"
+        insert_error(
+            db,
+            folder=str(settings.base_dir / "inbox" / "test"),
+            error_message="boom",
+            error_file=str(secret),
+        )
+        text = folder_error_text(
+            db, folder_id=fid, errors_dir=str(settings.errors_dir)
+        )
+    finally:
+        db.close()
+    assert "boom" in text
+    # Never any raw DB bytes leaking in.
+    assert "SQLite format" not in text
+
+
+def test_folder_error_text_returns_empty_for_no_rows(settings):
+    fid = _insert_folder(settings, folder_name="inbox/test")
+    db = open_database(settings)
+    try:
+        assert folder_error_text(db, folder_id=fid) == ""
+    finally:
+        db.close()
+
+
+def test_error_counts_per_folder(settings):
+    """Open question #3: total rows per folder id, counting rows recorded
+    with the resolved absolute path against the stored relative name."""
+    fid1 = _insert_folder(settings, folder_name="inbox/test", alias="TEST")
+    fid2 = _insert_folder(settings, folder_name="inbox/other", alias="OTHER")
+    _record(settings, folder_name="inbox/test", filename="a.edi")
+    _record(settings, folder_name="inbox/test", filename="b.edi")
+    _record(settings, folder_name=str(settings.base_dir / "inbox" / "test"), filename="c.edi")
+    _record(settings, folder_name="inbox/other", filename="d.edi")
+
+    db = open_database(settings)
+    try:
+        counts = error_counts(db)
+    finally:
+        db.close()
+    assert counts == {fid1: 3, fid2: 1}
+
+
 def test_insert_error_trims_oldest_rows_beyond_cap(settings, monkeypatch):
     """The ledger is bounded by MAX_ERROR_ROWS (mirroring history.py's
     trim-on-write); the newest rows survive."""
@@ -454,6 +685,73 @@ def test_api_errors_filter_by_folder_id(client_with_db, settings):
     assert [e["filename"] for e in body["errors"]] == ["a.edi"]
 
 
+def test_api_errors_returns_folder_counts(client_with_db, settings):
+    """The response carries per-folder totals for the dropdown labels."""
+    fid = _insert_folder(settings, folder_name="inbox/test")
+    _insert_folder(settings, folder_name="inbox/other")
+    _record(settings, folder_name="inbox/test", filename="a.edi")
+    _record(settings, folder_name="inbox/test", filename="b.edi")
+
+    resp = client_with_db.get("/api/errors")
+    assert resp.status_code == 200
+    body = resp.json()
+    # JSON serializes int dict keys to strings; the API contract is a
+    # ``{folder_id: total}`` map.
+    assert body["folder_counts"][str(fid)] == 2
+
+
+def test_api_errors_file_download(client_with_db, settings):
+    """GET /api/errors/file streams a raw artifact under errors_dir."""
+    artifact = settings.errors_dir / "test" / "TEST errors.2026-08-12_14-00-00.txt"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("At: now\nError Message is: boom\n", encoding="utf-8")
+
+    resp = client_with_db.get(
+        "/api/errors/file", params={"path": str(artifact)}
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/plain")
+    assert "boom" in resp.text
+
+
+def test_api_errors_folder_file_downloads_full_text(client_with_db, settings):
+    """The banner's Download raw button hits this endpoint and gets the
+    folder's whole error text as a text/plain attachment."""
+    fid = _insert_folder(settings, folder_name="inbox/test", alias="TEST")
+    _record(settings, folder_name="inbox/test", filename="bad.edi", message="boom")
+
+    resp = client_with_db.get("/api/errors/folder-file", params={"folder_id": fid})
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/plain")
+    assert "boom" in resp.text
+    assert 'attachment; filename="TEST errors.txt"' in resp.headers[
+        "content-disposition"
+    ]
+
+
+def test_api_errors_folder_file_unknown_folder(client_with_db, settings):
+    _insert_folder(settings, folder_name="inbox/test")
+    resp = client_with_db.get("/api/errors/folder-file", params={"folder_id": 9999})
+    assert resp.status_code == 404
+
+
+def test_api_errors_file_rejects_paths_outside_errors_dir(client_with_db, settings):
+    """Path traversal guard: an operator-supplied path must stay under
+    errors_dir, like the maintenance download endpoint."""
+    secret = settings.data_dir / "folders.db"
+    secret.touch()
+
+    resp = client_with_db.get(
+        "/api/errors/file", params={"path": str(secret)}
+    )
+    assert resp.status_code == 400
+
+    resp = client_with_db.get(
+        "/api/errors/file", params={"path": str(settings.errors_dir / "missing.txt")}
+    )
+    assert resp.status_code == 404
+
+
 def test_api_errors_clear(client_with_db, settings):
     _record(settings, folder_name="inbox/test", filename="a.edi")
     _record(settings, folder_name="inbox/test", filename="b.edi")
@@ -514,3 +812,17 @@ def test_failing_run_records_error_in_ledger(settings):
     # resolved (absolute) folder path.
     filtered = client.get(f"/api/errors?folder_id={fid}").json()
     assert filtered["count"] == 1
+
+    # Open question #2: the runner wrote a raw error-text artifact for the
+    # folder and linked the ledger row to it; the download endpoint serves
+    # the exact text the pipeline recorded.
+    assert row["error_file"], "row should link its raw artifact"
+    artifact_path = Path(row["error_file"])
+    assert artifact_path.is_file()
+    raw = artifact_path.read_text(encoding="utf-8")
+    assert "Error Message is:" in raw
+    assert "pattern" in raw.lower()
+
+    resp = client.get("/api/errors/file", params={"path": row["error_file"]})
+    assert resp.status_code == 200
+    assert "pattern" in resp.text.lower()

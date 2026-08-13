@@ -66,7 +66,8 @@ def _ensure_columns(db: Any) -> None:
             "error_type TEXT, "
             "error_source TEXT, "
             "stack_trace TEXT, "
-            "created_at TEXT)"
+            "created_at TEXT, "
+            "error_file TEXT DEFAULT '')"
         )
         existing = {
             row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()
@@ -74,6 +75,17 @@ def _ensure_columns(db: Any) -> None:
         for col, decl in needed:
             if col not in existing:
                 con.execute(f"ALTER TABLE folders ADD COLUMN {col} {decl}")
+        # Open question #2 resolution: ledger rows link to the raw error
+        # text file the runner writes per folder-run. Idempotent ALTER so
+        # pre-resolution databases pick up the column on next open.
+        err_existing = {
+            row[1]
+            for row in con.execute("PRAGMA table_info(dispatch_errors)").fetchall()
+        }
+        if "error_file" not in err_existing:
+            con.execute(
+                "ALTER TABLE dispatch_errors ADD COLUMN error_file TEXT DEFAULT ''"
+            )
         con.commit()
 
 

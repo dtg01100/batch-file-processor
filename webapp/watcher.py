@@ -32,7 +32,11 @@ from typing import Any
 from core.structured_logging import get_logger
 from webapp.config import Settings
 from webapp.database import lock, open_database
-from webapp.errors import insert_error
+from webapp.errors import (
+    dedupe_matches,
+    insert_error,
+    write_error_artifact,
+)
 from webapp.runner import RunStore
 
 logger = get_logger(__name__)
@@ -159,6 +163,7 @@ class FolderWatcher:
         now = datetime.datetime.now().isoformat()
         tick_error = ""
         run_id = ""
+        alias = ""
         folder_path: Path | None = None
         already: set[str] = set()
         try:
@@ -180,6 +185,7 @@ class FolderWatcher:
                     rel = row.get("folder_name") or ""
                     if not rel:
                         return
+                    alias = str(row.get("alias") or "")
                     folder_path = settings.base_dir / rel
                     if not folder_path.is_dir():
                         tick_error = f"Watched folder is missing: {folder_path}"
@@ -222,6 +228,7 @@ class FolderWatcher:
             run_id=run_id,
             last_error=tick_error,
             folder_path=folder_path,
+            alias=alias,
         )
 
     def _persist_health(
@@ -231,6 +238,7 @@ class FolderWatcher:
         run_id: str = "",
         last_error: str = "",
         folder_path: Path | None = None,
+        alias: str = "",
     ) -> None:
         """Persist one tick's watcher health on the folders row.
 
@@ -240,6 +248,13 @@ class FolderWatcher:
         most recent run this watcher triggered". Scan failures also land
         in the error ledger (phase 5.2) with the folder's resolved path
         so the Errors card folder filter matches them.
+
+        Each scan-failure *episode* (the first tick of a repeating error)
+        also writes one raw error-text artifact under ``errors_dir`` and
+        links the ledger row to it, so the Errors card's download link
+        works for watcher rows too. ``dedupe_matches`` is checked before
+        writing so a failure that repeats every tick produces one file,
+        not one per interval.
         """
         try:
             settings = self._settings
@@ -256,15 +271,37 @@ class FolderWatcher:
                         data["last_run_id"] = run_id
                     db.folders_table.update(data, ["id"])
                     if last_error:
+                        folder = str(folder_path) if folder_path is not None else ""
                         # Dedupe: a failure that repeats every tick (e.g.
                         # a permanently missing folder) writes one ledger
                         # row, not one per interval.
-                        insert_error(
+                        if not dedupe_matches(
                             db,
-                            folder=str(folder_path) if folder_path is not None else "",
+                            folder=folder,
                             error_message=last_error,
                             error_type="WatcherScanError",
                             error_source="FolderWatcher",
+                        ):
+                            # New episode: write one raw artifact so the
+                            # row links a downloadable file like dispatch
+                            # errors do (open question #2).
+                            artifact = write_error_artifact(
+                                str(settings.errors_dir),
+                                alias=alias,
+                                folder_path=folder,
+                                timestamp=now,
+                                text=f"At: {now}\nFolder: {folder}\n"
+                                f"Error Message is:\n{last_error}\n",
+                            )
+                        else:
+                            artifact = ""
+                        insert_error(
+                            db,
+                            folder=folder,
+                            error_message=last_error,
+                            error_type="WatcherScanError",
+                            error_source="FolderWatcher",
+                            error_file=artifact,
                             dedupe=True,
                         )
                 finally:

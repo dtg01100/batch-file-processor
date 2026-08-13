@@ -130,6 +130,9 @@
       <div id="errors-filter-state" class="errors-card__filter-state" hidden>
         <span class="state-on">● Filtered</span>
         <span>Showing only errors for <b id="errors-filter-name"></b></span>
+        <button id="errors-filter-download" class="btn btn--ghost" title="Download this folder's full error text">
+          ⬇ Download raw
+        </button>
         <button id="errors-filter-clear" class="btn btn--ghost">Clear filter</button>
       </div>
       <div id="errors-empty" class="empty">No errors recorded.</div>
@@ -141,6 +144,7 @@
               <th>Folder</th>
               <th>File</th>
               <th>Error</th>
+              <th>Raw</th>
             </tr>
           </thead>
           <tbody id="errors-body"></tbody>

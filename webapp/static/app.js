@@ -13,6 +13,7 @@ const state = {
   lastRunId: null,
   editingFolderId: null,
   errorsFilterId: null, // folder id the Errors card is narrowed to, or null
+  errorsFolderCounts: {}, // folder id -> total ledger rows (open question #3)
 };
 
 // ``esc`` and ``folderIdForPath`` live in helpers.js (loaded before this
@@ -245,6 +246,7 @@ function setErrorsFilter(folderId) {
 
 function _renderErrorsFilterOptions() {
   const folders = state.folders || [];
+  const counts = state.errorsFolderCounts || {};
   const select = $("errors-filter");
   $("errors-filter-wrap").hidden = folders.length === 0;
   // Rebuild only when the folder set changed, so the 8s poll doesn't
@@ -258,6 +260,17 @@ function _renderErrorsFilterOptions() {
         `<option value="${f.id}" title="${esc(f.folder_name || "")}">` +
         `${esc(f.alias || f.folder_name || `folder ${f.id}`)}</option>`
       ).join("");
+  }
+  // Open question #3: refresh each option's label with its per-folder
+  // error count. Updating textContent in place never disturbs an open
+  // dropdown (the options aren't rebuilt, just re-labelled).
+  for (const opt of select.options) {
+    if (!opt.value) continue;
+    const f = folders.find((x) => x.id === Number(opt.value));
+    if (!f) continue;
+    const n = counts[f.id] || 0;
+    const label = f.alias || f.folder_name || `folder ${f.id}`;
+    opt.textContent = n > 0 ? `${label} (${n})` : label;
   }
   // Drop a filter whose folder no longer exists (e.g. after a restore).
   if (state.errorsFilterId != null && !folders.some((f) => f.id === state.errorsFilterId)) {
@@ -283,6 +296,15 @@ $("errors-filter").addEventListener("change", () => {
 });
 $("errors-filter-clear").addEventListener("click", () => setErrorsFilter(null));
 
+// The filter-state banner's download button grabs the folder's full raw
+// error text (concatenated artifacts) in one file — no scrolling the
+// ledger row by row.
+$("errors-filter-download").addEventListener("click", () => {
+  const folderId = state.errorsFilterId;
+  if (folderId == null) return;
+  window.open(`/api/errors/folder-file?folder_id=${folderId}`, "_blank");
+});
+
 async function loadErrors() {
   _renderErrorsFilterOptions();
   const filterId = state.errorsFilterId;
@@ -293,6 +315,15 @@ async function loadErrors() {
     );
   } catch (_e) { return; }
   const errors = data.errors || [];
+  // JSON object keys are always strings; normalize to numbers so the
+  // lookup below (counts[f.id] with a numeric id) matches.
+  state.errorsFolderCounts = {};
+  for (const [k, v] of Object.entries(data.folder_counts || {})) {
+    state.errorsFolderCounts[Number(k)] = v;
+  }
+  // Re-render the dropdown labels now that fresh counts are in (the
+  // call at the top of this function ran on the previous poll's data).
+  _renderErrorsFilterOptions();
   const empty = $("errors-empty");
   const wrap = $("errors-wrap");
   const count = $("errors-count");
@@ -319,6 +350,10 @@ async function loadErrors() {
         setErrorsFilter(Number(row.dataset.folderId));
       }
     });
+  });
+  // The raw-link click must download the file, not filter the row.
+  $("errors-body").querySelectorAll(".error-row__raw").forEach((a) => {
+    a.addEventListener("click", (e) => e.stopPropagation());
   });
 }
 

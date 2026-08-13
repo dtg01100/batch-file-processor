@@ -55,6 +55,14 @@ function errorRows(errors, folders) {
     const folderCell = folderId != null
       ? `<span class="error-row__filterable">${H.esc(e.folder || "—")}</span>`
       : H.esc(e.folder || "—");
+    // Open question #2: rows the runner linked to a raw error-text file
+    // get a download link. The href must survive HTML escaping, so the
+    // path goes through encodeURIComponent and the click handler in
+    // app.js stops propagation (the row itself filters by folder).
+    const rawCell = e.error_file
+      ? `<a class="error-row__raw" href="/api/errors/file?path=${encodeURIComponent(e.error_file)}" ` +
+        `title="Download raw error text" download>raw</a>`
+      : "";
     return `<tr${attrs}>
       <td><code>${H.esc(H.fmtErrorStamp(e.timestamp))}</code></td>
       <td>${folderCell}</td>
@@ -63,6 +71,7 @@ function errorRows(errors, folders) {
         <span class="tag tag--err">${H.esc(e.error_type || "Error")}</span>
         <span>${H.esc(e.error_message || "")}</span>
       </td>
+      <td>${rawCell}</td>
     </tr>`;
   }).join("");
 }

@@ -65,20 +65,25 @@ const errors = [
     folder: "/data/inbox/gamma", filename: "/data/inbox/gamma/PO-77.edi",
     error_type: "EDIValidationError", error_message: "missing ST segment",
     error_source: "Validator", stack_trace: "", created_at: "",
+    error_file: "/data/errors/gamma/GAMMA errors.2026-08-12_13-20-51.txt",
   },
   {
     id: 2, timestamp: "Wed Aug 12 13:20:51 2026",
     folder: "/data/inbox/acme", filename: "/data/inbox/acme/INV-1002.edi",
     error_type: "EDISplitError", error_message: "missing B record",
-    error_source: "Splitter", stack_trace: "", created_at: "",
+    error_source: "Splitter", stack_trace: "", created_at: "", error_file: "",
   },
   {
     id: 1, timestamp: "Wed Aug 12 13:20:50 2026",
     folder: "/data/inbox/acme", filename: "/data/inbox/acme/INV-1001.edi",
     error_type: "ValueError", error_message: "bad rename pattern",
-    error_source: "Tweaker", stack_trace: "", created_at: "",
+    error_source: "Tweaker", stack_trace: "", created_at: "", error_file: "",
   },
 ];
+
+// Open question #3: per-folder totals the API returns alongside the rows
+// (acme 2, gamma 1, omega 0).
+const errorFolderCounts = { 1: 2, 2: 1, 3: 0 };
 
 const runs = [
   {
@@ -248,8 +253,10 @@ function buildRoutes() {
       const list = fid
         ? errors.filter((e) => e.folder.endsWith("/inbox/" + (Number(fid) === 1 ? "acme" : "gamma")))
         : errors;
-      return { count: list.length, errors: list };
+      return { count: list.length, errors: list, folder_counts: errorFolderCounts };
     },
+    // The banner's Download raw button opens this as a text/plain file.
+    "/api/errors/folder-file": () => rawResponse(200, "GAMMA error text"),
     "/api/runs": () => runs,
     "/api/processed-files/flagged": () => ({ count: processed.length, files: processed }),
     "/api/processed-files/1/resend": resendRoute(1),
@@ -315,7 +322,10 @@ function bootDom() {
     return true;
   };
   window.prompt = () => "";
-  window.open = () => {};
+  window.__openCalls = [];
+  window.open = (url) => {
+    window.__openCalls.push(url);
+  };
 
   // Run each static file as a real script in the window's VM context so
   // top-level declarations become globals exactly like browser <script>
@@ -396,8 +406,16 @@ test("boots and renders the full dashboard from the stubbed API", async () => {
   assert.equal(errorRows.length, 3);
   assert.equal(errorRows[0].querySelector("td:nth-child(2)").textContent, "/data/inbox/gamma");
   const filterOptions = [...document.getElementById("errors-filter").options].map((o) => o.textContent);
-  assert.deepEqual(filterOptions, ["All folders", "ACME", "GAMMA", "OMEGA"]);
+  // Per-folder error counts (open question #3) show in the dropdown.
+  assert.deepEqual(filterOptions, ["All folders", "ACME (2)", "GAMMA (1)", "OMEGA"]);
   assert.equal(document.getElementById("errors-filter-state").hidden, true);
+
+  // The GAMMA row links its raw error-text artifact (open question #2);
+  // the ACME rows don't have one yet.
+  const rawLinks = document.querySelectorAll("#errors-body .error-row__raw");
+  assert.equal(rawLinks.length, 1);
+  assert.ok(rawLinks[0].href.includes("/api/errors/file?path="));
+  assert.ok(rawLinks[0].href.includes("GAMMA%20errors"));
 
   // Runs list (newest first is reversed for display).
   const runItems = document.querySelectorAll("#runs-list li");
@@ -465,12 +483,25 @@ test("interactions: folder panel opens, error filter narrows and clears", async 
     "/data/inbox/gamma",
   );
 
+  // --- The banner's Download raw button opens the folder's full text. ---
+  const downloadBtn = document.getElementById("errors-filter-download");
+  assert.equal(downloadBtn.hidden, false);
+  downloadBtn.click();
+  assert.deepEqual(window.__openCalls, ["/api/errors/folder-file?folder_id=2"]);
+
   // --- Clear the filter: everything comes back. ---
   document.getElementById("errors-filter-clear").click();
   await waitFor(() => document.querySelectorAll("#errors-body tr").length === 3);
   assert.equal(document.getElementById("errors-filter-state").hidden, true);
   assert.equal(document.getElementById("errors-clear").textContent, "Clear all");
   assert.equal(document.getElementById("errors-count").textContent, "3 errors");
+
+  // --- Clicking the raw link downloads, it does NOT filter the row. ---
+  const rawLink = document.querySelector("#errors-body .error-row__raw");
+  assert.ok(rawLink, "GAMMA row links its raw artifact");
+  rawLink.click();
+  assert.equal(document.getElementById("errors-filter-state").hidden, true);
+  assert.equal(document.querySelectorAll("#errors-body tr").length, 3);
 });
 
 test("run flow: progress, results, and the log toggle", async () => {

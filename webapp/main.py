@@ -31,7 +31,9 @@ Endpoints
 - ``GET  /api/maintenance/download``          download a previously-written report
 - ``GET  /api/schedule``           current schedule state
 - ``POST /api/schedule``           enable/disable the scheduler + set interval
-- ``GET  /api/errors``             error-ledger rows (optionally per folder)
+- ``GET  /api/errors``             error-ledger rows + per-folder counts
+- ``GET  /api/errors/file``        download a raw error-text artifact
+- ``GET  /api/errors/folder-file`` download one folder's full error text
 - ``POST /api/errors/clear``       delete error-ledger rows
 """
 
@@ -44,7 +46,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -57,7 +59,12 @@ from webapp.backup import (
 )
 from webapp.config import Settings
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
-from webapp.errors import clear_errors, list_errors
+from webapp.errors import (
+    clear_errors,
+    error_counts,
+    folder_error_text,
+    list_errors,
+)
 from webapp.folder_schema import (
     FolderEditSchema,
     folder_row_to_schema,
@@ -473,6 +480,9 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         ``folder_id`` filters by the folder whose relative path the
         pipeline recorded; ``limit`` caps the page (bounded to 10000 so
         an accidental huge request can't return the whole table).
+        ``folder_counts`` (open question #3) maps every folder id to its
+        total ledger-row count so the Errors card can show per-folder
+        totals regardless of the active filter.
         """
         settings = app.state.settings
         if not settings.database_path.is_file():
@@ -482,9 +492,71 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             db = open_database(settings)
             try:
                 rows = list_errors(db, folder_id=folder_id, limit=limit)
+                counts = error_counts(db)
             finally:
                 db.close()
-        return {"count": len(rows), "errors": rows}
+        return {"count": len(rows), "errors": rows, "folder_counts": counts}
+
+    @app.get("/api/errors/file")
+    def api_error_file(path: str):
+        """Stream a raw error-text artifact back to the browser.
+
+        ``path`` must live under the data dir's ``errors/`` folder — the
+        same traversal guard as ``/api/maintenance/download`` — so an
+        operator-supplied path can't read arbitrary files.
+        """
+        settings = app.state.settings
+        resolved = Path(path).resolve()
+        allowed_root = settings.errors_dir.resolve()
+        try:
+            resolved.relative_to(allowed_root)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Path not allowed") from exc
+        if not resolved.is_file():
+            raise HTTPException(status_code=404, detail="Error file not found")
+        return FileResponse(
+            path=str(resolved),
+            filename=resolved.name,
+            media_type="text/plain",
+        )
+
+    @app.get("/api/errors/folder-file")
+    def api_error_folder_file(folder_id: int):
+        """Download one folder's full raw error text.
+
+        Concatenates every ledger row's raw artifact (falling back to a
+        synthesized block when a row has no linked file), so an operator
+        can grab the whole folder's error text at once instead of
+        scrolling the ledger.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                folder = db.folders_table.find_one(id=folder_id)
+                if folder is None:
+                    raise HTTPException(
+                        status_code=404, detail=f"Folder {folder_id} not found"
+                    )
+                text = folder_error_text(
+                    db,
+                    folder_id=folder_id,
+                    errors_dir=str(settings.errors_dir),
+                )
+            finally:
+                db.close()
+        alias = str(folder.get("alias") or folder.get("folder_name") or folder_id)
+        safe = "".join(c for c in alias if c.isalnum() or c in " _-") or "folder"
+        return Response(
+            content=text or f"No errors recorded for {alias}.\n",
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f'attachment; filename="{safe} errors.txt"'
+            },
+        )
 
     @app.post("/api/errors/clear")
     def api_clear_errors(folder_id: int | None = None) -> dict:
