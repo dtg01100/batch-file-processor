@@ -77,6 +77,16 @@ def test_import_flow(client, legacy_db):
         assert ":" not in folder["folder_name"]
 
 
+def test_import_rejects_non_sqlite_upload(client):
+    """A malformed database upload is a 400 (client error), not a 500."""
+    resp = client.post(
+        "/api/import",
+        files={"file": ("garbage.db", b"this is not a database", "application/octet-stream")},
+    )
+    assert resp.status_code == 400, resp.text
+    assert "not a SQLite database" in resp.json()["detail"]
+
+
 def test_run_endpoint_requires_database(client):
     resp = client.post("/api/run")
     assert resp.status_code == 400

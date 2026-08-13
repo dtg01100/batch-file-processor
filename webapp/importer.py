@@ -127,6 +127,19 @@ def import_database(
     source = Path(source_path)
     if not source.is_file():
         raise ValueError(f"Source database not found: {source}")
+    # Fail fast with a clear client error (400, not 500) when the
+    # upload isn't a SQLite file at all. The SQLite magic header is
+    # the same check sqlite3 uses when it reports "file is not a
+    # database"; surfacing it before connect keeps the endpoint's
+    # ValueError → 400 mapping (a bad upload is a client error, not
+    # a server failure).
+    try:
+        with source.open("rb") as fh:
+            magic = fh.read(16)
+    except OSError as exc:
+        raise ValueError(f"Source database not readable: {source}") from exc
+    if magic != b"SQLite format 3\x00":
+        raise ValueError(f"File is not a SQLite database: {source.name}")
 
     settings.ensure_dirs()
     effective_base = (

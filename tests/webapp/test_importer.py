@@ -90,3 +90,14 @@ def test_import_missing_file_raises(tmp_path):
     )
     with pytest.raises(ValueError, match="not found"):
         import_database(tmp_path / "nope.db", settings)
+
+
+def test_import_non_sqlite_file_raises_value_error(tmp_path):
+    """A malformed upload raises ValueError (→ 400), not sqlite3.DatabaseError (→ 500)."""
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
+    bogus = tmp_path / "not_a_db.db"
+    bogus.write_text("this is not a database\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="not a SQLite database"):
+        import_database(bogus, settings)
