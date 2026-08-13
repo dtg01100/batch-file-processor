@@ -340,7 +340,91 @@ def test_bulk_actions_503_when_no_database(tmp_path):
     for path in (
         "/api/maintenance/set-all-active",
         "/api/maintenance/set-all-inactive",
+        "/api/maintenance/mark-all-processed",
         "/api/maintenance/clear-queued-emails",
         "/api/maintenance/remove-inactive",
     ):
         assert c.post(path).status_code == 503, path
+
+
+# ---------------------------------------------------------------------------
+# mark-all-processed: record every active folder's on-disk files
+# ---------------------------------------------------------------------------
+
+
+def test_mark_all_processed_records_files_with_dedup(client):
+    """Active folders' files are recorded once; duplicates are skipped."""
+    test_client, settings = client
+    # Materialise the two active fixture folders with real files.
+    for rel in ("inbox/test", "inbox/other"):
+        (settings.base_dir / rel).mkdir(parents=True, exist_ok=True)
+    (settings.base_dir / "inbox/test" / "a.edi").write_text("AAAA", encoding="utf-8")
+    (settings.base_dir / "inbox/test" / "b.edi").write_text("BBBB", encoding="utf-8")
+    (settings.base_dir / "inbox/other" / "c.edi").write_text("CCCC", encoding="utf-8")
+
+    r = test_client.post("/api/maintenance/mark-all-processed")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["marked"] == 3
+    # JSON object keys are strings, so folder ids arrive as "1"/"2".
+    assert body["folders"]["1"] == 2
+    assert body["folders"]["2"] == 1
+
+    # Idempotent: a second scan finds nothing new.
+    r = test_client.post("/api/maintenance/mark-all-processed")
+    assert r.json()["marked"] == 0
+
+    db = open_database(settings)
+    try:
+        rows = list(db.processed_files.all())
+        assert len(rows) == 6  # 3 fixture rows + 3 new
+        new_rows = [x for x in rows if x["status"] == "processed" and x["sent_to"] == "N/A"]
+        assert len(new_rows) == 3
+        assert all(x["file_checksum"] for x in new_rows)
+    finally:
+        db.close()
+
+
+def test_mark_all_processed_only_scans_active_folders(client):
+    test_client, settings = client
+    db = open_database(settings)
+    try:
+        # Deactivate folder 2; its files must not be recorded.
+        db.folders_table.update({"id": 2, "folder_is_active": False}, ["id"])
+    finally:
+        db.close()
+    (settings.base_dir / "inbox/test").mkdir(parents=True, exist_ok=True)
+    (settings.base_dir / "inbox/other").mkdir(parents=True, exist_ok=True)
+    (settings.base_dir / "inbox/test" / "x.edi").write_text("XXXX", encoding="utf-8")
+    (settings.base_dir / "inbox/other" / "y.edi").write_text("YYYY", encoding="utf-8")
+
+    body = test_client.post("/api/maintenance/mark-all-processed").json()
+    assert body["marked"] == 1
+    assert body["folders"]["1"] == 1
+    assert "2" not in body["folders"]
+
+
+def test_mark_all_processed_skips_missing_directories(client):
+    """Folders whose directory doesn't exist are skipped, not failed."""
+    test_client, _ = client  # fixture dirs were never created on disk
+    body = test_client.post("/api/maintenance/mark-all-processed").json()
+    assert body == {"marked": 0, "folders": {}}
+
+
+def test_mark_all_processed_dedupes_within_folder(client):
+    """Two files with the same checksum in one folder record only once."""
+    test_client, settings = client
+    (settings.base_dir / "inbox/test").mkdir(parents=True, exist_ok=True)
+    content = b"same content"
+    (settings.base_dir / "inbox/test" / "dup1.edi").write_bytes(content)
+    (settings.base_dir / "inbox/test" / "dup2.edi").write_bytes(content)
+
+    body = test_client.post("/api/maintenance/mark-all-processed").json()
+    assert body["marked"] == 1
+    db = open_database(settings)
+    try:
+        rows = list(db.processed_files.find(folder_id=1))
+        # 2 fixture rows + 1 new (the second dup shares the checksum).
+        assert len(rows) == 3
+    finally:
+        db.close()

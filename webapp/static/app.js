@@ -718,6 +718,7 @@ $("settings-save").addEventListener("click", async () => {
 const MAINTENANCE_ENDPOINTS = {
   "set-all-active": "/api/maintenance/set-all-active",
   "set-all-inactive": "/api/maintenance/set-all-inactive",
+  "mark-all-processed": "/api/maintenance/mark-all-processed",
   "clear-queued-emails": "/api/maintenance/clear-queued-emails",
   "remove-inactive": "/api/maintenance/remove-inactive",
 };
@@ -736,6 +737,11 @@ for (const btn of document.querySelectorAll(".maintenance-card [data-maint]")) {
     if (action === "clear-queued-emails") {
       if (!window.confirm("Clear every queued report email?")) return;
     }
+    if (action === "mark-all-processed") {
+      if (!window.confirm("Record every file in the ACTIVE folders as already processed? The next run will skip them.")) {
+        return;
+      }
+    }
     btn.disabled = true;
     try {
       const r = await api(MAINTENANCE_ENDPOINTS[action], { method: "POST" });
@@ -745,8 +751,9 @@ for (const btn of document.querySelectorAll(".maintenance-card [data-maint]")) {
       await loadProcessed();
       const noun = action === "set-all-active" || action === "set-all-inactive"
         ? "folder(s) moved"
+        : action === "mark-all-processed" ? "file(s) marked processed"
         : action === "clear-queued-emails" ? "queued email(s) cleared" : "inactive folder(s) removed";
-      const n = r.changed ?? r.cleared ?? r.removed ?? 0;
+      const n = r.changed ?? r.marked ?? r.cleared ?? r.removed ?? 0;
       result.hidden = false;
       result.className = "notice ok";
       result.textContent = `${n} ${noun}.`;

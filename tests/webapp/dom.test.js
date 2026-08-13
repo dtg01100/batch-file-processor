@@ -357,6 +357,7 @@ function buildRoutes() {
       }
       return { changed };
     },
+    "/api/maintenance/mark-all-processed": () => ({ marked: 4, folders: { "1": 2, "2": 2 } }),
     "/api/maintenance/clear-queued-emails": () => ({ cleared: 2 }),
     "/api/maintenance/remove-inactive": () => {
       let removed = 0;
@@ -900,6 +901,12 @@ test("maintenance card bulk actions move and remove folders", async () => {
   await waitFor(() => result.textContent === "3 inactive folder(s) removed.");
   assert.equal(document.querySelectorAll("#folders-body tr").length, 0);
   assert.equal(document.getElementById("folders-empty").hidden, false);
+
+  // Mark all in active as processed confirms, then reports its count.
+  result.hidden = true;
+  click("mark-all-processed");
+  assert.ok(window.__confirmCalls.at(-1).includes("Record every file in the ACTIVE folders as already processed?"));
+  await waitFor(() => result.textContent === "4 file(s) marked processed.");
 
   // Clear queued emails reports its count.
   result.hidden = true;

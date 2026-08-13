@@ -268,6 +268,72 @@ def remove_inactive_folders(db: Any) -> int:
     return len(rows)
 
 
+def mark_active_as_processed(db: Any, *, base_dir: str) -> dict:
+    """Record every on-disk file of the active folders as processed.
+
+    Mirrors the desktop's ``MaintenanceFunctions.mark_active_as_processed``:
+    for each active folder, list the files in its directory, skip any
+    file whose checksum already has a ``processed_files`` row (dedup),
+    and insert a row per remaining file — so the next run skips them.
+    Folders whose directory is missing are skipped (their files cannot
+    be scanned; the run itself will report them as failures).
+
+    Args:
+        db: An open ``DatabaseObj``.
+        base_dir: The webapp base-dir, used to resolve the stored
+            (relative) folder paths to absolute paths.
+
+    Returns:
+        A dict with ``marked`` (total rows inserted) and ``folders``
+        mapping folder id -> number of files recorded for that folder.
+
+    """
+    from core.utils.file_utils import calculate_file_checksum
+    from webapp.paths import resolve
+
+    total = 0
+    per_folder: dict[int, int] = {}
+    for row in db.folders_table.find(folder_is_active=True):
+        folder_path = resolve(base_dir, row.get("folder_name", ""))
+        if not folder_path or not os.path.isdir(folder_path):
+            continue
+        existing = {
+            r.get("file_checksum")
+            for r in db.processed_files.find(folder_id=row["id"])
+            if r.get("file_checksum")
+        }
+        count = 0
+        now = datetime.datetime.now().isoformat()
+        for name in sorted(os.listdir(folder_path)):
+            full_path = os.path.join(folder_path, name)
+            if not os.path.isfile(full_path):
+                continue
+            checksum = calculate_file_checksum(full_path)
+            if not checksum or checksum in existing:
+                continue
+            # Same row shape the dispatcher writes on a real run, so the
+            # UI and the resend flagger treat these like any other file.
+            db.processed_files.insert(
+                {
+                    "file_name": full_path,
+                    "folder_id": row["id"],
+                    "folder_alias": row.get("alias", ""),
+                    "file_checksum": checksum,
+                    "processed_at": now,
+                    "created_at": now,
+                    "status": "processed",
+                    "sent_to": "N/A",
+                    "invoice_numbers": "",
+                    "resend_flag": False,
+                }
+            )
+            existing.add(checksum)
+            count += 1
+        total += count
+        per_folder[row["id"]] = count
+    return {"marked": total, "folders": per_folder}
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -305,6 +371,7 @@ __all__ = [
     "clear_processed_files",
     "clear_queued_emails",
     "export_processed_report",
+    "mark_active_as_processed",
     "mark_file_processed",
     "remove_inactive_folders",
     "set_all_folders_active",

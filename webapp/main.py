@@ -39,6 +39,7 @@ Endpoints
 - ``POST /api/maintenance/set-all-inactive``  deactivate every folder (bulk)
 - ``POST /api/maintenance/clear-queued-emails``  drop queued report emails
 - ``POST /api/maintenance/remove-inactive``   delete inactive folders + history
+- ``POST /api/maintenance/mark-all-processed``  record every active folder's files
 - ``POST /api/maintenance/export-processed``  write CSV report
 - ``GET  /api/maintenance/download``          download a previously-written report
 - ``GET  /api/schedule``           current schedule state
@@ -96,6 +97,7 @@ from webapp.maintenance import (
     clear_processed_files,
     clear_queued_emails,
     export_processed_report,
+    mark_active_as_processed,
     mark_file_processed,
     remove_inactive_folders,
     set_all_folders_active,
@@ -1070,6 +1072,32 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             finally:
                 db.close()
         return {"removed": removed}
+
+    @app.post("/api/maintenance/mark-all-processed")
+    def api_mark_all_processed() -> dict:
+        """Record every file in the active folders as processed.
+
+        Mirrors the desktop's "Mark all in active as processed": scans
+        each active folder's directory, dedupes by checksum against
+        ``processed_files``, and inserts a row per remaining file so the
+        next run skips them.
+
+        Raises:
+            HTTPException: 503 if no database imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                result = mark_active_as_processed(
+                    db, base_dir=str(settings.base_dir)
+                )
+            finally:
+                db.close()
+        return result
 
     @app.post("/api/maintenance/export-processed")
     def api_export_processed(folder_id: int) -> dict:
