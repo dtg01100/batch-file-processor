@@ -45,6 +45,12 @@ def _ensure_columns(db: Any) -> None:
     needed = [
         ("watch_enabled", "TEXT DEFAULT ''"),
         ("watch_interval_seconds", "INTEGER DEFAULT 30"),
+        # The v32 desktop DB (and the v32→v51 migration) never had this
+        # column; the webapp's PUT /api/folders/{id} writes it, so a
+        # missing column broke folder editing after import with
+        # ``no such column: alert_on_failure``. Default 1 = enabled,
+        # matching the desktop's ``alert_on_failure INTEGER`` semantics.
+        ("alert_on_failure", "INTEGER DEFAULT 1"),
         # Phase 5.2 watcher health — updated every tick by the watcher
         # thread; the Watching card reads them via ``list_watched``.
         ("last_tick_at", "TEXT DEFAULT ''"),

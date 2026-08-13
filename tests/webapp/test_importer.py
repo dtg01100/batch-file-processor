@@ -55,6 +55,39 @@ def test_import_rebases_paths_and_installs_active_db(tmp_path, legacy_db):
             db.close()
 
 
+def test_imported_db_has_webapp_write_columns(tmp_path, legacy_db):
+    """Every column the webapp writes on folder edit exists post-import.
+
+    Regression: the v32 desktop DB (and the v32→v51 migration) never
+    had ``alert_on_failure``; the webapp's ``PUT /api/folders/{id}``
+    writes it unconditionally, so folder editing 500'd with
+    ``no such column: alert_on_failure`` after importing the real
+    fixture. ``open_database`` backfills it via ``_ensure_columns``.
+    """
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
+    import_database(legacy_db, settings, platform="Windows")
+
+    db = open_database(settings)
+    try:
+        conn = db.database_connection.raw_connection
+        cols = {
+            r[1]
+            for r in conn.execute("PRAGMA table_info(folders)").fetchall()
+        }
+        assert "alert_on_failure" in cols
+        # Existing rows default to enabled (1) so alerts aren't
+        # silently disabled for imported folders.
+        row = conn.execute(
+            "SELECT alert_on_failure FROM folders LIMIT 1"
+        ).fetchone()
+        assert row is not None and row[0] == 1
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+
 def test_import_migrates_legacy_version(tmp_path, legacy_db):
     """The imported DB is migrated to the current schema (version table + kv_settings exist)."""
     settings = Settings(

@@ -215,6 +215,18 @@ def folder_row_to_schema(row: dict[str, Any]) -> FolderEditSchema:
         except (TypeError, ValueError):
             return default
 
+    def _coerce_str(value: Any) -> str:
+        """Normalize a DB cell to a string for the wire schema.
+
+        The legacy desktop DB stores the backend-specific ids as
+        integers (e.g. ``estore_c_record_OID = 10025``). The Pydantic
+        schema types them as ``str``, so without coercion every
+        imported folder would fail to load in the editor with a 500.
+        """
+        if value is None:
+            return ""
+        return str(value)
+
     ftp = None
     ftp_keys = ("ftp_server", "ftp_port", "ftp_username", "ftp_password", "ftp_folder")
     if _has_any(ftp_keys):
@@ -298,11 +310,11 @@ def folder_row_to_schema(row: dict[str, Any]) -> FolderEditSchema:
     )
 
     backend_specific = BackendSpecificConfig(
-        estore_store_number=row.get("estore_store_number", "") or "",
-        estore_vendor_oid=row.get("estore_Vendor_OId", "") or "",
-        estore_vendor_namevendoroid=row.get("estore_vendor_NameVendorOID", "") or "",
-        estore_c_record_oid=row.get("estore_c_record_OID", "") or "",
-        fintech_division_id=row.get("fintech_division_id", "") or "",
+        estore_store_number=_coerce_str(row.get("estore_store_number")),
+        estore_vendor_oid=_coerce_str(row.get("estore_Vendor_OId")),
+        estore_vendor_namevendoroid=_coerce_str(row.get("estore_vendor_NameVendorOID")),
+        estore_c_record_oid=_coerce_str(row.get("estore_c_record_OID")),
+        fintech_division_id=_coerce_str(row.get("fintech_division_id")),
     )
 
     csv_cfg = CSVConfig(

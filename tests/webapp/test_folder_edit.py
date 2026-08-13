@@ -124,6 +124,70 @@ def test_schema_roundtrip_preserves_every_field():
         assert flat.get(key) == value, f"{key}: {flat.get(key)!r} != {value!r}"
 
 
+def test_schema_coerces_legacy_integer_backend_specific_cells():
+    """Legacy DBs store backend-specific ids as ints; the schema needs str.
+
+    Without coercion, ``GET /api/folders/{id}`` raised a Pydantic
+    ``ValidationError`` → HTTP 500 for every imported legacy folder
+    (``estore_c_record_OID`` etc. are integers in the v32 desktop DB).
+    """
+    row = {
+        "id": 7,
+        "folder_name": "x",
+        "estore_store_number": 338,
+        "estore_Vendor_OId": 338,
+        "estore_vendor_NameVendorOID": "n1",
+        "estore_c_record_OID": 10025,
+        "fintech_division_id": 445,
+    }
+    schema = folder_row_to_schema(row)
+    assert schema.backend_specific is not None
+    assert schema.backend_specific.estore_store_number == "338"
+    assert schema.backend_specific.estore_vendor_oid == "338"
+    assert schema.backend_specific.estore_vendor_namevendoroid == "n1"
+    assert schema.backend_specific.estore_c_record_oid == "10025"
+    assert schema.backend_specific.fintech_division_id == "445"
+    # The schema validates cleanly (this is what used to 500).
+    schema.model_dump()
+
+
+def test_schema_coerces_null_backend_specific_cells():
+    """NULL backend-specific cells become empty strings, not 'None'."""
+    schema = folder_row_to_schema({"id": 1, "folder_name": "x"})
+    assert schema.backend_specific is not None
+    assert schema.backend_specific.estore_store_number == ""
+    assert schema.backend_specific.estore_c_record_oid == ""
+    assert schema.backend_specific.fintech_division_id == ""
+
+
+def test_get_folder_with_legacy_integer_backend_specific(client):
+    """End-to-end: a folder with integer backend-specific cells loads (200)."""
+    settings = client.app.state.settings
+    db = open_database(settings)
+    db.folders_table.insert(
+        {
+            "folder_name": "legacy/int",
+            "folder_is_active": True,
+            "alias": "LEGACY",
+            "process_backend_copy": True,
+            "copy_to_directory": "out",
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+            "process_backend_http": False,
+            "estore_store_number": 338,
+            "estore_Vendor_OId": 338,
+            "estore_c_record_OID": 10025,
+            "fintech_division_id": 445,
+        }
+    )
+    db.close()
+    r = client.get("/api/folders/2")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["backend_specific"]["estore_c_record_oid"] == "10025"
+    assert body["backend_specific"]["estore_store_number"] == "338"
+
+
 def test_schema_to_row_omits_unconfigured_backends():
     """Backend columns are only emitted when the nested config is non-None."""
     schema = FolderEditSchema(
