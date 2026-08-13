@@ -11,6 +11,7 @@ Endpoints
 - ``GET  /``                      browser UI (static files)
 - ``GET  /api/health``            liveness + data dirs
 - ``GET  /api/config``            base-dir / data-dir / platform
+- ``GET  /api/preflight``         validate active folder configs before a run
 - ``POST /api/import``            multipart: file (legacy folders.db),
                                   base_dir (optional), platform (optional)
 - ``POST /api/preview/edi``       classify an EDI upload (parse-only preview)
@@ -69,6 +70,7 @@ from fastapi.staticfiles import StaticFiles
 
 from core.domain.models.folder import FolderConfiguration
 from core.structured_logging import get_logger
+from dispatch.preflight_validator import PreflightIssue, PreflightValidator
 from webapp.backup import (
     list_backups,
     make_backup,
@@ -98,7 +100,7 @@ from webapp.maintenance import (
     remove_inactive_folders,
     set_all_folders_active,
 )
-from webapp.paths import resolve
+from webapp.paths import resolve, resolve_row
 from webapp.preview import preview_edi
 from webapp.resend import (
     clear_resend_flags,
@@ -547,6 +549,62 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
                 )
             finally:
                 db.close()
+
+    @app.get("/api/preflight")
+    def api_preflight(folder_id: int | None = None) -> dict:
+        """Validate active folder configurations before a run starts.
+
+        Runs the shared ``PreflightValidator`` (the same checks the
+        desktop surfaced as a dialog) over the active folders. Errors
+        (missing backend config, email enabled without SMTP, no backends)
+        will make the run fail per-file; warnings (missing copy
+        destination) degrade gracefully. The caller decides whether to
+        proceed — this endpoint never blocks an automatic/scheduled run.
+
+        Args (query params):
+            folder_id: optional — scope to one folder (per-folder runs).
+
+        Raises:
+            HTTPException: 503 if no database imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                if folder_id is None:
+                    rows = (
+                        list(db.folders_table.find(folder_is_active=True))
+                        if db.folders_table
+                        else []
+                    )
+                else:
+                    row = db.folders_table.find_one(id=folder_id)
+                    rows = [row] if row is not None else []
+                settings_dict = db.get_settings_or_default() or {}
+            finally:
+                db.close()
+        # Resolve relative paths against the base-dir (like the runner
+        # does) so the copy-destination existence check sees the real
+        # absolute path.
+        resolved = [resolve_row(r, settings.base_dir) for r in rows]
+        result = PreflightValidator().validate_folders(resolved, settings_dict)
+
+        def _issue(i: PreflightIssue) -> dict:
+            return {
+                "folder_alias": i.folder_alias,
+                "message": i.message,
+                "severity": i.severity,
+                "field": i.field,
+            }
+
+        return {
+            "is_valid": result.is_valid,
+            "errors": [_issue(i) for i in result.errors],
+            "warnings": [_issue(i) for i in result.warnings],
+        }
 
     @app.post("/api/run")
     def api_run() -> dict:

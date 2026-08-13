@@ -825,6 +825,7 @@ async function runFolderMaintenance(action) {
 async function _runFolderFromPanel() {
   const folderId = state.editingFolderId;
   if (folderId == null) return;
+  if (!(await confirmPreflight(folderId))) return;
   const btn = $("folder-panel-run");
   btn.disabled = true;
   btn.textContent = "Running…";
@@ -886,8 +887,32 @@ $("edi-preview-form").addEventListener("submit", async (e) => {
 
 /* ---------------- run ---------------- */
 
+// Preflight check before a run starts (mirrors the desktop's dialog).
+// Errors (no backends, email without SMTP, missing FTP fields) will make
+// the run fail per-file, so the operator gets a chance to abort; warnings
+// (missing copy destination) are informational. Returns true to proceed.
+async function confirmPreflight(folderId) {
+  try {
+    const p = folderId == null
+      ? await api("/api/preflight")
+      : await api(`/api/preflight?folder_id=${folderId}`);
+    if (p.is_valid) return true;
+    const lines = [...p.errors, ...p.warnings].map(
+      (i) => `  [${i.severity.toUpperCase()}] ${i.folder_alias}: ${i.message}`,
+    );
+    const heading = p.errors.length > 0
+      ? `${p.errors.length} configuration error(s) will make this run fail:`
+      : `${p.warnings.length} warning(s) found:`;
+    return window.confirm(`${heading}\n\n${lines.join("\n")}\n\nProceed anyway?`);
+  } catch (err) {
+    // Preflight is advisory — failing to fetch it must not block a run.
+    return true;
+  }
+}
+
 $("run-btn").addEventListener("click", async () => {
   try {
+    if (!(await confirmPreflight(null))) return;
     const { run_id } = await api("/api/run", { method: "POST" });
     state.lastRunId = run_id;
     $("run-progress").hidden = false;

@@ -216,6 +216,9 @@ function buildRoutes() {
   // Mutable copy of the processed-files rows: flag toggles and the resend
   // sweep update this, and loadProcessed re-reads it after each run.
   const processed = processedFiles.map((f) => ({ ...f }));
+  // Preflight: valid by default so ordinary run tests aren't blocked;
+  // a test can push error issues to exercise the confirm prompt.
+  const preflightIssues = [];
   // Editable settings: the Settings card GETs this on boot and PUTs it
   // back on Save (full replace of the editable groups).
   const settingsState = {
@@ -328,6 +331,11 @@ function buildRoutes() {
       }
       return settingsState;
     },
+    "/api/preflight": () => ({
+      is_valid: preflightIssues.length === 0,
+      errors: preflightIssues,
+      warnings: [],
+    }),
     // --- bulk maintenance (desktop Maintenance dialog parity) ---
     "/api/maintenance/set-all-active": () => {
       let changed = 0;
@@ -379,7 +387,7 @@ function buildRoutes() {
         ? (resendPollsLeft -= 1, { ...resendReport, status: "running" })
         : resendReport,
   };
-  return { routes, schedule };
+  return { routes, schedule, preflightIssues };
 }
 
 /* ---------------- harness ---------------- */
@@ -400,7 +408,7 @@ function bootDom() {
   window.TextEncoder = TextEncoder;
   window.TextDecoder = TextDecoder;
 
-  const { routes, schedule } = buildRoutes();
+  const { routes, schedule, preflightIssues } = buildRoutes();
   window.fetch = async (input, options) => {
     const url = new URL(String(input), window.location.href);
     const handler = routes[url.pathname];
@@ -432,7 +440,7 @@ function bootDom() {
   for (const file of SCRIPT_FILES) {
     vm.runInContext(fs.readFileSync(path.join(STATIC, file), "utf8"), window);
   }
-  return { dom, schedule };
+  return { dom, schedule, preflightIssues };
 }
 
 function waitFor(fn, { timeout = 3000, interval = 10 } = {}) {
@@ -658,6 +666,47 @@ test("run flow: progress, results, and the log toggle", async () => {
   toggle.click();
   assert.equal(logBody.hidden, true);
   assert.equal(toggle.textContent, "show");
+});
+
+test("run preflight: config errors prompt before the run starts", async () => {
+  const { dom, preflightIssues } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // A valid preflight (default) never prompts — covered by the run-flow
+  // test; here we start with an error so the prompt must fire.
+  preflightIssues.push({
+    folder_alias: "ACME",
+    message: "Email backend is enabled but global SMTP settings are missing: email_smtp_server",
+    severity: "error",
+    field: "email_smtp",
+  });
+
+  // --- Abort path: the operator declines, so no run starts. ---
+  window.confirm = (m) => {
+    window.__confirmCalls.push(m);
+    return false;
+  };
+  document.getElementById("run-btn").click();
+  await waitFor(() => window.__confirmCalls.length === 1);
+  const msg = window.__confirmCalls[0];
+  assert.ok(msg.includes("1 configuration error(s) will make this run fail"));
+  assert.ok(msg.includes("[ERROR] ACME: Email backend is enabled"));
+  assert.ok(msg.includes("Proceed anyway?"));
+  // Aborted: no run-progress, no run started.
+  assert.equal(document.getElementById("run-progress").hidden, true);
+  assert.equal(document.getElementById("run-btn").disabled, false);
+
+  // --- Proceed path: accepting starts the run normally. ---
+  window.confirm = (m) => {
+    window.__confirmCalls.push(m);
+    return true;
+  };
+  document.getElementById("run-btn").click();
+  await waitFor(() => !document.getElementById("run-progress").hidden);
+  assert.equal(window.__confirmCalls.length, 2);
 });
 
 test("schedule card: enable, persist interval, show run times, disable", async () => {
