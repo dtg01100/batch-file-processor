@@ -22,6 +22,7 @@ from dispatch.error_handler import ErrorHandler
 from dispatch.orchestrator import DispatchOrchestrator
 from dispatch.pipeline.factory import create_standard_pipeline
 from webapp.config import Settings
+from webapp.converters_api import merge_plugin_config
 from webapp.database import lock, open_database
 from webapp.errors import (
     LedgerDatabase,
@@ -171,7 +172,10 @@ def run_folders(settings: Settings, db=None) -> RunReport:
             active = [r for r in rows if _is_active(r)]
             # Keep the original (relative) row for the report; hand the
             # dispatcher the resolved (absolute) copy.
-            active_pairs = [(r, resolve_row(r, settings.base_dir)) for r in active]
+            active_pairs = [
+                (r, merge_plugin_config(resolve_row(r, settings.base_dir)))
+                for r in active
+            ]
 
             settings_dict = db.get_settings_or_default() or {}
 
@@ -338,7 +342,9 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                     # Folder deleted but rows remain — drop them.
                     delete_processed_rows(db, [r["id"] for r in rows])
                     continue
-                resolved = resolve_row(original_row, settings.base_dir)
+                resolved = merge_plugin_config(
+                    resolve_row(original_row, settings.base_dir)
+                )
                 before_error_id = max_error_id(db)
                 before_log_len = len(error_handler.get_error_log())
                 run_log = io.StringIO()
@@ -429,7 +435,7 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
             row = db.folders_table.find_one(id=folder_id)
             if row is None:
                 raise ValueError(f"Folder {folder_id} not found")
-            resolved = resolve_row(row, settings.base_dir)
+            resolved = merge_plugin_config(resolve_row(row, settings.base_dir))
             settings_dict = db.get_settings_or_default() or {}
             # Phase 5.1: hand the pipeline's error handler a database so
             # every ``record_error`` also lands in the ``dispatch_errors``

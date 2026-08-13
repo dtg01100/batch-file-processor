@@ -274,6 +274,22 @@
           </label>
         </fieldset>
 
+        <fieldset class="grp" id="grp-plugin">
+          <legend>Plugin configuration</legend>
+          <p class="card__hint">
+            Per-format converter settings (mirrors the desktop's plugin
+            UI). Pick a convert format to configure its fields; the
+            choice also sets the folder's convert-to-format above.
+          </p>
+          <label class="field">
+            <span>Convert format</span>
+            <select name="plugin.format" id="plugin-format">
+              <option value="">— none —</option>
+            </select>
+          </label>
+          <div id="plugin-fields"></div>
+        </fieldset>
+
         <fieldset class="grp">
           <legend>UPC override</legend>
           <label class="check"><input type="checkbox" name="upc_override.enabled" /> Enabled</label>

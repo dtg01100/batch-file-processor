@@ -426,6 +426,116 @@ function setPanelValue(name, value) {
   }
 }
 
+/* ---------------- per-format plugin configuration ---------------- */
+
+// The 11 convert formats with their config-field specs, loaded from
+// GET /api/converters. { format -> { display_name, fields: [...] } }
+let converterSpecs = {};
+let converterList = [];
+
+async function loadConverters() {
+  try {
+    converterList = await api("/api/converters");
+    converterSpecs = {};
+    for (const spec of converterList) converterSpecs[spec.format] = spec;
+    _populatePluginFormatOptions();
+  } catch (err) {
+    // Non-fatal: the plugin section stays empty if the endpoint fails.
+    converterList = [];
+    converterSpecs = {};
+  }
+}
+
+function _populatePluginFormatOptions() {
+  const sel = $("plugin-format");
+  const current = sel.value;
+  sel.innerHTML = `<option value="">— none —</option>`;
+  for (const spec of converterList) {
+    const opt = document.createElement("option");
+    opt.value = spec.format;
+    opt.textContent = spec.display_name;
+    sel.appendChild(opt);
+  }
+  sel.value = current;
+}
+
+// Render the config fields for a format into #plugin-fields. ``values``
+// carries the stored config (may be empty for defaults).
+function _renderPluginFields(format, values) {
+  const box = $("plugin-fields");
+  box.innerHTML = "";
+  const spec = converterSpecs[format];
+  if (!spec || !spec.fields.length) {
+    box.innerHTML = `<p class="card__hint">No additional settings for this format.</p>`;
+    return;
+  }
+  for (const f of spec.fields) {
+    const value = values[f.key] !== undefined ? values[f.key] : f.default;
+    const wrap = document.createElement("label");
+    wrap.className = f.type === "boolean" ? "check" : "field";
+    wrap.innerHTML = `<span>${H.esc(f.label)}</span>`;
+    let input;
+    if (f.type === "boolean") {
+      input = document.createElement("input");
+      input.type = "checkbox";
+      input.name = `plugin.${f.key}`;
+      input.checked = Boolean(value);
+      wrap.prepend(input);
+    } else if (f.type === "select") {
+      input = document.createElement("select");
+      input.name = `plugin.${f.key}`;
+      for (const opt of f.options) {
+        const o = document.createElement("option");
+        o.value = String(opt);
+        o.textContent = String(opt);
+        if (String(value) === String(opt)) o.selected = true;
+        input.appendChild(o);
+      }
+      wrap.appendChild(input);
+    } else {
+      input = document.createElement("input");
+      input.type = f.type === "integer" ? "number" : "text";
+      input.name = `plugin.${f.key}`;
+      if (f.type === "integer" && f.min !== undefined) input.min = String(f.min);
+      if (f.type === "integer" && f.max !== undefined) input.max = String(f.max);
+      input.value = value === null || value === undefined ? "" : String(value);
+      wrap.appendChild(input);
+    }
+    box.appendChild(wrap);
+  }
+}
+
+// Set the plugin format select to ``format`` and render its fields,
+// seeded from ``pluginConfig`` (the stored per-format config). Also
+// keeps the EDI group's convert_to_format in sync.
+function _selectPluginFormat(format, pluginConfig) {
+  const sel = $("plugin-format");
+  if (format && converterSpecs[format]) {
+    sel.value = format;
+  } else {
+    sel.value = "";
+  }
+  _renderPluginFields(sel.value, (pluginConfig && pluginConfig[sel.value]) || {});
+  const convertInput = $("folder-panel-form").elements.namedItem("edi.convert_to_format");
+  if (convertInput) convertInput.value = sel.value;
+}
+
+// Collect the rendered plugin fields into plugin_configurations[format].
+function _readPluginFields() {
+  const format = $("plugin-format").value;
+  const config = {};
+  for (const el of $("plugin-fields").querySelectorAll("[name^=\"plugin.\"]")) {
+    if (el.type === "checkbox") config[el.name.slice("plugin.".length)] = el.checked;
+    else if (el.type === "number") config[el.name.slice("plugin.".length)] = el.value === "" ? "" : Number(el.value);
+    else config[el.name.slice("plugin.".length)] = el.value;
+  }
+  return format ? { [format]: config } : {};
+}
+
+$("plugin-format").addEventListener("change", () => {
+  _selectPluginFormat($("plugin-format").value, {});
+});
+
 function populateFolderPanel(schema) {
   const form = $("folder-panel-form");
   // Identity + backend toggles + watcher live at the top level
@@ -474,6 +584,12 @@ function populateFolderPanel(schema) {
       }
     }
   }
+  // Per-format plugin section: default the format from convert_to_format
+  // and seed fields from the stored plugin_configurations.
+  _selectPluginFormat(
+    (schema.edi && schema.edi.convert_to_format) || "",
+    schema.plugin_configurations || {},
+  );
   $("folder-panel-error").hidden = true;
   $("folder-panel-error").textContent = "";
   $("folder-panel-title").textContent =
@@ -503,9 +619,15 @@ function readFolderPanel() {
       if (v !== undefined && v !== "" && v !== false) anySet = true;
       const lastDot = f.name.lastIndexOf(".");
       setByPath(obj, f.name.slice(lastDot + 1), v);
-    });
-    if (anySet) schema[grp] = obj;
+    });    if (anySet) schema[grp] = obj;
   }
+  // Per-format plugin fields live in plugin_configurations (a JSON dict),
+  // not fixed columns — collect them from the dynamic form.
+  const plugin = _readPluginFields();
+  if (Object.keys(plugin).length > 0) {
+    schema.plugin_configurations = plugin;
+  }
+
   return schema;
 }
 
@@ -1128,6 +1250,7 @@ $("clear-flags-btn").addEventListener("click", async () => {
   await loadProcessed();
   await loadBackups();
   await loadSettings();
+  await loadConverters();
   window.setInterval(async () => {
     await refreshConfig();
     await loadWatched();

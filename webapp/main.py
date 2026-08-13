@@ -78,6 +78,7 @@ from webapp.backup import (
     restore_backup,
 )
 from webapp.config import Settings
+from webapp.converters_api import all_converter_specs
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
 from webapp.errors import (
     clear_errors,
@@ -551,6 +552,17 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
                 )
             finally:
                 db.close()
+
+    @app.get("/api/converters")
+    def api_converters() -> list[dict]:
+        """Return the 11 convert formats with their per-format config fields.
+
+        Powers the folder panel's per-format plugin configuration section
+        (the desktop's dynamic plugin UI). Each entry has the format key
+        (matches ``convert_to_format``), the display name, and the config
+        field specs the browser renders into a form.
+        """
+        return all_converter_specs()
 
     @app.get("/api/preflight")
     def api_preflight(folder_id: int | None = None) -> dict:

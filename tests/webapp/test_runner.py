@@ -232,6 +232,62 @@ def test_run_without_as400_creds_still_succeeds(workspace, monkeypatch):
     assert report.total_failed == 0
 
 
+def test_run_merges_plugin_config_into_converter(workspace):
+    """Per-format plugin_configurations reach the converter at run time.
+
+    Regression for the webapp gap: plugin_configurations was schema-only
+    (no UI, nothing consumed it). The runner now merges the config for
+    the folder's convert_to_format into the folder dict, so e.g. the
+    tweaks converter's force_txt_file_ext setting takes effect and the
+    output is written with a .txt extension.
+    """
+    settings = workspace
+    inbox = settings.base_dir / "input"  # created by the workspace fixture
+    # Drop the fixture's non-EDI samples so only conv.edi runs.
+    for stale in inbox.glob("sample_*.txt"):
+        stale.unlink()
+    b_record = (
+        "B"
+        + "ABCDEFGHIJK"
+        + ("Test Item Description    1234560001000100000100010991001000000")
+    )
+    b_record = b_record.ljust(76)
+    (inbox / "conv.edi").write_text(
+        "AVENDOR00000000010101250000100000\n"
+        f"{b_record}\n"
+        "CTABSales Tax                 000010000\n",
+        encoding="utf-8",
+    )
+
+    db = open_database(settings)
+    try:
+        db.folders_table.insert(
+            {
+                "folder_name": "input",
+                "folder_is_active": "True",
+                "alias": "conv",
+                "process_edi": True,
+                "convert_to_format": "tweaks",
+                "process_backend_copy": True,
+                "copy_to_directory": "out",
+                "process_backend_ftp": False,
+                "process_backend_email": False,
+                "plugin_configurations": {"tweaks": {"force_txt_file_ext": True}},
+            }
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    report = run_folders(settings)
+    assert report.status == "completed"
+    assert report.total_processed == 1, report
+    assert report.total_failed == 0
+    out = settings.base_dir / "out"
+    # force_txt_file_ext merged from plugin_configurations → .txt output.
+    assert list(out.glob("*.txt")), f"expected .txt output in {out}"
+
+
 def test_run_store_refuses_second_concurrent_run(workspace):
     """A second ``start()`` while a previous run is in flight raises."""
     from webapp.runner import RunStore
