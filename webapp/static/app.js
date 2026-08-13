@@ -834,6 +834,11 @@ async function loadProcessed() {
           method: "POST",
           params: { resend },
         });
+        // Keep the in-memory snapshot in sync so _updateResendButton
+        // (and the resend click handler) see the persisted flag. The
+        // API response is fresh JSON, not a reference into this array.
+        const row = (state.processedFiles || []).find((f) => f.id === id);
+        if (row) row.resend_flag = resend;
         cb.closest("tr").classList.toggle("resend-row-flagged", resend);
         _updateResendButton();
       } catch (err) {

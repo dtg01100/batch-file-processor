@@ -260,7 +260,13 @@ function buildRoutes() {
     // The banner's Download raw button opens this as a text/plain file.
     "/api/errors/folder-file": () => rawResponse(200, "GAMMA error text"),
     "/api/runs": () => runs,
-    "/api/processed-files/flagged": () => ({ count: processed.length, files: processed }),
+    // Return a fresh copy like a real HTTP response would. app.js keeps
+    // its own state.processedFiles snapshot; aliasing the backend array
+    // here would mask bugs where the UI fails to update its copy.
+    "/api/processed-files/flagged": () => ({
+      count: processed.length,
+      files: processed.map((f) => ({ ...f })),
+    }),
     "/api/processed-files/1/resend": resendRoute(1),
     "/api/processed-files/2/resend": resendRoute(2),
     "/api/backups": () => ({ backups }),
