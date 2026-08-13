@@ -4,6 +4,7 @@ This module provides a pipeline step for EDI file validation,
 wrapping the existing EDIValidator with pipeline integration.
 """
 
+import os
 from dataclasses import dataclass, field
 from io import StringIO
 from typing import Any, Protocol, runtime_checkable
@@ -294,8 +295,18 @@ class EDIValidationStep:
             filename_for_log, errors, warnings, self._validator.get_error_log()
         )
 
-        if errors and self._error_handler is not None:
-            self._record_errors(filename_for_log, errors)
+        # Phase 5.5: record EDI validation problems in the errors ledger
+        # with the original program's major/minor distinction — format
+        # failures are major (they block the file), UPC/pricing issues are
+        # minor (they don't). The folder is derived from the file path so
+        # the rows match the runner's folder filter + raw-artifact linking
+        # (which key on the resolved folder path).
+        if self._error_handler is not None:
+            folder = os.path.dirname(file_path)
+            if errors:
+                self._record_errors(filename_for_log, errors, folder=folder)
+            if warnings:
+                self._record_warnings(filename_for_log, warnings, folder=folder)
 
         if log_output:
             self._error_log.write(log_output)
@@ -385,25 +396,69 @@ class EDIValidationStep:
 
         return output.getvalue()
 
-    def _record_errors(self, filename: str, errors: list[str]) -> None:
-        """Record errors to the error handler.
+    def _record_errors(
+        self, filename: str, errors: list[str], *, folder: str = ""
+    ) -> None:
+        """Record major EDI validation problems to the error handler.
+
+        Major problems are format failures that block the file (bad
+        record type, wrong B-record length, etc.). They are recorded with
+        ``severity="major"`` so the errors ledger can distinguish them
+        from minor issues.
 
         Args:
             filename: Filename being processed
             errors: List of error messages
+            folder: Folder the file lives in (resolved path)
 
         """
         if self._error_handler is None:
             return
 
-        logger.debug("Recording %d errors for %s", len(errors), filename)
+        logger.debug("Recording %d major problem(s) for %s", len(errors), filename)
         for error_msg in errors:
             self._error_handler.record_error(
-                folder="",
+                folder=folder,
                 filename=filename,
                 error=ValidationError(error_msg),
-                context={"source": "EDIValidationStep"},
+                context={"source": "EDIValidationStep", "severity": "major"},
                 error_source="EDIValidator",
+                severity="major",
+            )
+
+    def _record_warnings(
+        self, filename: str, warnings: list[str], *, folder: str = ""
+    ) -> None:
+        """Record minor EDI validation problems to the error handler.
+
+        Minor problems (non-numeric/suppressed/truncated UPC, missing
+        pricing, etc.) are warnings — the file still processes. They are
+        recorded with ``severity="minor"`` and ``alert_on_failure=False``
+        so a future alert integration doesn't page operators for a file
+        that went through fine.
+
+        Args:
+            filename: Filename being processed
+            warnings: List of warning messages
+            folder: Folder the file lives in (resolved path)
+
+        """
+        if self._error_handler is None:
+            return
+
+        logger.debug("Recording %d minor problem(s) for %s", len(warnings), filename)
+        for warning_msg in warnings:
+            self._error_handler.record_error(
+                folder=folder,
+                filename=filename,
+                error=ValidationError(warning_msg),
+                context={
+                    "source": "EDIValidationStep",
+                    "severity": "minor",
+                    "alert_on_failure": False,
+                },
+                error_source="EDIValidator",
+                severity="minor",
             )
 
 

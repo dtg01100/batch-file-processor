@@ -53,6 +53,7 @@ LEDGER_COLUMNS = (
     "stack_trace",
     "created_at",
     "error_file",
+    "severity",
 )
 
 
@@ -170,6 +171,7 @@ def insert_error(
     error_source: str = "FolderWatcher",
     timestamp: str | None = None,
     error_file: str = "",
+    severity: str = "",
     dedupe: bool = False,
 ) -> bool:
     """Insert one error-ledger row directly.
@@ -177,7 +179,9 @@ def insert_error(
     The dispatch pipeline writes through ``ErrorHandler``; the watcher
     (phase 5.2) writes scan failures through this helper so they share
     the same ``dispatch_errors`` table and the Errors card / folder
-    filter pick them up unchanged.
+    filter pick them up unchanged. ``severity`` carries the same
+    major/minor vocabulary the dispatch layer uses for EDI validation
+    problems (empty for generic scan failures).
 
     With ``dedupe=True`` the row is skipped when it is identical
     (same message/type/source) to the latest row already recorded for
@@ -203,8 +207,8 @@ def insert_error(
     con.execute(
         "INSERT INTO dispatch_errors "
         "(timestamp, folder, filename, error_message, error_type, "
-        "error_source, error_file) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "error_source, error_file, severity) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             timestamp or time.ctime(),
             folder,
@@ -213,6 +217,7 @@ def insert_error(
             error_type,
             error_source,
             error_file,
+            severity,
         ),
     )
     con.commit()

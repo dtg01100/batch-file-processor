@@ -106,6 +106,7 @@ class ErrorHandler:
         error: Exception,
         context: dict | None = None,
         error_source: str = "Dispatch",
+        severity: str = "",
     ) -> None:
         """Record an error to all configured destinations.
 
@@ -115,6 +116,10 @@ class ErrorHandler:
             error: The exception that was raised
             context: Optional additional context
             error_source: Source module/component name
+            severity: Optional "major"/"minor" classification (matches the
+                original EDI validator's distinction: format failures are
+                major problems that block a file, UPC/pricing issues are
+                minor problems that don't). Empty for pipeline exceptions.
 
         """
         import logging
@@ -126,6 +131,7 @@ class ErrorHandler:
             "error_message": str(error),
             "error_type": type(error).__name__,
             "error_source": error_source,
+            "severity": severity,
             "context": context or {},
         }
 
@@ -283,6 +289,7 @@ class ErrorHandler:
                     "error_message",
                     "error_type",
                     "error_source",
+                    "severity",
                 ]
                 placeholders = ", ".join("?" for _ in columns)
                 col_names = ", ".join(f'"{c}"' for c in columns)
@@ -296,6 +303,7 @@ class ErrorHandler:
                     error_record.get("error_message", ""),
                     error_record.get("error_type", ""),
                     error_record.get("error_source", ""),
+                    error_record.get("severity", ""),
                 )
                 raw_conn.execute(sql, params)
                 raw_conn.commit()

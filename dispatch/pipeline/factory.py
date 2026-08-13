@@ -63,7 +63,11 @@ def create_standard_pipeline(
         version=version,
         upc_service=upc_service,
         progress_reporter=progress_reporter,
-        validator_step=EDIValidationStep(),
+        # Phase 5.5: hand the validator step the same error handler the
+        # rest of the pipeline uses, so EDI validation problems (major
+        # format failures + minor UPC/pricing issues) land in the errors
+        # ledger instead of only the run card.
+        validator_step=EDIValidationStep(error_handler=error_handler),
         splitter_step=EDISplitterStep(),
         converter_step=EDIConverterStep(),
         file_processor=file_processor,

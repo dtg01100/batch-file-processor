@@ -73,7 +73,8 @@ def _ensure_columns(db: Any) -> None:
             "error_source TEXT, "
             "stack_trace TEXT, "
             "created_at TEXT, "
-            "error_file TEXT DEFAULT '')"
+            "error_file TEXT DEFAULT '', "
+            "severity TEXT DEFAULT '')"
         )
         existing = {
             row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()
@@ -91,6 +92,13 @@ def _ensure_columns(db: Any) -> None:
         if "error_file" not in err_existing:
             con.execute(
                 "ALTER TABLE dispatch_errors ADD COLUMN error_file TEXT DEFAULT ''"
+            )
+        # Phase 5.5: EDI validation problems are now recorded in the ledger
+        # with a major/minor classification (matching the original desktop
+        # validator). Backfill the column idempotently for pre-5.5 DBs.
+        if "severity" not in err_existing:
+            con.execute(
+                "ALTER TABLE dispatch_errors ADD COLUMN severity TEXT DEFAULT ''"
             )
         con.commit()
 

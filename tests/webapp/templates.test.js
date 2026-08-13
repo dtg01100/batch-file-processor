@@ -149,6 +149,56 @@ test("errorRows renders a filterable row for a known folder", () => {
   );
 });
 
+test("errorRows renders a severity badge for EDI validation problems", () => {
+  const out = errorRows(
+    [
+      {
+        timestamp: "Tue Aug 12 10:00:00 2026",
+        folder: "/data/inbox/acme",
+        filename: "/data/inbox/acme/bad.edi",
+        error_type: "ValidationError",
+        error_message: "EDI check failed on line number: 2",
+        severity: "major",
+      },
+      {
+        timestamp: "Tue Aug 12 10:01:00 2026",
+        folder: "/data/inbox/acme",
+        filename: "/data/inbox/acme/ok.edi",
+        error_type: "ValidationError",
+        error_message: "Non-numeric UPC in line 2 (UPC: 'x')",
+        severity: "minor",
+      },
+    ],
+    folders,
+  );
+  assert.ok(
+    out.includes('<span class="tag tag--major">major</span>'),
+    "major problem row shows a major badge",
+  );
+  assert.ok(
+    out.includes('<span class="tag tag--minor">minor</span>'),
+    "minor problem row shows a minor badge",
+  );
+});
+
+test("errorRows omits the severity badge when the row has no severity", () => {
+  // Pipeline exceptions (ValueError etc.) carry no severity — the badge
+  // must not appear so the row matches the pre-5.5 rendering.
+  const out = errorRows(
+    [
+      {
+        timestamp: "Tue Aug 12 10:00:00 2026",
+        folder: "/data/inbox/acme",
+        filename: "/data/inbox/acme/crash.edi",
+        error_type: "ValueError",
+        error_message: "boom",
+      },
+    ],
+    folders,
+  );
+  assert.ok(!out.includes('tag--major') && !out.includes('tag--minor'));
+});
+
 test("errorRows renders a raw-download link when the row links an artifact", () => {
   const out = errorRows(
     [

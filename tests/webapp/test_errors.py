@@ -826,3 +826,110 @@ def test_failing_run_records_error_in_ledger(settings):
     resp = client.get("/api/errors/file", params={"path": row["error_file"]})
     assert resp.status_code == 200
     assert "pattern" in resp.text.lower()
+
+
+def _run_folder(client, fid) -> dict:
+    """Start a single-folder run and wait for completion."""
+    resp = client.post(f"/api/folders/{fid}/run")
+    assert resp.status_code == 200, resp.text
+    run_id = resp.json()["run_id"]
+    detail = {}
+    for _ in range(100):  # up to ~10s
+        time.sleep(0.1)
+        detail = client.get(f"/api/runs/{run_id}").json()
+        if detail["status"] != "running":
+            break
+    assert detail["status"] == "completed"
+    return detail
+
+
+def test_edi_validation_major_problem_lands_ledger_row(settings):
+    """Phase 5.5: a file that fails EDI format validation (major problem)
+    records a ledger row with ``severity="major"``.
+
+    Previously the validator step had no error handler wired, so EDI
+    problems only appeared on the run card and never reached the errors
+    ledger the watcher/pipeline exceptions used.
+    """
+    fid = _insert_folder(
+        settings,
+        folder_name="inbox/test",
+        alias="TEST",
+        process_edi=True,
+        copy_to_directory="archive/test",
+    )
+    inbox = settings.base_dir / "inbox" / "test"
+    inbox.mkdir(parents=True)
+    # First char not 'A' → format check fails on line 1 (major problem).
+    (inbox / "bad.edi").write_text("XNOTANEDI\n", encoding="utf-8")
+
+    client = TestClient(create_app(settings=settings))
+    detail = _run_folder(client, fid)
+    assert detail["total_failed"] >= 1
+
+    body = client.get("/api/errors").json()
+    assert body["count"] >= 1
+    row = next(
+        (e for e in body["errors"] if (e["filename"] or "").endswith("bad.edi")),
+        None,
+    )
+    assert row is not None
+    assert row["error_type"] == "ValidationError"
+    assert row["error_source"] == "EDIValidator"
+    assert row["severity"] == "major"
+    assert "EDI check failed" in row["error_message"]
+
+    # The row carries the resolved folder path so folder filtering works.
+    filtered = client.get(f"/api/errors?folder_id={fid}").json()
+    assert filtered["count"] >= 1
+
+
+def test_edi_validation_minor_problem_lands_ledger_row(settings):
+    """Phase 5.5: a file that passes format checks but has a UPC warning
+    (minor problem) records a ``severity="minor"`` row while still
+    processing successfully.
+    """
+    fid = _insert_folder(
+        settings,
+        folder_name="inbox/test",
+        alias="TEST",
+        process_edi=True,
+        # A no-op-ish converter that still produces output so the file
+        # ships (validation must run, so process_edi=True is required;
+        # with an empty convert_to_format the converter produces nothing
+        # and the file fails with "No converted output was produced").
+        convert_to_format="tweaks",
+        copy_to_directory="archive/test",
+    )
+    inbox = settings.base_dir / "inbox" / "test"
+    inbox.mkdir(parents=True)
+    # A real convertible EDI (the estore sample shape) whose B-record UPC
+    # is non-numeric → minor issue. The B record must be exactly 76 chars
+    # (EDI_B_RECORD_STANDARD_LENGTH) to pass the format check. The file
+    # must still process: minor problems don't block.
+    b_record = "B" + "ABCDEFGHIJK" + (
+        "Test Item Description    1234560001000100000100010991001000000"
+    )
+    b_record = b_record.ljust(76)
+    assert len(b_record) == 76
+    content = (
+        "AVENDOR00000000010101250000100000\n"
+        f"{b_record}\n"
+        "CTABSales Tax                 000010000\n"
+    )
+    (inbox / "minor.edi").write_text(content, encoding="utf-8")
+
+    client = TestClient(create_app(settings=settings))
+    detail = _run_folder(client, fid)
+    # Minor problems don't block: the file is converted and sent.
+    assert detail["total_processed"] >= 1, detail
+    assert detail["total_failed"] == 0, detail
+
+    body = client.get("/api/errors").json()
+    row = next(
+        (e for e in body["errors"] if (e["filename"] or "").endswith("minor.edi")),
+        None,
+    )
+    assert row is not None
+    assert row["severity"] == "minor"
+    assert "Non-numeric UPC" in row["error_message"]

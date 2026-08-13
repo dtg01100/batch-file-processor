@@ -63,13 +63,19 @@ function errorRows(errors, folders) {
       ? `<a class="error-row__raw" href="/api/errors/file?path=${encodeURIComponent(e.error_file)}" ` +
         `title="Download raw error text" download>raw</a>`
       : "";
+    // Phase 5.5: EDI validation problems carry a major/minor severity
+    // (the original validator's distinction). Pipeline exceptions have
+    // no severity, so the badge is omitted for them.
+    const sev = e.severity === "major" || e.severity === "minor"
+      ? `<span class="tag tag--${e.severity}">${e.severity}</span> `
+      : "";
     return `<tr${attrs}>
       <td><code>${H.esc(H.fmtErrorStamp(e.timestamp))}</code></td>
       <td>${folderCell}</td>
       <td><code>${H.esc(e.filename || "—")}</code></td>
       <td>
         <span class="tag tag--err">${H.esc(e.error_type || "Error")}</span>
-        <span>${H.esc(e.error_message || "")}</span>
+        ${sev}<span>${H.esc(e.error_message || "")}</span>
       </td>
       <td>${rawCell}</td>
     </tr>`;

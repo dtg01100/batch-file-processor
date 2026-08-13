@@ -212,6 +212,11 @@ input[type="file"] { padding: 8px; }
 .tag--email { background: rgba(245, 181, 61, 0.14); color: #f5d08a; }
 .tag--http { background: rgba(46, 204, 113, 0.14); color: #8ae6b0; }
 .tag--err { background: rgba(255, 93, 108, 0.16); color: var(--bad); }
+/* Phase 5.5: EDI validation problem severity (original validator's
+   major/minor distinction). Major = format failure (blocks the file),
+   minor = UPC/pricing warning (file still processes). */
+.tag--major { background: rgba(255, 93, 108, 0.16); color: var(--bad); }
+.tag--minor { background: rgba(245, 181, 61, 0.14); color: #f5d08a; }
 .errors-card__head-actions { display: flex; align-items: center; gap: 10px; }
 .errors-card__filter { display: inline-flex; align-items: center; gap: 6px; }
 .errors-card__filter-label {

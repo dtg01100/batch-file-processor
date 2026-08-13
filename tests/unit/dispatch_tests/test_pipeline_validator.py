@@ -74,6 +74,7 @@ class MockErrorHandler:
         error: Exception,
         context: dict | None = None,
         error_source: str = "Dispatch",
+        severity: str = "",
     ):
         self.errors.append(
             {
@@ -82,6 +83,7 @@ class MockErrorHandler:
                 "error": error,
                 "context": context,
                 "error_source": error_source,
+                "severity": severity,
             }
         )
 
@@ -673,6 +675,10 @@ class TestEDIValidationStep:
         assert len(mock_error_handler.errors) == 1
         assert mock_error_handler.errors[0]["filename"] == "file.edi"
         assert isinstance(mock_error_handler.errors[0]["error"], ValidationError)
+        # Phase 5.5: format failures are major problems, tagged with the
+        # resolved folder so the ledger row is filterable + linkable.
+        assert mock_error_handler.errors[0]["severity"] == "major"
+        assert mock_error_handler.errors[0]["folder"] == "/test"
 
     def test_no_error_recording_when_valid(self):
         """Test that no errors are recorded when validation passes."""
@@ -921,8 +927,51 @@ class TestIntegration:
         step.validate("/test/myfile.edi", "myfile.edi")
 
         error = mock_error_handler.errors[0]
-        assert error["context"] == {"source": "EDIValidationStep"}
+        assert error["context"]["source"] == "EDIValidationStep"
+        assert error["context"]["severity"] == "major"
         assert error["error_source"] == "EDIValidator"
+        assert error["severity"] == "major"
+        assert error["folder"] == "/test"
+
+    def test_minor_warnings_recorded_with_severity_minor(self):
+        """Phase 5.5: UPC/pricing warnings are recorded as minor problems.
+
+        The file is still valid (is_valid=True) — minor problems don't
+        block processing — but they land in the ledger so operators can
+        see them, tagged ``severity="minor"`` with alerts suppressed.
+        """
+        mock_validator = MockValidatorForStep(
+            should_pass=True,
+            should_have_minor_errors=True,
+            warnings=["Non-numeric UPC in line 2 (UPC: 'x', desc: 'y')"],
+        )
+        mock_error_handler = MockErrorHandler()
+
+        step = EDIValidationStep(
+            validator=mock_validator, error_handler=mock_error_handler
+        )
+
+        result = step.validate("/data/inbox/test/a.edi", "a.edi")
+
+        assert result.is_valid is True
+        assert len(mock_error_handler.errors) == 1
+        error = mock_error_handler.errors[0]
+        assert error["severity"] == "minor"
+        assert error["folder"] == "/data/inbox/test"
+        assert error["context"]["alert_on_failure"] is False
+
+    def test_no_warning_recording_when_valid(self):
+        """A clean file records nothing to the error handler."""
+        mock_validator = MockValidatorForStep(should_pass=True)
+        mock_error_handler = MockErrorHandler()
+
+        step = EDIValidationStep(
+            validator=mock_validator, error_handler=mock_error_handler
+        )
+
+        step.validate("/data/a.edi", "a.edi")
+
+        assert len(mock_error_handler.errors) == 0
 
 
 class TestEdgeCases:
