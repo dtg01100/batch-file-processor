@@ -68,7 +68,9 @@ def _ensure_columns(db: Any) -> None:
             "stack_trace TEXT, "
             "created_at TEXT)"
         )
-        existing = {row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()}
+        existing = {
+            row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()
+        }
         for col, decl in needed:
             if col not in existing:
                 con.execute(f"ALTER TABLE folders ADD COLUMN {col} {decl}")
