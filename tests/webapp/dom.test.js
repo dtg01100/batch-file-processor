@@ -328,6 +328,38 @@ function buildRoutes() {
       }
       return settingsState;
     },
+    // --- bulk maintenance (desktop Maintenance dialog parity) ---
+    "/api/maintenance/set-all-active": () => {
+      let changed = 0;
+      for (const f of folderList) {
+        if (!f.is_active) {
+          f.is_active = true;
+          changed += 1;
+        }
+      }
+      return { changed };
+    },
+    "/api/maintenance/set-all-inactive": () => {
+      let changed = 0;
+      for (const f of folderList) {
+        if (f.is_active) {
+          f.is_active = false;
+          changed += 1;
+        }
+      }
+      return { changed };
+    },
+    "/api/maintenance/clear-queued-emails": () => ({ cleared: 2 }),
+    "/api/maintenance/remove-inactive": () => {
+      let removed = 0;
+      for (let i = folderList.length - 1; i >= 0; i--) {
+        if (!folderList[i].is_active) {
+          folderList.splice(i, 1);
+          removed += 1;
+        }
+      }
+      return { removed };
+    },
     "/api/backups": () => ({ backups }),
     // --- run flow ---
     "/api/run": () => ({ run_id: completedRunReport.run_id }),
@@ -787,4 +819,41 @@ test("settings card loads the saved state and PUTs edits", async () => {
   assert.equal(form.elements.namedItem("as400.as400_address").value, "10.0.0.7");
   assert.equal(form.elements.namedItem("email.smtp_port").value, "2525");
   assert.equal(form.elements.namedItem("email.enable_email").checked, true);
+});
+
+test("maintenance card bulk actions move and remove folders", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  const result = document.getElementById("maintenance-card-result");
+  const click = (action) =>
+    document.querySelector(`.maintenance-card [data-maint="${action}"]`).click();
+
+  // OMEGA (id 3) is the only inactive folder; Move all to active flips it.
+  click("set-all-active");
+  await waitFor(() => result.textContent === "1 folder(s) moved.");
+  assert.ok(result.classList.contains("ok"));
+  assert.equal(document.querySelectorAll("#folders-body tr").length, 3);
+  assert.ok(document.querySelectorAll("#folders-body tr")[2].textContent.includes("○ inactive") === false);
+
+  // Move all to inactive flips all three (OMEGA was just activated).
+  result.hidden = true;
+  click("set-all-inactive");
+  await waitFor(() => result.textContent === "3 folder(s) moved.");
+
+  // Remove inactive deletes all three (now all inactive) + confirms.
+  result.hidden = true;
+  click("remove-inactive");
+  assert.equal(window.__confirmCalls.at(-1), "Remove ALL inactive folder configurations and their processed-files history?");
+  await waitFor(() => result.textContent === "3 inactive folder(s) removed.");
+  assert.equal(document.querySelectorAll("#folders-body tr").length, 0);
+  assert.equal(document.getElementById("folders-empty").hidden, false);
+
+  // Clear queued emails reports its count.
+  result.hidden = true;
+  click("clear-queued-emails");
+  await waitFor(() => result.textContent === "2 queued email(s) cleared.");
 });

@@ -246,3 +246,101 @@ def test_export_handles_duplicate_filename(client):
         db.close()
     assert path_a != path_b
     assert "(1)" in path_b
+
+
+# ---------------------------------------------------------------------------
+# Bulk actions: set-all-active / set-all-inactive / clear-queued-emails /
+# remove-inactive (the desktop Maintenance dialog's bulk buttons)
+# ---------------------------------------------------------------------------
+
+
+def test_set_all_inactive_flips_active_folders(client):
+    test_client, settings = client
+    r = test_client.post("/api/maintenance/set-all-inactive")
+    assert r.status_code == 200
+    assert r.json() == {"changed": 2}  # both fixture folders were active
+    db = open_database(settings)
+    try:
+        rows = list(db.folders_table.all())
+        assert all(not row["folder_is_active"] for row in rows)
+    finally:
+        db.close()
+    # Idempotent: a second call changes nothing.
+    r = test_client.post("/api/maintenance/set-all-inactive")
+    assert r.json() == {"changed": 0}
+
+
+def test_set_all_active_flips_inactive_folders(client):
+    test_client, settings = client
+    db = open_database(settings)
+    try:
+        db.folders_table.update(
+            {"id": 1, "folder_is_active": False}, ["id"]
+        )
+    finally:
+        db.close()
+    r = test_client.post("/api/maintenance/set-all-active")
+    assert r.status_code == 200
+    assert r.json() == {"changed": 1}  # only folder 1 was inactive
+    db = open_database(settings)
+    try:
+        rows = list(db.folders_table.all())
+        assert all(row["folder_is_active"] for row in rows)
+    finally:
+        db.close()
+
+
+def test_clear_queued_emails_drops_queue(client):
+    test_client, settings = client
+    db = open_database(settings)
+    try:
+        db.emails_table.insert({"folder_alias": "TEST", "log": "/logs/run.log", "folder_id": 1})
+        db.emails_table.insert({"folder_alias": "OTHER", "log": "/logs/other.log", "folder_id": 2})
+        assert db.emails_table.count() == 2
+    finally:
+        db.close()
+    r = test_client.post("/api/maintenance/clear-queued-emails")
+    assert r.status_code == 200
+    assert r.json() == {"cleared": 2}
+    db = open_database(settings)
+    try:
+        assert db.emails_table.count() == 0
+    finally:
+        db.close()
+
+
+def test_remove_inactive_deletes_folder_and_history(client):
+    test_client, settings = client
+    db = open_database(settings)
+    try:
+        db.folders_table.update(
+            {"id": 2, "folder_is_active": False}, ["id"]
+        )
+    finally:
+        db.close()
+    r = test_client.post("/api/maintenance/remove-inactive")
+    assert r.status_code == 200
+    assert r.json() == {"removed": 1}
+    db = open_database(settings)
+    try:
+        assert db.folders_table.find_one(id=2) is None
+        # Folder 2's processed row (other.001) went with it.
+        rows = list(db.processed_files.all())
+        assert all(row["folder_id"] == 1 for row in rows)
+        assert len(rows) == 2
+    finally:
+        db.close()
+
+
+def test_bulk_actions_503_when_no_database(tmp_path):
+    settings = Settings(base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config")
+    settings.ensure_dirs()
+    app = create_app(settings=settings)
+    c = TestClient(app)
+    for path in (
+        "/api/maintenance/set-all-active",
+        "/api/maintenance/set-all-inactive",
+        "/api/maintenance/clear-queued-emails",
+        "/api/maintenance/remove-inactive",
+    ):
+        assert c.post(path).status_code == 503, path

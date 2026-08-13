@@ -1,6 +1,6 @@
 """Maintenance operations for the webapp.
 
-Three operations:
+Core operations:
 
 - ``clear_processed_files``: bulk-delete ``processed_files`` rows,
   optionally filtered by folder. Used when an operator wants to
@@ -20,6 +20,20 @@ Three operations:
   file for a folder. Mirrors the desktop app's
   ``export_processed_report`` from ``interface/operations/processed_files.py``;
   returns the file path so the web UI can offer it as a download.
+
+Bulk actions (the desktop's Maintenance dialog):
+
+- ``set_all_folders_active`` / ``set_all_folders_inactive``: flip
+  every folder to the given state (``set_all_active`` /
+  ``set_all_inactive`` in the desktop's ``MaintenanceFunctions``).
+
+- ``clear_queued_emails``: drop every row from the ``emails_to_send``
+  queue — the desktop's "Clear queued emails" button
+  (``db.emails_table.delete()``).
+
+- ``remove_inactive_folders``: delete every folder marked inactive,
+  including its processed-files rows — the desktop's "Remove all
+  inactive configurations" (``remove_inactive_folders``).
 
 The webapp is the only writer to ``processed_files`` in this project,
 so the implementations here own the SQL. The desktop-app helper is
@@ -182,6 +196,78 @@ def export_processed_report(db: Any, folder_id: int, output_dir: str) -> str:
     return str(out_path)
 
 
+def set_all_folders_active(db: Any, *, active: bool) -> int:
+    """Flip every folder to the given active state (bulk maintenance).
+
+    Mirrors the desktop's ``MaintenanceFunctions.set_all_active`` /
+    ``set_all_inactive``: only folders in the *opposite* state are
+    touched, so calling it twice in a row is a no-op and the returned
+    count is the number of folders actually changed.
+
+    Args:
+        db: An open ``DatabaseObj``.
+        active: True to activate every inactive folder; False to
+            deactivate every active folder.
+
+    Returns:
+        The number of folders flipped.
+
+    """
+    table = db.folders_table
+    changed = 0
+    for row in table.find(folder_is_active=not active):
+        row["folder_is_active"] = active
+        table.update(row, ["id"])
+        changed += 1
+    return changed
+
+
+def clear_queued_emails(db: Any) -> int:
+    """Drop every queued report-email row (``emails_to_send``).
+
+    Matches the desktop's "Clear queued emails" button
+    (``db.emails_table.delete()`` in the Maintenance dialog). The
+    report-email queue is populated when ``enable_reporting`` is on;
+    clearing it drops unsent report entries.
+
+    Args:
+        db: An open ``DatabaseObj``.
+
+    Returns:
+        The number of queued rows deleted.
+
+    """
+    table = db.emails_table
+    count = table.count()
+    table.delete()
+    return count
+
+
+def remove_inactive_folders(db: Any) -> int:
+    """Delete every folder marked inactive, plus its processed rows.
+
+    Matches the desktop's "Remove all inactive configurations" — each
+    inactive folder is removed the same way the per-folder Delete
+    works (the row itself and its ``processed_files`` history), so the
+    resend flagger never sees orphaned rows.
+
+    Args:
+        db: An open ``DatabaseObj``.
+
+    Returns:
+        The number of folders removed.
+
+    """
+    con = db.database_connection.raw_connection
+    rows = list(db.folders_table.find(folder_is_active=False))
+    for row in rows:
+        folder_id = row["id"]
+        db.folders_table.delete(id=folder_id)
+        con.execute("DELETE FROM processed_files WHERE folder_id = ?", (folder_id,))
+    con.commit()
+    return len(rows)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -217,8 +303,11 @@ def _parse_timestamp(value: str) -> datetime.datetime:
 # ---------------------------------------------------------------------------
 __all__ = [
     "clear_processed_files",
+    "clear_queued_emails",
     "export_processed_report",
     "mark_file_processed",
+    "remove_inactive_folders",
+    "set_all_folders_active",
 ]
 
 

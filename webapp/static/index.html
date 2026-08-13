@@ -78,6 +78,25 @@
       </div>
     </section>
 
+    <section class="card maintenance-card">
+      <div class="card__head">
+        <h2>Maintenance</h2>
+        <span class="pill pill--warn">advanced</span>
+      </div>
+      <p class="card__hint">
+        Bulk actions mirrored from the desktop app's Maintenance dialog.
+        "Move all" flips every folder's active state; "Remove inactive"
+        deletes those configurations and their processed-files history.
+      </p>
+      <div class="maintenance-card__actions">
+        <button type="button" class="btn btn--ghost" data-maint="set-all-active">Move all to active</button>
+        <button type="button" class="btn btn--ghost" data-maint="set-all-inactive">Move all to inactive</button>
+        <button type="button" class="btn btn--ghost" data-maint="clear-queued-emails">Clear queued emails</button>
+        <button type="button" class="btn btn--danger" data-maint="remove-inactive">Remove inactive configurations</button>
+      </div>
+      <div id="maintenance-card-result" class="notice" hidden></div>
+    </section>
+
     <section class="card watching-card">
       <div class="card__head">
         <h2>Watching</h2>

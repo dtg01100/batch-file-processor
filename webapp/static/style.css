@@ -79,6 +79,10 @@ body {
   color: var(--bad);
   border-color: rgba(255, 93, 108, 0.45);
 }
+.pill--warn {
+  color: var(--warn);
+  border-color: rgba(240, 170, 65, 0.45);
+}
 
 /* ---------- layout ---------- */
 
@@ -365,6 +369,17 @@ input[type="file"] { padding: 8px; }
   width: auto;
   font-size: 12.5px;
   padding: 8px 14px;
+}
+
+/* ---------- maintenance card (bulk actions) ---------- */
+
+.maintenance-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.maintenance-card__actions .btn {
+  width: auto;
 }
 
 .grp {

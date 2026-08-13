@@ -713,6 +713,53 @@ $("settings-save").addEventListener("click", async () => {
   }
 });
 
+/* ---------------- bulk maintenance card ---------------- */
+
+const MAINTENANCE_ENDPOINTS = {
+  "set-all-active": "/api/maintenance/set-all-active",
+  "set-all-inactive": "/api/maintenance/set-all-inactive",
+  "clear-queued-emails": "/api/maintenance/clear-queued-emails",
+  "remove-inactive": "/api/maintenance/remove-inactive",
+};
+
+for (const btn of document.querySelectorAll(".maintenance-card [data-maint]")) {
+  btn.addEventListener("click", async () => {
+    const action = btn.dataset.maint;
+    const result = $("maintenance-card-result");
+    result.hidden = true;
+    // The destructive ones deserve a confirm, like the desktop dialog.
+    if (action === "remove-inactive") {
+      if (!window.confirm("Remove ALL inactive folder configurations and their processed-files history?")) {
+        return;
+      }
+    }
+    if (action === "clear-queued-emails") {
+      if (!window.confirm("Clear every queued report email?")) return;
+    }
+    btn.disabled = true;
+    try {
+      const r = await api(MAINTENANCE_ENDPOINTS[action], { method: "POST" });
+      await loadFolders();
+      await refreshConfig();
+      await loadWatched();
+      await loadProcessed();
+      const noun = action === "set-all-active" || action === "set-all-inactive"
+        ? "folder(s) moved"
+        : action === "clear-queued-emails" ? "queued email(s) cleared" : "inactive folder(s) removed";
+      const n = r.changed ?? r.cleared ?? r.removed ?? 0;
+      result.hidden = false;
+      result.className = "notice ok";
+      result.textContent = `${n} ${noun}.`;
+    } catch (err) {
+      result.hidden = false;
+      result.className = "notice err";
+      result.textContent = err.message || String(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 /* ---------------- folder-level maintenance ---------------- */
 
 function _showMaintenance(message, kind) {

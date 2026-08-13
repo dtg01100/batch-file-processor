@@ -34,6 +34,10 @@ Endpoints
 - ``POST /api/processed-files/clear-flags``   clear every resend flag
 - ``POST /api/maintenance/clear-processed``   bulk-delete processed rows
 - ``POST /api/maintenance/mark-processed``    record a single file as processed
+- ``POST /api/maintenance/set-all-active``    activate every folder (bulk)
+- ``POST /api/maintenance/set-all-inactive``  deactivate every folder (bulk)
+- ``POST /api/maintenance/clear-queued-emails``  drop queued report emails
+- ``POST /api/maintenance/remove-inactive``   delete inactive folders + history
 - ``POST /api/maintenance/export-processed``  write CSV report
 - ``GET  /api/maintenance/download``          download a previously-written report
 - ``GET  /api/schedule``           current schedule state
@@ -88,8 +92,11 @@ from webapp.history import RunHistory
 from webapp.importer import ImportResult, import_database
 from webapp.maintenance import (
     clear_processed_files,
+    clear_queued_emails,
     export_processed_report,
     mark_file_processed,
+    remove_inactive_folders,
+    set_all_folders_active,
 )
 from webapp.paths import resolve
 from webapp.preview import preview_edi
@@ -943,6 +950,68 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             finally:
                 db.close()
         return {"id": row_id}
+
+    @app.post("/api/maintenance/set-all-active")
+    def api_set_all_active() -> dict:
+        """Activate every inactive folder (desktop's "Move all to active")."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                changed = set_all_folders_active(db, active=True)
+            finally:
+                db.close()
+        return {"changed": changed}
+
+    @app.post("/api/maintenance/set-all-inactive")
+    def api_set_all_inactive() -> dict:
+        """Deactivate every active folder (desktop's "Move all to inactive")."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                changed = set_all_folders_active(db, active=False)
+            finally:
+                db.close()
+        return {"changed": changed}
+
+    @app.post("/api/maintenance/clear-queued-emails")
+    def api_clear_queued_emails() -> dict:
+        """Drop every queued report-email row (desktop's "Clear queued emails")."""
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                cleared = clear_queued_emails(db)
+            finally:
+                db.close()
+        return {"cleared": cleared}
+
+    @app.post("/api/maintenance/remove-inactive")
+    def api_remove_inactive() -> dict:
+        """Delete every inactive folder + its processed rows (desktop's
+        "Remove all inactive configurations").
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                removed = remove_inactive_folders(db)
+            finally:
+                db.close()
+        return {"removed": removed}
 
     @app.post("/api/maintenance/export-processed")
     def api_export_processed(folder_id: int) -> dict:
