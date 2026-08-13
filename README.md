@@ -53,11 +53,37 @@ uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 | `GET /api/health` | Liveness + paths |
 | `GET /api/config` | Base-dir, data-dir, DB status, counts |
 | `POST /api/import` | Multipart upload of a legacy `folders.db` (+ optional `base_dir`, `platform`) |
+| `POST /api/preview/edi` | Classify an EDI upload (parse-only preview) |
 | `GET /api/folders` | Configured folders (relative + resolved paths) |
+| `GET /api/folders/{id}` | One folder (full edit schema) |
+| `PUT /api/folders/{id}` | Save one folder |
 | `POST /api/run` | Start a background processing run |
+| `POST /api/resend` | Start a background resend run |
+| `POST /api/folders/{id}/run` | Run a single folder |
 | `GET /api/runs` | Recent runs |
-| `GET /api/runs/{run_id}` | Run detail (poll while running) |
+| `GET /api/runs/{run_id}` | Run detail (poll while running; includes duration + throughput) |
+| `GET /api/runs/{run_id}/log` | SSE stream of the run's per-folder logs |
 | `GET /api/processed-files` | Recently processed files |
+| `GET /api/processed-files/flagged` | Processed files with resend-flag info |
+| `POST /api/processed-files/{id}/resend` | Flag a row for resend |
+| `POST /api/processed-files/resend-batch` | Flag many rows for resend |
+| `POST /api/processed-files/clear-flags` | Clear every resend flag |
+| `POST /api/maintenance/clear-processed` | Bulk-delete processed rows |
+| `POST /api/maintenance/mark-processed` | Record a single file as processed |
+| `POST /api/maintenance/export-processed` | Write a CSV report for a folder |
+| `GET /api/maintenance/download` | Download a previously-written report |
+| `GET /api/schedule` | Current scheduler state + runs triggered |
+| `POST /api/schedule` | Enable/disable the scheduler + set interval |
+| `GET /api/watched` | Watched folders + live watcher health (last tick / last run / last error) |
+| `POST /api/watcher/refresh` | Force the watcher supervisor to re-read the watch list |
+| `GET /api/errors` | Error-ledger rows + per-folder counts |
+| `GET /api/errors/file` | Download a raw error-text artifact |
+| `GET /api/errors/folder-file` | Download one folder's full error text |
+| `POST /api/errors/clear` | Delete error-ledger rows (optionally per folder) |
+| `GET /api/backups` | List timestamped backup files |
+| `POST /api/backup/create` | Snapshot the active DB |
+| `POST /api/backup/restore` | Restore a named backup as the active DB |
+| `GET /api/backup/download` | Download a backup file |
 
 ### Running Tests
 

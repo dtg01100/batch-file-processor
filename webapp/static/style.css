@@ -415,6 +415,9 @@ input[type="file"] { padding: 8px; }
 .folder-result__head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .folder-result h3 { margin: 0; font-size: 14px; }
 .folder-result__meta { font-size: 12px; color: var(--text-dim); font-family: ui-monospace, monospace; }
+
+/* Phase 5.3: run-level duration + throughput summary on the run card. */
+.run-meta { font-size: 12px; color: var(--text-dim); font-family: ui-monospace, monospace; margin-bottom: 8px; }
 .folder-result__stats { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; }
 .stat b { font-size: 16px; }
 .stat--good b { color: var(--good); }

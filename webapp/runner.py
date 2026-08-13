@@ -58,6 +58,25 @@ class RunReport:
     total_processed: int = 0
     total_failed: int = 0
     error: str = ""
+    # Phase 5.3: computed at completion by ``_finalize_run_report``.
+    duration_seconds: float = 0.0
+    files_per_second: float = 0.0
+
+
+def _finalize_run_report(report: RunReport) -> None:
+    """Stamp ``finished_at`` and compute duration + throughput (5.3)."""
+    report.finished_at = datetime.datetime.now().isoformat()
+    try:
+        start = datetime.datetime.fromisoformat(report.started_at)
+        finish = datetime.datetime.fromisoformat(report.finished_at)
+        report.duration_seconds = max(0.0, (finish - start).total_seconds())
+    except (TypeError, ValueError):
+        report.duration_seconds = 0.0
+    report.files_per_second = (
+        report.total_processed / report.duration_seconds
+        if report.duration_seconds > 0
+        else 0.0
+    )
 
 
 def _is_active(row: dict[str, Any]) -> bool:
@@ -228,7 +247,7 @@ def run_folders(settings: Settings, db=None) -> RunReport:
         if owns_db:
             with contextlib.suppress(Exception):
                 db.close()
-        report.finished_at = datetime.datetime.now().isoformat()
+        _finalize_run_report(report)
 
     return report
 
@@ -275,7 +294,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
             )
             if not flagged:
                 report.status = "completed"
-                report.finished_at = datetime.datetime.now().isoformat()
+                _finalize_run_report(report)
                 return report
 
             # Group by folder_id.
@@ -370,7 +389,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
         if owns_db:
             with contextlib.suppress(Exception):
                 db.close()
-        report.finished_at = datetime.datetime.now().isoformat()
+        _finalize_run_report(report)
 
     return report
 
@@ -469,7 +488,7 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
         if owns_db:
             with contextlib.suppress(Exception):
                 db.close()
-        report.finished_at = datetime.datetime.now().isoformat()
+        _finalize_run_report(report)
     return report
 
 

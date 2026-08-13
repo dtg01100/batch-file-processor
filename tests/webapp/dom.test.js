@@ -83,23 +83,23 @@ const errors = [
 
 // Open question #3: per-folder totals the API returns alongside the rows
 // (acme 2, gamma 1, omega 0).
-const errorFolderCounts = { 1: 2, 2: 1, 3: 0 };
-
-const runs = [
-  {
-    run_id: "run-2026-08-12-1", status: "completed",
-    started_at: "2026-08-12T13:20:00.000000", finished_at: "2026-08-12T13:21:00.000000",
-    total_processed: 3, total_failed: 0, error: "",
-    folders: [{ alias: "ACME", relative_path: "inbox/acme", resolved_path: "/data/inbox/acme",
-                files_processed: 3, files_failed: 0, success: true, errors: [] }],
-  },
-  {
-    run_id: "run-2026-08-12-0", status: "failed",
-    started_at: "2026-08-12T13:10:00.000000", finished_at: "2026-08-12T13:11:00.000000",
-    total_processed: 1, total_failed: 2, error: "backend down",
-    folders: [],
-  },
-];
+const errorFolderCounts = { 1: 2, 2: 1, 3: 0 };  const runs = [
+    {
+      run_id: "run-2026-08-12-1", status: "completed",
+      started_at: "2026-08-12T13:20:00.000000", finished_at: "2026-08-12T13:21:00.000000",
+      total_processed: 3, total_failed: 0, error: "",
+      duration_seconds: 60, files_per_second: 0.05,
+      folders: [{ alias: "ACME", relative_path: "inbox/acme", resolved_path: "/data/inbox/acme",
+                  files_processed: 3, files_failed: 0, success: true, errors: [] }],
+    },
+    {
+      run_id: "run-2026-08-12-0", status: "failed",
+      started_at: "2026-08-12T13:10:00.000000", finished_at: "2026-08-12T13:11:00.000000",
+      total_processed: 1, total_failed: 2, error: "backend down",
+      duration_seconds: 60, files_per_second: 0.0167,
+      folders: [],
+    },
+  ];
 
 const processedFiles = [
   {
@@ -144,6 +144,8 @@ const completedRunReport = {
   total_processed: 3,
   total_failed: 0,
   error: "",
+  duration_seconds: 60,
+  files_per_second: 0.05,
   run_log:
     "processing INV-1001.edi\nprocessing INV-1002.edi\nprocessing PO-77.edi\n3 files processed",
   folders: [
@@ -424,6 +426,9 @@ test("boots and renders the full dashboard from the stubbed API", async () => {
   assert.ok(runItems[0].textContent.includes("1 ok · 2 fail"));
   assert.ok(runItems[0].querySelector(".dot").classList.contains("err"));
   assert.ok(runItems[1].textContent.includes("3 ok · 0 fail"));
+  // Phase 5.3: duration + throughput on every finished run row.
+  assert.ok(runItems[0].textContent.includes("60.0s · 0.0 files/s"));
+  assert.ok(runItems[1].textContent.includes("60.0s · 0.1 files/s"));
 
   // Processed files (first row flagged + checked).
   const processedRows = document.querySelectorAll("#processed-body tr");
@@ -539,6 +544,8 @@ test("run flow: progress, results, and the log toggle", async () => {
   assert.ok(results.innerHTML.includes('processed <b>2</b>'));
   assert.ok(results.innerHTML.includes('failed <b>0</b>'));
   assert.ok(results.innerHTML.includes("GAMMA"));
+  // Phase 5.3: the run card opens with a duration + throughput line.
+  assert.ok(results.innerHTML.includes('<div class="run-meta">60.0s · 0.1 files/s</div>'));
 
   // renderRun swaps in the report's run_log and hides the body behind the toggle.
   assert.equal(logBody.textContent, completedRunReport.run_log);

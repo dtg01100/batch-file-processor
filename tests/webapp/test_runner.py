@@ -118,6 +118,34 @@ def test_run_reports_missing_folder_as_failure(workspace):
     folder = report.folders[0]
     assert not folder.success
     assert folder.files_failed == 1
+    # Phase 5.3: even a failed run gets a duration stamp (0 throughput).
+    assert report.duration_seconds >= 0
+    assert report.files_per_second == 0
+
+
+def test_run_report_duration_metrics(workspace):
+    """Phase 5.3: completed runs carry duration + throughput."""
+    settings = workspace
+    db = open_database(settings)
+    try:
+        _insert_folder(db, "input", copy_to_directory="output")
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    report = run_folders(settings)
+
+    assert report.status == "completed"
+    assert report.total_processed == 2
+    assert report.started_at
+    assert report.finished_at >= report.started_at
+    # Two files through a real pipeline take well over a microsecond.
+    assert report.duration_seconds > 0
+    assert report.duration_seconds < 60  # sanity bound
+    assert report.files_per_second == pytest.approx(
+        report.total_processed / report.duration_seconds
+    )
+    assert report.files_per_second > 0
 
 
 def test_run_store_refuses_second_concurrent_run(workspace):

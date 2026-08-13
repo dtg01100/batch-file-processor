@@ -138,6 +138,16 @@ function backupRows(backups) {
       </tr>`).join("");
 }
 
+// Phase 5.3: per-run duration + throughput. Running placeholders and
+// payloads without the metric fields (older API responses) show nothing;
+// finished runs with metrics always do (0.0 files/s is honest for a run
+// that processed nothing).
+function runMetricsText(r) {
+  if (r.status === "running" || typeof r.duration_seconds !== "number") return "";
+  const fps = typeof r.files_per_second === "number" ? r.files_per_second : 0;
+  return ` · ${r.duration_seconds.toFixed(1)}s · ${fps.toFixed(1)} files/s`;
+}
+
 // Recent-runs list. Newest-first ordering is applied by the caller
 // (runs.slice().reverse()); this builder renders what it is given.
 function runRows(runs) {
@@ -148,18 +158,26 @@ function runRows(runs) {
         <b>${H.esc(r.run_id)}</b>
         <span class="state-off">${H.esc(r.started_at.replace("T", " ").slice(0, 19))}</span>
       </span>
-      <span class="state-off">${r.total_processed} ok · ${r.total_failed} fail</span>
+      <span class="state-off">${r.total_processed} ok · ${r.total_failed} fail${runMetricsText(r)}</span>
     </li>`).join("");
+}
+
+// Phase 5.3: run-level duration + throughput summary line for the run card.
+function runMetricsLine(report) {
+  if (report.status === "running" || typeof report.duration_seconds !== "number") return "";
+  const fps = typeof report.files_per_second === "number" ? report.files_per_second : 0;
+  return `<div class="run-meta">${report.duration_seconds.toFixed(1)}s · ${fps.toFixed(1)} files/s</div>`;
 }
 
 // Run card body: either a failed-run notice or one folder-result block
 // per folder. The run-log DOM handling stays in app.js.
 function runResults(report) {
+  const meta = runMetricsLine(report);
   if (report.status === "failed") {
     return `<div class="folder-result"><div class="folder-result__head">
-      <h3>Run failed</h3></div><div class="folder-result__errors">${H.esc(report.error)}</div></div>`;
+      <h3>Run failed</h3></div>${meta}<div class="folder-result__errors">${H.esc(report.error)}</div></div>`;
   }
-  return (report.folders || []).map((f) => `
+  return meta + (report.folders || []).map((f) => `
     <div class="folder-result">
       <div class="folder-result__head">
         <h3>${H.esc(f.alias)}</h3>
@@ -240,6 +258,8 @@ if (typeof module !== "undefined" && module.exports) {
     backupRows,
     runRows,
     runResults,
+    runMetricsText,
+    runMetricsLine,
     runErrorBox,
     importResultNotice,
     ediPreviewResult,

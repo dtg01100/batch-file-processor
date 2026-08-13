@@ -450,7 +450,7 @@ test("backupRows escapes the backup path in the data attribute", () => {
 
 /* ---------------- runRows ---------------- */
 
-test("runRows renders a completed run", () => {
+test("runRows renders a completed run with duration + throughput", () => {
   const out = runRows([
     {
       run_id: "run-abc",
@@ -458,6 +458,8 @@ test("runRows renders a completed run", () => {
       started_at: "2026-08-12T10:00:00.000000",
       total_processed: 3,
       total_failed: 0,
+      duration_seconds: 12.34,
+      files_per_second: 0.24,
     },
   ]);
   assert.equal(
@@ -469,7 +471,7 @@ test("runRows renders a completed run", () => {
         <b>run-abc</b>
         <span class="state-off">2026-08-12 10:00:00</span>
       </span>
-      <span class="state-off">3 ok · 0 fail</span>
+      <span class="state-off">3 ok · 0 fail · 12.3s · 0.2 files/s</span>
     </li>`,
   );
 });
@@ -477,22 +479,48 @@ test("runRows renders a completed run", () => {
 test("runRows marks running runs ok and failed runs err", () => {
   const out = runRows([
     { run_id: "r1", status: "running", started_at: "2026-08-12T10:00:00", total_processed: 0, total_failed: 0 },
-    { run_id: "r2", status: "failed", started_at: "2026-08-12T11:00:00", total_processed: 1, total_failed: 2 },
+    { run_id: "r2", status: "failed", started_at: "2026-08-12T11:00:00", total_processed: 1, total_failed: 2, duration_seconds: 3.1, files_per_second: 0.32 },
   ]);
   assert.ok(out.includes('<span class="dot ok"></span>\n        <b>r1</b>'));
   assert.ok(out.includes('<span class="dot err"></span>\n        <b>r2</b>'));
-  assert.ok(out.includes("1 ok · 2 fail"));
+  assert.ok(out.includes("1 ok · 2 fail · 3.1s · 0.3 files/s"));
+  // Running placeholders have no metrics yet.
+  assert.ok(out.includes("0 ok · 0 fail</span>"));
 });
 
 /* ---------------- runResults ---------------- */
 
-test("runResults renders a failed run notice", () => {
+test("runResults renders a failed run notice (no metrics without fields)", () => {
   const out = runResults({ status: "failed", error: "backend <ftp> unreachable" });
   assert.equal(
     out,
     `<div class="folder-result"><div class="folder-result__head">
       <h3>Run failed</h3></div><div class="folder-result__errors">backend &lt;ftp&gt; unreachable</div></div>`,
   );
+});
+
+test("runResults prepends a duration + throughput meta line when present", () => {
+  const out = runResults({
+    status: "completed",
+    duration_seconds: 45.67,
+    files_per_second: 2.5,
+    folders: [
+      {
+        alias: "ACME",
+        relative_path: "inbox/acme",
+        files_processed: 2,
+        files_failed: 0,
+        success: true,
+        errors: [],
+      },
+    ],
+  });
+  assert.ok(
+    out.startsWith('<div class="run-meta">45.7s · 2.5 files/s</div>')
+  );
+  // A failed run with metrics shows them inside the failure block.
+  const failed = runResults({ status: "failed", duration_seconds: 8.25, files_per_second: 0, error: "boom" });
+  assert.ok(failed.includes('<h3>Run failed</h3></div><div class="run-meta">8.3s · 0.0 files/s</div>'));
 });
 
 test("runResults renders folder-result blocks with stats and errors", () => {

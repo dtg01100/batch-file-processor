@@ -13,13 +13,16 @@ Endpoints
 - ``GET  /api/config``            base-dir / data-dir / platform
 - ``POST /api/import``            multipart: file (legacy folders.db),
                                   base_dir (optional), platform (optional)
+- ``POST /api/preview/edi``       classify an EDI upload (parse-only preview)
 - ``GET  /api/folders``           configured folders (relative + resolved)
 - ``GET  /api/folders/{id}``      one folder (full edit schema)
 - ``PUT  /api/folders/{id}``      save one folder
 - ``POST /api/run``               start a background run
 - ``POST /api/resend``            start a background resend run
+- ``POST /api/folders/{id}/run``  run one folder
 - ``GET  /api/runs``              recent runs
 - ``GET  /api/runs/{run_id}``     one run (poll this while running)
+- ``GET  /api/runs/{run_id}/log`` SSE stream of the run's per-folder logs
 - ``GET  /api/processed-files``   recently processed files
 - ``GET  /api/processed-files/flagged``  same, with resend_flag info
 - ``POST /api/processed-files/{id}/resend``  flag a row for resend
@@ -31,10 +34,16 @@ Endpoints
 - ``GET  /api/maintenance/download``          download a previously-written report
 - ``GET  /api/schedule``           current schedule state
 - ``POST /api/schedule``           enable/disable the scheduler + set interval
+- ``GET  /api/watched``            watched folders + live watcher health
+- ``POST /api/watcher/refresh``    force the watcher supervisor to re-read
 - ``GET  /api/errors``             error-ledger rows + per-folder counts
 - ``GET  /api/errors/file``        download a raw error-text artifact
 - ``GET  /api/errors/folder-file`` download one folder's full error text
 - ``POST /api/errors/clear``       delete error-ledger rows
+- ``GET  /api/backups``            list timestamped backup files
+- ``POST /api/backup/create``      snapshot the active DB
+- ``POST /api/backup/restore``     restore a named backup as the active DB
+- ``GET  /api/backup/download``    download a backup file
 """
 
 from __future__ import annotations
@@ -194,6 +203,9 @@ def _run_summary(report: RunReport, *, include_log: bool = False) -> dict:
         "total_processed": report.total_processed,
         "total_failed": report.total_failed,
         "error": report.error,
+        # Phase 5.3: computed at completion (0.0 on the running placeholder).
+        "duration_seconds": report.duration_seconds,
+        "files_per_second": report.files_per_second,
         "folders": [
             {
                 "alias": f.alias,
@@ -639,14 +651,21 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
 
     @app.get("/api/runs")
     def api_runs() -> list[dict]:
-        """Return recent runs (in-memory first, then persistent history)."""
+        """Return recent runs, newest first.
+
+        The in-memory store hands out runs in insertion order (oldest
+        first) while ``RunHistory.recent`` is newest first, so the
+        in-memory slice is reversed here to keep one consistent ordering
+        contract for the UI (which reverses again for display). Without
+        this, the Recent-runs list would reorder after a restart.
+        """
         in_memory = {r.run_id: r for r in app.state.run_store.list()}
         persisted = []
         if _history is not None:
             persisted = _history.recent(limit=50)
         seen: set[str] = set()
         out: list[dict] = []
-        for r in in_memory.values():
+        for r in reversed(list(in_memory.values())):
             out.append(_run_summary(r))
             seen.add(r.run_id)
         for r in persisted:

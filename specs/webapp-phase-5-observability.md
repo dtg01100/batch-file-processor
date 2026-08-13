@@ -1,9 +1,9 @@
 # Spec: Webapp Phase 5 — Operator Observability
 
-**Status:** IN PROGRESS (5.1 + 5.2 implemented; 5.3 + 5.4 pending)
+**Status:** COMPLETE (5.1–5.4 all implemented)
 **Author:** Project Owner
 **Created:** 2026-08-12
-**Updated:** 2026-08-12
+**Updated:** 2026-08-13
 
 ---
 
@@ -137,20 +137,20 @@ watcher tick failure / success ─────────┘  (last_tick_at, la
 - [x] Task 5.2.5: Watching card gains a live state column (ticking / idle / error) + last-run id + last-tick time; schedule card shows runs triggered.
 - [x] Deliverable: the Watching card distinguishes "watching and healthy" from "watching but failing" without inspecting the server.
 
-### Phase 5.3: Run metrics (Estimated: 1 day)
+### Phase 5.3: Run metrics (Estimated: 1 day) — **implemented**
 
-- [ ] Task 5.3.1: Add `duration_seconds` + `files_per_second` to `RunReport` (computed in `runner.py` at completion).
-- [ ] Task 5.3.2: Surface in `_run_summary` and render in the Recent-runs list.
-- [ ] Task 5.3.3: Update `webapp/history.py` serialization if `dataclasses.asdict` needs a custom encoder for floats (verify — plain JSON handles floats, so likely no change).
-- [ ] Deliverable: every run row shows duration + throughput.
+- [x] Task 5.3.1: Add `duration_seconds` + `files_per_second` to `RunReport` (computed in `runner.py::_finalize_run_report` at completion, stamped in the `finally` of all three runner call sites).
+- [x] Task 5.3.2: Surface in `_run_summary` and render in the Recent-runs list (`runMetricsText`) + run card (`runMetricsLine`, `.run-meta` line).
+- [x] Task 5.3.3: Update `webapp/history.py` serialization if `dataclasses.asdict` needs a custom encoder for floats (verify — plain JSON handles floats, so likely no change). **Verified:** `json.dumps(dataclasses.asdict(report), default=str)` serializes floats natively; persisted runs round-trip the new fields with no schema change.
+- [x] Deliverable: every run row shows duration + throughput; the running placeholder and older payloads without the fields render without metrics.
 
-### Phase 5.4: Testing & Documentation (Estimated: 1 day) — **mostly done, one item pending**
+### Phase 5.4: Testing & Documentation (Estimated: 1 day) — **done**
 
 - [x] Write `tests/webapp/test_errors.py` (persistence on failed run, filtering, clear, missing-DB tolerance, dedupe, trim) — 23 tests.
 - [x] Extend `tests/webapp/test_watcher.py` end-to-end test to assert a failing file lands in the ledger + watcher health / dedupe tests.
 - [x] API coverage for the two new endpoints (landed in `tests/webapp/test_errors.py::test_api_errors_*` rather than `test_api.py`).
 - [x] Extend `tests/webapp/test_scheduler.py` for `runs_triggered`.
-- [ ] Update `webapp/main.py` module docstring endpoint list + `README.md` API table — docstring done; the `README.md` API table still lists only the phase-1 endpoints and needs the phase-2/4/5 additions.
+- [x] Update `webapp/main.py` module docstring endpoint list + `README.md` API table — docstring now lists every endpoint including the phase-2/4/5 additions (watcher, preview, folder-run, backups, errors); the `README.md` API table now covers the full surface.
 - [x] Deliverable: full `tests/webapp` suite green (168 pass), ruff clean on `webapp/` + `tests/webapp/`. Note: `test_run_store_active_count_drops_after_run_completes` is a pre-existing timing test that flakes when the host machine is saturated (passes on an idle box).
 
 ---
@@ -206,7 +206,7 @@ ALTER TABLE folders ADD COLUMN last_error     TEXT DEFAULT '';
 | test_errors_missing_db | webapp | No database imported | `GET /api/errors` returns 503 or empty, not a crash | ✅ |
 | test_watcher_records_scan_error | webapp | Watched folder's input dir is deleted mid-watch | Ledger gets a row; `last_error` populated | ✅ `test_maybe_run_records_missing_folder_error` |
 | test_watched_health_fields | webapp | Watcher tick runs | `last_tick_at` / `last_run_id` present in `/api/watched` | ✅ |
-| test_run_report_duration | webapp | Completed run | `duration_seconds` ≥ 0, `files_per_second` computed | ⏳ pending (5.3) |
+| test_run_report_duration | webapp | Completed run | `duration_seconds` ≥ 0, `files_per_second` computed | ✅ `test_run_report_duration` (API) + `test_run_report_duration_metrics` (runner) + JS `runRows`/`runResults` metric tests |
 | test_schedule_runs_triggered | webapp | Scheduler fires N runs | `runs_triggered` == N | ✅ |
 
 ### 6.2 Test File Locations
@@ -245,7 +245,7 @@ ALTER TABLE folders ADD COLUMN last_error     TEXT DEFAULT '';
 
 - [x] A folder run with a failing backend produces a visible, filterable, stack-trace-able error in the browser — no server access required
 - [x] Watcher scan failures and health (last tick / last run / last error) are visible on the Watching card
-- [ ] Every run row shows duration + files/second (5.3)
+- [x] Every run row shows duration + files/second (5.3)
 - [x] All existing webapp tests pass (168); new tests cover the ledger, endpoints, watcher health, scheduler counter, and dedupe
 - [x] `ruff check webapp/ tests/webapp/` clean
 - [x] PROJECT_SPEC §3.2.5 Capability E fully satisfied (folders, state, processed files, errors all queryable; the work queue is a separate roadmap item)
@@ -285,3 +285,5 @@ ALTER TABLE folders ADD COLUMN last_error     TEXT DEFAULT '';
 | 2026-08-12 | Project Owner | Spec status → IN PROGRESS; 5.1/5.2 + testing checklist marked done; success criteria updated; `README.md` API-table item left pending |
 | 2026-08-12 | Project Owner | Open questions 2 + 3 resolved (`b68c1d764`): runner writes per-folder raw error artifacts + `error_file` column + `GET /api/errors/file` download; `folder_counts` in `/api/errors` + count labels in the Errors-card folder dropdown |
 | 2026-08-12 | Project Owner | Watcher scan-failure rows get raw artifacts too (`dedupe_matches` + `write_error_artifact` shared with the runner); `GET /api/errors/folder-file` serves one folder's full error text for the filter banner's "Download raw" button |
+| 2026-08-13 | Project Owner | 5.3 implemented: `duration_seconds` + `files_per_second` on `RunReport` via `_finalize_run_report` (all three runner call sites), surfaced in `_run_summary` + Recent-runs rows + run card; `history.py` serialization verified float-safe with no change; tests in `test_api.py`, `test_runner.py`, `templates.test.js`, `dom.test.js` (198 webapp + 78 JS green) |
+| 2026-08-13 | Project Owner | 5.4 docs finished: `webapp/main.py` docstring endpoint list + `README.md` API table updated to the full phase-2/4/5 surface; spec status → COMPLETE |
