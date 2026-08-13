@@ -148,6 +148,90 @@ def test_run_report_duration_metrics(workspace):
     assert report.files_per_second > 0
 
 
+def test_run_uses_real_upc_lookup_when_as400_configured(workspace, monkeypatch):
+    """AS400 credentials in the settings table reach the UPC lookup.
+
+    Regression for the webapp gap: the runner used to pass a non-empty
+    ``upc_dict={"_mock": []}`` that short-circuited the orchestrator's
+    UPC lookup entirely, so converters silently degraded (no UPC data)
+    even when real AS400 credentials were configured. With an empty
+    dict, the orchestrator's ``UPCLookupService`` actually runs; when
+    the AS400 settings are set it fetches the dictionary.
+    """
+    import dispatch.services.upc_service as upc_service_module
+
+    calls: list[dict] = []
+
+    def fake_get_dictionary(self, *args, **kwargs):
+        # Record the settings the lookup sees (real AS400 creds from
+        # the settings table) and return a canned dictionary.
+        calls.append(dict(self.settings))
+        return {int("001002003004"): ["Product A"]}
+
+    monkeypatch.setattr(
+        upc_service_module.UPCLookupService, "get_dictionary", fake_get_dictionary
+    )
+
+    settings = workspace
+    db = open_database(settings)
+    try:
+        _insert_folder(db, "input", copy_to_directory="output")
+        # Configure AS400 credentials the way the Settings card does.
+        db.settings.update(
+            {
+                "id": 1,
+                "as400_address": "10.0.0.7",
+                "as400_username": "edi_user",
+                "as400_password": "pw",
+                "ssh_key_filename": "",
+            },
+            ["id"],
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    report = run_folders(settings)
+
+    assert report.status == "completed"
+    assert report.total_processed == 2
+    # The lookup actually ran (was not short-circuited by a mock dict).
+    assert len(calls) == 1
+    assert calls[0]["as400_address"] == "10.0.0.7"
+    assert calls[0]["as400_username"] == "edi_user"
+
+
+def test_run_without_as400_creds_still_succeeds(workspace, monkeypatch):
+    """No AS400 credentials → empty UPC dict, run still completes.
+
+    The orchestrator's lookup fails fast on missing credentials
+    (non-strict mode) and returns ``{}``; files must still process.
+    """
+    import dispatch.services.upc_service as upc_service_module
+
+    def fake_get_dictionary(self, *args, **kwargs):
+        # Mirrors the real service: missing creds -> no query -> {}.
+        assert not self.settings.get("as400_address")
+        return {}
+
+    monkeypatch.setattr(
+        upc_service_module.UPCLookupService, "get_dictionary", fake_get_dictionary
+    )
+
+    settings = workspace
+    db = open_database(settings)
+    try:
+        _insert_folder(db, "input", copy_to_directory="output")
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    report = run_folders(settings)
+    assert report.status == "completed"
+    assert report.total_processed == 2
+    assert report.total_failed == 0
+
+
 def test_run_store_refuses_second_concurrent_run(workspace):
     """A second ``start()`` while a previous run is in flight raises."""
     from webapp.runner import RunStore

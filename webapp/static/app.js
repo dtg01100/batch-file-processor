@@ -509,17 +509,48 @@ function readFolderPanel() {
   return schema;
 }
 
+// Defaults for a brand-new folder — mirrors the desktop's "Add
+// Directory" behaviour (a fresh, inactive row the operator then edits).
+function newFolderSchema() {
+  return {
+    alias: "",
+    folder_name: "",
+    folder_is_active: true,
+    process_backend_copy: false,
+    process_backend_ftp: false,
+    process_backend_email: false,
+    process_backend_http: false,
+    alert_on_failure: true,
+    watch_enabled: false,
+    watch_interval_seconds: 30,
+    plugin_configurations: {},
+  };
+}
+
+function showFolderPanel(schema) {
+  populateFolderPanel(schema);
+  const panel = $("folder-panel");
+  panel.hidden = false;
+  panel.setAttribute("aria-hidden", "false");
+  // Delete is only meaningful for an existing row.
+  $("folder-panel-delete").hidden = state.editingFolderId == null;
+  $("folder-panel-run").hidden = state.editingFolderId == null;
+}
+
 async function openFolderPanel(folderId) {
   state.editingFolderId = folderId;
   const errBox = $("folder-panel-error");
   errBox.hidden = true;
   errBox.textContent = "";
   try {
+    if (folderId == null) {
+      // populateFolderPanel overwrites the title, so set it afterwards.
+      showFolderPanel(newFolderSchema());
+      $("folder-panel-title").textContent = "New folder";
+      return;
+    }
     const schema = await api(`/api/folders/${folderId}`);
-    populateFolderPanel(schema);
-    const panel = $("folder-panel");
-    panel.hidden = false;
-    panel.setAttribute("aria-hidden", "false");
+    showFolderPanel(schema);
   } catch (err) {
     // Show errors in the panel itself, not in the (far away) Run card —
     // an operator opening a folder expects feedback in the same place
@@ -550,12 +581,23 @@ $("folder-panel-form").addEventListener("submit", async (e) => {
   saveBtn.disabled = true;
   saveBtn.textContent = "Saving…";
   try {
-    const updated = await api(`/api/folders/${schema.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(schema),
-    });
+    // A null id means we're creating a fresh row (POST); otherwise PUT.
+    const isNew = schema.id == null;
+    const updated = isNew
+      ? await api("/api/folders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(schema),
+        })
+      : await api(`/api/folders/${schema.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(schema),
+        });
+    state.editingFolderId = updated.id;
     populateFolderPanel(updated);
+    $("folder-panel-delete").hidden = false;
+    $("folder-panel-run").hidden = false;
     errBox.hidden = true;
     await loadFolders();
     await refreshConfig();
@@ -571,6 +613,103 @@ $("folder-panel-form").addEventListener("submit", async (e) => {
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = "Save";
+  }
+});
+
+$("add-folder-btn").addEventListener("click", () => {
+  openFolderPanel(null);
+});
+
+$("folder-panel-delete").addEventListener("click", async () => {
+  const folderId = state.editingFolderId;
+  if (folderId == null) return;
+  const alias =
+    $("folder-panel-form").elements.namedItem("alias").value ||
+    `folder ${folderId}`;
+  if (!window.confirm(`Delete folder "${alias}"? This removes its configuration and processed-files history.`)) {
+    return;
+  }
+  const btn = $("folder-panel-delete");
+  btn.disabled = true;
+  try {
+    await api(`/api/folders/${folderId}`, { method: "DELETE" });
+    closeFolderPanel();
+    await loadFolders();
+    await refreshConfig();
+    await loadWatched();
+    await loadErrors();
+  } catch (err) {
+    const errBox = $("folder-panel-error");
+    errBox.hidden = false;
+    errBox.textContent = err.message || String(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- settings card ---------------- */
+
+function populateSettingsForm(schema) {
+  const form = $("settings-form");
+  for (const el of form.elements) {
+    if (!el.name) continue;
+    const value = getByPath(schema, el.name);
+    if (el.type === "checkbox") {
+      el.checked = Boolean(value);
+    } else if (value === null || value === undefined) {
+      el.value = "";
+    } else {
+      el.value = String(value);
+    }
+  }
+}
+
+function readSettingsForm() {
+  const schema = {};
+  for (const el of $("settings-form").elements) {
+    if (!el.name) continue;
+    let value;
+    if (el.type === "checkbox") value = el.checked;
+    else if (el.type === "number") value = el.value === "" ? "" : Number(el.value);
+    else value = el.value;
+    setByPath(schema, el.name, value);
+  }
+  return schema;
+}
+
+async function loadSettings() {
+  const stateBox = $("settings-state");
+  try {
+    const schema = await api("/api/settings");
+    populateSettingsForm(schema);
+    stateBox.hidden = true;
+  } catch (err) {
+    // No database imported yet — leave the form blank; the Save
+    // button surfaces the error if the operator tries anyway.
+    stateBox.hidden = true;
+  }
+}
+
+$("settings-save").addEventListener("click", async () => {
+  const stateBox = $("settings-state");
+  const btn = $("settings-save");
+  btn.disabled = true;
+  try {
+    const saved = await api("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(readSettingsForm()),
+    });
+    populateSettingsForm(saved);
+    stateBox.hidden = false;
+    stateBox.className = "notice ok";
+    stateBox.textContent = "Settings saved.";
+  } catch (err) {
+    stateBox.hidden = false;
+    stateBox.className = "notice err";
+    stateBox.textContent = err.message || String(err);
+  } finally {
+    btn.disabled = false;
   }
 });
 
@@ -909,6 +1048,7 @@ $("clear-flags-btn").addEventListener("click", async () => {
   await loadRuns();
   await loadProcessed();
   await loadBackups();
+  await loadSettings();
   window.setInterval(async () => {
     await refreshConfig();
     await loadWatched();

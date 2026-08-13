@@ -191,3 +191,113 @@ def test_api_runs_orders_by_start_time_desc(client):
         assert ids[1] == "older"
     finally:
         client.app.state.run_store = old_store
+
+
+def test_settings_requires_database(client):
+    resp = client.get("/api/settings")
+    assert resp.status_code == 503
+    assert "No database imported" in resp.json()["detail"]
+    resp = client.put("/api/settings", json={})
+    assert resp.status_code == 503
+
+
+def test_settings_defaults_after_import(client, legacy_db):
+    """After import the editable settings mirror the legacy DB records."""
+    with open(legacy_db, "rb") as fh:
+        resp = client.post(
+            "/api/import",
+            files={"file": ("folders.db", fh, "application/octet-stream")},
+            data={"platform": "Windows", "base_dir": "/data"},
+        )
+    assert resp.status_code == 200, resp.text
+
+    body = client.get("/api/settings").json()
+    assert body["email"]["smtp_port"] == 587
+    assert isinstance(body["email"]["enable_email"], bool)
+    assert body["as400"]["as400_address"] == "" or isinstance(
+        body["as400"]["as400_address"], str
+    )
+    assert isinstance(body["backup"]["enable_interval_backups"], bool)
+    assert body["backup"]["backup_counter_maximum"] >= 1
+    assert isinstance(body["reporting"]["enable_reporting"], bool)
+
+
+def test_settings_put_round_trips_and_reaches_runner(client, legacy_db):
+    """PUT persists into both singleton records; the runner reads them."""
+    with open(legacy_db, "rb") as fh:
+        resp = client.post(
+            "/api/import",
+            files={"file": ("folders.db", fh, "application/octet-stream")},
+            data={"platform": "Windows", "base_dir": "/data"},
+        )
+    assert resp.status_code == 200, resp.text
+
+    payload = {
+        "email": {
+            "enable_email": True,
+            "email_address": "ops@example.com",
+            "email_username": "sender",
+            "email_password": "s3cret",
+            "email_smtp_server": "smtp.example.com",
+            "smtp_port": 2525,
+        },
+        "as400": {
+            "as400_address": "10.0.0.7",
+            "as400_username": "edi_user",
+            "as400_password": "pw",
+            "ssh_key_filename": "/keys/edi.pem",
+        },
+        "backup": {
+            "enable_interval_backups": True,
+            "backup_counter_maximum": 50,
+        },
+        "reporting": {
+            "enable_reporting": True,
+            "report_email_destination": "reports@example.com",
+            "report_edi_errors": True,
+            "report_printing_fallback": False,
+            "logs_directory": "/var/log/bfs",
+            "copy_to_directory": "/data/out",
+        },
+    }
+    resp = client.put("/api/settings", json=payload)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["email"]["smtp_port"] == 2525
+    assert body["email"]["enable_email"] is True
+    assert body["as400"]["as400_address"] == "10.0.0.7"
+    assert body["backup"]["enable_interval_backups"] is True
+    assert body["backup"]["backup_counter_maximum"] == 50
+    assert body["reporting"]["report_email_destination"] == "reports@example.com"
+
+    # The GET returns the same payload.
+    assert client.get("/api/settings").json() == body
+
+    # The runner's settings_dict reads the same record, so AS400 creds
+    # flow into converters on the next run.
+    settings = client.app.state.settings
+    db = open_database(settings)
+    try:
+        settings_dict = db.get_settings_or_default()
+        assert settings_dict["as400_address"] == "10.0.0.7"
+        assert settings_dict["email_smtp_server"] == "smtp.example.com"
+        assert settings_dict["enable_email"] is True
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+
+def test_settings_put_rejects_unknown_fields(client, legacy_db):
+    with open(legacy_db, "rb") as fh:
+        resp = client.post(
+            "/api/import",
+            files={"file": ("folders.db", fh, "application/octet-stream")},
+            data={"platform": "Windows", "base_dir": "/data"},
+        )
+    assert resp.status_code == 200, resp.text
+
+    resp = client.put(
+        "/api/settings",
+        json={"email": {"enable_email": True, "bogus": 1}},
+    )
+    assert resp.status_code == 422

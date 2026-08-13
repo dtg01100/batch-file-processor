@@ -210,9 +210,34 @@ function buildRoutes() {
     next_run_at: null,
     runs_triggered: 3,
   };
+  // Mutable copy of the folder rows: the Add/Delete flows mutate this,
+  // and state must never leak between tests.
+  const folderList = folders.map((f) => ({ ...f }));
   // Mutable copy of the processed-files rows: flag toggles and the resend
   // sweep update this, and loadProcessed re-reads it after each run.
   const processed = processedFiles.map((f) => ({ ...f }));
+  // Editable settings: the Settings card GETs this on boot and PUTs it
+  // back on Save (full replace of the editable groups).
+  const settingsState = {
+    email: { enable_email: false, email_address: "", email_username: "",
+             email_password: "", email_smtp_server: "", smtp_port: 587 },
+    as400: { as400_address: "", as400_username: "", as400_password: "",
+             ssh_key_filename: "" },
+    backup: { enable_interval_backups: false, backup_counter_maximum: 100 },
+    reporting: { enable_reporting: false, report_email_destination: "",
+                 report_edi_errors: false, report_printing_fallback: false,
+                 logs_directory: "", copy_to_directory: "" },
+  };
+  // GET returns the (flat) row; DELETE removes it. Registered per-id so
+  // the delete flow can target any folder.
+  const folderById = (id) => (url, options) => {
+    if (options && options.method === "DELETE") {
+      const idx = folderList.findIndex((f) => f.id === id);
+      if (idx >= 0) folderList.splice(idx, 1);
+      return { ok: true, deleted: id };
+    }
+    return folderList.find((f) => f.id === id) || null;
+  };
   let resendPollsLeft = 1;
   const resendRoute = (id) => (url, options) => {
     if (options && options.method === "POST") {
@@ -230,8 +255,8 @@ function buildRoutes() {
     "/api/config": () => ({
       base_dir: "/data", data_dir: "/data/config", database_exists: true,
       imported_base_dir: "/data", source_platform: "Windows",
-      folders_count: folders.length,
-      active_count: folders.filter((f) => f.is_active).length,
+      folders_count: folderList.length,
+      active_count: folderList.filter((f) => f.is_active).length,
     }),
     "/api/schedule": (url, options) => {
       // POST persists the toggle + interval (params arrive as query
@@ -247,8 +272,36 @@ function buildRoutes() {
       }
       return { ...schedule };
     },
-    "/api/folders": () => folders,
+    "/api/folders": (url, options) => {
+      // GET lists; POST creates a fresh row (the UI's "Add folder").
+      if (options && options.method === "POST") {
+        const body = JSON.parse(options.body || "{}");
+        const id = folderList.reduce((m, f) => Math.max(m, f.id), 0) + 1;
+        const created = {
+          id, alias: body.alias || "", folder_name: body.folder_name || "",
+          process_backend_copy: !!body.process_backend_copy,
+          process_backend_ftp: !!body.process_backend_ftp,
+          process_backend_email: !!body.process_backend_email,
+          process_backend_http: !!body.process_backend_http,
+          watch_enabled: !!body.watch_enabled,
+          watch_interval_seconds: body.watch_interval_seconds || 30,
+          alert_on_failure: true, plugin_configurations: {},
+          edi: body.edi, copy_backend: body.copy_backend,
+        };
+        folderList.push({
+          id, alias: created.alias, folder_name: created.folder_name,
+          resolved_path: "/data/" + created.folder_name, path_exists: false,
+          is_active: true, backends: created.process_backend_copy ? ["copy"] : [],
+        });
+        return created;
+      }
+      return folderList;
+    },
     "/api/folders/1": () => folderOneSchema,
+    // The Add flow creates id 4 (max existing id 3 + 1); 3 is OMEGA,
+    // used by the delete flow.
+    "/api/folders/3": folderById(3),
+    "/api/folders/4": folderById(4),
     "/api/watched": () => ({ folders: watched }),
     "/api/errors": (url) => {
       const fid = url.searchParams.get("folder_id");
@@ -269,6 +322,12 @@ function buildRoutes() {
     }),
     "/api/processed-files/1/resend": resendRoute(1),
     "/api/processed-files/2/resend": resendRoute(2),
+    "/api/settings": (url, options) => {
+      if (options && options.method === "PUT") {
+        Object.assign(settingsState, JSON.parse(options.body || "{}"));
+      }
+      return settingsState;
+    },
     "/api/backups": () => ({ backups }),
     // --- run flow ---
     "/api/run": () => ({ run_id: completedRunReport.run_id }),
@@ -658,4 +717,74 @@ test("resend flow: flag a file, resend flagged, flags clear after the run", asyn
   assert.equal(rowsAfter[0].querySelector("input[data-flag-id]").checked, false);
   assert.equal(rowsAfter[1].querySelector("input[data-flag-id]").checked, false);
   assert.equal(document.querySelectorAll("#processed-body .resend-row-flagged").length, 0);
+});
+
+test("add folder via the panel, then delete it", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // --- "+ Add folder" opens the panel in create mode. ---
+  document.getElementById("add-folder-btn").click();
+  await waitFor(() => !document.getElementById("folder-panel").hidden);
+  assert.equal(document.getElementById("folder-panel-title").textContent, "New folder");
+  // Delete + run only make sense for an existing row.
+  assert.equal(document.getElementById("folder-panel-delete").hidden, true);
+  assert.equal(document.getElementById("folder-panel-run").hidden, true);
+
+  // --- Fill the form and save: POST creates the row, the table grows. ---
+  const form = document.getElementById("folder-panel-form");
+  form.elements.namedItem("alias").value = "DELTA";
+  form.elements.namedItem("folder_name").value = "inbox/delta";
+  form.elements.namedItem("process_backend_copy").checked = true;
+  form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 4);
+  const rows = document.querySelectorAll("#folders-body tr");
+  assert.ok(rows[3].textContent.includes("DELTA"));
+  assert.ok(rows[3].textContent.includes("copy"));
+  // The panel stays open in edit mode with the new id (populateFolderPanel
+  // re-titled it to the created alias; Delete + Run are now available).
+  assert.equal(document.getElementById("folder-panel-title").textContent, "Edit: DELTA");
+  assert.equal(document.getElementById("folder-panel-delete").hidden, false);
+  assert.equal(document.getElementById("folder-panel-run").hidden, false);
+
+  // --- Delete it: confirm dialog fires, the row disappears. ---
+  document.getElementById("folder-panel-delete").click();
+  assert.equal(window.__confirmCalls.length, 1);
+  assert.equal(window.__confirmCalls[0], "Delete folder \"DELTA\"? This removes its configuration and processed-files history.");
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+  assert.equal(document.getElementById("folder-panel").hidden, true);
+  assert.ok(![...document.querySelectorAll("#folders-body tr")].some((r) => r.textContent.includes("DELTA")));
+});
+
+test("settings card loads the saved state and PUTs edits", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+  // loadSettings() ran during boot and populated the form.
+  await waitFor(() =>
+    document.getElementById("settings-form").elements.namedItem("email.smtp_port").value === "587",
+  );
+
+  const form = document.getElementById("settings-form");
+  assert.equal(form.elements.namedItem("as400.as400_address").value, "");
+  assert.equal(form.elements.namedItem("backup.backup_counter_maximum").value, "100");
+  assert.equal(form.elements.namedItem("email.enable_email").checked, false);
+
+  // --- Edit and save: the PUT round-trips and the notice shows. ---
+  form.elements.namedItem("as400.as400_address").value = "10.0.0.7";
+  form.elements.namedItem("email.enable_email").checked = true;
+  form.elements.namedItem("email.smtp_port").value = "2525";
+  document.getElementById("settings-save").click();
+  await waitFor(() => !document.getElementById("settings-state").hidden);
+  assert.equal(document.getElementById("settings-state").textContent, "Settings saved.");
+  assert.ok(document.getElementById("settings-state").classList.contains("ok"));
+  // The form reflects the saved payload (still populated after PUT).
+  assert.equal(form.elements.namedItem("as400.as400_address").value, "10.0.0.7");
+  assert.equal(form.elements.namedItem("email.smtp_port").value, "2525");
+  assert.equal(form.elements.namedItem("email.enable_email").checked, true);
 });

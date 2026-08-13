@@ -142,9 +142,7 @@ class FolderEditSchema(BaseModel):
     id: int
     folder_name: str = ""
     folder_is_active: bool = True
-    alias: str = ""
-
-    # Backend toggles
+    alias: str = ""    # Backend toggles
     process_backend_copy: bool = False
     process_backend_ftp: bool = False
     process_backend_email: bool = False
@@ -181,6 +179,17 @@ class FolderEditSchema(BaseModel):
     # to validate generically. Operators editing these know what they
     # are doing.
     plugin_configurations: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
+class FolderCreateSchema(FolderEditSchema):
+    """Wire representation for creating a new folder.
+
+    Identical to ``FolderEditSchema`` except ``id`` is optional — a
+    fresh row gets its id from the database on insert. The id is
+    ignored if the caller sends one.
+    """
+
+    id: int | None = None
 
 
 # ---------------------------------------------------------------------------

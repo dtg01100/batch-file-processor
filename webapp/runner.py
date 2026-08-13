@@ -189,9 +189,12 @@ def run_folders(settings: Settings, db=None) -> RunReport:
                 version="webapp",
                 error_handler=error_handler,
                 backends={},
-                # Non-empty dict prevents the UPC lookup from trying to reach
-                # the AS400 (the webapp runs without DB2/SSH access).
-                upc_dict={"_mock": []},
+                # Empty dict (falsy) so the orchestrator's UPCLookupService
+                # actually runs: when AS400 credentials are configured it
+                # fetches the real UPC dictionary from the IBM i; when they
+                # are missing it fails fast with a warning and an empty
+                # dict, so runs still succeed (non-strict mode).
+                upc_dict={},
             )
             orchestrator = DispatchOrchestrator(config)
 
@@ -321,7 +324,10 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                 version="webapp",
                 error_handler=error_handler,
                 backends={},
-                upc_dict={"_mock": []},
+                # Empty dict (falsy) so the orchestrator's UPCLookupService
+                # runs the real AS400 lookup when credentials are set; it
+                # degrades to an empty dict with a warning otherwise.
+                upc_dict={},
             )
             orchestrator = DispatchOrchestrator(config)
 
@@ -439,7 +445,10 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
                 version="webapp",
                 error_handler=error_handler,
                 backends={},
-                upc_dict={"_mock": []},
+                # Empty dict (falsy) so the orchestrator's UPCLookupService
+                # runs the real AS400 lookup when credentials are set; it
+                # degrades to an empty dict with a warning otherwise.
+                upc_dict={},
             )
             orchestrator = DispatchOrchestrator(config)
             before_error_id = max_error_id(db)

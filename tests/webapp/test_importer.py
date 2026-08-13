@@ -88,6 +88,33 @@ def test_imported_db_has_webapp_write_columns(tmp_path, legacy_db):
             db.close()
 
 
+def test_imported_db_has_settings_columns(tmp_path, legacy_db):
+    """The settings table carries every column the settings API writes.
+
+    Regression: the v32 desktop DB (and its migration) never had
+    ``ssh_key_filename``; ``PUT /api/settings`` writes it, so saving
+    settings on an imported DB 500'd with ``no such column:
+    ssh_key_filename``. ``open_database`` backfills it via
+    ``_ensure_columns``.
+    """
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
+    import_database(legacy_db, settings, platform="Windows")
+
+    db = open_database(settings)
+    try:
+        conn = db.database_connection.raw_connection
+        cols = {
+            r[1]
+            for r in conn.execute("PRAGMA table_info(settings)").fetchall()
+        }
+        assert "ssh_key_filename" in cols
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+
 def test_import_migrates_legacy_version(tmp_path, legacy_db):
     """The imported DB is migrated to the current schema (version table + kv_settings exist)."""
     settings = Settings(

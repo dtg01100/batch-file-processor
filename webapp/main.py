@@ -15,8 +15,12 @@ Endpoints
                                   base_dir (optional), platform (optional)
 - ``POST /api/preview/edi``       classify an EDI upload (parse-only preview)
 - ``GET  /api/folders``           configured folders (relative + resolved)
+- ``POST /api/folders``           create a new folder
 - ``GET  /api/folders/{id}``      one folder (full edit schema)
 - ``PUT  /api/folders/{id}``      save one folder
+- ``DELETE /api/folders/{id}``    delete a folder + its processed rows
+- ``GET  /api/settings``          editable app settings (email/AS400/backup)
+- ``PUT  /api/settings``          replace the editable app settings
 - ``POST /api/run``               start a background run
 - ``POST /api/resend``            start a background resend run
 - ``POST /api/folders/{id}/run``  run one folder
@@ -75,6 +79,7 @@ from webapp.errors import (
     list_errors,
 )
 from webapp.folder_schema import (
+    FolderCreateSchema,
     FolderEditSchema,
     folder_row_to_schema,
     schema_to_folder_row,
@@ -99,6 +104,12 @@ from webapp.scheduler import (
     Scheduler,
     get_schedule_summary,
     write_schedule_state,
+)
+from webapp.settings_api import (
+    SettingsSchema,
+    payload_to_oversight_row,
+    payload_to_settings_row,
+    settings_row_to_payload,
 )
 from webapp.watcher import WatcherSupervisor, list_watched
 
@@ -399,6 +410,136 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
                 detail=f"Folder {folder_id} disappeared during update",
             )
         return folder_row_to_schema(refreshed)
+
+    @app.post("/api/folders", response_model=FolderEditSchema, status_code=201)
+    def api_create_folder(schema: FolderCreateSchema) -> FolderEditSchema:
+        """Create a new folder row and return its full edit schema.
+
+        Closes the desktop gap where new trading partners could only be
+        onboarded via an imported legacy DB — the webapp previously had
+        no way to add a folder through the UI or API.
+
+        Raises:
+            HTTPException: 400 on validation failure, 503 if no database
+                imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        row = schema_to_folder_row(schema)
+        # ``id`` is database-assigned; never honor a caller-supplied one.
+        row.pop("id", None)
+        try:
+            # Same cross-field invariant check the PUT path uses.
+            FolderConfiguration.from_dict(row)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        with lock():
+            db = open_database(settings)
+            try:
+                new_id = db.folders_table.insert(row)
+                created = db.folders_table.find_one(id=new_id)
+            finally:
+                db.close()
+        if created is None:
+            raise HTTPException(
+                status_code=500, detail="Folder insert did not return a row"
+            )
+        return folder_row_to_schema(created)
+
+    @app.delete("/api/folders/{folder_id}")
+    def api_delete_folder(folder_id: int) -> dict:
+        """Delete a folder row and its processed-files history.
+
+        The desktop's per-folder Delete removed the configuration row;
+        its processed-files rows would otherwise linger as orphans the
+        resend flagger could try to act on. The error ledger rows are
+        kept (they remain queryable/filterable by the stored relative
+        name — the folder filter already renders orphaned rows as
+        plain text).
+
+        Raises:
+            HTTPException: 404 if no folder with this id exists, 503 if
+                no database imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                existing = db.folders_table.find_one(id=folder_id)
+                if existing is None:
+                    raise HTTPException(
+                        status_code=404, detail=f"Folder {folder_id} not found"
+                    )
+                db.folders_table.delete(id=folder_id)
+                con = db.database_connection.raw_connection
+                con.execute(
+                    "DELETE FROM processed_files WHERE folder_id = ?",
+                    (folder_id,),
+                )
+                con.commit()
+            finally:
+                db.close()
+        return {"deleted": folder_id}
+
+    @app.get("/api/settings", response_model=SettingsSchema)
+    def api_get_settings() -> SettingsSchema:
+        """Return the editable application settings (email/AS400/backup).
+
+        Reads the two singleton records (``settings`` + ``administrative``)
+        the desktop app used. The runner already feeds the ``settings``
+        record into the backends via ``get_settings_or_default``, so
+        editing here takes effect on the next run.
+
+        Raises:
+            HTTPException: 503 if no database imported yet.
+        """
+        settings = app.state.settings
+        if not settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        settings.ensure_dirs()
+        with lock():
+            db = open_database(settings)
+            try:
+                return settings_row_to_payload(
+                    db.get_settings_or_default(), db.get_oversight_or_default()
+                )
+            finally:
+                db.close()
+
+    @app.put("/api/settings", response_model=SettingsSchema)
+    def api_put_settings(schema: SettingsSchema) -> SettingsSchema:
+        """Replace the editable settings with the request body.
+
+        Full replace of the editable subset (matching the folder PUT
+        semantics); bookkeeping fields like ``backup_counter`` are left
+        untouched. The ``administrative`` record is only written when
+        it exists, so a minimal legacy DB without it still works.
+
+        Raises:
+            HTTPException: 503 if no database imported yet.
+        """
+        app_settings = app.state.settings
+        if not app_settings.database_path.is_file():
+            raise HTTPException(status_code=503, detail="No database imported yet")
+        app_settings.ensure_dirs()
+        with lock():
+            db = open_database(app_settings)
+            try:
+                db.settings.update(payload_to_settings_row(schema), ["id"])
+                if db.oversight_and_defaults.find_one(id=1) is not None:
+                    db.oversight_and_defaults.update(
+                        payload_to_oversight_row(schema), ["id"]
+                    )
+                return settings_row_to_payload(
+                    db.get_settings_or_default(), db.get_oversight_or_default()
+                )
+            finally:
+                db.close()
 
     @app.post("/api/run")
     def api_run() -> dict:

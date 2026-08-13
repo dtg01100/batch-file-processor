@@ -317,3 +317,126 @@ def test_put_folder_404_when_id_unknown(client):
     schema.id = 999
     r = client.put("/api/folders/999", json=schema.model_dump())
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# POST /api/folders (create) + DELETE /api/folders/{id}
+# ---------------------------------------------------------------------------
+
+
+def test_create_folder_inserts_and_returns_schema(client):
+    """POST /api/folders creates a fresh row (db-assigned id) and returns
+    the full edit schema so the UI can keep editing it."""
+    r = client.post(
+        "/api/folders",
+        json={
+            "folder_name": "inbox/new",
+            "alias": "NEW",
+            "folder_is_active": True,
+            "process_backend_copy": True,
+            "copy_backend": {"destination_directory": "archive/new"},
+            "process_backend_ftp": False,
+            "process_backend_email": False,
+            "process_backend_http": False,
+        },
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["id"] not in (None, 1)  # a brand-new row, not the seeded one
+    assert body["alias"] == "NEW"
+    assert body["copy_backend"]["destination_directory"] == "archive/new"
+
+    # Persisted, and loadable back through the edit endpoint.
+    fetch = client.get(f"/api/folders/{body['id']}")
+    assert fetch.status_code == 200
+    assert fetch.json()["alias"] == "NEW"
+
+
+def test_create_folder_ignores_caller_supplied_id(client):
+    """A body id must not be honored — the DB owns the new row's id."""
+    r = client.post(
+        "/api/folders",
+        json={"id": 999, "folder_name": "inbox/x", "alias": "X"},
+    )
+    assert r.status_code == 201
+    assert r.json()["id"] != 999
+
+
+def test_create_folder_rejects_cross_field_violation(client):
+    """Create goes through the same FolderConfiguration invariants as PUT."""
+    r = client.post(
+        "/api/folders",
+        json={
+            "folder_name": "inbox/x",
+            "alias": "X",
+            "edi": {"process_edi": True, "split_edi": False, "prepend_date_files": True},
+        },
+    )
+    assert r.status_code == 400
+    assert "prepend_date_files" in r.json()["detail"]
+
+
+def test_create_folder_503_when_no_database(tmp_path):
+    settings = Settings(base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config")
+    settings.ensure_dirs()
+    app = create_app(settings=settings)
+    no_db_client = TestClient(app)
+    r = no_db_client.post("/api/folders", json={"folder_name": "x", "alias": "X"})
+    assert r.status_code == 503
+
+
+def test_delete_folder_removes_row_and_processed_history(client):
+    """DELETE removes the folder row and its processed-files rows."""
+    settings = client.app.state.settings
+    r = client.post(
+        "/api/folders",
+        json={
+            "folder_name": "inbox/tmp",
+            "alias": "TMP",
+            "process_backend_copy": True,
+            "copy_backend": {"destination_directory": "archive/tmp"},
+        },
+    )
+    new_id = r.json()["id"]
+
+    db = open_database(settings)
+    db.database_connection["processed_files"].insert(
+        {
+            "file_name": "inbox/tmp/a.edi",
+            "folder_alias": "TMP",
+            "folder_id": new_id,
+            "processed_at": datetime.datetime.now().isoformat(),
+            "status": "processed",
+            "sent_to": "copy",
+        }
+    )
+    db.close()
+
+    resp = client.delete(f"/api/folders/{new_id}")
+    assert resp.status_code == 200
+    assert resp.json() == {"deleted": new_id}
+
+    assert client.get(f"/api/folders/{new_id}").status_code == 404
+    db = open_database(settings)
+    try:
+        row = db.database_connection.raw_connection.execute(
+            "SELECT COUNT(*) AS n FROM processed_files WHERE folder_id = ?",
+            (new_id,),
+        ).fetchone()
+        assert row[0] == 0
+    finally:
+        db.close()
+
+
+def test_delete_folder_404_when_id_unknown(client):
+    resp = client.delete("/api/folders/999")
+    assert resp.status_code == 404
+
+
+def test_delete_folder_503_when_no_database(tmp_path):
+    settings = Settings(base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config")
+    settings.ensure_dirs()
+    app = create_app(settings=settings)
+    no_db_client = TestClient(app)
+    r = no_db_client.delete("/api/folders/1")
+    assert r.status_code == 503

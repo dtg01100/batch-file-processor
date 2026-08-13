@@ -55,6 +55,7 @@
     <section class="card folders-card">
       <div class="card__head">
         <h2>Configured folders</h2>
+        <button id="add-folder-btn" class="btn btn--ghost" title="Add a new folder">+ Add folder</button>
         <button id="refresh-folders" class="btn btn--ghost" title="Refresh">↻</button>
       </div>
       <div id="folders-empty" class="empty" hidden>
@@ -73,7 +74,7 @@
           </thead>
           <tbody id="folders-body"></tbody>
         </table>
-        <p class="card__hint">Click any row to edit the folder.</p>
+        <p class="card__hint">Click any row to edit the folder, or use “+ Add folder” to onboard a new one.</p>
       </div>
     </section>
 
@@ -309,6 +310,7 @@
 
         <div class="folder-panel__actions">
           <button type="button" id="folder-panel-run" class="btn btn--ghost">Run this folder</button>
+          <button type="button" id="folder-panel-delete" class="btn btn--danger" hidden>Delete folder</button>
           <button type="button" id="folder-panel-cancel" class="btn btn--ghost">Cancel</button>
           <button type="submit" id="folder-panel-save" class="btn btn--primary">Save</button>
         </div>
@@ -401,6 +403,60 @@
         <small>Next run: <span id="schedule-next-run">—</span></small>
         <small>Runs triggered: <span id="schedule-runs">0</span></small>
       </div>
+    </section>
+
+    <section class="card settings-card">
+      <div class="card__head">
+        <h2>Settings</h2>
+        <button id="settings-save" class="btn btn--primary">Save</button>
+      </div>
+      <p class="card__hint">
+        Application-wide settings, matching the desktop app's
+        Edit&nbsp;Settings dialog. AS400/SSH credentials feed the
+        converters' UPC lookups; email/SMTP settings drive the email
+        backend; backup + reporting toggles mirror the desktop defaults.
+      </p>
+      <div id="settings-state" class="notice" hidden></div>
+      <form id="settings-form" class="settings-form" autocomplete="off">
+        <fieldset class="grp">
+          <legend>Email / SMTP</legend>
+          <label class="check"><input type="checkbox" name="email.enable_email" /> Enable email backend</label>
+          <label class="field"><span>From address</span><input type="text" name="email.email_address" /></label>
+          <label class="field"><span>Username</span><input type="text" name="email.email_username" /></label>
+          <label class="field"><span>Password</span><input type="password" name="email.email_password" /></label>
+          <label class="field"><span>SMTP server</span><input type="text" name="email.email_smtp_server" /></label>
+          <label class="field"><span>SMTP port</span><input type="number" name="email.smtp_port" min="1" max="65535" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>AS400 / DB2</legend>
+          <p class="card__hint">Used by converters + UPC lookups (IBM i via SSH/db2ssh).</p>
+          <label class="field"><span>Host address</span><input type="text" name="as400.as400_address" /></label>
+          <label class="field"><span>Username</span><input type="text" name="as400.as400_username" /></label>
+          <label class="field"><span>Password</span><input type="password" name="as400.as400_password" /></label>
+          <label class="field"><span>SSH key filename</span><input type="text" name="as400.ssh_key_filename" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Backups</legend>
+          <label class="check"><input type="checkbox" name="backup.enable_interval_backups" /> Enable interval backups</label>
+          <label class="field"><span>Backup counter maximum</span><input type="number" name="backup.backup_counter_maximum" min="1" /></label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Reporting</legend>
+          <label class="check"><input type="checkbox" name="reporting.enable_reporting" /> Enable reporting</label>
+          <label class="field"><span>Report email destination</span><input type="text" name="reporting.report_email_destination" /></label>
+          <label class="check"><input type="checkbox" name="reporting.report_edi_errors" /> Report EDI validator errors</label>
+          <label class="check"><input type="checkbox" name="reporting.report_printing_fallback" /> Print fallback</label>
+        </fieldset>
+
+        <fieldset class="grp">
+          <legend>Paths</legend>
+          <label class="field"><span>Logs directory</span><input type="text" name="reporting.logs_directory" /></label>
+          <label class="field"><span>Default copy-to directory</span><input type="text" name="reporting.copy_to_directory" /></label>
+        </fieldset>
+      </form>
     </section>
 
     <section class="card backup-card">

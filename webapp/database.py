@@ -100,6 +100,22 @@ def _ensure_columns(db: Any) -> None:
             con.execute(
                 "ALTER TABLE dispatch_errors ADD COLUMN severity TEXT DEFAULT ''"
             )
+        # The v32 desktop DB (and its migration) never had the settings
+        # columns the webapp writes through GET/PUT /api/settings
+        # (``ssh_key_filename`` arrived in a post-v32 migration). Without
+        # a backfill, saving settings on an imported DB fails with
+        # ``no such column: ssh_key_filename``.
+        settings_needed = [("ssh_key_filename", "TEXT DEFAULT ''")]
+        with contextlib.suppress(Exception):
+            settings_existing = {
+                row[1]
+                for row in con.execute("PRAGMA table_info(settings)").fetchall()
+            }
+            for col, decl in settings_needed:
+                if col not in settings_existing:
+                    con.execute(
+                        f"ALTER TABLE settings ADD COLUMN {col} {decl}"
+                    )
         con.commit()
 
 
