@@ -6,7 +6,7 @@ parameters:
   estore_store_number: ""
   estore_Vendor_OId: ""
   estore_vendor_NameVendorOID: ""
-  test_inv_fetcher_data:
-    po: "PO12345"
-    cust_name: "Test Customer"
-    cust_no: 60670
+# NOTE: estore_einvoice does NOT use InvFetcher (no DB lookup is required
+# — header fields are built from the EDI A record + parameters). The
+# test harness's ``test_inv_fetcher_data`` key is intentionally omitted
+# here; including it would trigger the mock-invocation assertion.

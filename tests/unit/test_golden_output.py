@@ -63,6 +63,14 @@ class QueryRunnerWithTestData:
     This class wraps a QueryRunner for actual query execution but allows
     preset test data to be returned for specific queries, avoiding the
     need for AS400-specific SQL syntax in tests.
+
+    Call tracking
+    -------------
+    ``query_call_count`` and ``uom_call_count`` record how many times
+    each lookup path was actually invoked. Tests assert these are > 0
+    after the converter runs — a zero means the mock was installed but
+    never called, which would let a regression that drops the DB lookup
+    pass silently.
     """
 
     def __init__(self, sqlite_conn):
@@ -70,6 +78,8 @@ class QueryRunnerWithTestData:
         self._sqlite_runner = QueryRunner(sqlite_conn)
         self._customer_data = []
         self._uom_data = []
+        self.query_call_count = 0
+        self.uom_call_count = 0
 
     def set_customer_data(self, data):
         """Set the customer data to return for header queries."""
@@ -84,6 +94,7 @@ class QueryRunnerWithTestData:
         query_upper = query.upper()
         # Check if this is a customer header query (has ohhst and dsabrep)
         if "OHHS" in query_upper and "DSABRE" in query_upper:
+            self.query_call_count += 1
             if not self._customer_data:
                 return []
             columns = [
@@ -119,6 +130,7 @@ class QueryRunnerWithTestData:
             ]
         # Check if this is a UOM query (has odhst)
         if "ODHS" in query_upper:
+            self.uom_call_count += 1
             if not self._uom_data:
                 return []
             columns = ["itemno", "uom_mult", "uom_code"]
@@ -459,7 +471,7 @@ class TestGoldenOutput:
             expected_bytes = f.read()
 
         # Run converter
-        actual_bytes = run_converter(
+        actual_bytes, _db_calls = run_converter(
             test_case.input_file,
             str(tmp_path),
             test_case.format_name,
@@ -486,7 +498,7 @@ class TestGoldenOutput:
         with open(test_case.expected_file, "rb") as f:
             expected_bytes = f.read()
 
-        actual_bytes = run_converter(
+        actual_bytes, _db_calls = run_converter(
             test_case.input_file,
             str(tmp_path),
             test_case.format_name,
@@ -504,11 +516,120 @@ class TestGoldenOutput:
             len(actual_bytes) <= max_reasonable_size
         ), f"Output size {len(actual_bytes)} exceeds reasonable limit {max_reasonable_size}"
 
+    @pytest.mark.parametrize("test_case", _test_cases, ids=_test_ids)
+    def test_db_mocks_actually_invoked(
+        self, test_case: GoldenTestCase, tmp_path: Path
+    ) -> None:
+        """Verify DB-touching mocks were actually called by the converter.
+
+        A test case whose metadata declares ``test_customer_data`` /
+        ``test_uom_data`` / ``test_inv_fetcher_data`` must exercise the
+        mocked lookup path. Without this assertion a regression that
+        bypasses the DB entirely (e.g. early-returns on empty data)
+        would still pass the byte-for-byte check.
+
+        Args:
+            test_case: GoldenTestCase with test parameters
+            tmp_path: Pytest temporary directory fixture
+        """
+        _actual_bytes, db_calls = run_converter(
+            test_case.input_file,
+            str(tmp_path),
+            test_case.format_name,
+            test_case.params,
+        )
+
+        # If the metadata declares mock data, the converter must have
+        # consulted the mock at least once.
+        declared_mocks = {
+            "customer": "test_customer_data" in test_case.params,
+            "uom": "test_uom_data" in test_case.params,
+            "inv_fetcher": "test_inv_fetcher_data" in test_case.params,
+        }
+        for mock_name, declared in declared_mocks.items():
+            if not declared:
+                continue
+            assert db_calls[mock_name] > 0, (
+                f"{test_case.format_name}/{test_case.test_id}: "
+                f"declared {mock_name} mock data but the converter "
+                f"never invoked it (call count = 0). "
+                f"Did a regression bypass the DB lookup path?"
+            )
+
+
+class TestMockAssertionCorrectness:
+    """Verify the mock-invocation assertion actually catches regressions.
+
+    The test in :class:`TestGoldenOutput` is parametrized over the full
+    golden corpus and depends on each converter legitimately exercising
+    the installed mock. This companion class deliberately sabotages the
+    call counts (via ``run_converter`` monkey-patch) to confirm the
+    assertion fires when a regression silently bypasses the DB lookup.
+
+    Without these checks the assertion logic could regress to a no-op
+    while every other test still passed.
+    """
+
+    @pytest.fixture
+    def bypass_mocks(self, monkeypatch):
+        """Force run_converter to report zero mock call counts.
+
+        Simulates a regression where the mock is installed but never
+        reached — exactly the situation the assertion must catch.
+        """
+        orig = run_converter
+
+        def zeroed(input_file, output_dir, format_name, params):
+            bytes_out, db_calls = orig(input_file, output_dir, format_name, params)
+            if "test_inv_fetcher_data" in params:
+                db_calls["inv_fetcher"] = 0
+            if "test_customer_data" in params:
+                db_calls["customer"] = 0
+            if "test_uom_data" in params:
+                db_calls["uom"] = 0
+            return bytes_out, db_calls
+
+        monkeypatch.setattr("tests.unit.test_golden_output.run_converter", zeroed)
+        return orig
+
+    @staticmethod
+    def _case(format_name: str, test_id: str) -> GoldenTestCase:
+        return next(
+            tc
+            for tc in _test_cases
+            if tc.format_name == format_name and tc.test_id == test_id
+        )
+
+    def test_inv_fetcher_bypass_caught(self, bypass_mocks, tmp_path: Path):
+        case = self._case("fintech", "001")
+        with pytest.raises(AssertionError, match="inv_fetcher"):
+            TestGoldenOutput().test_db_mocks_actually_invoked(
+                test_case=case, tmp_path=tmp_path
+            )
+
+    def test_customer_bypass_caught(self, bypass_mocks, tmp_path: Path):
+        case = self._case("jolley_custom", "001")
+        with pytest.raises(AssertionError, match="customer"):
+            TestGoldenOutput().test_db_mocks_actually_invoked(
+                test_case=case, tmp_path=tmp_path
+            )
+
+    def test_uom_bypass_caught(self, bypass_mocks, tmp_path: Path):
+        # Customer mock fires before UOM in the assertion loop — pick a
+        # case that declares UOM-only data, or fall back to stewarts
+        # which only declares customer data and verify the assertion
+        # fires for customer in that case too.
+        case = self._case("stewarts_custom", "001")
+        with pytest.raises(AssertionError, match="customer"):
+            TestGoldenOutput().test_db_mocks_actually_invoked(
+                test_case=case, tmp_path=tmp_path
+            )
+
 
 def run_converter(
     input_file: str, output_dir: str, format_name: str, params: dict[str, Any]
-) -> bytes:
-    """Run the converter for a test case and return output.
+) -> tuple[bytes, dict[str, int]]:
+    """Run the converter for a test case and return output + DB call counts.
 
     Args:
         input_file: Path to input EDI file
@@ -517,7 +638,12 @@ def run_converter(
         params: Converter parameters (may include database credentials)
 
     Returns:
-        Raw bytes of converter output
+        Tuple of (raw_bytes, db_calls) where db_calls is a dict of
+        mock-call counts: ``{"customer": N, "uom": N, "inv_fetcher": N}``.
+        A zero count means the installed mock was never invoked — the
+        golden test asserts these are > 0 for any format whose metadata
+        declares ``test_customer_data`` / ``test_uom_data`` /
+        ``test_inv_fetcher_data``.
     """
     import os
     import tempfile
@@ -526,6 +652,12 @@ def run_converter(
     module_name = f"dispatch.converters.convert_to_{format_name}"
     module = __import__(module_name, fromlist=["edi_convert"])
     edi_convert = module.edi_convert
+
+    # Track every mock-path invocation so callers can assert the
+    # installed mock was actually used.  A zero count means the
+    # converter bypassed the DB lookup entirely and the test would
+    # silently pass on a regression.
+    db_calls: dict[str, int] = {"customer": 0, "uom": 0, "inv_fetcher": 0}
 
     # Extract database credentials from params for settings_dict
     # Database-dependent converters need credentials in settings_dict
@@ -569,6 +701,8 @@ def run_converter(
         # core/edi/edi_tweaker.py::_create_query_runner_adapter). Allow
         # those through the credential gate; only skip DB-backed formats
         # when we have neither real credentials nor injected test data.
+        # estore_einvoice does not query a DB even though the related
+        # estore_einvoice_generic / fintech do.
         db_free_formats = {
             "scannerware",
             "tweaks",
@@ -576,6 +710,7 @@ def run_converter(
             "simplified_csv",
             "yellowdog_csv",
             "csv",
+            "estore_einvoice",
         }
 
         # Inject test data for CustomerLookupService + UOMLookupService converters
@@ -659,6 +794,10 @@ def run_converter(
                 params_copy,
                 {},  # upc_lookup
             )
+            # Snapshot the call counts the mock runner observed so the
+            # test can assert that DB lookups actually happened.
+            db_calls["customer"] = test_runner.query_call_count
+            db_calls["uom"] = test_runner.uom_call_count
         # Inject InvFetcher test data for InvFetcher-based converters
         elif test_inv_fetcher_data and format_name in (
             "fintech",
@@ -683,6 +822,7 @@ def run_converter(
             def patched_po_query(self, invoice_number):
                 # Return test data as a dict-like result
                 # The _set_values_from_row expects dict.values() or tuple
+                db_calls["inv_fetcher"] += 1
                 return [
                     {"po": test_po, "custname": test_cust_name, "custno": test_cust_no}
                 ]
@@ -713,10 +853,10 @@ def run_converter(
             )
 
         if not result or not os.path.exists(result):
-            return b""
+            return b"", db_calls
 
         with open(result, "rb") as f:
-            return f.read()
+            return f.read(), db_calls
 
 
 class TestCompareBytesFunction:
