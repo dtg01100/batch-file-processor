@@ -253,6 +253,32 @@ function maintenanceErrorNotice(message) {
   return `Failed: ${H.esc(message)}`;
 }
 
+// Read-only audit table: one row per folder with a configured convert
+// format, showing the per-format plugin settings as key=value pairs.
+// Folders without a format (or with an empty config) are skipped so
+// the table only surfaces what an operator would want to review.
+function pluginAuditRows(folders) {
+  const rows = (folders || []).filter((f) => f.convert_to_format);
+  return rows
+    .map((f) => {
+      const config = f.plugin_configurations || {};
+      const plugin = config[f.convert_to_format] || {};
+      const settings = Object.entries(plugin)
+        .map(([key, value]) => {
+          const shown =
+            typeof value === "boolean" ? (value ? "true" : "false") : String(value);
+          return `<code class="plugin-audit__kv">${H.esc(key)}=${H.esc(shown)}</code>`;
+        })
+        .join(" ");
+      return `<tr data-folder-id="${f.id}" class="folder-row" tabindex="0" role="button" aria-label="Edit ${H.esc(f.alias || f.folder_name)}">
+        <td><b>${H.esc(f.alias || f.folder_name)}</b></td>
+        <td><span class="tag tag--format">${H.esc(f.convert_to_format)}</span></td>
+        <td>${settings || '<span class="state-off">defaults</span>'}</td>
+      </tr>`;
+    })
+    .join("");
+}
+
 // Browser: top-level function declarations are already globals. Node:
 // expose the builders for tests.
 if (typeof module !== "undefined" && module.exports) {
@@ -273,5 +299,6 @@ if (typeof module !== "undefined" && module.exports) {
     maintenanceRecordedNotice,
     maintenanceExportNotice,
     maintenanceErrorNotice,
+    pluginAuditRows,
   };
 }

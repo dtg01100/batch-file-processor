@@ -148,6 +148,12 @@ def test_plugin_configurations_round_trips_through_api(tmp_path, legacy_db):
         is True
     )
 
+    # The list payload carries the config too (read-only audit view).
+    summary = c.get("/api/folders").json()
+    audited = next(f for f in summary if f["id"] == fid)
+    assert audited["convert_to_format"] == "scannerware"
+    assert audited["plugin_configurations"]["scannerware"]["retail_uom"] is True
+
     # And the runner merges it into the folder handed to the dispatcher.
     db = open_database(settings)
     try:

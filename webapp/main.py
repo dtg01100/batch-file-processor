@@ -59,6 +59,7 @@ Endpoints
 from __future__ import annotations
 
 import contextlib
+import json
 import platform as _platform
 import tempfile
 from contextlib import asynccontextmanager
@@ -168,6 +169,15 @@ def _folder_summary(row: dict, base_dir: str) -> dict:
         )
         if str(row.get(key, "")).lower() in ("1", "true")
     ]
+    # Per-format plugin configuration (read-only audit view). Normalized
+    # to a dict so the payload is JSON-safe even for legacy rows that
+    # stored the column as JSON text.
+    plugin_config = row.get("plugin_configurations") or {}
+    if isinstance(plugin_config, str):
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
+            plugin_config = json.loads(plugin_config)
+    if not isinstance(plugin_config, dict):
+        plugin_config = {}
     return {
         "id": row.get("id"),
         "folder_name": relative,
@@ -176,6 +186,9 @@ def _folder_summary(row: dict, base_dir: str) -> dict:
         "alias": row.get("alias") or "",
         "is_active": str(row.get("folder_is_active", "")).lower() in ("1", "true"),
         "backends": backends,
+        # Normalized lowercase, matching merge_plugin_config's lookup.
+        "convert_to_format": str(row.get("convert_to_format") or "").strip().lower(),
+        "plugin_configurations": plugin_config,
     }
 
 

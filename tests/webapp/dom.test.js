@@ -34,6 +34,10 @@ const folders = [
     id: 1, alias: "ACME", folder_name: "inbox/acme",
     resolved_path: "/data/inbox/acme", path_exists: true, is_active: true,
     backends: ["copy"],
+    convert_to_format: "scannerware",
+    plugin_configurations: {
+      scannerware: { a_record_padding: "000000", append_a_records: true },
+    },
   },
   {
     id: 2, alias: "GAMMA", folder_name: "inbox/gamma",
@@ -129,7 +133,10 @@ const folderOneSchema = {
   process_backend_copy: true, process_backend_ftp: false,
   process_backend_email: false, process_backend_http: false,
   watch_enabled: true, watch_interval_seconds: 120,
-  edi: { process_edi: true, split_edi: false },
+  edi: { process_edi: true, split_edi: false, convert_to_format: "scannerware" },
+  plugin_configurations: {
+    scannerware: { a_record_padding: "000000", append_a_records: true },
+  },
 };
 
 // The run the Run card will report. While runningPollsLeft > 0 the detail
@@ -261,6 +268,15 @@ function buildRoutes() {
       folders_count: folderList.length,
       active_count: folderList.filter((f) => f.is_active).length,
     }),
+    "/api/converters": () => [
+      {
+        format: "scannerware", display_name: "ScannerWare",
+        fields: [
+          { key: "a_record_padding", label: "A-Record Padding", type: "string", default: "" },
+          { key: "append_a_records", label: "Append A-Records", type: "boolean", default: false },
+        ],
+      },
+    ],
     "/api/schedule": (url, options) => {
       // POST persists the toggle + interval (params arrive as query
       // string via api()'s serializer); enabling schedules a next run,
@@ -491,6 +507,17 @@ test("boots and renders the full dashboard from the stubbed API", async () => {
   assert.equal(document.getElementById("folders-empty").hidden, true);
   assert.equal(document.getElementById("folders-wrap").hidden, false);
 
+  // Read-only plugin-settings audit table: only ACME has a format.
+  const auditRows = document.querySelectorAll("#plugin-audit-body tr");
+  assert.equal(auditRows.length, 1);
+  assert.ok(auditRows[0].textContent.includes("ACME"));
+  assert.ok(auditRows[0].textContent.includes("scannerware"));
+  assert.ok(auditRows[0].textContent.includes("a_record_padding=000000"));
+  assert.ok(auditRows[0].textContent.includes("append_a_records=true"));
+  assert.equal(document.getElementById("plugin-audit-count").textContent, "1 folder");
+  assert.equal(document.getElementById("plugin-audit-empty").hidden, true);
+  assert.equal(document.getElementById("plugin-audit-wrap").hidden, false);
+
   // Watching table: health states + last tick (phase 5.2).
   const watchingRows = document.querySelectorAll("#watching-body tr");
   assert.equal(watchingRows.length, 2);
@@ -613,6 +640,29 @@ test("interactions: folder panel opens, error filter narrows and clears", async 
   rawLink.click();
   assert.equal(document.getElementById("errors-filter-state").hidden, true);
   assert.equal(document.querySelectorAll("#errors-body tr").length, 3);
+});
+
+test("plugin audit: read-only rows open the edit panel", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#plugin-audit-body tr").length === 1);
+
+  // The audit row is read-only display but opens the same edit panel,
+  // pre-seeded with the folder's format in the plugin section.
+  document.querySelector("#plugin-audit-body .folder-row").click();
+  await waitFor(() => !document.getElementById("folder-panel").hidden);
+  assert.equal(document.getElementById("folder-panel-title").textContent, "Edit: ACME");
+  assert.equal(
+    document.getElementById("folder-panel-form").elements.namedItem("edi.convert_to_format").value,
+    "scannerware",
+  );
+  assert.equal(document.getElementById("plugin-format").value, "scannerware");
+  assert.equal(
+    document.querySelector('[name="plugin.a_record_padding"]').value,
+    "000000",
+  );
 });
 
 test("run flow: progress, results, and the log toggle", async () => {

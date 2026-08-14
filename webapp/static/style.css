@@ -228,6 +228,17 @@ input[type="file"] { padding: 8px; }
    minor = UPC/pricing warning (file still processes). */
 .tag--major { background: rgba(255, 93, 108, 0.16); color: var(--bad); }
 .tag--minor { background: rgba(245, 181, 61, 0.14); color: #f5d08a; }
+/* Format tag in the read-only plugin-audit table. */
+.tag--format { background: rgba(124, 92, 255, 0.16); color: #b4a0ff; }
+/* key=value chips in the plugin-audit settings column. */
+.plugin-audit__kv {
+  display: inline-block;
+  font-size: 11.5px;
+  background: var(--bg-soft);
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin: 1px 4px 1px 0;
+}
 .errors-card__head-actions { display: flex; align-items: center; gap: 10px; }
 .errors-card__filter { display: inline-flex; align-items: center; gap: 6px; }
 .errors-card__filter-label {

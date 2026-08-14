@@ -78,6 +78,34 @@
       </div>
     </section>
 
+    <section class="card plugin-audit-card">
+      <div class="card__head">
+        <h2>Format plugin settings</h2>
+        <span id="plugin-audit-count" class="pill" hidden></span>
+      </div>
+      <p class="card__hint">
+        Read-only view of every folder's per-format converter settings
+        (the desktop's plugin configurations). Only folders with a
+        configured format are listed. Click a row to edit that folder.
+      </p>
+      <div id="plugin-audit-empty" class="empty">
+        No folders have a convert format configured yet — set one in a
+        folder's Plugin configuration section.
+      </div>
+      <div class="table-wrap" id="plugin-audit-wrap" hidden>
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Folder</th>
+              <th>Format</th>
+              <th>Settings</th>
+            </tr>
+          </thead>
+          <tbody id="plugin-audit-body"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card maintenance-card">
       <div class="card__head">
         <h2>Maintenance</h2>

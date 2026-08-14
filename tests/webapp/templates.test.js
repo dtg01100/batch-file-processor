@@ -30,6 +30,7 @@ const {
   maintenanceRecordedNotice,
   maintenanceExportNotice,
   maintenanceErrorNotice,
+  pluginAuditRows,
 } = require("../../webapp/static/templates.js");
 
 /* ---------------- folderRows ---------------- */
@@ -735,4 +736,64 @@ test("maintenanceExportNotice escapes the path in the code element", () => {
 
 test("maintenanceErrorNotice escapes the message", () => {
   assert.equal(maintenanceErrorNotice('backend <ftp> down'), "Failed: backend &lt;ftp&gt; down");
+});
+
+/* ---------------- pluginAuditRows ---------------- */
+
+test("pluginAuditRows renders one row per folder with a format", () => {
+  const out = pluginAuditRows([
+    {
+      id: 1,
+      alias: "ACME",
+      folder_name: "inbox/acme",
+      convert_to_format: "scannerware",
+      plugin_configurations: {
+        scannerware: { a_record_padding: "000000", append_a_records: true },
+      },
+    },
+    {
+      id: 2,
+      alias: "GAMMA",
+      folder_name: "inbox/gamma",
+      convert_to_format: "",
+      plugin_configurations: {},
+    },
+  ]);
+  assert.equal(
+    out,
+    `<tr data-folder-id="1" class="folder-row" tabindex="0" role="button" aria-label="Edit ACME">
+        <td><b>ACME</b></td>
+        <td><span class="tag tag--format">scannerware</span></td>
+        <td><code class="plugin-audit__kv">a_record_padding=000000</code> <code class="plugin-audit__kv">append_a_records=true</code></td>
+      </tr>`,
+  );
+});
+
+test("pluginAuditRows shows defaults placeholder for an empty config", () => {
+  const out = pluginAuditRows([
+    {
+      id: 3,
+      alias: "DELTA",
+      folder_name: "inbox/delta",
+      convert_to_format: "tweaks",
+      plugin_configurations: { tweaks: {} },
+    },
+  ]);
+  assert.ok(out.includes("<span class=\"state-off\">defaults</span>"));
+});
+
+test("pluginAuditRows skips folders without a format and escapes values", () => {
+  const out = pluginAuditRows([
+    {
+      id: 4,
+      alias: 'A&B <x>',
+      folder_name: "inbox/ab",
+      convert_to_format: "csv",
+      plugin_configurations: { csv: { simple_csv_sort_order: "A <B>" } },
+    },
+    { id: 5, alias: "NOFMT", folder_name: "inbox/nofmt" },
+  ]);
+  assert.ok(out.includes("<b>A&amp;B &lt;x&gt;</b>"));
+  assert.ok(out.includes("simple_csv_sort_order=A &lt;B&gt;"));
+  assert.ok(!out.includes("NOFMT"));
 });

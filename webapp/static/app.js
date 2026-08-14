@@ -192,6 +192,34 @@ async function loadFolders() {
       }
     });
   });
+
+  renderPluginAudit(folders);
+}
+
+// Read-only audit table: every folder with a configured convert format,
+// showing its per-format plugin settings. Clicking a row opens the same
+// edit panel as the folders table.
+function renderPluginAudit(folders) {
+  const auditFolders = (folders || []).filter((f) => f.convert_to_format);
+  const empty = $("plugin-audit-empty");
+  const wrap = $("plugin-audit-wrap");
+  const count = $("plugin-audit-count");
+  empty.hidden = auditFolders.length !== 0;
+  wrap.hidden = auditFolders.length === 0;
+  count.hidden = auditFolders.length === 0;
+  count.textContent = `${auditFolders.length} folder${auditFolders.length === 1 ? "" : "s"}`;
+
+  const body = $("plugin-audit-body");
+  body.innerHTML = pluginAuditRows(auditFolders);
+  body.querySelectorAll(".folder-row").forEach((row) => {
+    row.addEventListener("click", () => openFolderPanel(Number(row.dataset.folderId)));
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openFolderPanel(Number(row.dataset.folderId));
+      }
+    });
+  });
 }
 
 $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProcessed(); });
