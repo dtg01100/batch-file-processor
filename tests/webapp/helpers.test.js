@@ -144,3 +144,100 @@ test("fmtInterval formats minute-long intervals in minutes", () => {
   assert.equal(fmtInterval(120), "2m");
   assert.equal(fmtInterval(150), "3m");
 });
+
+/* ---------------- dialog helpers ---------------- */
+// The dashboard's confirmDialog / alertDialog rely on `document` and
+// the global `__bfsTestStubs` injection. Node has neither — so we run
+// the helpers module fresh inside a vm context that provides both, and
+// verify behaviour through the injected stubs.
+
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+function loadHelpersInSandbox(stubReturn = true) {
+  const code = fs.readFileSync(
+    path.join(__dirname, "../../webapp/static/helpers.js"),
+    "utf8",
+  );
+  const sandbox = {
+    __bfsTestStubs: {
+      confirmDialog: () => Promise.resolve(stubReturn),
+      alertDialog: () => Promise.resolve(),
+    },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox);
+  return sandbox;
+}
+
+function loadHelpersInDom() {
+  // Run helpers.js inside a jsdom window so document.body exists and
+  // the dialog can be rendered + dismissed without our test stubs.
+  const { JSDOM } = require("jsdom");
+  const dom = new JSDOM(`<!doctype html><html><body></body></html>`, {
+    url: "http://localhost/",
+    runScripts: "outside-only",
+  });
+  const code = fs.readFileSync(
+    path.join(__dirname, "../../webapp/static/helpers.js"),
+    "utf8",
+  );
+  vm.runInContext(code, dom.getInternalVMContext());
+  return dom;
+}
+
+test("confirmDialog returns the stubbed promise when __bfsTestStubs is set", async () => {
+  const sb = loadHelpersInSandbox(true);
+  const ok = await sb.confirmDialog("Proceed?", { title: "Confirm" });
+  assert.equal(ok, true);
+});
+
+test("confirmDialog returns false when the stub resolves to false", async () => {
+  const sb = loadHelpersInSandbox(false);
+  const ok = await sb.confirmDialog("Proceed?");
+  assert.equal(ok, false);
+});
+
+test("alertDialog resolves without throwing when stubbed", async () => {
+  const sb = loadHelpersInSandbox(true);
+  await sb.alertDialog("Heads up");
+  // Resolves to undefined; no exception is enough.
+  assert.ok(true);
+});
+
+test("confirmDialog renders an in-page dialog when no stub is set", async () => {
+  const dom = loadHelpersInDom();
+  const ctx = dom.getInternalVMContext();
+  const { document, KeyboardEvent } = dom.window;
+
+  // Open the dialog, then click the primary button to confirm.
+  const promise = ctx.confirmDialog("Delete?", { title: "Are you sure?" });
+  const dlg = document.querySelector(".dlg");
+  assert.ok(dlg, "dialog element rendered");
+  assert.equal(dlg.getAttribute("role"), "alertdialog");
+  assert.equal(dlg.getAttribute("aria-modal"), "true");
+  const titleEl = document.getElementById("dlg-title");
+  assert.equal(titleEl.textContent, "Are you sure?");
+  const msgEl = document.getElementById("dlg-msg");
+  assert.equal(msgEl.textContent, "Delete?");
+
+  document.querySelector('[data-dismiss="confirm"]').click();
+  const result = await promise;
+  assert.equal(result, true);
+  // Dialog hidden after dismiss.
+  assert.equal(document.getElementById("dlg-root").hidden, true);
+});
+
+test("confirmDialog resolves false on Escape", async () => {
+  const dom = loadHelpersInDom();
+  const ctx = dom.getInternalVMContext();
+  const { document, KeyboardEvent } = dom.window;
+
+  const promise = ctx.confirmDialog("Cancel me");
+  const root = document.getElementById("dlg-root");
+  const evt = new KeyboardEvent("keydown", { key: "Escape" });
+  root.dispatchEvent(evt);
+  const result = await promise;
+  assert.equal(result, false);
+});

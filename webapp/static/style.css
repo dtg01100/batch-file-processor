@@ -636,3 +636,47 @@ input[type="file"] { padding: 8px; }
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
 }
+
+/* ---------- async dialog (confirmDialog / alertDialog) ---------- */
+
+.dlg-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+}
+.dlg-root[hidden] { display: none; }
+.dlg-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.dlg {
+  position: relative;
+  width: min(440px, 92vw);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px 18px;
+}
+.dlg__title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  letter-spacing: 0.2px;
+}
+.dlg__msg {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.dlg__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

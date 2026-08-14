@@ -442,15 +442,32 @@ function bootDom() {
   // The handlers use these; stub them so nothing throws in jsdom. The
   // confirm stub records its messages so tests can assert dialog text.
   window.__confirmCalls = [];
+  window.__confirmReturns = true;
+  window.__alertCalls = [];
   window.alert = () => {};
   window.confirm = (message) => {
     window.__confirmCalls.push(message);
-    return true;
+    return window.__confirmReturns;
   };
   window.prompt = () => "";
   window.__openCalls = [];
   window.open = (url) => {
     window.__openCalls.push(url);
+  };
+  // The dashboard helpers (helpers.js) build a real in-page dialog when
+  // document.body exists. Inject test stubs via ``__bfsTestStubs`` so
+  // the dashboard boot resolves immediately and tests can inspect
+  // calls. Tests can flip ``__confirmReturns`` to control whether the
+  // dialog is accepted or cancelled.
+  window.__bfsTestStubs = {
+    confirmDialog: (message) => {
+      window.__confirmCalls.push(message);
+      return Promise.resolve(window.__confirmReturns);
+    },
+    alertDialog: (message) => {
+      window.__alertCalls.push(message);
+      return Promise.resolve();
+    },
   };
 
   // Run each static file as a real script in the window's VM context so
@@ -749,9 +766,9 @@ test("run preflight: config errors prompt before the run starts", async () => {
   });
 
   // --- Abort path: the operator declines, so no run starts. ---
-  window.confirm = (m) => {
+  window.__bfsTestStubs.confirmDialog = (m) => {
     window.__confirmCalls.push(m);
-    return false;
+    return Promise.resolve(false);
   };
   document.getElementById("run-btn").click();
   await waitFor(() => window.__confirmCalls.length === 1);
@@ -764,9 +781,9 @@ test("run preflight: config errors prompt before the run starts", async () => {
   assert.equal(document.getElementById("run-btn").disabled, false);
 
   // --- Proceed path: accepting starts the run normally. ---
-  window.confirm = (m) => {
+  window.__bfsTestStubs.confirmDialog = (m) => {
     window.__confirmCalls.push(m);
-    return true;
+    return Promise.resolve(true);
   };
   document.getElementById("run-btn").click();
   await waitFor(() => !document.getElementById("run-progress").hidden);

@@ -69,7 +69,7 @@ async function _postSchedule(enabled) {
     });
     _renderSchedule(s);
   } catch (err) {
-    alert(`Failed: ${err.message || err}`);
+    await alertDialog(`Failed: ${err.message || err}`);
   }
 }
 
@@ -93,7 +93,7 @@ async function loadBackups() {
       btn.addEventListener("click", async (e) => {
         const tr = e.target.closest("tr");
         const path = tr.dataset.backupPath;
-        if (!window.confirm(`Restore ${tr.querySelector("code").textContent} as the active database? The current database will be backed up first.`)) return;
+        if (!await confirmDialog(`Restore ${tr.querySelector("code").textContent} as the active database? The current database will be backed up first.`)) return;
         try {
           await api("/api/backup/restore", { method: "POST", params: { path } });
           await loadBackups();
@@ -102,7 +102,7 @@ async function loadBackups() {
           await loadWatched();
           await loadErrors();
         } catch (err) {
-          alert(`Restore failed: ${err.message || err}`);
+          await alertDialog(`Restore failed: ${err.message || err}`);
         }
       });
     });
@@ -114,7 +114,7 @@ $("backup-create").addEventListener("click", async () => {
     await api("/api/backup/create", { method: "POST" });
     await loadBackups();
   } catch (err) {
-    alert(`Failed: ${err.message || err}`);
+    await alertDialog(`Failed: ${err.message || err}`);
   }
 });
 
@@ -395,7 +395,7 @@ $("errors-clear").addEventListener("click", async () => {
   const what = folder
     ? `all errors for ${folder.alias || folder.folder_name || `folder ${filterId}`}`
     : "the entire error ledger";
-  if (!window.confirm(`Clear ${what}? This cannot be undone.`)) return;
+  if (!await confirmDialog(`Clear ${what}? This cannot be undone.`)) return;
   try {
     await api(
       "/api/errors/clear" + (filterId != null ? `?folder_id=${filterId}` : ""),
@@ -403,7 +403,7 @@ $("errors-clear").addEventListener("click", async () => {
     );
     await loadErrors();
   } catch (err) {
-    alert(`Failed: ${err.message || err}`);
+    await alertDialog(`Failed: ${err.message || err}`);
   }
 });
 
@@ -779,7 +779,7 @@ $("folder-panel-delete").addEventListener("click", async () => {
   const alias =
     $("folder-panel-form").elements.namedItem("alias").value ||
     `folder ${folderId}`;
-  if (!window.confirm(`Delete folder "${alias}"? This removes its configuration and processed-files history.`)) {
+  if (!await confirmDialog(`Delete folder "${alias}"? This removes its configuration and processed-files history.`)) {
     return;
   }
   const btn = $("folder-panel-delete");
@@ -883,15 +883,15 @@ for (const btn of document.querySelectorAll(".maintenance-card [data-maint]")) {
     result.hidden = true;
     // The destructive ones deserve a confirm, like the desktop dialog.
     if (action === "remove-inactive") {
-      if (!window.confirm("Remove ALL inactive folder configurations and their processed-files history?")) {
+      if (!await confirmDialog("Remove ALL inactive folder configurations and their processed-files history?")) {
         return;
       }
     }
     if (action === "clear-queued-emails") {
-      if (!window.confirm("Clear every queued report email?")) return;
+      if (!await confirmDialog("Clear every queued report email?")) return;
     }
     if (action === "mark-all-processed") {
-      if (!window.confirm("Record every file in the ACTIVE folders as already processed? The next run will skip them.")) {
+      if (!await confirmDialog("Record every file in the ACTIVE folders as already processed? The next run will skip them.")) {
         return;
       }
     }
@@ -934,7 +934,7 @@ async function runFolderMaintenance(action) {
   if (folderId == null) return;
   if (action === "clear-processed") {
     if (
-      !window.confirm(
+      !await confirmDialog(
         `Clear every processed-files row for folder ${folderId}? The next run will re-process every EDI in this folder.`,
       )
     ) {
@@ -1063,7 +1063,7 @@ async function confirmPreflight(folderId) {
     const heading = p.errors.length > 0
       ? `${p.errors.length} configuration error(s) will make this run fail:`
       : `${p.warnings.length} warning(s) found:`;
-    return window.confirm(`${heading}\n\n${lines.join("\n")}\n\nProceed anyway?`);
+    return confirmDialog(`${heading}\n\n${lines.join("\n")}\n\nProceed anyway?`, { title: "Preflight" });
   } catch (err) {
     // Preflight is advisory — failing to fetch it must not block a run.
     return true;
@@ -1215,7 +1215,7 @@ async function loadProcessed() {
       } catch (err) {
         // Revert on failure.
         cb.checked = !resend;
-        alert(`Failed to update flag: ${err.message || err}`);
+        await alertDialog(`Failed to update flag: ${err.message || err}`);
       }
     });
   });
@@ -1233,7 +1233,7 @@ function _updateResendButton() {
 $("resend-btn").addEventListener("click", async () => {
   const flagged = (state.processedFiles || []).filter((f) => f.resend_flag);
   if (flagged.length === 0) return;
-  if (!window.confirm(
+  if (!await confirmDialog(
     `Re-send ${flagged.length} flagged file(s) through their original backends?`,
   )) return;
   try {
@@ -1242,7 +1242,7 @@ $("resend-btn").addEventListener("click", async () => {
     $("resend-btn").textContent = "Resending…";
     await _pollResend(run_id);
   } catch (err) {
-    alert(`Resend failed: ${err.message || err}`);
+    await alertDialog(`Resend failed: ${err.message || err}`);
     _updateResendButton();
   }
 });
@@ -1261,12 +1261,12 @@ async function _pollResend(runId) {
 $("clear-flags-btn").addEventListener("click", async () => {
   const count = (state.processedFiles || []).filter((f) => f.resend_flag).length;
   if (count === 0) return;
-  if (!window.confirm(`Clear ${count} resend flag(s)?`)) return;
+  if (!await confirmDialog(`Clear ${count} resend flag(s)?`)) return;
   try {
     await api("/api/processed-files/clear-flags", { method: "POST" });
     await loadProcessed();
   } catch (err) {
-    alert(`Failed: ${err.message || err}`);
+    await alertDialog(`Failed: ${err.message || err}`);
   }
 });
 
