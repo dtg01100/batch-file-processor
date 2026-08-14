@@ -572,6 +572,7 @@ function populateFolderPanel(schema) {
     "process_backend_copy", "process_backend_ftp",
     "process_backend_email", "process_backend_http",
     "watch_enabled", "watch_interval_seconds",
+    "max_duration_seconds", "max_failure_rate_percent",
   ]) {
     setPanelValue(k, schema[k]);
   }
@@ -673,6 +674,8 @@ function newFolderSchema() {
     alert_on_failure: true,
     watch_enabled: false,
     watch_interval_seconds: 30,
+    max_duration_seconds: 0,
+    max_failure_rate_percent: 0,
     plugin_configurations: {},
   };
 }

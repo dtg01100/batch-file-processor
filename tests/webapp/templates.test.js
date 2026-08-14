@@ -601,9 +601,31 @@ test("runResults renders folder-result blocks with stats and errors", () => {
         <span class="stat stat--bad">failed <b>1</b></span>
         <span class="stat"><span class="state-off">⚠</span></span>
       </div>
+      
       <div class="folder-result__errors">line 12 bad<br>dup</div>
     </div>`,
   );
+});
+
+test("runResults renders a threshold warning banner on a folder block", () => {
+  const out = runResults({
+    status: "completed",
+    duration_seconds: 10,
+    files_per_second: 1,
+    folders: [
+      {
+        alias: "ACME",
+        relative_path: "inbox/acme",
+        files_processed: 8,
+        files_failed: 2,
+        success: false,
+        errors: [],
+        warning: "failure rate 20.0% (limit <10%)",
+      },
+    ],
+  });
+  // Warning text is HTML-escaped like every other template field.
+  assert.ok(out.includes('<div class="folder-result__warning">⚠ failure rate 20.0% (limit &lt;10%)</div>'));
 });
 
 test("runResults escapes folder aliases and error text", () => {

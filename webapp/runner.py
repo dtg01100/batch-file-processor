@@ -15,6 +15,7 @@ import dataclasses
 import datetime
 import io
 import threading
+import time
 import uuid
 from typing import Any
 
@@ -45,6 +46,11 @@ class FolderRunReport:
     success: bool = True
     errors: list[str] = dataclasses.field(default_factory=list)
     run_log: str = ""
+    # Phase 5.3 follow-up: wall-clock time spent on this folder, and a
+    # human-readable warning when it exceeded the folder's configured
+    # thresholds (``_folder_warning``).
+    duration_seconds: float = 0.0
+    warning: str = ""
 
 
 @dataclasses.dataclass
@@ -86,6 +92,40 @@ def _is_active(row: dict[str, Any]) -> bool:
 
 def _folder_relative_path(row: dict[str, Any]) -> str:
     return str(row.get("folder_name", "") or "")
+
+
+def _row_float(row: dict[str, Any], key: str) -> float:
+    """Parse a folder-row threshold column; 0/empty/invalid/negative = unset."""
+    try:
+        value = float(row.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return value if value > 0 else 0.0
+
+
+def _folder_warning(
+    row: dict[str, Any],
+    *,
+    duration_seconds: float,
+    files_processed: int,
+    files_failed: int,
+) -> str:
+    """Return a run-card warning when a folder exceeded its thresholds.
+
+    Thresholds come from the folder row: ``max_duration_seconds`` and
+    ``max_failure_rate_percent`` (0/empty = no limit). Multiple exceeded
+    limits are joined with ``'; '``.
+    """
+    parts: list[str] = []
+    max_duration = _row_float(row, "max_duration_seconds")
+    if max_duration and duration_seconds > max_duration:
+        parts.append(f"took {duration_seconds:.1f}s (limit {max_duration:g}s)")
+    max_rate = _row_float(row, "max_failure_rate_percent")
+    total = files_processed + files_failed
+    rate = (files_failed / total * 100) if total else 0.0
+    if max_rate and rate > max_rate:
+        parts.append(f"failure rate {rate:.1f}% (limit {max_rate:g}%)")
+    return "; ".join(parts)
 
 
 def _write_folder_error_artifact(
@@ -216,6 +256,7 @@ def run_folders(settings: Settings, db=None) -> RunReport:
                     relative_path=_folder_relative_path(original_row),
                     resolved_path=str(folder.get("folder_name", "")),
                 )
+                folder_started = time.monotonic()
                 try:
                     result = orchestrator.process_folder(
                         folder,
@@ -232,6 +273,13 @@ def run_folders(settings: Settings, db=None) -> RunReport:
                     folder_report.success = False
                     folder_report.files_failed = 1
                     folder_report.errors.append(f"{type(exc).__name__}: {exc}")
+                folder_report.duration_seconds = time.monotonic() - folder_started
+                folder_report.warning = _folder_warning(
+                    original_row,
+                    duration_seconds=folder_report.duration_seconds,
+                    files_processed=folder_report.files_processed,
+                    files_failed=folder_report.files_failed,
+                )
                 folder_report.run_log = run_log.getvalue()
                 report.folders.append(folder_report)
                 report.total_processed += folder_report.files_processed
@@ -362,6 +410,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                 file_paths = [
                     r["file_name"] for r in rows if r.get("file_name")
                 ]
+                folder_started = time.monotonic()
                 try:
                     result = orchestrator.process_folder(
                         resolved,
@@ -379,6 +428,13 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                     folder_report.success = False
                     folder_report.files_failed = 1
                     folder_report.errors.append(f"{type(exc).__name__}: {exc}")
+                folder_report.duration_seconds = time.monotonic() - folder_started
+                folder_report.warning = _folder_warning(
+                    original_row,
+                    duration_seconds=folder_report.duration_seconds,
+                    files_processed=folder_report.files_processed,
+                    files_failed=folder_report.files_failed,
+                )
                 folder_report.run_log = run_log.getvalue()
                 report.folders.append(folder_report)
                 report.total_processed += folder_report.files_processed
@@ -465,6 +521,7 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
                 relative_path=_folder_relative_path(row),
                 resolved_path=str(resolved.get("folder_name", "")),
             )
+            folder_started = time.monotonic()
             try:
                 result = orchestrator.process_folder(
                     resolved,
@@ -479,6 +536,13 @@ def run_folder(settings: Settings, folder_id: int, db=None) -> RunReport:
                 folder_report.success = False
                 folder_report.files_failed = 1
                 folder_report.errors.append(f"{type(exc).__name__}: {exc}")
+            folder_report.duration_seconds = time.monotonic() - folder_started
+            folder_report.warning = _folder_warning(
+                row,
+                duration_seconds=folder_report.duration_seconds,
+                files_processed=folder_report.files_processed,
+                files_failed=folder_report.files_failed,
+            )
             folder_report.run_log = run_log.getvalue()
             report.folders.append(folder_report)
             report.total_processed = folder_report.files_processed

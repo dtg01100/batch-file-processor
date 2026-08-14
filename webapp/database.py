@@ -56,6 +56,11 @@ def _ensure_columns(db: Any) -> None:
         ("last_tick_at", "TEXT DEFAULT ''"),
         ("last_run_id", "TEXT DEFAULT ''"),
         ("last_error", "TEXT DEFAULT ''"),
+        # Phase 5.3 follow-up: per-folder run-warning thresholds (0/'' =
+        # no limit). The runner compares each folder's run duration +
+        # failure rate against these and stamps a warning on the run card.
+        ("max_duration_seconds", "TEXT DEFAULT ''"),
+        ("max_failure_rate_percent", "TEXT DEFAULT ''"),
     ]
     with contextlib.suppress(Exception):
         con = db.database_connection.raw_connection

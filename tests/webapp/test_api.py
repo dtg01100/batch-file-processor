@@ -143,6 +143,45 @@ def test_run_report_duration(client):
     assert report["duration_seconds"] >= 0
     assert report["files_per_second"] > 0
 
+
+def test_run_report_warning_surfaces_failure_rate(client):
+    """Phase 5.3 follow-up: a folder over its failure-rate threshold warns."""
+    settings = client.app.state.settings
+
+    db = open_database(settings)
+    try:
+        db.folders_table.insert(
+            {
+                "folder_name": "inbox/missing",
+                "folder_is_active": "True",
+                "alias": "MISSING",
+                "process_backend_copy": True,
+                "copy_to_directory": "output",
+                "process_backend_ftp": False,
+                "process_backend_email": False,
+                "max_failure_rate_percent": "10",
+            }
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    resp = client.post("/api/run")
+    assert resp.status_code == 200, resp.text
+    run_id = resp.json()["run_id"]
+
+    report = {}
+    for _ in range(200):
+        report = client.get(f"/api/runs/{run_id}").json()
+        if report["status"] != "running":
+            break
+        time.sleep(0.05)
+    assert report["status"] == "completed"
+    folder = report["folders"][0]
+    assert folder["files_failed"] == 1
+    assert folder["warning"] == "failure rate 100.0% (limit 10%)"
+    assert folder["duration_seconds"] >= 0
+
     # The list endpoint keeps one ordering contract (newest first)
     # regardless of whether runs come from memory or persisted history.
     # Ordering itself is asserted in test_api_runs_orders_by_start_time_desc;

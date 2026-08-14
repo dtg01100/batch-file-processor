@@ -456,6 +456,18 @@ input[type="file"] { padding: 8px; }
 
 /* Phase 5.3: run-level duration + throughput summary on the run card. */
 .run-meta { font-size: 12px; color: var(--text-dim); font-family: ui-monospace, monospace; margin-bottom: 8px; }
+
+/* Phase 5.3 follow-up: a folder exceeded its duration / failure-rate
+   thresholds — amber banner on that folder's run-card block. */
+.folder-result__warning {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #7a5b00;
+  background: rgba(245, 181, 61, 0.14);
+  border: 1px solid rgba(245, 181, 61, 0.45);
+}
 .folder-result__stats { display: flex; gap: 18px; margin-top: 10px; font-size: 13px; }
 .stat b { font-size: 16px; }
 .stat--good b { color: var(--good); }

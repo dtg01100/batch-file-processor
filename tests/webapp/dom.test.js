@@ -133,6 +133,7 @@ const folderOneSchema = {
   process_backend_copy: true, process_backend_ftp: false,
   process_backend_email: false, process_backend_http: false,
   watch_enabled: true, watch_interval_seconds: 120,
+  max_duration_seconds: 90, max_failure_rate_percent: 5,
   edi: { process_edi: true, split_edi: false, convert_to_format: "scannerware" },
   plugin_configurations: {
     scannerware: { a_record_padding: "000000", append_a_records: true },
@@ -157,7 +158,8 @@ const completedRunReport = {
     "processing INV-1001.edi\nprocessing INV-1002.edi\nprocessing PO-77.edi\n3 files processed",
   folders: [
     { alias: "ACME", relative_path: "inbox/acme", resolved_path: "/data/inbox/acme",
-      files_processed: 2, files_failed: 0, success: true, errors: [] },
+      files_processed: 2, files_failed: 0, success: true, errors: [],
+      warning: "took 75.0s (limit 60s)" },
     { alias: "GAMMA", relative_path: "inbox/gamma", resolved_path: "/data/inbox/gamma",
       files_processed: 1, files_failed: 0, success: true, errors: [] },
   ],
@@ -604,6 +606,15 @@ test("interactions: folder panel opens, error filter narrows and clears", async 
     document.getElementById("folder-panel-form").elements.namedItem("watch_interval_seconds").value,
     "120",
   );
+  // Phase 5.3 follow-up: alert thresholds populate into the editor.
+  assert.equal(
+    document.getElementById("folder-panel-form").elements.namedItem("max_duration_seconds").value,
+    "90",
+  );
+  assert.equal(
+    document.getElementById("folder-panel-form").elements.namedItem("max_failure_rate_percent").value,
+    "5",
+  );
   document.getElementById("folder-panel-close").click();
   await waitFor(() => document.getElementById("folder-panel").hidden);
 
@@ -702,6 +713,8 @@ test("run flow: progress, results, and the log toggle", async () => {
   assert.ok(results.innerHTML.includes("GAMMA"));
   // Phase 5.3: the run card opens with a duration + throughput line.
   assert.ok(results.innerHTML.includes('<div class="run-meta">60.0s · 0.1 files/s</div>'));
+  // Phase 5.3 follow-up: a folder that exceeded its duration limit warns.
+  assert.ok(results.innerHTML.includes('<div class="folder-result__warning">⚠ took 75.0s (limit 60s)</div>'));
 
   // renderRun swaps in the report's run_log and hides the body behind the toggle.
   assert.equal(logBody.textContent, completedRunReport.run_log);

@@ -251,6 +251,9 @@ def _run_summary(report: RunReport, *, include_log: bool = False) -> dict:
                 "files_failed": f.files_failed,
                 "success": f.success,
                 "errors": f.errors,
+                # Phase 5.3 follow-up: per-folder timing + threshold warning.
+                "duration_seconds": f.duration_seconds,
+                "warning": f.warning,
             }
             for f in report.folders
         ],

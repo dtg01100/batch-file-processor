@@ -150,6 +150,11 @@ class FolderEditSchema(BaseModel):
 
     # Alerting
     alert_on_failure: bool = True
+    # Phase 5.3 follow-up: run-warning thresholds. 0 = no limit. The
+    # runner stamps a warning on the run card when a folder's run
+    # exceeds these (duration in seconds, failure rate in percent).
+    max_duration_seconds: int = Field(default=0, ge=0)
+    max_failure_rate_percent: int = Field(default=0, ge=0, le=100)
 
     # Folder watcher: when watch_enabled is True, the dispatcher
     # polls folder_name every watch_interval_seconds and runs only
@@ -347,6 +352,8 @@ def folder_row_to_schema(row: dict[str, Any]) -> FolderEditSchema:
         alert_on_failure=bool(row.get("alert_on_failure", True)),
         watch_enabled=str(row.get("watch_enabled", "")).lower() in ("1", "true", "yes"),
         watch_interval_seconds=_to_int(row.get("watch_interval_seconds"), 30),
+        max_duration_seconds=_to_int(row.get("max_duration_seconds"), 0),
+        max_failure_rate_percent=_to_int(row.get("max_failure_rate_percent"), 0),
         ftp=ftp,
         email=email,
         copy_backend=copy_cfg,
@@ -533,6 +540,8 @@ def schema_to_folder_row(schema: FolderEditSchema) -> dict[str, Any]:
         "alert_on_failure": schema.alert_on_failure,
         "watch_enabled": schema.watch_enabled,
         "watch_interval_seconds": schema.watch_interval_seconds,
+        "max_duration_seconds": schema.max_duration_seconds,
+        "max_failure_rate_percent": schema.max_failure_rate_percent,
     }
     for emitter in (
         _emit_ftp,

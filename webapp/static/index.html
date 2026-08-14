@@ -237,6 +237,19 @@
         </fieldset>
 
         <fieldset class="grp">
+          <legend>Alerting</legend>
+          <p class="card__hint">Warn on the run card when this folder's run exceeds a limit. 0 = no limit.</p>
+          <label class="field">
+            <span>Max run duration (seconds)</span>
+            <input type="number" name="max_duration_seconds" min="0" step="1" />
+          </label>
+          <label class="field">
+            <span>Max failure rate (%)</span>
+            <input type="number" name="max_failure_rate_percent" min="0" max="100" step="1" />
+          </label>
+        </fieldset>
+
+        <fieldset class="grp">
           <legend>Backends</legend>
           <p class="card__hint">Enable the backends this folder should deliver to.</p>
           <label class="check"><input type="checkbox" name="process_backend_copy" /> Copy</label>

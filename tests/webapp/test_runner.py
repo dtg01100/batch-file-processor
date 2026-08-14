@@ -7,7 +7,7 @@ import pytest
 
 from webapp.config import Settings
 from webapp.database import open_database
-from webapp.runner import run_folders
+from webapp.runner import _folder_warning, run_folders
 
 pytestmark = [pytest.mark.integration]
 
@@ -24,18 +24,28 @@ def workspace(tmp_path):
     return settings
 
 
-def _insert_folder(db, folder_name: str, *, copy_to_directory: str | None = None):
-    db.folders_table.insert(
-        {
-            "folder_name": folder_name,
-            "folder_is_active": "True",
-            "alias": "inbox",
-            "process_backend_copy": bool(copy_to_directory),
-            "copy_to_directory": copy_to_directory or "",
-            "process_backend_ftp": False,
-            "process_backend_email": False,
-        }
-    )
+def _insert_folder(
+    db,
+    folder_name: str,
+    *,
+    copy_to_directory: str | None = None,
+    max_duration_seconds: str | None = None,
+    max_failure_rate_percent: str | None = None,
+):
+    row = {
+        "folder_name": folder_name,
+        "folder_is_active": "True",
+        "alias": "inbox",
+        "process_backend_copy": bool(copy_to_directory),
+        "copy_to_directory": copy_to_directory or "",
+        "process_backend_ftp": False,
+        "process_backend_email": False,
+    }
+    if max_duration_seconds is not None:
+        row["max_duration_seconds"] = max_duration_seconds
+    if max_failure_rate_percent is not None:
+        row["max_failure_rate_percent"] = max_failure_rate_percent
+    db.folders_table.insert(row)
 
 
 def test_run_processes_files_and_records_processed(workspace):
@@ -132,9 +142,7 @@ def test_run_report_duration_metrics(workspace):
     finally:
         with contextlib.suppress(Exception):
             db.close()
-
     report = run_folders(settings)
-
     assert report.status == "completed"
     assert report.total_processed == 2
     assert report.started_at
@@ -146,6 +154,77 @@ def test_run_report_duration_metrics(workspace):
         report.total_processed / report.duration_seconds
     )
     assert report.files_per_second > 0
+    # Per-folder timing is recorded too; no thresholds configured → no warning.
+    assert report.folders[0].duration_seconds > 0
+    assert report.folders[0].warning == ""
+
+
+# ---------------------------------------------------------------------------
+# Phase 5.3 follow-up: per-folder run-warning thresholds
+# ---------------------------------------------------------------------------
+
+
+def test_folder_warning_flags_exceeded_thresholds():
+    row = {"max_duration_seconds": "60", "max_failure_rate_percent": "10"}
+    # Duration over, rate under.
+    assert (
+        _folder_warning(row, duration_seconds=95, files_processed=10, files_failed=1)
+        == "took 95.0s (limit 60s)"
+    )
+    # Rate over.
+    out = _folder_warning(row, duration_seconds=30, files_processed=8, files_failed=2)
+    assert out == "failure rate 20.0% (limit 10%)"
+    # Both over — joined.
+    out = _folder_warning(row, duration_seconds=95, files_processed=8, files_failed=2)
+    assert out == "took 95.0s (limit 60s); failure rate 20.0% (limit 10%)"
+    # Within limits — no warning.
+    assert _folder_warning(row, duration_seconds=30, files_processed=10, files_failed=0) == ""
+    # Rate exactly at the limit is not a warning.
+    assert (
+        _folder_warning(
+            {"max_failure_rate_percent": "50"},
+            duration_seconds=1,
+            files_processed=1,
+            files_failed=1,
+        )
+        == ""
+    )
+
+
+def test_folder_warning_no_thresholds_or_bad_values():
+    # No thresholds configured → nothing to compare against.
+    assert _folder_warning({}, duration_seconds=9999, files_processed=0, files_failed=5) == ""
+    # Invalid / negative threshold values are treated as unset.
+    bad = {"max_duration_seconds": "abc", "max_failure_rate_percent": "-5"}
+    assert _folder_warning(bad, duration_seconds=1, files_processed=0, files_failed=1) == ""
+    # No files at all → failure rate is 0, never warns.
+    assert (
+        _folder_warning(
+            {"max_failure_rate_percent": "0.0001"},
+            duration_seconds=1,
+            files_processed=0,
+            files_failed=0,
+        )
+        == ""
+    )
+
+
+def test_run_warns_when_folder_exceeds_failure_rate_threshold(workspace):
+    """A missing folder fails every file — 100% failure rate > 10% limit."""
+    settings = workspace
+    db = open_database(settings)
+    try:
+        _insert_folder(db, "does-not-exist", max_failure_rate_percent="10")
+    finally:
+        with contextlib.suppress(Exception):
+            db.close()
+
+    report = run_folders(settings)
+    folder = report.folders[0]
+    assert folder.files_failed == 1
+    assert folder.duration_seconds > 0
+    assert folder.warning == "failure rate 100.0% (limit 10%)"
+
 
 
 def test_run_uses_real_upc_lookup_when_as400_configured(workspace, monkeypatch):

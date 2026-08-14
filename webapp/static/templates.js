@@ -194,6 +194,7 @@ function runResults(report) {
         <span class="stat ${f.files_failed ? "stat--bad" : "stat--good"}">failed <b>${f.files_failed}</b></span>
         <span class="stat">${f.success ? '<span class="state-on">✓ ok</span>' : '<span class="state-off">⚠</span>'}</span>
       </div>
+      ${f.warning ? `<div class="folder-result__warning">⚠ ${H.esc(f.warning)}</div>` : ""}
       ${f.errors.length ? `<div class="folder-result__errors">${f.errors.map(H.esc).join("<br>")}</div>` : ""}
     </div>`).join("");
 }

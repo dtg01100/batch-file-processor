@@ -66,6 +66,8 @@ def test_schema_roundtrip_preserves_every_field():
         "process_backend_email": False,
         "process_backend_http": False,
         "alert_on_failure": True,
+        "max_duration_seconds": 90,
+        "max_failure_rate_percent": 5,
         "ftp_server": "ftp.example.com",
         "ftp_port": 2121,
         "ftp_username": "user",
@@ -265,6 +267,47 @@ def test_put_folder_persists_changes(client):
     db.close()
     assert row["alias"] == "TEST-RENAMED"
     assert row["ftp_server"] == "ftp.changed.example.com"
+
+
+def test_put_folder_persists_alert_thresholds(client):
+    """Phase 5.3 follow-up: duration + failure-rate thresholds round-trip."""
+    r = client.get("/api/folders/1")
+    body = r.json()
+    body["max_duration_seconds"] = 90
+    body["max_failure_rate_percent"] = 5
+
+    r = client.put("/api/folders/1", json=body)
+    assert r.status_code == 200
+    assert r.json()["max_duration_seconds"] == 90
+    assert r.json()["max_failure_rate_percent"] == 5
+
+    # Persisted in the DB (TEXT-affinity columns, so compare as strings).
+    db = open_database(Settings(base_dir=client.app.state.settings.base_dir,
+                                data_dir=client.app.state.settings.data_dir))
+    row = db.folders_table.find_one(id=1)
+    db.close()
+    assert str(row["max_duration_seconds"]) == "90"
+    assert str(row["max_failure_rate_percent"]) == "5"
+
+    # GET re-reads them as ints (the editor's wire type).
+    fetch = client.get("/api/folders/1")
+    assert fetch.json()["max_duration_seconds"] == 90
+    assert fetch.json()["max_failure_rate_percent"] == 5
+
+
+def test_put_folder_rejects_invalid_thresholds(client):
+    """Negative duration / out-of-range percent are rejected at the boundary."""
+    r = client.get("/api/folders/1")
+    body = r.json()
+    body["max_duration_seconds"] = -1
+    r = client.put("/api/folders/1", json=body)
+    assert r.status_code == 422
+
+    r = client.get("/api/folders/1")
+    body = r.json()
+    body["max_failure_rate_percent"] = 101
+    r = client.put("/api/folders/1", json=body)
+    assert r.status_code == 422
 
 
 def test_put_folder_rejects_cross_field_violation(client):
