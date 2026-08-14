@@ -1,0 +1,11 @@
+test_id: "001"
+description: "basic_invoice"
+format: "yellowdog_csv"
+parameters:
+  convert_to_format: "yellowdog_csv"
+notes: |
+  Basic invoice converted to YellowDog CSV. Tests default column layout
+  (Invoice Total, Description, Item Number, Cost, Quantity, UOM Desc.,
+  Invoice Date, Invoice Number, Customer Name, Customer PO Number, UPC)
+  without AS400 credentials — InvFetcher returns empty values for
+  customer name / PO number / UOM description.

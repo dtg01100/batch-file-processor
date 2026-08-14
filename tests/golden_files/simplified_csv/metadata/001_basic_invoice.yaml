@@ -1,0 +1,12 @@
+test_id: "001"
+description: "basic_invoice"
+format: "simplified_csv"
+parameters:
+  convert_to_format: "simplified_csv"
+  include_headers: true
+  include_item_numbers: true
+  include_item_description: true
+  simple_csv_sort_order: "description,item_number,upc,quantity,cost"
+notes: |
+  Basic invoice converted to simplified CSV. Tests the default column layout
+  (description, item_number, upc, quantity, cost) without retail UOM conversion.

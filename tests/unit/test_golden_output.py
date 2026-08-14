@@ -564,6 +564,19 @@ def run_converter(
             settings_dict.get(cred)
             for cred in ["as400_username", "as400_address", "as400_password"]
         )
+        # Some converters don't query a database — they accept empty
+        # settings_dict via a no-op query runner (see
+        # core/edi/edi_tweaker.py::_create_query_runner_adapter). Allow
+        # those through the credential gate; only skip DB-backed formats
+        # when we have neither real credentials nor injected test data.
+        db_free_formats = {
+            "scannerware",
+            "tweaks",
+            "scansheet_type_a",
+            "simplified_csv",
+            "yellowdog_csv",
+            "csv",
+        }
 
         # Inject test data for CustomerLookupService + UOMLookupService converters
         if test_customer_data is not None or test_uom_data is not None:
@@ -687,7 +700,7 @@ def run_converter(
             finally:
                 InvFetcher._po_query = original_inv_fetcher_class_run_query
         # Skip if no credentials and no test data was used by any branch above
-        elif not has_creds:
+        elif not has_creds and format_name not in db_free_formats:
             pytest.skip("Requires AS400 credentials or test data")
         else:
             # Run conversion with real credentials
