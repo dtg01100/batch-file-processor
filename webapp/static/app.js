@@ -174,13 +174,33 @@ async function loadFolders() {
     return;
   }
   state.folders = folders; // keep the list for the edit panel
+  _renderFolders();
+  renderPluginAudit(folders);
+}
+
+// Re-render the folders table applying the current search filter. State
+// is read from ``state.folders``; called after the initial load and on
+// every keystroke in the search box. Splitting render from fetch keeps
+// filter keystrokes free of API round-trips.
+function _renderFolders() {
+  const folders = state.folders || [];
   const empty = $("folders-empty");
   const wrap = $("folders-wrap");
+  const noMatch = $("folders-no-match");
+  const search = $("folders-search");
+  const needle = (search && search.value ? search.value : "").trim().toLowerCase();
+  const visible = !needle
+    ? folders
+    : folders.filter((f) => {
+        const hay = `${f.alias || ""} ${f.folder_name || ""} ${f.resolved_path || ""}`.toLowerCase();
+        return hay.includes(needle);
+      });
   empty.hidden = folders.length !== 0;
-  wrap.hidden = folders.length === 0;
+  wrap.hidden = visible.length === 0;
+  noMatch.hidden = !(folders.length > 0 && visible.length === 0);
 
   const body = $("folders-body");
-  body.innerHTML = folderRows(folders);
+  body.innerHTML = folderRows(visible);
 
   // Each row is a button: clicking opens the side panel.
   body.querySelectorAll(".folder-row").forEach((row) => {
@@ -192,8 +212,6 @@ async function loadFolders() {
       }
     });
   });
-
-  renderPluginAudit(folders);
 }
 
 // Read-only audit table: every folder with a configured convert format,
@@ -223,6 +241,7 @@ function renderPluginAudit(folders) {
 }
 
 $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProcessed(); });
+$("folders-search").addEventListener("input", () => _renderFolders());
 
 /* ---------------- watching overview ---------------- */
 

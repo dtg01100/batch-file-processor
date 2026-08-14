@@ -1001,3 +1001,45 @@ test("maintenance card bulk actions move and remove folders", async () => {
   click("clear-queued-emails");
   await waitFor(() => result.textContent === "2 queued email(s) cleared.");
 });
+
+test("folder search filter narrows the table and clears on empty input", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  const search = document.getElementById("folders-search");
+
+  // --- Filter by alias (substring, case-insensitive). ---
+  search.value = "gam";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 1);
+  const visible = document.querySelectorAll("#folders-body tr");
+  assert.equal(visible.length, 1);
+  assert.ok(visible[0].textContent.includes("GAMMA"));
+  assert.equal(document.getElementById("folders-wrap").hidden, false);
+  assert.equal(document.getElementById("folders-no-match").hidden, true);
+
+  // --- Filter that matches nothing shows the no-match empty state. ---
+  search.value = "nothing-matches-this";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await waitFor(() => !document.getElementById("folders-no-match").hidden);
+  assert.equal(document.querySelectorAll("#folders-body tr").length, 0);
+  assert.equal(document.getElementById("folders-wrap").hidden, true);
+  assert.equal(document.getElementById("folders-no-match").hidden, false);
+
+  // --- Clearing the input restores every folder. ---
+  search.value = "";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+  assert.equal(document.getElementById("folders-wrap").hidden, false);
+  assert.equal(document.getElementById("folders-no-match").hidden, true);
+
+  // --- Filter by folder path (relative) hits OMEGA, which has no alias
+  //     matching "omega" but its folder_name "inbox/omega" does. ---
+  search.value = "inbox/omega";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 1);
+  assert.ok(document.querySelector("#folders-body tr").textContent.includes("OMEGA"));
+});

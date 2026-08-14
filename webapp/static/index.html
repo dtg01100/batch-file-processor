@@ -55,11 +55,16 @@
     <section class="card folders-card">
       <div class="card__head">
         <h2>Configured folders</h2>
+        <input type="search" id="folders-search" class="card__search"
+               placeholder="Filter by alias or path…" aria-label="Filter folders" />
         <button id="add-folder-btn" class="btn btn--ghost" title="Add a new folder">+ Add folder</button>
         <button id="refresh-folders" class="btn btn--ghost" title="Refresh">↻</button>
       </div>
       <div id="folders-empty" class="empty" hidden>
         No folders yet — import a database above.
+      </div>
+      <div id="folders-no-match" class="empty" hidden>
+        No folders match the filter.
       </div>
       <div class="table-wrap" id="folders-wrap" hidden>
         <table class="table">
