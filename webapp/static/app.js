@@ -628,7 +628,6 @@ function populateFolderPanel(schema) {
 function readFolderPanel() {
   const schema = {
     id: state.editingFolderId,
-    alert_on_failure: true, // not exposed in the UI yet; default
     plugin_configurations: {},
   };
   for (const el of $("folder-panel-form").elements) {

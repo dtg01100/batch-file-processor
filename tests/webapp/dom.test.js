@@ -134,6 +134,7 @@ const folderOneSchema = {
   process_backend_email: false, process_backend_http: false,
   watch_enabled: true, watch_interval_seconds: 120,
   max_duration_seconds: 90, max_failure_rate_percent: 5,
+  alert_on_failure: false,
   edi: { process_edi: true, split_edi: false, convert_to_format: "scannerware" },
   plugin_configurations: {
     scannerware: { a_record_padding: "000000", append_a_records: true },
@@ -632,6 +633,13 @@ test("interactions: folder panel opens, error filter narrows and clears", async 
     document.getElementById("folder-panel-form").elements.namedItem("max_failure_rate_percent").value,
     "5",
   );
+  // The alert_on_failure toggle is exposed and reflects the saved
+  // value (fixture sets it to false).
+  const alertToggle = document
+    .getElementById("folder-panel-form")
+    .elements.namedItem("alert_on_failure");
+  assert.equal(alertToggle.checked, false);
+  alertToggle.checked = true;
   document.getElementById("folder-panel-close").click();
   await waitFor(() => document.getElementById("folder-panel").hidden);
 
