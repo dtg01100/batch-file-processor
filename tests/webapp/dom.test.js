@@ -141,6 +141,26 @@ const folderOneSchema = {
   },
 };
 
+// Full edit schema for folder 2 (GAMMA) — the "Copy from…" test seeds
+// the ACME form with these backend / EDI / plugin settings.
+const folderTwoSchema = {
+  id: 2, alias: "GAMMA", folder_name: "inbox/gamma",
+  process_backend_copy: false, process_backend_ftp: true,
+  process_backend_email: false, process_backend_http: false,
+  watch_enabled: false, watch_interval_seconds: 30,
+  max_duration_seconds: 0, max_failure_rate_percent: 0,
+  alert_on_failure: true,
+  ftp: { server: "ftp.gamma.example.com", port: 21, username: "gamma",
+         password: "s3cret", folder: "/out/" },
+  edi: { process_edi: true, split_edi: true, convert_to_format: "scannerware",
+         split_edi_include_invoices: true },
+  upc_override: { enabled: true, level: 2, category_filter: "11",
+                  target_length: 12, padding_pattern: "0            " },
+  plugin_configurations: {
+    scannerware: { a_record_padding: "999999", append_a_records: false },
+  },
+};
+
 // The run the Run card will report. While runningPollsLeft > 0 the detail
 // endpoint answers "running" (pollRun keeps polling every 1.2s); when it
 // hits 0 the run is "completed" and the UI settles. The /log endpoint
@@ -320,6 +340,7 @@ function buildRoutes() {
       return folderList;
     },
     "/api/folders/1": () => folderOneSchema,
+    "/api/folders/2": () => folderTwoSchema,
     // The Add flow creates id 4 (max existing id 3 + 1); 3 is OMEGA,
     // used by the delete flow.
     "/api/folders/3": folderById(3),
@@ -338,10 +359,47 @@ function buildRoutes() {
     // Return a fresh copy like a real HTTP response would. app.js keeps
     // its own state.processedFiles snapshot; aliasing the backend array
     // here would mask bugs where the UI fails to update its copy.
-    "/api/processed-files/flagged": () => ({
-      count: processed.length,
-      files: processed.map((f) => ({ ...f })),
-    }),
+    "/api/processed-files": (url) => {
+      // Honor the search / folder / date / offset / limit params the
+      // new gap-1.2 UI sends. Real filtering lives in the SQL helper;
+      // we re-implement it here so the dashboard sees the same shape
+      // the real endpoint returns (``count`` for the page, ``total``
+      // for the unpaginated match count, echoed ``limit`` / ``offset``).
+      const params = url.searchParams;
+      const search = (params.get("search") || "").toLowerCase();
+      const folderId = params.get("folder_id");
+      const dateFrom = params.get("date_from") || "";
+      const dateToNext = params.get("date_to") || "";
+      const dateToExclusive = (() => {
+        if (!dateToNext) return null;
+        // Add one day in YYYY-MM-DD form; Date setUTCDate handles
+        // month/year rollover automatically.
+        const [y, m, d] = dateToNext.split("-").map(Number);
+        const dt = new Date(Date.UTC(y, m - 1, d + 1));
+        return dt.toISOString().slice(0, 10);
+      })();
+      const filtered = processed.filter((f) => {
+        if (folderId && String(f.folder_id) !== String(folderId)) return false;
+        if (search) {
+          const hay = `${f.file_name} ${f.folder_alias} ${f.invoice_numbers || ""}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        if (dateFrom && f.processed_at < dateFrom) return false;
+        if (dateToExclusive && f.processed_at >= dateToExclusive) return false;
+        return true;
+      });
+      const total = filtered.length;
+      const limit = Math.max(1, Number(params.get("limit")) || 200);
+      const offset = Math.max(0, Number(params.get("offset")) || 0);
+      const page = filtered.slice(offset, offset + limit).map((f) => ({ ...f }));
+      return {
+        count: page.length,
+        total,
+        limit,
+        offset,
+        files: page,
+      };
+    },
     "/api/processed-files/1/resend": resendRoute(1),
     "/api/processed-files/2/resend": resendRoute(2),
     "/api/settings": (url, options) => {
@@ -676,6 +734,57 @@ test("interactions: folder panel opens, error filter narrows and clears", async 
   rawLink.click();
   assert.equal(document.getElementById("errors-filter-state").hidden, true);
   assert.equal(document.querySelectorAll("#errors-body tr").length, 3);
+});
+
+test("copy from…: another folder's settings seed the form, identity stays", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // --- Open the ACME panel (folder 1). ---
+  document.querySelectorAll("#folders-body .folder-row")[0].click();
+  await waitFor(() => !document.getElementById("folder-panel").hidden);
+  assert.equal(document.getElementById("folder-panel-title").textContent, "Edit: ACME");
+
+  // --- The picker lists every other folder (GAMMA, OMEGA), never the
+  // folder being edited. ---
+  document.getElementById("folder-panel-copy").click();
+  await waitFor(() => !document.getElementById("dlg-root").hidden);
+  const rows = document.querySelectorAll("#dlg-copy-list [data-copy-id]");
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].textContent.includes("GAMMA"), true);
+
+  // --- Pick GAMMA: backends / EDI / UPC / plugin config land in the
+  // form, but the destination's alias + path are preserved. The dialog
+  // closes synchronously on click while the /api/folders/{id} fetch is
+  // still in flight, so wait for the form to actually populate rather
+  // than the dialog to hide. ---
+  rows[0].click();
+  await waitFor(() =>
+    document.getElementById("folder-panel-form").elements.namedItem("ftp.server").value
+      === "ftp.gamma.example.com");
+  const form = document.getElementById("folder-panel-form");
+  assert.equal(document.getElementById("dlg-root").hidden, true);
+  assert.equal(form.elements.namedItem("alias").value, "ACME");
+  assert.equal(form.elements.namedItem("folder_name").value, "inbox/acme");
+  assert.equal(form.elements.namedItem("ftp.server").value, "ftp.gamma.example.com");
+  assert.equal(
+    form.elements.namedItem("edi.convert_to_format").value,
+    "scannerware",
+  );
+  assert.equal(form.elements.namedItem("upc_override.enabled").checked, true);
+  // The FTP fieldset is revealed because the source configures FTP.
+  assert.equal(document.getElementById("grp-ftp").hidden, false);
+  assert.equal(
+    document.getElementById("folder-panel-copy-note").hidden,
+    false,
+  );
+
+  // --- Escape dismisses the panel; the note is not sticky across opens. ---
+  document.getElementById("folder-panel-close").click();
+  await waitFor(() => document.getElementById("folder-panel").hidden);
 });
 
 test("plugin audit: read-only rows open the edit panel", async () => {
@@ -1042,4 +1151,554 @@ test("folder search filter narrows the table and clears on empty input", async (
   search.dispatchEvent(new window.Event("input", { bubbles: true }));
   await waitFor(() => document.querySelectorAll("#folders-body tr").length === 1);
   assert.ok(document.querySelector("#folders-body tr").textContent.includes("OMEGA"));
+});
+
+test("processed-files filter narrows by search and date", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  // Two processed rows seed by default.
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+
+  // --- Search filter narrows to one row by invoice number. ---
+  const search = document.getElementById("processed-search");
+  search.value = "1002";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  try {
+    await waitFor(() => document.querySelectorAll("#processed-body tr").length === 1);
+  } catch (_e) {
+    console.log("TIMEOUT rows:",
+      document.querySelectorAll("#processed-body tr").length,
+      "wrap.hidden:",
+      document.getElementById("processed-wrap").hidden);
+    throw _e;
+  }
+  assert.equal(document.getElementById("processed-no-match").hidden, true);
+
+  // --- Search that matches nothing shows the no-match empty state. ---
+  search.value = "nothing-matches";
+  search.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await waitFor(() => !document.getElementById("processed-no-match").hidden);
+  assert.equal(document.querySelectorAll("#processed-body tr").length, 0);
+  assert.equal(document.getElementById("processed-wrap").hidden, true);
+  assert.equal(document.getElementById("processed-no-match").hidden, false);
+
+  // --- Clear button restores everything. ---
+  document.getElementById("processed-filters-clear").click();
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+  assert.equal(search.value, "");
+  assert.equal(document.getElementById("processed-no-match").hidden, true);
+
+  // --- Date filter: a far-future range hides every row. ---
+  const fromInput = document.getElementById("processed-date-from");
+  const toInput = document.getElementById("processed-date-to");
+  fromInput.value = "2999-01-01";
+  toInput.value = "2999-12-31";
+  fromInput.dispatchEvent(new window.Event("change", { bubbles: true }));
+  toInput.dispatchEvent(new window.Event("change", { bubbles: true }));
+  await waitFor(() => !document.getElementById("processed-no-match").hidden);
+  assert.equal(document.querySelectorAll("#processed-body tr").length, 0);
+  assert.equal(document.getElementById("processed-no-match").hidden, false);
+});
+
+test("processed-files: folder filter dropdown narrows by folder_id", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+
+  // The dropdown mirrors the folders card (ACME / GAMMA / OMEGA).
+  const filter = document.getElementById("processed-folder-filter");
+  const options = [...filter.options].map((o) => o.textContent);
+  assert.deepEqual(options, ["All folders", "ACME", "GAMMA", "OMEGA"]);
+
+  // --- Pick GAMMA: only the GAMMA row remains. ---
+  filter.value = "2";
+  filter.dispatchEvent(new window.Event("change", { bubbles: true }));
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 1);
+  const visible = document.querySelector("#processed-body tr");
+  assert.ok(visible.textContent.includes("GAMMA"));
+  assert.ok(visible.textContent.includes("PO-77.edi"));
+
+  // --- Pick ACME: the GAMMA row is replaced by the ACME row. ---
+  filter.value = "1";
+  filter.dispatchEvent(new window.Event("change", { bubbles: true }));
+  await waitFor(() => {
+    const row = document.querySelector("#processed-body tr");
+    return row && row.textContent.includes("ACME");
+  });
+  assert.equal(document.querySelectorAll("#processed-body tr").length, 1);
+  assert.ok(document.querySelector("#processed-body tr").textContent.includes("INV-1002.edi"));
+
+  // --- "All folders" restores everything. ---
+  filter.value = "";
+  filter.dispatchEvent(new window.Event("change", { bubbles: true }));
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+});
+
+test("processed-files: Today buttons fill the date inputs and re-fetch", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+
+  const fromInput = document.getElementById("processed-date-from");
+  const toInput = document.getElementById("processed-date-to");
+  assert.equal(fromInput.value, "");
+  assert.equal(toInput.value, "");
+
+  // Click the From-Today button: the input is filled with today's
+  // ISO date and the table refreshes (the fixture rows use
+  // 2026-08-12 timestamps so a "from today" range hides everything).
+  document.getElementById("processed-date-from-today").click();
+  await waitFor(() => !document.getElementById("processed-no-match").hidden);
+  // The exact value depends on "today" relative to the fixed fixture
+  // timestamps; the important contract is that the input was filled
+  // and a fetch was issued.
+  assert.match(fromInput.value, /^\d{4}-\d{2}-\d{2}$/);
+
+  // The To-Today button mirrors the same behavior.
+  document.getElementById("processed-filters-clear").click();
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+  document.getElementById("processed-date-to-today").click();
+  await waitFor(() => fromInput.value !== "" || toInput.value !== "");
+  assert.match(toInput.value, /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test("processed-files: Select all / Clear selection toggle every row", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+
+  // Row 0 (INV-1002) starts flagged; row 1 (PO-77) starts unflagged.
+  const boxes = [...document.querySelectorAll("#processed-body input[data-flag-id]")];
+  assert.equal(boxes[0].checked, true);
+  assert.equal(boxes[1].checked, false);
+
+  // --- Select all: every row on screen is flagged. The head-of-table
+  // checkbox follows. ---
+  document.getElementById("processed-select-all").click();
+  await waitFor(() => {
+    const all = [...document.querySelectorAll("#processed-body input[data-flag-id]")];
+    return all.length > 0 && all.every((b) => b.checked);
+  });
+  // The Resend button count reflects every flagged row; wait for the
+  // text to settle (the per-row change handlers POST asynchronously).
+  await waitFor(() =>
+    document.getElementById("resend-btn").textContent === "Resend flagged (2)");
+  const headToggle = document.getElementById("processed-select-toggle");
+  assert.equal(headToggle.checked, true);
+  assert.equal(headToggle.indeterminate, false);
+
+  // --- Clear selection: nothing is flagged. ---
+  document.getElementById("processed-select-none").click();
+  await waitFor(() => {
+    const all = [...document.querySelectorAll("#processed-body input[data-flag-id]")];
+    return all.length > 0 && all.every((b) => !b.checked);
+  });
+  await waitFor(() =>
+    document.getElementById("resend-btn").textContent === "Resend flagged");
+  assert.equal(headToggle.checked, false);
+  assert.equal(headToggle.indeterminate, false);
+});
+
+test("processed-files: head checkbox becomes indeterminate on partial selection", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 2);
+
+  const headToggle = document.getElementById("processed-select-toggle");
+  // Row 0 is flagged from the fixture — already partial.
+  assert.equal(headToggle.checked, false);
+  assert.equal(headToggle.indeterminate, true);
+});
+
+test("processed-files: Load More paginates via the offset/total params", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  // The default fixture only has 2 rows, but the dashboard should
+  // still show Load More whenever the response says ``total`` exceeds
+  // what's on screen. Wrap fetch to simulate a large history; the
+  // non-processed-files routes delegate to the original handler.
+  const originalFetch = window.fetch;
+  const totalRows = 250;
+  const synthetic = [];
+  for (let i = 0; i < totalRows; i++) {
+    synthetic.push({
+      id: 100 + i,
+      file_name: `synthetic-${i}.edi`,
+      folder_id: 1,
+      folder_alias: "ACME",
+      processed_at: "2026-08-12T13:21:00.000000",
+      status: "processed",
+      sent_to: "copy",
+      invoice_numbers: String(i),
+      resend_flag: false,
+    });
+  }
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname !== "/api/processed-files") {
+      return originalFetch(input, options);
+    }
+    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+    const limit = Math.max(1, Number(url.searchParams.get("limit")) || 200);
+    const page = synthetic.slice(offset, offset + limit).map((f) => ({ ...f }));
+    return {
+      ok: true, status: 200, statusText: "OK",
+      json: async () => ({
+        count: page.length,
+        total: synthetic.length,
+        limit, offset,
+        files: page,
+      }),
+    };
+  };
+
+  // Trigger a fresh load via the keyboard shortcut (or any call that
+  // re-issues the fetch) — the 8s poll fires too late for the test.
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "r", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 200);
+
+  // Load More is visible while more pages remain.
+  const moreWrap = document.getElementById("processed-load-more").parentElement;
+  assert.equal(moreWrap.hidden, false);
+  assert.equal(
+    document.getElementById("processed-count").textContent,
+    `Showing 200 of ${totalRows}`,
+  );
+
+  // --- Click Load More: another page is appended. ---
+  document.getElementById("processed-load-more").click();
+  await waitFor(() => document.querySelectorAll("#processed-body tr").length === 250);
+  assert.equal(moreWrap.hidden, true); // no more pages
+  assert.equal(
+    document.getElementById("processed-count").textContent,
+    `${totalRows} rows`,
+  );
+});
+
+test("keyboard shortcuts: ? opens the modal, Esc closes it; Ctrl+Enter starts a run", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // The shortcuts modal lives in the DOM but starts closed.
+  const modal = document.getElementById("shortcuts-modal");
+  assert.equal(modal.open, false);
+
+  // --- "?" opens the modal. ---
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "?", bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => modal.open);
+  assert.equal(modal.open, true);
+  // Header is present and the shortcuts table has the expected rows.
+  const rows = document.querySelectorAll("#shortcuts-modal .shortcuts-table tr");
+  assert.ok(rows.length >= 6, `expected several shortcut rows, got ${rows.length}`);
+  assert.ok(modal.textContent.includes("Ctrl") && modal.textContent.includes("Enter"));
+
+  // --- Esc closes it. ---
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "Escape", bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => !modal.open);
+  assert.equal(modal.open, false);
+
+  // --- The topbar "?" button also opens the modal. ---
+  document.getElementById("shortcuts-help").click();
+  await waitFor(() => modal.open);
+  assert.equal(modal.open, true);
+
+  // --- Ctrl+Enter starts a run (the Run button isn't disabled). ---
+  if (typeof modal.close === "function") modal.close();
+  else modal.removeAttribute("open");
+  assert.equal(modal.open, false);
+  const runBtn = document.getElementById("run-btn");
+  assert.equal(runBtn.disabled, false);
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "Enter", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => !document.getElementById("run-progress").hidden);
+  assert.equal(runBtn.disabled, true);
+});
+
+test("keyboard shortcuts: Ctrl+R refreshes every card", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  let processedCalls = 0;
+  const originalFetch = window.fetch;
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname === "/api/processed-files") processedCalls += 1;
+    return originalFetch(input, options);
+  };
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "r", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => processedCalls >= 1);
+  // refreshConfig + loadFolders + loadWatched + loadErrors + loadRuns +
+  // loadProcessed + loadBackups + loadSettings all fire; we only
+  // assert processedFiles was hit (since that's the cheapest signal).
+  assert.ok(processedCalls >= 1);
+});
+
+test("keyboard shortcuts: Ctrl+F focuses the folders search; Ctrl+P focuses processed search", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "f", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  assert.equal(document.activeElement, document.getElementById("folders-search"));
+
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "p", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  assert.equal(document.activeElement, document.getElementById("processed-search"));
+});
+
+test("diagnostics modal: opens from the topbar button, fetches /api/diagnostics, renders snapshot", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // The diagnostic endpoint is fetched on open; stub a realistic
+  // payload so the modal has something to render. Build a fresh
+  // routes object that handles BOTH /api/diagnostics and the existing
+  // boot routes by deferring to originalFetch for anything else.
+  const originalFetch = window.fetch;
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname === "/api/diagnostics") {
+      return {
+        ok: true, status: 200, statusText: "OK",
+        json: async () => ({
+          collected_at: "2026-08-17T11:00:00",
+          platform: {
+            system: "Linux", release: "6.5.0", machine: "x86_64",
+            python_version: "3.13.3", python_executable: "/usr/bin/python",
+            pid: 4242,
+          },
+          app: { title: "Batch File Sender", version: "0.1.0" },
+          paths: {
+            base_dir: "/data",
+            data_dir: "/data/config",
+            database_path: "/data/config/folders.db",
+            database_exists: true,
+            database_size_bytes: 8192,
+          },
+          database: {
+            version: "51",
+            folders_count: 3, active_folders_count: 2,
+            processed_files_count: 7, errors_count: 1, queued_emails: 0,
+          },
+          runtime: {
+            active_runs: 0,
+            scheduler: { enabled: true, interval_seconds: 60, runs_triggered: 4 },
+            watched_folders: 2, watched_with_errors: 1,
+            recent_runs: [
+              { run_id: "r1", status: "completed",
+                started_at: "2026-08-17T10:00:00", finished_at: "2026-08-17T10:01:00",
+                total_processed: 5, total_failed: 0, error: "" },
+              { run_id: "r2", status: "failed",
+                started_at: "2026-08-17T09:00:00", finished_at: "2026-08-17T09:01:00",
+                total_processed: 1, total_failed: 2, error: "backend down" },
+            ],
+            recent_run_failures_24h: 1,
+            backup_count: 3,
+          },
+          modules: [
+            { module: "core.edi.edi_parser", ok: true, error: "" },
+            { module: "dispatch", ok: true, error: "" },
+            { module: "webapp.main", ok: false, error: "ModuleNotFoundError: x" },
+          ],
+          ok: false,
+          warnings: ["Recent run failures: 1 failed run(s) in the last 24h",
+                     "Watcher health: 1 watched folder(s) with errors"],
+        }),
+      };
+    }
+    return originalFetch(input, options);
+  };
+
+  const modal = document.getElementById("diagnostics-modal");
+  assert.equal(modal.open, false);
+
+  // --- Open via the topbar "diag" button. ---
+  document.getElementById("diagnostics-help").click();
+  await waitFor(() => modal.open);
+  // The state banner is the first thing rendered once data arrives.
+  await waitFor(() => {
+    const s = document.getElementById("diagnostics-state");
+    if (!s || s.hidden) return false;
+    return s.classList.contains("ok") || s.classList.contains("warn");
+  });
+  // The status banner surfaces the warnings count.
+  const state = document.getElementById("diagnostics-state");
+  assert.equal(state.hidden, false);
+  assert.ok(state.textContent.includes("2 warning(s)"));
+  assert.ok(state.classList.contains("warn"));
+  // Database + runtime fields populated.
+  assert.equal(document.getElementById("diag-platform").textContent,
+    "Linux 6.5.0 (x86_64)");
+  assert.equal(document.getElementById("diag-python").textContent, "3.13.3");
+  assert.equal(document.getElementById("diag-db-version").textContent, "51");
+  assert.equal(document.getElementById("diag-active-runs").textContent, "0");
+  assert.equal(document.getElementById("diag-recent-failures").textContent, "1");
+  assert.equal(document.getElementById("diag-backups").textContent, "3");
+  // Module summary surfaces the failure.
+  const modulesCell = document.getElementById("diag-modules");
+  assert.equal(modulesCell.textContent, "2/3 ok · 1 failed");
+  assert.ok(modulesCell.title.includes("webapp.main"));
+  // Recent runs list renders one completed + one failed row.
+  const runItems = document.querySelectorAll("#diag-recent-runs li");
+  assert.equal(runItems.length, 2);
+  assert.ok(runItems[0].textContent.includes("completed"));
+  assert.ok(runItems[1].textContent.includes("failed"));
+  assert.ok(runItems[1].textContent.includes("backend down"));
+  // Raw JSON is rendered for support-ticket copy/paste.
+  const raw = document.getElementById("diag-raw").textContent;
+  assert.ok(raw.includes("\"version\": \"51\""));
+
+  // --- Esc closes the modal. ---
+  document.dispatchEvent(new window.KeyboardEvent("keydown", {
+    key: "Escape", bubbles: true, cancelable: true,
+  }));
+  await waitFor(() => !modal.open);
+});
+
+test("diagnostics modal: clean run renders a green 'self-test clean' banner", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  const originalFetch = window.fetch;
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname === "/api/diagnostics") {
+      return {
+        ok: true, status: 200, statusText: "OK",
+        json: async () => ({
+          collected_at: "2026-08-17T11:00:00",
+          platform: { system: "Linux", release: "", machine: "",
+                      python_version: "3.13.3", python_executable: "", pid: 1 },
+          app: { title: "Batch File Sender", version: "0.1.0" },
+          paths: { base_dir: "/d", data_dir: "/d/c", database_path: "/d/c/f.db",
+                   database_exists: true, database_size_bytes: 1024 },
+          database: { version: "51", folders_count: 0, active_folders_count: 0,
+                      processed_files_count: 0, errors_count: 0, queued_emails: 0 },
+          runtime: { active_runs: 0, scheduler: { enabled: false, interval_seconds: 60 },
+                     watched_folders: 0, watched_with_errors: 0,
+                     recent_runs: [], recent_run_failures_24h: 0,
+                     backup_count: 0 },
+          modules: [{ module: "webapp", ok: true, error: "" }],
+          ok: true,
+          warnings: [],
+        }),
+      };
+    }
+    return originalFetch(input, options);
+  };
+
+  document.getElementById("diagnostics-help").click();
+  await waitFor(() => document.getElementById("diagnostics-state").hidden === false);
+  const state = document.getElementById("diagnostics-state");
+  assert.ok(state.classList.contains("ok"));
+  assert.equal(state.textContent, "Self-test clean.");
+});
+
+test("import card: live timer ticks while in flight; result surfaces duration_seconds", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  // Intercept the import POST: return the standard ImportResult
+  // shape plus a measured duration, but with a small async delay so
+  // the live timer can tick before the result renders.
+  const originalFetch = window.fetch;
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname === "/api/import") {
+      // Sleep ~250ms so the elapsed timer fires at least twice.
+      await new Promise((r) => setTimeout(r, 250));
+      return {
+        ok: true, status: 200, statusText: "OK",
+        json: async () => ({
+          folders_imported: 3,
+          active_folders: 2,
+          rebased_paths: 0,
+          source_platform: "Windows",
+          database_path: "/data/folders.db",
+          base_directory: "/data",
+          duration_seconds: 0.42,
+        }),
+      };
+    }
+    return originalFetch(input, options);
+  };
+
+  const importBtn = document.getElementById("import-btn");
+  const resultBox = document.getElementById("import-result");
+
+  // Stage a file + submit. jsdom's ``DataTransfer`` is unavailable, so
+  // we synthesize a FileList with a minimal array-like shape and
+  // assign it to the input's ``files`` property — the dashboard only
+  // reads ``files[0]``, so a one-element array is enough.
+  const form = document.getElementById("import-form");
+  const fileInput = document.getElementById("import-file");
+  const fakeFile = new window.File(["dummy"], "folders.db",
+    { type: "application/octet-stream" });
+  Object.defineProperty(fileInput, "files", {
+    configurable: true,
+    value: [fakeFile],
+  });
+  form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+
+  // --- Live timer ticks while the request is in flight. ---
+  await waitFor(() => /^Importing… \d+\.\ds$/.test(importBtn.textContent));
+  assert.equal(importBtn.disabled, true);
+  // The timer increments over time.
+  const earlyLabel = importBtn.textContent;
+  await new Promise((r) => setTimeout(r, 200));
+  const laterLabel = importBtn.textContent;
+  assert.notEqual(earlyLabel, laterLabel, "timer should tick");
+
+  // --- Once the fetch resolves, the result notice shows the
+  // server-measured duration alongside the folder summary. ---
+  await waitFor(() => !resultBox.hidden);
+  assert.ok(resultBox.textContent.includes("Imported"));
+  assert.ok(resultBox.textContent.includes("3 folder(s)"));
+  assert.ok(resultBox.textContent.includes("(0.42s)"),
+    `expected duration in result notice, got: ${resultBox.textContent}`);
+  // Button restored.
+  assert.equal(importBtn.disabled, false);
+  assert.equal(importBtn.textContent, "Import");
 });

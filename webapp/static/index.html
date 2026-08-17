@@ -18,6 +18,10 @@
     <div class="topbar__status">
       <span id="health-dot" class="dot" title="server status"></span>
       <span id="base-dir-pill" class="pill" title="base directory"></span>
+      <button id="shortcuts-help" type="button" class="btn btn--ghost btn--mini"
+              title="Keyboard shortcuts (?)">?</button>
+      <button id="diagnostics-help" type="button" class="btn btn--ghost btn--mini"
+              title="Diagnostics / self-test">diag</button>
     </div>
   </header>
 
@@ -212,8 +216,15 @@
     <aside id="folder-panel" class="folder-panel" hidden aria-hidden="true">
       <div class="folder-panel__head">
         <h2 id="folder-panel-title">Folder</h2>
-        <button id="folder-panel-close" class="btn btn--ghost" title="Close">×</button>
+        <div class="folder-panel__head-actions">
+          <button type="button" id="folder-panel-copy" class="btn btn--ghost"
+                  title="Copy backends, EDI, UPC and plugin settings from another folder">
+            Copy from…
+          </button>
+          <button id="folder-panel-close" class="btn btn--ghost" title="Close">×</button>
+        </div>
       </div>
+      <div id="folder-panel-copy-note" class="notice" hidden></div>
       <div id="folder-panel-error" class="notice err" hidden></div>
       <form id="folder-panel-form" class="folder-panel__body" autocomplete="off">
         <fieldset class="grp">
@@ -396,6 +407,10 @@
 
         <div class="folder-panel__actions">
           <button type="button" id="folder-panel-run" class="btn btn--ghost">Run this folder</button>
+          <button type="button" id="folder-panel-duplicate" class="btn btn--ghost"
+                  title="Create a new folder with the same settings">
+            Duplicate folder
+          </button>
           <button type="button" id="folder-panel-delete" class="btn btn--danger" hidden>Delete folder</button>
           <button type="button" id="folder-panel-cancel" class="btn btn--ghost">Cancel</button>
           <button type="submit" id="folder-panel-save" class="btn btn--primary">Save</button>
@@ -581,21 +596,128 @@
           <button id="clear-flags-btn" class="btn btn--ghost">Clear all flags</button>
         </div>
       </div>
+      <div class="processed-card__filters">
+        <input type="search" id="processed-search" class="card__search"
+               placeholder="Filter by file, folder, or invoice…"
+               aria-label="Filter processed files" />
+        <label class="field field--inline">
+          <span>Folder</span>
+          <select id="processed-folder-filter" aria-label="Filter by folder">
+            <option value="">All folders</option>
+          </select>
+        </label>
+        <label class="field field--inline">
+          <span>From</span>
+          <input type="date" id="processed-date-from" aria-label="Date from" />
+          <button type="button" id="processed-date-from-today"
+                  class="btn btn--ghost btn--mini"
+                  title="Set From to today">Today</button>
+        </label>
+        <label class="field field--inline">
+          <span>To</span>
+          <input type="date" id="processed-date-to" aria-label="Date to" />
+          <button type="button" id="processed-date-to-today"
+                  class="btn btn--ghost btn--mini"
+                  title="Set To to today">Today</button>
+        </label>
+        <button id="processed-filters-clear" class="btn btn--ghost" type="button">Clear</button>
+      </div>
+      <div class="processed-card__selection">
+        <button id="processed-select-all" class="btn btn--ghost btn--mini" type="button">Select all</button>
+        <button id="processed-select-none" class="btn btn--ghost btn--mini" type="button">Clear selection</button>
+        <span id="processed-count" class="processed-card__count"></span>
+      </div>
       <div id="processed-empty" class="empty">Nothing processed yet.</div>
+      <div id="processed-no-match" class="empty" hidden>No processed files match the filter.</div>
       <div class="table-wrap" id="processed-wrap" hidden>
         <table class="table table--compact">
           <thead>
-            <tr><th class="resend-cell">Resend</th><th>File</th><th>Folder</th><th>Status</th><th>Sent to</th><th>When</th></tr>
+            <tr><th class="resend-cell"><input type="checkbox" id="processed-select-toggle"
+                                               aria-label="Toggle all rows on this page" /></th><th>File</th><th>Folder</th><th>Status</th><th>Sent to</th><th>When</th></tr>
           </thead>
           <tbody id="processed-body"></tbody>
         </table>
+      </div>
+      <div class="processed-card__more" hidden>
+        <button id="processed-load-more" class="btn btn--ghost" type="button">Load more</button>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     Batch File Sender webapp · files are processed where the base directory points
+    <span class="footer__shortcuts">Press <kbd>?</kbd> for keyboard shortcuts.</span>
   </footer>
+
+  <dialog id="shortcuts-modal" class="dlg" aria-labelledby="shortcuts-title">
+    <div class="dlg__head">
+      <h3 id="shortcuts-title">Keyboard shortcuts</h3>
+      <button type="button" class="dlg__close" data-dismiss="cancel" aria-label="Close">×</button>
+    </div>
+    <div class="dlg__body">
+      <table class="shortcuts-table">
+        <tbody>
+          <tr><th><kbd>Ctrl</kbd>+<kbd>Enter</kbd></th><td>Run all folders</td></tr>
+          <tr><th><kbd>Ctrl</kbd>+<kbd>R</kbd></th><td>Refresh every card</td></tr>
+          <tr><th><kbd>Ctrl</kbd>+<kbd>I</kbd></th><td>Focus the Import button</td></tr>
+          <tr><th><kbd>Ctrl</kbd>+<kbd>F</kbd></th><td>Focus the Folders search box</td></tr>
+          <tr><th><kbd>Ctrl</kbd>+<kbd>P</kbd></th><td>Focus the Processed files search box</td></tr>
+          <tr><th><kbd>?</kbd></th><td>Show this dialog</td></tr>
+          <tr><th><kbd>Esc</kbd></th><td>Close any open dialog / side panel</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dlg__actions">
+      <button type="button" class="btn btn--ghost" data-dismiss="cancel">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="diagnostics-modal" class="dlg" aria-labelledby="diagnostics-title">
+    <div class="dlg__head">
+      <h3 id="diagnostics-title">Diagnostics</h3>
+      <button type="button" class="dlg__close" data-dismiss="cancel" aria-label="Close">×</button>
+    </div>
+    <div class="dlg__body">
+      <div id="diagnostics-state" class="diagnostics-state" hidden></div>
+      <div id="diagnostics-loading" class="diagnostics-loading">Loading…</div>
+      <div id="diagnostics-content" hidden>
+        <table class="shortcuts-table diagnostics-table">
+          <tbody>
+            <tr><th>Platform</th><td id="diag-platform"></td></tr>
+            <tr><th>Python</th><td id="diag-python"></td></tr>
+            <tr><th>PID</th><td id="diag-pid"></td></tr>
+            <tr><th>Database</th><td id="diag-db"></td></tr>
+            <tr><th>DB version</th><td id="diag-db-version"></td></tr>
+            <tr><th>Base directory</th><td><code id="diag-base-dir"></code></td></tr>
+            <tr><th>Data directory</th><td><code id="diag-data-dir"></code></td></tr>
+            <tr><th>Database file</th><td><code id="diag-db-path"></code></td></tr>
+            <tr><th>Folders</th><td id="diag-folders"></td></tr>
+            <tr><th>Processed files</th><td id="diag-processed"></td></tr>
+            <tr><th>Error ledger rows</th><td id="diag-errors"></td></tr>
+            <tr><th>Queued emails</th><td id="diag-queued-emails"></td></tr>
+            <tr><th>Active runs</th><td id="diag-active-runs"></td></tr>
+            <tr><th>Recent run failures (24h)</th><td id="diag-recent-failures"></td></tr>
+            <tr><th>Scheduler</th><td id="diag-scheduler"></td></tr>
+            <tr><th>Watched folders</th><td id="diag-watched"></td></tr>
+            <tr><th>Backups</th><td id="diag-backups"></td></tr>
+            <tr><th>Module imports</th><td id="diag-modules"></td></tr>
+          </tbody>
+        </table>
+        <details class="diagnostics-details">
+          <summary>Recent runs</summary>
+          <ol id="diag-recent-runs" class="diagnostics-runs"></ol>
+        </details>
+        <details class="diagnostics-details">
+          <summary>Raw JSON (for support tickets)</summary>
+          <pre id="diag-raw" class="diagnostics-raw"></pre>
+        </details>
+      </div>
+    </div>
+    <div class="dlg__actions">
+      <button type="button" id="diagnostics-copy" class="btn btn--ghost">Copy JSON</button>
+      <button type="button" class="btn btn--ghost" data-dismiss="cancel">Close</button>
+    </div>
+  </dialog>
 
   <script src="/api.js"></script>
   <script src="/helpers.js"></script>

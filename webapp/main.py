@@ -28,7 +28,7 @@ Endpoints
 - ``GET  /api/runs``              recent runs
 - ``GET  /api/runs/{run_id}``     one run (poll this while running)
 - ``GET  /api/runs/{run_id}/log`` SSE stream of the run's per-folder logs
-- ``GET  /api/processed-files``   recently processed files
+- ``GET  /api/processed-files``   recently processed files (filters, ``total``, offset)
 - ``GET  /api/processed-files/flagged``  same, with resend_flag info
 - ``POST /api/processed-files/{id}/resend``  flag a row for resend
 - ``POST /api/processed-files/resend-batch``  flag many rows
@@ -64,6 +64,7 @@ import platform as _platform
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
+from time import perf_counter as _perf_counter
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
@@ -81,6 +82,7 @@ from webapp.backup import (
 from webapp.config import Settings
 from webapp.converters_api import all_converter_specs
 from webapp.database import get_base_directory, get_source_platform, lock, open_database
+from webapp.diagnostics import collect_diagnostics
 from webapp.errors import (
     clear_errors,
     error_counts,
@@ -108,6 +110,7 @@ from webapp.paths import resolve, resolve_row
 from webapp.preview import preview_edi
 from webapp.resend import (
     clear_resend_flags,
+    count_processed_files,
     list_processed_files,
     set_resend_flag,
     set_resend_flag_batch,
@@ -294,6 +297,49 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
             "platform": _platform.system(),
         }
 
+    @app.get("/api/diagnostics")
+    def diagnostics() -> dict:
+        """Self-test snapshot for the dashboard's Diagnostics card.
+
+        Mirrors the desktop ``-t`` / ``--self-test`` CLI: platform /
+        Python version, module-import checks, config + filesystem, plus
+        the live snapshot of runs / scheduler / watcher the dashboard
+        needs for support tickets. Never raises — every probe is
+        wrapped so a missing table returns ``0`` instead of 500.
+        """
+        settings = app.state.settings
+        settings.ensure_dirs()
+        # The schedule summary reads kv_settings, which the operator
+        # can leave mid-write during an import — wrap it so the card
+        # always renders.
+        schedule_summary = None
+        try:
+            from webapp.scheduler import get_schedule_summary as _gss
+
+            schedule_summary = _gss(settings)
+        except Exception:
+            schedule_summary = {}
+        watched_folders = []
+        try:
+            from webapp.watcher import list_watched as _lw
+
+            watched_folders = _lw(settings)
+        except Exception:
+            watched_folders = []
+        backups_count = 0
+        try:
+            backups_count = len(list_backups(settings.data_dir))
+        except Exception:
+            backups_count = 0
+        return collect_diagnostics(
+            settings=settings,
+            run_store=app.state.run_store,
+            history=_history,
+            schedule_summary=schedule_summary,
+            watched_folders=watched_folders,
+            backups_count=backups_count,
+        )
+
     @app.get("/api/config")
     def config() -> dict:
         return _config_payload(app.state.settings)
@@ -309,6 +355,16 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             tmp.write(await file.read())
             tmp_path = tmp.name
+        # Phase 6 (gap 1.6): the desktop's "Cancel" button cancelled a
+        # QThread; the webapp doesn't expose a Cancel endpoint (import
+        # is a short-lived, one-time setup action and threading a
+        # cancel through FastAPI's request lifecycle would add a lot
+        # of code for little operator benefit). Instead, surface
+        # timing so the dashboard's import notice can show how long
+        # the import actually took — a 30-second import on 500 folders
+        # used to be a mystery spinner; now it's a clear "Imported
+        # 500 folders in 28.4s".
+        started = _perf_counter()
         try:
             result: ImportResult = import_database(
                 tmp_path,
@@ -316,7 +372,9 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
                 base_dir=base_dir or None,
                 platform=platform or None,
             )
-            return dataclass_to_dict(result)
+            payload = dataclass_to_dict(result)
+            payload["duration_seconds"] = round(_perf_counter() - started, 3)
+            return payload
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
@@ -969,20 +1027,71 @@ def create_app(  # noqa: C901 - flat endpoint registry, linear on purpose
         )
 
     @app.get("/api/processed-files")
-    def api_processed_files() -> dict:
+    def api_processed_files(
+        folder_id: int | None = None,
+        search: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> dict:
+        """List recent processed-files rows.
+
+        Query params (all optional):
+            folder_id: restrict to one folder.
+            search: substring match against file_name / folder_alias /
+                invoice_numbers (case-insensitive).
+            date_from: ISO date lower bound on processed_at.
+            date_to: ISO date upper bound (inclusive — the day
+                itself is included).
+            limit: maximum rows to return (default 200, capped at
+                10000 to prevent expensive full-history dumps).
+            offset: number of matching rows to skip (for "Load More"
+                pagination). Must be non-negative; capped at 10000 to
+                mirror the limit guard.
+
+        The response includes ``total`` — the count of rows that match
+        the filters ignoring ``limit`` / ``offset`` — so the dashboard
+        knows whether more pages remain. ``count`` is the size of the
+        current page.
+        """
+        if limit < 1:
+            limit = 200
+        if limit > 10000:
+            limit = 10000
+        if offset < 0:
+            offset = 0
+        if offset > 10000:
+            offset = 10000
         settings = app.state.settings
         with lock():
             db = open_database(settings)
             try:
-                raw = db.database_connection.query(
-                    "SELECT file_name, folder_alias, processed_at, status, "
-                    "sent_to, invoice_numbers FROM processed_files "
-                    "ORDER BY id DESC LIMIT 200"
+                total = count_processed_files(
+                    db,
+                    folder_id=folder_id,
+                    search=search or None,
+                    date_from=date_from or None,
+                    date_to=date_to or None,
                 )
-                rows = [dict(r) for r in raw] if raw else []
+                rows = list_processed_files(
+                    db,
+                    folder_id=folder_id,
+                    search=search or None,
+                    date_from=date_from or None,
+                    date_to=date_to or None,
+                    limit=limit,
+                    offset=offset,
+                )
             finally:
                 db.close()
-        return {"count": len(rows), "files": rows}
+        return {
+            "count": len(rows),
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "files": rows,
+        }
 
     @app.post("/api/maintenance/clear-processed")
     def api_clear_processed(folder_id: int | None = None) -> dict:

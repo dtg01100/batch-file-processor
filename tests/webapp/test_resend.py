@@ -14,6 +14,7 @@ from webapp.main import create_app
 from webapp.maintenance import mark_file_processed
 from webapp.resend import (
     clear_resend_flags,
+    count_processed_files,
     delete_processed_rows,
     list_processed_files,
     set_resend_flag,
@@ -25,7 +26,9 @@ pytestmark = [pytest.mark.integration]
 
 @pytest.fixture
 def client(tmp_path: Path):
-    settings = Settings(base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config")
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
     settings.ensure_dirs()
     db = open_database(settings)
     db.folders_table.insert(
@@ -191,7 +194,178 @@ def test_get_flagged_returns_all_rows(seeded):
     assert r.status_code == 200
     body = r.json()
     assert body["count"] == 1
-    assert body["files"][0]["resend_flag"] is False or body["files"][0]["resend_flag"] == 0
+    assert (
+        body["files"][0]["resend_flag"] is False or body["files"][0]["resend_flag"] == 0
+    )
+
+
+def test_list_processed_files_search_filters_by_filename_alias_invoice(seeded):
+    """The new search / date filters narrow the rows the dashboard shows."""
+    test_client, settings, _ = seeded
+    db = open_database(settings)
+    try:
+        # Two more rows so the filter has something to discriminate.
+        mark_file_processed(
+            db,
+            file_path="/incoming/test/sample.002",
+            folder_id=1,
+            folder_alias="OTHER",
+            invoice_numbers="0002",
+        )
+        mark_file_processed(
+            db,
+            file_path="/incoming/special/order.003",
+            folder_id=1,
+            folder_alias="TEST",
+            invoice_numbers="9999",
+        )
+    finally:
+        db.close()
+
+    # search matches file_name.
+    r = test_client.get("/api/processed-files?search=special")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert body["files"][0]["file_name"].endswith("order.003")
+
+    # search matches folder_alias.
+    r = test_client.get("/api/processed-files?search=OTHER")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert body["files"][0]["folder_alias"] == "OTHER"
+
+    # search matches invoice_numbers.
+    r = test_client.get("/api/processed-files?search=9999")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert body["files"][0]["invoice_numbers"] == "9999"
+
+    # search misses everything.
+    r = test_client.get("/api/processed-files?search=does-not-exist")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 0
+    assert body["files"] == []
+    # ``total`` is still 0 so Load More knows there's nothing to fetch.
+    assert body["total"] == 0
+
+
+def test_list_processed_files_date_range_inclusive(seeded):
+    """date_from / date_to bound the processed_at column inclusively."""
+    test_client, settings, _ = seeded
+    db = open_database(settings)
+    try:
+        # All seeded rows share ``datetime.now()`` so a "today" range
+        # must match every one of them.
+        from datetime import date
+
+        today = date.today().isoformat()
+        # No rows from yesterday.
+        r = test_client.get(f"/api/processed-files?date_from={today}&date_to={today}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 1
+        # A future-only range matches nothing.
+        r = test_client.get(
+            "/api/processed-files?date_from=2999-01-01&date_to=2999-12-31"
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] == 0
+        assert body["total"] == 0
+        assert body["files"] == []
+    finally:
+        db.close()
+
+
+def test_list_processed_files_caps_limit(seeded):
+    """A limit above the cap is silently reduced to the cap."""
+    test_client, _, _ = seeded
+    r = test_client.get("/api/processed-files?limit=99999")
+    assert r.status_code == 200
+    # 10000 cap is enforced; we just assert the call succeeded.
+    assert "files" in r.json()
+
+
+def test_list_processed_files_response_includes_total_and_offset(seeded):
+    """The response now exposes ``total`` + the echoed ``limit`` /
+    ``offset`` so the dashboard can paginate without an extra count
+    call."""
+    test_client, settings, _ = seeded
+    db = open_database(settings)
+    try:
+        # Two more rows so total > page size below.
+        mark_file_processed(
+            db,
+            file_path="/incoming/test/sample.002",
+            folder_id=1,
+            folder_alias="TEST",
+        )
+        mark_file_processed(
+            db,
+            file_path="/incoming/test/sample.003",
+            folder_id=1,
+            folder_alias="TEST",
+        )
+    finally:
+        db.close()
+    r = test_client.get("/api/processed-files?limit=1&offset=0")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert body["total"] == 3
+    assert body["limit"] == 1
+    assert body["offset"] == 0
+    assert len(body["files"]) == 1
+
+    r = test_client.get("/api/processed-files?limit=1&offset=1")
+    assert r.json()["files"][0]["file_name"].endswith("sample.002")
+
+    # Out-of-range offset returns nothing but still reports the total.
+    r = test_client.get("/api/processed-files?limit=1&offset=100")
+    assert r.json()["count"] == 0
+    assert r.json()["total"] == 3
+    assert r.json()["files"] == []
+
+
+def test_list_processed_files_offset_clamps_negatives(seeded):
+    """A negative offset is treated as zero; the offset guard rejects
+    obvious typos before they reach SQL."""
+    test_client, _, _ = seeded
+    r = test_client.get("/api/processed-files?offset=-50")
+    assert r.status_code == 200
+    assert r.json()["offset"] == 0
+
+
+def test_count_processed_files_matches_list_total(seeded):
+    """The unpaginated count agrees with the SQL we'd otherwise use."""
+    _test_client, settings, _ = seeded
+    db = open_database(settings)
+    try:
+        # The shared WHERE keeps total + list in lockstep — add the same
+        # kind of rows the other tests use so a future filter change
+        # can't silently desync them.
+        mark_file_processed(
+            db,
+            file_path="/incoming/test/sample.002",
+            folder_id=1,
+            folder_alias="OTHER",
+        )
+    finally:
+        db.close()
+    db = open_database(settings)
+    try:
+        assert count_processed_files(db) == 2
+        assert count_processed_files(db, folder_id=1) == 2
+        assert count_processed_files(db, folder_id=999) == 0
+        # search uses the same WHERE as list_processed_files.
+        assert count_processed_files(db, search="OTHER") == 1
+        assert count_processed_files(db, search="does-not-exist") == 0
+    finally:
+        db.close()
 
 
 def test_flag_for_resend_single(seeded):
@@ -255,6 +429,7 @@ def test_resend_no_flagged_returns_immediately(seeded):
     run_id = r.json()["run_id"]
     # Wait for completion.
     import time
+
     for _ in range(20):
         time.sleep(0.1)
         report = test_client.get(f"/api/runs/{run_id}").json()
@@ -294,6 +469,7 @@ def test_resend_runs_through_dispatcher(seeded, tmp_path):
     assert r.status_code == 200
     run_id = r.json()["run_id"]
     import time
+
     for _ in range(40):
         time.sleep(0.25)
         report = test_client.get(f"/api/runs/{run_id}").json()

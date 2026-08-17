@@ -135,7 +135,14 @@ $("import-form").addEventListener("submit", async (e) => {
   const btn = $("import-btn");
   const resultBox = $("import-result");
   btn.disabled = true;
-  btn.textContent = "Importing…";
+  // Live elapsed timer mirrors the desktop's progress bar — the
+  // operator no longer has to wonder whether a long import is
+  // actually working. The timer stops on the next finally branch.
+  const startedAt = Date.now();
+  let elapsedTimer = setInterval(() => {
+    const secs = (Date.now() - startedAt) / 1000;
+    btn.textContent = `Importing… ${secs.toFixed(1)}s`;
+  }, 100);
   resultBox.hidden = true;
 
   const form = new FormData();
@@ -158,6 +165,7 @@ $("import-form").addEventListener("submit", async (e) => {
     resultBox.hidden = false;
     resultBox.textContent = "Import failed: " + err.message;
   } finally {
+    clearInterval(elapsedTimer);
     btn.disabled = false;
     btn.textContent = "Import";
   }
@@ -176,6 +184,10 @@ async function loadFolders() {
   state.folders = folders; // keep the list for the edit panel
   _renderFolders();
   renderPluginAudit(folders);
+  // The processed-files card mirrors the same folder set in its own
+  // dropdown; re-render here so it picks up new / deleted folders
+  // without a second round-trip.
+  _renderProcessedFolderFilter();
 }
 
 // Re-render the folders table applying the current search filter. State
@@ -242,6 +254,43 @@ function renderPluginAudit(folders) {
 
 $("refresh-folders").addEventListener("click", () => { loadFolders(); loadProcessed(); });
 $("folders-search").addEventListener("input", () => _renderFolders());
+$("processed-search").addEventListener("input", () => loadProcessed({ append: false }));
+$("processed-folder-filter").addEventListener("change", () => loadProcessed({ append: false }));
+$("processed-date-from").addEventListener("change", () => loadProcessed({ append: false }));
+$("processed-date-to").addEventListener("change", () => loadProcessed({ append: false }));
+// "Today" buttons mirror the desktop's _create_date_edit_with_today_button
+// helper: filling the date input is one click, the operator doesn't have
+// to dig out a calendar widget.
+const _todayIso = () => {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+$("processed-date-from-today").addEventListener("click", () => {
+  $("processed-date-from").value = _todayIso();
+  loadProcessed({ append: false });
+});
+$("processed-date-to-today").addEventListener("click", () => {
+  $("processed-date-to").value = _todayIso();
+  loadProcessed({ append: false });
+});
+$("processed-filters-clear").addEventListener("click", () => {
+  $("processed-search").value = "";
+  $("processed-date-from").value = "";
+  $("processed-date-to").value = "";
+  $("processed-folder-filter").value = "";
+  loadProcessed({ append: false });
+});
+// Bulk selection + Load More. Select-all / clear-selection toggle every
+// checkbox on the current page; the head-of-table checkbox is the same
+// tri-state idea as the desktop dialog (it shows checked when every
+// visible row is flagged).
+$("processed-select-all").addEventListener("click", () => _setAllSelection(true));
+$("processed-select-none").addEventListener("click", () => _setAllSelection(false));
+$("processed-select-toggle").addEventListener("change", (e) => {
+  _setAllSelection(e.target.checked);
+});
+$("processed-load-more").addEventListener("click", () => loadProcessed({ append: true }));
 
 /* ---------------- watching overview ---------------- */
 
@@ -585,6 +634,11 @@ $("plugin-format").addEventListener("change", () => {
 
 function populateFolderPanel(schema) {
   const form = $("folder-panel-form");
+  // Remember the schema backing the form so the "Copy from…" feature
+  // can preserve the destination's identity fields (id / alias / path)
+  // while overwriting everything else with the source folder's settings.
+  state.currentFolder = schema;
+  $("folder-panel-copy-note").hidden = true;
   // Identity + backend toggles + watcher live at the top level
   for (const k of [
     "alias", "folder_name",
@@ -703,9 +757,10 @@ function showFolderPanel(schema) {
   const panel = $("folder-panel");
   panel.hidden = false;
   panel.setAttribute("aria-hidden", "false");
-  // Delete is only meaningful for an existing row.
+  // Delete / duplicate are only meaningful for an existing row.
   $("folder-panel-delete").hidden = state.editingFolderId == null;
   $("folder-panel-run").hidden = state.editingFolderId == null;
+  $("folder-panel-duplicate").hidden = state.editingFolderId == null;
 }
 
 async function openFolderPanel(folderId) {
@@ -738,10 +793,482 @@ function closeFolderPanel() {
   state.editingFolderId = null;
 }
 
+/* ---------------- copy settings from another folder ---------------- */
+
+// A picker dialog listing every other folder, mirroring the desktop's
+// "Copy Config" flow (edit_folders_dialog.py). Reuses the shared
+// dlg-root machinery from helpers.js; resolves with the chosen folder
+// summary (or null when cancelled). Keyboard: Tab moves through the
+// rows, Enter/Space picks the focused row, Escape cancels.
+function pickCopySource(folders, currentId) {
+  const root = _dialogRoot();
+  if (!root) return Promise.resolve(null);
+  const options = (folders || []).filter((f) => f.id !== currentId);
+  return new Promise((resolve) => {
+    root.__resolver = resolve;
+    root.__opener = typeof document !== "undefined" ? document.activeElement : null;
+    root.hidden = false;
+    root.setAttribute("aria-hidden", "false");
+    root.innerHTML = `
+      <div class="dlg-backdrop" data-dismiss="cancel"></div>
+      <div class="dlg dlg--list" role="dialog" aria-modal="true" aria-labelledby="dlg-copy-title" aria-describedby="dlg-copy-msg">
+        <h3 id="dlg-copy-title" class="dlg__title">Copy settings from…</h3>
+        <p id="dlg-copy-msg" class="dlg__msg">
+          Backends, EDI, UPC, plugin and other processing settings will be
+          copied into this folder's form. Alias and path stay unchanged.
+        </p>
+        <ul class="dlg__list" id="dlg-copy-list">
+          ${options.map((f) => `
+            <li>
+              <button type="button" class="dlg__row" data-copy-id="${f.id}" aria-label="Copy from ${H.esc(f.alias || f.folder_name || `folder ${f.id}`)}">
+                <b>${H.esc(f.alias || f.folder_name || `folder ${f.id}`)}</b>
+                <span class="dlg__row-sub">${H.esc(f.folder_name || "")}</span>
+              </button>
+            </li>`).join("")}
+        </ul>
+        <div class="dlg__actions">
+          <button type="button" class="btn btn--ghost" data-dismiss="cancel">Cancel</button>
+        </div>
+      </div>`;
+    const dlg = root.querySelector(".dlg");
+    // close() removes the keydown listener before handing control back,
+    // so this dialog never leaves a stale handler on dlg-root that could
+    // hijack a later confirm/alert dialog's Escape or Enter.
+    const close = (value) => {
+      root.removeEventListener("keydown", onKey);
+      _closeDialog(root, value);
+    };
+    dlg.addEventListener("click", (e) => {
+      const row = e.target.closest("[data-copy-id]");
+      if (row) {
+        close(options.find((f) => f.id === Number(row.dataset.copyId)) || null);
+      } else if (e.target.dataset && e.target.dataset.dismiss === "cancel") {
+        close(null);
+      }
+    });
+    root.querySelector(".dlg-backdrop").addEventListener("click", () => close(null));
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        close(null);
+      } else if (e.key === "Enter" || e.key === " ") {
+        const active = document.activeElement;
+        if (active && active.dataset && active.dataset.copyId !== undefined) {
+          e.preventDefault();
+          close(options.find((f) => f.id === Number(active.dataset.copyId)) || null);
+        }
+      }
+    }
+    root.addEventListener("keydown", onKey);
+    const first = root.querySelector("[data-copy-id]");
+    if (first && typeof first.focus === "function") first.focus();
+  });
+}
+
+// "Copy from…" button: let the operator seed the current folder form
+// with another folder's settings. Id / alias / path / active state stay
+// local — everything else (backends, EDI, UPC, plugin config) is taken
+// from the source folder's full edit schema.
+async function copyFolderSettings() {
+  const currentId = state.editingFolderId;
+  const btn = $("folder-panel-copy");
+  const note = $("folder-panel-copy-note");
+  btn.disabled = true;
+  try {
+    let folders = state.folders || [];
+    if (folders.length === 0) {
+      await loadFolders();
+      folders = state.folders || [];
+    }
+    const candidates = folders.filter((f) => f.id !== currentId);
+    if (candidates.length === 0) {
+      await alertDialog("No other folders to copy settings from.");
+      return;
+    }
+    const source = await pickCopySource(candidates, currentId);
+    if (!source) return;
+    const schema = await api(`/api/folders/${source.id}`);
+    const current = state.currentFolder || {};
+    const copy = Object.assign({}, schema, {
+      id: current.id !== undefined ? current.id : currentId,
+      alias: current.alias || "",
+      folder_name: current.folder_name || "",
+      folder_is_active: current.folder_is_active !== undefined
+        ? current.folder_is_active
+        : true,
+    });
+    populateFolderPanel(copy);
+    note.textContent =
+      `Copied settings from ${source.alias || source.folder_name || `folder ${source.id}`}. ` +
+      "Review before saving.";
+    note.hidden = false;
+  } catch (err) {
+    await alertDialog(`Copy failed: ${err.message || err}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$("folder-panel-copy").addEventListener("click", copyFolderSettings);
+
+/* ---------------- duplicate folder ---------------- */
+
+// Generate a unique alias by appending " (copy)" / " (copy N)" to the
+// base, skipping any alias already in use.
+function _uniqueAlias(base, folders) {
+  const existing = new Set((folders || []).map((f) => (f.alias || "").toLowerCase()));
+  const baseLower = (base || "").toLowerCase();
+  if (!base || !existing.has(baseLower)) return base || "Copy";
+  let n = 2;
+  while (existing.has(`${base} (${n})`.toLowerCase())) n++;
+  return `${base} (${n})`;
+}
+
+// "Duplicate folder": create a brand-new folder from the current one's
+// settings in a single step — alias auto-numbered, folder_name derived,
+// all backends / EDI / plugin config copied.  The new row is POSTed,
+// the folder list refreshes, and the new folder opens in the editor.
+async function duplicateFolder() {
+  const btn = $("folder-panel-duplicate");
+  btn.disabled = true;
+  try {
+    const current = state.currentFolder;
+    if (!current || !current.id) {
+      await alertDialog("Save this folder first, then try duplicating.");
+      return;
+    }
+    if (!await confirmDialog(
+      `Duplicate "${current.alias || current.folder_name || `folder ${current.id}`}" as a new folder?`,
+    )) return;
+    let folders = state.folders || [];
+    if (folders.length === 0) {
+      await loadFolders();
+      folders = state.folders || [];
+    }
+    const newAlias = _uniqueAlias(current.alias, folders);
+    // Derive a new folder_name — append " (copy)" so it doesn't collide.
+    let newFolderName = current.folder_name
+      ? `${current.folder_name} (copy)`
+      : current.folder_name;
+    const baseLower = (newFolderName || "").toLowerCase();
+    const nameExisting = new Set(folders.map((f) => (f.folder_name || "").toLowerCase()));
+    if (baseLower && nameExisting.has(baseLower)) {
+      let n = 2;
+      while (nameExisting.has(`${current.folder_name} (${n})`.toLowerCase())) n++;
+      newFolderName = `${current.folder_name} (${n})`;
+    }
+    // Build the new row: id=null so POST creates it; everything else
+    // from the source — backends, EDI, UPC, plugin config, etc.
+    const payload = Object.assign({}, current, {
+      id: null,
+      alias: newAlias,
+      folder_name: newFolderName,
+      folder_is_active: false, // new copy starts inactive
+    });
+    const created = await api("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    await loadFolders();
+    closeFolderPanel();
+    openFolderPanel(created.id);
+    $("folder-panel-copy-note").textContent =
+      `Created "${newAlias}" as a copy of "${current.alias || current.folder_name}".`;
+    $("folder-panel-copy-note").hidden = false;
+  } catch (err) {
+    await alertDialog(`Duplicate failed: ${err.message || err}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$("folder-panel-duplicate").addEventListener("click", duplicateFolder);
 $("folder-panel-close").addEventListener("click", closeFolderPanel);
 $("folder-panel-cancel").addEventListener("click", closeFolderPanel);
+
+/* ---------------- global keyboard shortcuts ---------------- */
+
+// Modifier-aware helper: Ctrl on Linux/Windows, Cmd on macOS.
+const _isCmdOrCtrl = (e) => e.ctrlKey || e.metaKey;
+// True when the event happened inside a control that already owns
+// keystrokes — typing in an input or editing a select option shouldn't
+// hijack Ctrl+Enter / Ctrl+R.
+const _isTypingTarget = (t) => {
+  if (!t) return false;
+  const tag = (t.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  if (t.isContentEditable) return true;
+  return false;
+};
+
+function _openShortcutsModal() {
+  const dlg = $("shortcuts-modal");
+  if (!dlg) return;
+  if (typeof dlg.showModal === "function") dlg.showModal();
+  else dlg.setAttribute("open", "");
+}
+function _closeShortcutsModal() {
+  const dlg = $("shortcuts-modal");
+  if (!dlg) return;
+  if (typeof dlg.close === "function") dlg.close();
+  else dlg.removeAttribute("open");
+}
+
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$("folder-panel").hidden) closeFolderPanel();
+  // Escape: close the topmost open dialog (diagnostics modal first —
+  // it's a support tool that should always dismiss cleanly), then the
+  // shortcuts modal, then the folder panel.
+  if (e.key === "Escape") {
+    const diagDlg = $("diagnostics-modal");
+    if (diagDlg && diagDlg.open) {
+      _closeDiagnosticsModal();
+      e.preventDefault();
+      return;
+    }
+    const dlg = $("shortcuts-modal");
+    if (dlg && dlg.open) {
+      _closeShortcutsModal();
+      e.preventDefault();
+      return;
+    }
+    if (!$("folder-panel").hidden) {
+      closeFolderPanel();
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // "?" opens the shortcuts cheat sheet. Plain "?" — no modifier, no
+  // typing target — so the user can hit it while reading the page.
+  if (e.key === "?" && !_isCmdOrCtrl(e) && !_isTypingTarget(e.target)) {
+    _openShortcutsModal();
+    e.preventDefault();
+    return;
+  }
+
+  if (!_isCmdOrCtrl(e)) return;
+
+  // Ctrl/Cmd+Enter: kick off a run. Disabled while a run is already
+  // in flight (the button locks itself), but the keyboard shortcut
+  // mirrors that by no-op'ing when disabled.
+  if (e.key === "Enter") {
+    const btn = $("run-btn");
+    if (btn && !btn.disabled) {
+      btn.click();
+      e.preventDefault();
+      return;
+    }
+  }
+  // Ctrl/Cmd+R: refresh every card.
+  if ((e.key === "r" || e.key === "R") && !_isTypingTarget(e.target)) {
+    e.preventDefault();
+    refreshConfig();
+    loadFolders();
+    loadWatched();
+    loadErrors();
+    loadRuns();
+    loadProcessed({ append: false });
+    loadBackups();
+    loadSettings();
+    return;
+  }
+  // Ctrl/Cmd+I: jump to the Import button. Skip when typing so the
+  // operator can still use the OS-level "select all" while editing
+  // any text field.
+  if ((e.key === "i" || e.key === "I") && !_isTypingTarget(e.target)) {
+    const btn = $("import-btn");
+    if (btn) {
+      btn.focus();
+      e.preventDefault();
+      return;
+    }
+  }
+  // Ctrl/Cmd+F: focus the Folders search box.
+  if ((e.key === "f" || e.key === "F") && !_isTypingTarget(e.target)) {
+    const s = $("folders-search");
+    if (s) {
+      s.focus();
+      s.select && s.select();
+      e.preventDefault();
+      return;
+    }
+  }
+  // Ctrl/Cmd+P: focus the Processed files search box.
+  if ((e.key === "p" || e.key === "P") && !_isTypingTarget(e.target)) {
+    const s = $("processed-search");
+    if (s) {
+      s.focus();
+      s.select && s.select();
+      e.preventDefault();
+      return;
+    }
+  }
+});
+
+// Wire the modal's own buttons (Close + × in the header).
+$("shortcuts-help").addEventListener("click", _openShortcutsModal);
+document.querySelectorAll("#shortcuts-modal [data-dismiss='cancel']").forEach((btn) => {
+  btn.addEventListener("click", _closeShortcutsModal);
+});
+// Backdrop click closes the modal.
+$("shortcuts-modal").addEventListener("click", (e) => {
+  if (e.target === $("shortcuts-modal")) _closeShortcutsModal();
+});
+
+/* ---------------- diagnostics modal ---------------- */
+
+function _openDiagnosticsModal() {
+  const dlg = $("diagnostics-modal");
+  if (!dlg) return;
+  if (typeof dlg.showModal === "function") dlg.showModal();
+  else dlg.setAttribute("open", "");
+  // Re-fetch every time the modal opens so the data is fresh.
+  _loadDiagnostics();
+}
+function _closeDiagnosticsModal() {
+  const dlg = $("diagnostics-modal");
+  if (!dlg) return;
+  if (typeof dlg.close === "function") dlg.close();
+  else dlg.removeAttribute("open");
+}
+
+function _setDiagnosticsText(id, value) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = value;
+}
+
+async function _loadDiagnostics() {
+  const loading = $("diagnostics-loading");
+  const content = $("diagnostics-content");
+  const state = $("diagnostics-state");
+  loading.hidden = false;
+  content.hidden = true;
+  state.hidden = true;
+  let data;
+  try {
+    data = await api("/api/diagnostics");
+  } catch (err) {
+    loading.textContent = `Failed: ${err.message || err}`;
+    return;
+  }
+  loading.hidden = true;
+  content.hidden = false;
+  // Header status banner: green if everything's clean, amber otherwise.
+  if (!data.ok || (data.warnings && data.warnings.length > 0)) {
+    state.hidden = false;
+    state.className = "diagnostics-state warn";
+    state.textContent = data.warnings && data.warnings.length > 0
+      ? `${data.warnings.length} warning(s) — see details below.`
+      : "Self-test reported warnings.";
+  } else {
+    state.hidden = false;
+    state.className = "diagnostics-state ok";
+    state.textContent = "Self-test clean.";
+  }
+  const plat = data.platform || {};
+  const db = data.database || {};
+  const rt = data.runtime || {};
+  const sched = rt.scheduler || {};
+  _setDiagnosticsText("diag-platform", `${plat.system || "?"} ${plat.release || ""} (${plat.machine || ""})`);
+  _setDiagnosticsText("diag-python", plat.python_version || "?");
+  _setDiagnosticsText("diag-pid", plat.pid != null ? String(plat.pid) : "?");
+  const paths = data.paths || {};
+  const dbSizeKb = paths.database_size_bytes
+    ? `${(paths.database_size_bytes / 1024).toFixed(1)} KB`
+    : "missing";
+  _setDiagnosticsText(
+    "diag-db",
+    paths.database_exists
+      ? `present (${dbSizeKb})`
+      : "missing — import a database to begin",
+  );
+  _setDiagnosticsText("diag-db-version", db.version || "—");
+  _setDiagnosticsText("diag-base-dir", paths.base_dir || "");
+  _setDiagnosticsText("diag-data-dir", paths.data_dir || "");
+  _setDiagnosticsText("diag-db-path", paths.database_path || "");
+  _setDiagnosticsText(
+    "diag-folders",
+    `${db.folders_count || 0} total · ${db.active_folders_count || 0} active`,
+  );
+  _setDiagnosticsText("diag-processed", String(db.processed_files_count || 0));
+  _setDiagnosticsText("diag-errors", String(db.errors_count || 0));
+  _setDiagnosticsText("diag-queued-emails", String(db.queued_emails || 0));
+  _setDiagnosticsText("diag-active-runs", String(rt.active_runs || 0));
+  _setDiagnosticsText("diag-recent-failures", String(rt.recent_run_failures_24h || 0));
+  _setDiagnosticsText(
+    "diag-scheduler",
+    sched.enabled
+      ? `enabled · ${sched.interval_seconds}s · ${sched.runs_triggered || 0} runs`
+      : "disabled",
+  );
+  _setDiagnosticsText(
+    "diag-watched",
+    `${rt.watched_folders || 0} total`
+      + (rt.watched_with_errors ? ` (${rt.watched_with_errors} with errors)` : ""),
+  );
+  _setDiagnosticsText("diag-backups", String(rt.backup_count || 0));
+  // Module imports: one-line summary; failures surface in warnings.
+  const mods = data.modules || [];
+  const failed = mods.filter((m) => !m.ok);
+  const modsEl = $("diag-modules");
+  if (modsEl) {
+    modsEl.textContent = failed.length === 0
+      ? `${mods.length}/${mods.length} ok`
+      : `${mods.length - failed.length}/${mods.length} ok · ${failed.length} failed`;
+    modsEl.title = failed.map((m) => `${m.module}: ${m.error}`).join("\n");
+  }
+  // Recent runs list.
+  const runsEl = $("diag-recent-runs");
+  if (runsEl) {
+    const runs = rt.recent_runs || [];
+    if (runs.length === 0) {
+      runsEl.innerHTML = "<li class='state-off'>No runs recorded.</li>";
+    } else {
+      runsEl.innerHTML = runs.map((r) => {
+        const cls = r.status === "failed" ? "run-status-err" : "run-status-ok";
+        const when = (r.started_at || "").replace("T", " ").slice(0, 19);
+        const err = r.error ? ` — ${esc(String(r.error).slice(0, 80))}` : "";
+        return `<li><span class="${cls}">●</span> <code>${esc(when)}</code> ${esc(r.status)} · ${r.total_processed} ok / ${r.total_failed} fail${err}</li>`;
+      }).join("");
+    }
+  }
+  // Raw JSON payload (for support tickets).
+  const rawEl = $("diag-raw");
+  if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+}
+
+$("diagnostics-help").addEventListener("click", _openDiagnosticsModal);
+document.querySelectorAll("#diagnostics-modal [data-dismiss='cancel']").forEach((btn) => {
+  btn.addEventListener("click", _closeDiagnosticsModal);
+});
+$("diagnostics-modal").addEventListener("click", (e) => {
+  if (e.target === $("diagnostics-modal")) _closeDiagnosticsModal();
+});
+$("diagnostics-copy").addEventListener("click", async () => {
+  const raw = $("diag-raw").textContent || "";
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(raw);
+    } else {
+      // Fallback for non-secure contexts: stage the text in a hidden
+      // textarea, select, and let execCommand do the work.
+      const ta = document.createElement("textarea");
+      ta.value = raw;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    $("diagnostics-copy").textContent = "Copied";
+    setTimeout(() => ($("diagnostics-copy").textContent = "Copy JSON"), 1200);
+  } catch (_e) {
+    await alertDialog("Copy failed — paste from the Raw JSON block instead.");
+  }
 });
 
 $("folder-panel-form").addEventListener("submit", async (e) => {
@@ -1204,15 +1731,98 @@ async function loadRuns() {
 
 /* ---------------- processed files ---------------- */
 
-async function loadProcessed() {
+// Pagination state for the processed-files card. The server returns
+// ``total`` alongside the page; ``state.processedFilesOffset`` is the
+// number of rows already on screen (or being requested next).
+const PROCESSED_PAGE_SIZE = 200;
+
+function _processedFilters() {
+  const params = {};
+  const search = $("processed-search");
+  if (search && search.value) params.search = search.value;
+  const folderSel = $("processed-folder-filter");
+  if (folderSel && folderSel.value) params.folder_id = Number(folderSel.value);
+  const dateFrom = $("processed-date-from");
+  if (dateFrom && dateFrom.value) params.date_from = dateFrom.value;
+  const dateTo = $("processed-date-to");
+  if (dateTo && dateTo.value) params.date_to = dateTo.value;
+  return params;
+}
+
+function _processedHasActiveFilters(params) {
+  return !!(params.search || params.folder_id || params.date_from || params.date_to);
+}
+
+function _renderProcessedFolderFilter() {
+  const select = $("processed-folder-filter");
+  if (!select) return;
+  const folders = state.folders || [];
+  // Preserve the current selection across a rebuild so the 8s poll
+  // doesn't reset the operator's chosen folder.
+  const prev = select.value;
+  // Rebuild only when the folder set actually changed so the poll
+  // doesn't disturb a dropdown the operator has open (same trick as
+  // the errors-filter dropdown).
+  const key = folders.map((f) => f.id).join(",");
+  if (select.dataset.foldersKey !== key) {
+    select.dataset.foldersKey = key;
+    select.innerHTML =
+      '<option value="">All folders</option>' +
+      folders.map((f) =>
+        `<option value="${f.id}" title="${esc(f.folder_name || "")}">` +
+        `${esc(f.alias || f.folder_name || `folder ${f.id}`)}</option>`
+      ).join("");
+    // If the previously-selected folder is gone (e.g. after a restore),
+    // clear the filter so the next load isn't silently empty.
+    const stillThere = prev && folders.some((f) => String(f.id) === String(prev));
+    select.value = stillThere ? prev : "";
+  }
+}
+
+async function loadProcessed({ append = false } = {}) {
+  const params = _processedFilters();
+  // Reset the in-memory snapshot on a fresh load so per-row handlers
+  // and the resend-count button see the right rows. Append keeps the
+  // current snapshot and tacks the next page onto it.
+  if (!append) {
+    state.processedFiles = [];
+    state.processedFilesOffset = 0;
+    state.processedFilesTotal = 0;
+  }
+  const offset = state.processedFilesOffset || 0;
+  params.limit = PROCESSED_PAGE_SIZE;
+  params.offset = offset;
+  const qs = `?${new URLSearchParams(params).toString()}`;
   let data;
   try {
-    data = await api("/api/processed-files/flagged");
+    data = await api("/api/processed-files" + qs);
   } catch (_e) { return; }
-  $("processed-empty").hidden = data.count !== 0;
-  $("processed-wrap").hidden = data.count === 0;
-  state.processedFiles = data.files;
-  $("processed-body").innerHTML = processedRows(data.files);
+  // Merge the page into the snapshot. ``append`` keeps the rows
+  // already on screen; a fresh load replaces them entirely.
+  const incoming = data.files || [];
+  state.processedFiles = append
+    ? (state.processedFiles || []).concat(incoming)
+    : incoming;
+  state.processedFilesOffset = offset + incoming.length;
+  state.processedFilesTotal = typeof data.total === "number" ? data.total : state.processedFiles.length;
+
+  const empty = $("processed-empty");
+  const wrap = $("processed-wrap");
+  const noMatch = $("processed-no-match");
+  const more = $("processed-load-more").parentElement;
+  const totalRows = state.processedFiles.length;
+  const totalAll = state.processedFilesTotal;
+  empty.hidden = totalAll !== 0;
+  noMatch.hidden = !(totalRows === 0 && _processedHasActiveFilters(params));
+  wrap.hidden = totalRows === 0;
+  // The "Load More" button only shows when more pages remain. ``total``
+  // counts ALL matching rows regardless of the page cap, so the
+  // comparison is safe even if the server returned a short final page.
+  more.hidden = !(state.processedFilesOffset < totalAll);
+  $("processed-body").innerHTML = processedRows(state.processedFiles);
+  $("processed-count").textContent = totalAll > totalRows
+    ? `Showing ${totalRows} of ${totalAll}`
+    : `${totalAll} row${totalAll === 1 ? "" : "s"}`;
   // Attach per-row checkbox handler.
   $("processed-body").querySelectorAll("input[data-flag-id]").forEach((cb) => {
     cb.addEventListener("change", async () => {
@@ -1230,6 +1840,7 @@ async function loadProcessed() {
         if (row) row.resend_flag = resend;
         cb.closest("tr").classList.toggle("resend-row-flagged", resend);
         _updateResendButton();
+        _syncSelectToggle();
       } catch (err) {
         // Revert on failure.
         cb.checked = !resend;
@@ -1238,6 +1849,37 @@ async function loadProcessed() {
     });
   });
   _updateResendButton();
+  _syncSelectToggle();
+}
+
+function _syncSelectToggle() {
+  // The head-of-table checkbox shows its checked state when every row
+  // currently on screen is flagged, mirrors the desktop dialog.
+  const boxes = document.querySelectorAll("#processed-body input[data-flag-id]");
+  const toggle = $("processed-select-toggle");
+  if (!toggle) return;
+  if (boxes.length === 0) {
+    toggle.checked = false;
+    toggle.indeterminate = false;
+    return;
+  }
+  const flagged = [...boxes].filter((b) => b.checked).length;
+  toggle.checked = flagged === boxes.length;
+  toggle.indeterminate = flagged > 0 && flagged < boxes.length;
+}
+
+function _setAllSelection(flagged) {
+  // Flip every per-row checkbox on screen, then POST each change so
+  // the backend stays the source of truth. We don't POST a single
+  // batch flag because the dashboard's per-row handler already does
+  // the right thing (optimistic UI + revert on failure).
+  const boxes = document.querySelectorAll("#processed-body input[data-flag-id]");
+  const targets = [...boxes].filter((b) => b.checked !== flagged);
+  if (targets.length === 0) return;
+  for (const cb of targets) {
+    cb.checked = flagged;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+  }
 }
 
 function _updateResendButton() {
@@ -1271,7 +1913,7 @@ async function _pollResend(runId) {
     setTimeout(() => _pollResend(runId), 1200);
     return;
   }
-  await loadProcessed();
+  await loadProcessed({ append: false });
   await loadRuns();
   await loadErrors();
 }
@@ -1282,7 +1924,7 @@ $("clear-flags-btn").addEventListener("click", async () => {
   if (!await confirmDialog(`Clear ${count} resend flag(s)?`)) return;
   try {
     await api("/api/processed-files/clear-flags", { method: "POST" });
-    await loadProcessed();
+    await loadProcessed({ append: false });
   } catch (err) {
     await alertDialog(`Failed: ${err.message || err}`);
   }
@@ -1305,5 +1947,10 @@ $("clear-flags-btn").addEventListener("click", async () => {
     await loadWatched();
     await loadErrors();
     await loadRuns();
+    // Keep the processed-files card fresh — operators flag rows and
+    // expect to see their flag persist without a manual refresh.
+    // Always pass append:false so the page resets; polling with
+    // append:true would grow the table unbounded across runs.
+    await loadProcessed({ append: false });
   }, 8000);
 })();

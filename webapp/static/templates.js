@@ -204,13 +204,21 @@ function runErrorBox(message) {
   return `<div class="folder-result"><div class="folder-result__errors">${H.esc(message)}</div></div>`;
 }
 
-// Import success notice (Import configuration card).
+// Import success notice (Import configuration card). Surfaces the
+// server-measured duration when present so the operator can see how
+// long a large DB import actually took (the dashboard already shows
+// a live elapsed timer while the request is in flight; this is the
+// final, authoritative number the server measured).
 function importResultNotice(result) {
-  return (
+  const head = (
     `Imported <b>${result.folders_imported}</b> folder(s) ` +
     `(<b>${result.active_folders}</b> active), rebased <b>${result.rebased_paths}</b> ` +
     `path field(s) to <code>${H.esc(result.base_directory)}</code>.`
   );
+  if (typeof result.duration_seconds === "number" && result.duration_seconds >= 0) {
+    return `${head} <span class="state-off">(${result.duration_seconds.toFixed(2)}s)</span>`;
+  }
+  return head;
 }
 
 // EDI preview pane: summary pills + per-line record table. Counts and

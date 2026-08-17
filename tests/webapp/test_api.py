@@ -63,6 +63,13 @@ def test_import_flow(client, legacy_db):
     assert body["folders_imported"] > 0
     assert body["source_platform"] == "Windows"
     assert body["base_directory"] == "/data"
+    # Phase 6 (gap 1.6): the response now includes the wall-clock
+    # duration so the dashboard's import notice can render "Imported
+    # N folders in 28.4s". The number is non-negative and small for
+    # the tiny test fixture.
+    assert isinstance(body["duration_seconds"], (int, float))
+    assert body["duration_seconds"] >= 0
+    assert body["duration_seconds"] < 60
 
     config = client.get("/api/config").json()
     assert config["folders_count"] == body["folders_imported"]
@@ -81,7 +88,13 @@ def test_import_rejects_non_sqlite_upload(client):
     """A malformed database upload is a 400 (client error), not a 500."""
     resp = client.post(
         "/api/import",
-        files={"file": ("garbage.db", b"this is not a database", "application/octet-stream")},
+        files={
+            "file": (
+                "garbage.db",
+                b"this is not a database",
+                "application/octet-stream",
+            )
+        },
     )
     assert resp.status_code == 400, resp.text
     assert "not a SQLite database" in resp.json()["detail"]
@@ -206,13 +219,15 @@ def test_api_runs_orders_by_start_time_desc(client):
     # distinguishes insertion order from time order: "older" was
     # inserted first but started later.
     older = RunReport(
-        run_id="older", status="completed",
+        run_id="older",
+        status="completed",
         started_at="2026-08-13T09:00:00.000000",
         finished_at="2026-08-13T09:00:10.000000",
         total_processed=1,
     )
     newer = RunReport(
-        run_id="newer", status="completed",
+        run_id="newer",
+        status="completed",
         started_at="2026-08-13T10:00:00.000000",
         finished_at="2026-08-13T10:00:10.000000",
         total_processed=2,
