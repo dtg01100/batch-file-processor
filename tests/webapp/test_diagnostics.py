@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from pathlib import Path
 
 import pytest
@@ -165,11 +166,22 @@ def test_collect_diagnostics_records_warnings_on_recent_failures(tmp_path):
     )
     settings.ensure_dirs()
     # No DB / no scheduler — we only care about the runs aggregation.
+    #
+    # Timestamps must be relative to "now" so the 24h window check in
+    # ``_within_last_hours`` stays correct regardless of when the test
+    # is run — a hard-coded 2026-08-17T10:00:00 silently dropped out
+    # of the window on 2026-08-18 and broke CI.
+    started_at = (
+        datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=1)
+    ).isoformat()
+    finished_at = (
+        datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=59)
+    ).isoformat()
     fake_run = {
         "run_id": "run-bad",
         "status": "failed",
-        "started_at": "2026-08-17T10:00:00",
-        "finished_at": "2026-08-17T10:01:00",
+        "started_at": started_at,
+        "finished_at": finished_at,
         "total_processed": 0,
         "total_failed": 3,
         "error": "backend down",
