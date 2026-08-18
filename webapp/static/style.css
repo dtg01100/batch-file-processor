@@ -957,6 +957,20 @@ dialog#diagnostics-modal .dlg__close:hover { color: var(--text); }
 .diagnostics-runs .run-status-ok { color: #2c8a5c; }
 .diagnostics-runs .run-status-err { color: #c0392b; }
 
+/* Phase 6.3: backend health dots in the diagnostics Backends table.
+   Green = reachable, amber = not configured / informational, red =
+   unreachable. The dot inherits its size from the existing .dot
+   class above; the colour comes from these modifiers. */
+.diag-dot { display: inline-block; vertical-align: middle; }
+.diag-dot-green { background: var(--good); }
+.diag-dot-amber { background: #e0a82e; }
+.diag-dot-red { background: var(--bad); }
+#diag-backends-table td { font-size: 12.5px; }
+#diag-backends-table td:nth-child(3) {
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  color: var(--text-dim);
+}
+
 .diagnostics-raw {
   margin: 6px 0 0;
   padding: 8px;

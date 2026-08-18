@@ -727,6 +727,24 @@
             <tr><th>Module imports</th><td id="diag-modules"></td></tr>
           </tbody>
         </table>
+        <details class="diagnostics-details" open>
+          <summary>Backends (Phase 6.3 health probes)</summary>
+          <table class="shortcuts-table diagnostics-table" id="diag-backends-table">
+            <thead>
+              <tr>
+                <th>Backend</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="diag-backends-body"></tbody>
+          </table>
+          <p class="card__hint">
+            SMTP / FTP are TCP-probed live. Copy rows are stat'd from
+            disk. Each probe is bounded by a 2-second timeout — a
+            hung backend can't stall the diagnostics card.
+          </p>
+        </details>
         <details class="diagnostics-details">
           <summary>Recent runs</summary>
           <ol id="diag-recent-runs" class="diagnostics-runs"></ol>

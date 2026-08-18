@@ -1335,6 +1335,12 @@ async function _loadDiagnostics() {
       + (rt.watched_with_errors ? ` (${rt.watched_with_errors} with errors)` : ""),
   );
   _setDiagnosticsText("diag-backups", String(rt.backup_count || 0));
+  // Phase 6.3: render the Backends table. The shape is
+  // ``{smtp, ftp, copy}`` per the diagnostics.py contract; each
+  // entry has ``ok`` + an optional ``error`` / ``latency_ms``. The
+  // table renders one row per backend; copy destinations render as
+  // additional rows (one per folder).
+  _renderBackendsTable(data.backends_health || {});
   // Module imports: one-line summary; failures surface in warnings.
   const mods = data.modules || [];
   const failed = mods.filter((m) => !m.ok);
@@ -1363,6 +1369,56 @@ async function _loadDiagnostics() {
   // Raw JSON payload (for support tickets).
   const rawEl = $("diag-raw");
   if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+}
+
+// Phase 6.3: render the Backends health table. One row per backend
+// (SMTP, FTP) plus one row per folder whose copy destination is
+// being stat'd. Each row carries a coloured dot (green = ok, amber =
+// slow/unknown, red = unreachable) and an error tooltip for the
+// red/amber cases.
+function _renderBackendsTable(health) {
+  const body = $("diag-backends-body");
+  if (!body) return;
+  const rows = [];
+  const smtp = health.smtp || {};
+  rows.push(_backendRow("SMTP", smtp));
+  const ftp = health.ftp || {};
+  rows.push(_backendRow("FTP", ftp));
+  const copy = Array.isArray(health.copy) ? health.copy : [];
+  if (copy.length === 0) {
+    rows.push(_backendRow("Copy (no folders)", { ok: false, error: "no folders with copy enabled" }));
+  } else {
+    for (const c of copy) {
+      const label = `Copy → ${c.alias || "(no alias)"}`;
+      rows.push(_backendRow(label, c));
+    }
+  }
+  body.innerHTML = rows.join("");
+}
+
+function _backendRow(label, info) {
+  const ok = !!info.ok;
+  const err = info.error ? String(info.error) : "";
+  const latency = (info.latency_ms != null) ? ` · ${info.latency_ms} ms` : "";
+  // Dot class: green for ok, red for explicit error, amber for the
+  // "not configured" path (which is informational, not an error).
+  let dotClass = "diag-dot-amber";
+  let stateLabel;
+  if (ok) {
+    dotClass = "diag-dot-green";
+    stateLabel = "reachable";
+  } else if (err && /not configured/i.test(err)) {
+    dotClass = "diag-dot-amber";
+    stateLabel = err;
+  } else if (err) {
+    dotClass = "diag-dot-red";
+    stateLabel = err;
+  } else {
+    stateLabel = "unknown";
+  }
+  const escLabel = esc(label);
+  const escState = esc(stateLabel + latency);
+  return `<tr><td>${escLabel}</td><td><span class="diag-dot ${dotClass}" title="${escState}"></span></td><td title="${escState}">${escState}</td></tr>`;
 }
 
 $("diagnostics-help").addEventListener("click", _openDiagnosticsModal);

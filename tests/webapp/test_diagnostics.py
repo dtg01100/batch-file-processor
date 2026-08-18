@@ -97,7 +97,13 @@ def test_diagnostics_endpoint_returns_snapshot(client):
     assert failed == [], f"Modules failed to import: {failed}"
     # The "ok" flag agrees with the modules list.
     assert body["ok"] is True
-    assert body["warnings"] == []
+    # The fixture seeds ``process_backend_copy=True`` with a
+    # ``copy_to_directory`` that doesn't exist on disk — Phase 6.3
+    # surfaces that as a warning so the operator notices. The other
+    # sections (modules, runs, watcher) stay clean.
+    copy_warnings = [w for w in body["warnings"] if "Copy destination" in w]
+    assert len(copy_warnings) == 1
+    assert "TEST" in copy_warnings[0]
 
 
 def test_diagnostics_endpoint_counts_processed_and_errors(client):
@@ -240,3 +246,286 @@ def test_expected_modules_covers_core_imports():
         assert name and not name.endswith(".")
         parts = name.split(".")
         assert all(p.isidentifier() for p in parts), f"bad module name: {name}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.3 — backend health probe tests
+# ---------------------------------------------------------------------------
+
+
+def test_diagnostics_includes_backends_health(client):
+    """The diagnostics payload gains a ``backends_health`` key with
+    the three documented sections: ``smtp``, ``ftp``, ``copy``.
+
+    Even without a configured SMTP server the shape is stable — the
+    ``not configured`` sentinel is the documented contract for
+    "operator hasn't pointed the webapp at an SMTP server yet".
+    """
+    test_client, _ = client
+    r = test_client.get("/api/diagnostics")
+    assert r.status_code == 200
+    body = r.json()
+    assert "backends_health" in body
+    bh = body["backends_health"]
+    assert set(bh.keys()) == {"smtp", "ftp", "copy"}
+    # SMTP is "not configured" because the fixture doesn't seed an
+    # ``email_smtp_server`` row.
+    assert bh["smtp"]["ok"] is False
+    assert "not configured" in bh["smtp"]["error"].lower()
+    # FTP likewise — no folder has ``process_backend_ftp`` enabled.
+    assert bh["ftp"]["ok"] is False
+    # Copy: the fixture seeded one folder with ``process_backend_copy``
+    # enabled and ``copy_to_directory = archive/test`` (which doesn't
+    # exist on disk). The probe reports ``ok: False`` with the
+    # missing-path error.
+    assert isinstance(bh["copy"], list)
+    assert len(bh["copy"]) == 1
+    row = bh["copy"][0]
+    assert row["folder_id"] == 1
+    assert row["alias"] == "TEST"
+    assert row["ok"] is False
+    assert "missing" in row["error"].lower()
+
+
+def test_probe_smtp_reports_unreachable_host(tmp_path):
+    """A TCP probe to an unroutable host returns ``{ok: False, error}``
+    within the documented timeout — never raises."""
+    from webapp.diagnostics import _probe_smtp
+
+    # 198.51.100.0/24 is reserved for documentation (RFC 5737); packets
+    # to it are guaranteed to be dropped by the upstream router, so
+    # the probe times out cleanly without hitting a real server.
+    result = _probe_smtp("198.51.100.7", 25, timeout=0.3)
+    assert result["ok"] is False
+    assert result["error"] is not None
+    assert result["latency_ms"] is not None
+    # The latency_ms is the wall-clock spent before the error; assert
+    # it's at least approximately the timeout we set.
+    assert result["latency_ms"] >= 200
+
+
+def test_probe_ftp_reports_unreachable_host(tmp_path):
+    """Same contract as :func:`_probe_smtp` — unreachable → False +
+    error, never raises."""
+    from webapp.diagnostics import _probe_ftp
+
+    result = _probe_ftp("198.51.100.8", 21, timeout=0.3)
+    assert result["ok"] is False
+    assert result["error"] is not None
+    assert result["latency_ms"] is not None
+
+
+def test_probe_copy_missing_path():
+    """A missing path is reported as ``ok: False`` with a clear
+    error."""
+    from webapp.diagnostics import _probe_copy
+
+    # /this/path/definitely/does/not/exist/anywhere
+    result = _probe_copy("/nonexistent/path/for/test")
+    assert result["ok"] is False
+    assert "missing" in result["error"].lower()
+
+
+def test_probe_copy_existing_path(tmp_path):
+    """An existing directory is reported as ``ok: True``."""
+    from webapp.diagnostics import _probe_copy
+
+    result = _probe_copy(str(tmp_path))
+    assert result["ok"] is True
+    assert result["error"] is None
+
+
+def test_probe_copy_empty_path():
+    """An empty path is reported as ``ok: False`` with the
+    documented "no copy destination configured" message."""
+    from webapp.diagnostics import _probe_copy
+
+    result = _probe_copy("")
+    assert result["ok"] is False
+    assert "no copy destination" in result["error"].lower()
+
+
+def test_probe_smtp_reports_reachable(tmp_path):
+    """A local TCP server is reported as reachable.
+
+    The probe binds a real socket on localhost, then probes it from
+    the production code path. ``socket.create_connection`` accepts
+    any listening socket — we don't need a real SMTP server, only
+    a TCP listener. This validates the happy path of the probe.
+    """
+    import socket
+    import threading
+
+    from webapp.diagnostics import _probe_smtp
+
+    ready = threading.Event()
+    stop = threading.Event()
+
+    def _serve():
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(1)
+        srv.settimeout(5.0)
+        ready.set()
+        try:
+            conn, _ = srv.accept()
+            conn.settimeout(2.0)
+            # Send a minimal SMTP banner so the probe's banner-read
+            # path runs.
+            conn.sendall(b"220 test\r\n")
+            conn.close()
+        except Exception:
+            pass
+        finally:
+            srv.close()
+            stop.set()
+
+    t = threading.Thread(target=_serve, daemon=True)
+    t.start()
+    try:
+        ready.wait(timeout=2.0)
+        port = t.name and 0  # placeholder; we need the actual bound port
+    except Exception:
+        pass
+    # Re-bind to get the actual port: simpler approach — start a
+    # thread that returns the port via a list.
+    port_holder = [0]
+    ready2 = threading.Event()
+
+    def _serve2():
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", 0))
+        port_holder[0] = srv.getsockname()[1]
+        srv.listen(1)
+        srv.settimeout(5.0)
+        ready2.set()
+        try:
+            conn, _ = srv.accept()
+            conn.settimeout(2.0)
+            conn.sendall(b"220 test\r\n")
+            conn.close()
+        except Exception:
+            pass
+        finally:
+            srv.close()
+
+    t2 = threading.Thread(target=_serve2, daemon=True)
+    t2.start()
+    ready2.wait(timeout=2.0)
+    port = port_holder[0]
+    result = _probe_smtp("127.0.0.1", port, timeout=2.0)
+    t2.join(timeout=3.0)
+    assert result["ok"] is True
+    assert result["latency_ms"] is not None
+    assert result["error"] is None
+
+
+def test_probe_ftp_reports_reachable(tmp_path):
+    """A local TCP listener is reported as reachable by the FTP
+    probe (same rationale as :func:`test_probe_smtp_reports_reachable`)."""
+    import socket
+    import threading
+
+    from webapp.diagnostics import _probe_ftp
+
+    port_holder = [0]
+    ready = threading.Event()
+
+    def _serve():
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", 0))
+        port_holder[0] = srv.getsockname()[1]
+        srv.listen(1)
+        srv.settimeout(5.0)
+        ready.set()
+        try:
+            conn, _ = srv.accept()
+            conn.settimeout(2.0)
+            conn.sendall(b"220 test FTP\r\n")
+            conn.close()
+        except Exception:
+            pass
+        finally:
+            srv.close()
+
+    t = threading.Thread(target=_serve, daemon=True)
+    t.start()
+    ready.wait(timeout=2.0)
+    port = port_holder[0]
+    result = _probe_ftp("127.0.0.1", port, timeout=2.0)
+    t.join(timeout=3.0)
+    assert result["ok"] is True
+    assert result["latency_ms"] is not None
+
+
+def test_collect_diagnostics_warns_on_unreachable_smtp(tmp_path):
+    """A configured but unreachable SMTP server surfaces as a
+    warning so the diagnostics banner lights up amber."""
+    from webapp.diagnostics import PROBE_TIMEOUT_SECONDS, collect_diagnostics
+
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
+    settings.ensure_dirs()
+    db = open_database(settings)
+    try:
+        # Seed the global settings row (id=1) with an SMTP server
+        # that's guaranteed to be unroutable. ``database_obj``'s
+        # ``get_settings_or_default`` helper reads this row.
+        settings_row = db.database_connection.raw_connection.execute(
+            "SELECT * FROM settings WHERE id = 1"
+        ).fetchone()
+        if settings_row is None:
+            db.database_connection.raw_connection.execute(
+                "INSERT INTO settings (id, email_smtp_server, smtp_port) "
+                "VALUES (1, ?, ?)",
+                ("198.51.100.10", 25),
+            )
+        else:
+            db.database_connection.raw_connection.execute(
+                "UPDATE settings SET email_smtp_server = ?, smtp_port = ? WHERE id = 1",
+                ("198.51.100.10", 25),
+            )
+        db.database_connection.raw_connection.commit()
+    finally:
+        db.close()
+
+    payload = collect_diagnostics(
+        settings=settings,
+        run_store=None,
+        history=None,
+        schedule_summary=None,
+        watched_folders=[],
+        backups_count=0,
+    )
+    bh = payload["backends_health"]
+    assert bh["smtp"]["ok"] is False
+    # The warning surfaces to the dashboard's banner.
+    assert any("SMTP backend unreachable" in w for w in payload["warnings"])
+
+
+def test_collect_diagnostics_does_not_raise_with_no_db(tmp_path):
+    """The diagnostics endpoint never raises even when every probe
+    is up against a missing database — the contract for the
+    pre-import path is "show zeros + not-configured, not 500"."""
+    from webapp.diagnostics import collect_diagnostics
+
+    settings = Settings(
+        base_dir=tmp_path / "data", data_dir=tmp_path / "data" / "config"
+    )
+    settings.ensure_dirs()
+    payload = collect_diagnostics(
+        settings=settings,
+        run_store=None,
+        history=None,
+        schedule_summary=None,
+        watched_folders=[],
+        backups_count=0,
+    )
+    bh = payload["backends_health"]
+    assert bh["smtp"]["ok"] is False
+    assert bh["ftp"]["ok"] is False
+    assert bh["copy"] == []
