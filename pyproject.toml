@@ -134,6 +134,16 @@ keep-runtime-typing = true
     "PLC0415",
     "SIM117",
 ]
+# FastAPI's Depends() injection pattern uses function calls in argument
+# defaults, which ruff's B008 ("function call in argument defaults")
+# flags correctly for plain Python but is a known false-positive for
+# FastAPI: Depends() returns a sentinel marker that the framework
+# inspects, not a real value. Every endpoint in this directory uses
+# the dependency-injection style; rewriting 30+ signatures to the
+# Annotated[X, Depends(...)] form would be a separate refactor.
+"webapp/routers/*" = [
+    "B008",
+]
 "adapters/sqlite/repositories/*" = [
     "ANN401",
     "FBT001",
