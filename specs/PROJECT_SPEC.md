@@ -239,12 +239,14 @@ for operators who want remote access from a different machine. The
 two share the same SQLite-backed `dispatch/` engine, so a single
 configuration carries across both.
 
-**Why the spec still rejects the §3.6 alternative wholesale:** the
-PyQt5 GUI is still the recommended path for an operator who works
-directly on the host. The webapp is the right choice when the
-operator wants to leave the host running unattended and check in
-from a workstation — but for that workflow the operator already has
-a workstation, so the PyQt5 GUI remains the better *local* tool.
+**Why the spec still rejects the §3.6 alternative wholesale:**
+the original rejection was about *the desktop app existing at all*
+in a world where a single-user local-first product could be served
+by a single binary. The webapp-pivot (2026-08-04) removed the
+PyQt5 GUI source tree; the 2026-08-18 desktop-retirement decision
+removes the rest. The webapp is now the **only** operator surface.
+The §3.6 reasoning remains in this document as a record of the
+architectural choice; it does not bind future work.
 
 **Soft-delete + restore (Phase 6.4):** the desktop GUI's permanent
 delete was a known foot-gun; the webapp ships soft-delete with a
@@ -257,6 +259,40 @@ the original id, 409 on id-reuse, 410 on expired). The trim job
 FastAPI lifespan; `interval_seconds=0` is the synchronous-test
 override. The spec's release-channel rationale (§3.5) covers why the
 trim defaults to 1 h rather than running on every delete.
+
+---
+
+## 3.8 Addendum (2026-08-18) — Desktop Retirement
+
+The 2026-08-18 decision to **completely drop the desktop version**
+supersedes §3.7's "PyQt5 GUI is still the recommended path for an
+operator who works directly on the host" carve-out. Two layers of
+desktop-era code remain after the §3.7 addendum:
+
+1. The PyQt5 GUI source tree (`interface/qt/`) — already removed
+   in the 2026-08-04 webapp-pivot.
+2. The Qt-free `interface/` business-logic layer (16 files,
+   3,819 lines) — orphaned; verified no callers in `webapp/` or
+   `dispatch/` before Phase 7's deletion.
+
+Both deletions are tracked in `specs/webapp-phase-7-operator-confidence.md §3.3`.
+
+**Release channels (§3.5) collapse from three to two:**
+
+- ~~PyInstaller single-file Windows .exe~~ — removed. The webapp's
+  distribution shape is `docker compose up -d` or `uvicorn webapp.main:app`.
+  An operator who wants a single-file distribution can build one
+  with PyInstaller against the webapp source; it's not a product
+  commitment.
+- Source + venv — still supported. `pip install -r requirements.txt`
+  + `python -m webapp.main`.
+- Headless / automatic mode — subsumed by the webapp's scheduler
+  endpoint (`POST /api/schedule`). The `-a` flag is no longer
+  applicable to a webapp deployment.
+
+The webapp is the only operator surface going forward. Future
+specs (Phase 8+) operate on the assumption that there is no
+desktop alternative.
 
 ---
 

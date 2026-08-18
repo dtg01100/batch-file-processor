@@ -219,6 +219,24 @@ Restore. Phase 6.4's `FOLDERS_DELETED_TTL_DAYS` env var (default 30,
 clamped `[1, 365]`) controls the restore window; the trim job
 (`SoftDeleteTrimSupervisor`) purges expired tombstones every hour.
 
+### 4.2 Desktop retirement (2026-08-18)
+
+A follow-on decision (separate from Phase 6) is to **completely drop
+the desktop version**. The PyQt5 GUI source tree (`interface/qt/`)
+was removed in the 2026-08-04 webapp-pivot. The 2026-08-18
+decision extends that to the Qt-free `interface/` business-logic
+layer (3,819 lines, 16 files, no callers), the legacy desktop
+packaging machinery (`interface.spec`, `launch_interface.sh`,
+`nuitka-crash-report.xml`, `dist/`, `dist_windows/`, `outdir/`,
+`plans/`), and — via Phase 8 — the top-level `dispatch/` package
+itself. The webapp is the only operator surface going forward;
+§3.5 release channels collapse from three (PyInstaller + source/venv
++ headless) to two (Docker + source/venv). See
+`specs/PROJECT_SPEC.md §3.8` for the addendum, and
+`specs/webapp-phase-7-operator-confidence.md` +
+`specs/webapp-phase-8-pipeline-redesign.md` for the implementation
+phases.
+
 ---
 
 ## 5. Gap-2.x — Production hardening (new track)
