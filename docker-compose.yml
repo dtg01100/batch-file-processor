@@ -17,8 +17,12 @@ services:
   webapp:
     build: .
     container_name: batch-file-sender
+    # Phase 6.1: bind the host port to localhost only. The webapp is
+    # local-first per PROJECT_SPEC.md §3.4; a fresh `docker compose up`
+    # should not expose the dashboard to the LAN. Operators who want
+    # remote access change this to "8000:8000" or set BFS_HOST=0.0.0.0.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       BFS_BASE_DIR: /data
       BFS_DATA_DIR: /data/config

@@ -6,6 +6,11 @@ Run with::
     # or
     uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 
+Phase 6.1 (2026-08-18): the default bind is now ``127.0.0.1:8000`` —
+matches the spec's single-host local-first posture (§3.4 — "no
+inbound network surface"). Operators who want remote access opt in
+explicitly with ``BFS_HOST=0.0.0.0`` or ``uvicorn --host 0.0.0.0``.
+
 This module owns only:
 
   * the ``Settings`` factory + ``RunStore`` / ``Scheduler`` singletons
@@ -167,10 +172,16 @@ app = create_app()
 
 
 def main() -> None:
-    """Run the webapp with uvicorn (``python -m webapp.main``)."""
+    """Run the webapp with uvicorn (``python -m webapp.main``).
+
+    Phase 6.1: default bind is ``127.0.0.1:8000`` (local-first per
+    ``PROJECT_SPEC.md`` §3.4). Operators who want remote access opt
+    in via ``BFS_HOST=0.0.0.0`` or ``uvicorn --host 0.0.0.0``.
+    """
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    settings = Settings.from_env()
+    uvicorn.run(app, host=settings.host, port=settings.port, log_level="info")
 
 
 if __name__ == "__main__":

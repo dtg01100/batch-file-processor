@@ -33,11 +33,17 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run the webapp (base-dir defaults to ./data)
+# Run the webapp (base-dir defaults to ./data; binds 127.0.0.1:8000 by default)
 BFS_BASE_DIR=./data python -m webapp.main
-# or
+# opt in to remote access:
 uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 ```
+
+> **Phase 6.1 (2026-08-18):** the default bind is now `127.0.0.1:8000`
+> to match the spec's single-host local-first posture. The Docker
+> compose file likewise binds `127.0.0.1:8000:8000`. To expose the
+> dashboard to the LAN, change the compose `ports:` line to `"8000:8000"`
+> or pass `--host 0.0.0.0` to uvicorn.
 
 ### Environment variables
 
@@ -45,6 +51,8 @@ uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 |----------|---------|---------|
 | `BFS_BASE_DIR` | `./data` | Base directory that configured folder paths resolve against |
 | `BFS_DATA_DIR` | `<base_dir>/config` | Where `folders.db` lives |
+| `BFS_HOST` | `127.0.0.1` | Interface uvicorn binds (Phase 6.1; opt in to remote access with `0.0.0.0`) |
+| `BFS_PORT` | `8000` | TCP port uvicorn binds |
 
 ### API
 
