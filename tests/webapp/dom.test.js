@@ -1702,3 +1702,42 @@ test("import card: live timer ticks while in flight; result surfaces duration_se
   assert.equal(importBtn.disabled, false);
   assert.equal(importBtn.textContent, "Import");
 });
+
+test("login modal: dispatching bfs:api-401 opens the modal, submitting stores token", async () => {
+  // Phase 6.2: when the server returns 401 the dashboard's api.js
+  // helper dispatches a bfs:api-401 event; the modal listens for
+  // it and shows a password field. Submitting the token stores it
+  // in localStorage and triggers a re-render of every card (the
+  // re-render is best-effort — the assertion below verifies the
+  // observable contract; the post-submit fetch calls run async and
+  // may outlive the test).
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  const modal = document.getElementById("login-modal");
+  assert.ok(modal, "login modal must be in the DOM");
+  assert.equal(modal.open, false, "login modal starts closed");
+
+  // Dispatch the 401 event as api.js would; the app.js listener
+  // catches it and opens the modal.
+  window.dispatchEvent(new window.CustomEvent("bfs:api-401", { detail: { status: 401 } }));
+  await waitFor(() => modal.open);
+  assert.equal(modal.open, true);
+
+  // Type a token and submit. We don't await the post-submit re-render
+  // because the fetch stubs in this test return canned payloads that
+  // would clobber the existing card state; we only assert the local
+  // side-effects (modal close, localStorage write).
+  const input = document.getElementById("login-token");
+  assert.ok(input, "login-token input must exist");
+  input.value = "test-secret-token";
+  document.getElementById("login-submit").click();
+  await waitFor(() => !modal.open);
+
+  // The token is persisted to localStorage; subsequent api() calls
+  // attach Authorization: Bearer <token>.
+  assert.equal(window.localStorage.getItem("bfs_api_token"), "test-secret-token");
+});

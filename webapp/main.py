@@ -11,6 +11,14 @@ matches the spec's single-host local-first posture (§3.4 — "no
 inbound network surface"). Operators who want remote access opt in
 explicitly with ``BFS_HOST=0.0.0.0`` or ``uvicorn --host 0.0.0.0``.
 
+Phase 6.2 (2026-08-18): when ``BFS_API_TOKEN`` is set, every API
+endpoint (except ``/``, ``/api/health``, ``/docs``, ``/openapi.json``,
+``/redoc``) requires ``Authorization: Bearer <token>``. The static
+files mount at ``/`` and the ``/api/health`` liveness probe are
+exempt so the browser UI can boot and Docker health checks can
+probe without a token. Auth is opt-in — empty ``BFS_API_TOKEN``
+preserves the pre-6.2 behaviour exactly.
+
 This module owns only:
 
   * the ``Settings`` factory + ``RunStore`` / ``Scheduler`` singletons
@@ -36,7 +44,9 @@ Endpoints
 - ``POST   /api/folders``                   create a folder
 - ``GET    /api/folders/{folder_id}``       one folder (full edit schema)
 - ``PUT    /api/folders/{folder_id}``       save one folder
-- ``DELETE /api/folders/{folder_id}``       delete a folder + history
+- ``DELETE /api/folders/{folder_id}``       soft-delete a folder (Phase 6.4)
+- ``GET    /api/folders/deleted``           list soft-deleted folders (6.4)
+- ``POST   /api/folders/{folder_id}/restore`` restore a soft-deleted folder (6.4)
 - ``GET    /api/converters``                11 convert formats + config fields
 - ``GET    /api/settings``                  editable app settings
 - ``PUT    /api/settings``                  replace the editable settings
@@ -79,7 +89,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from webapp.config import Settings
@@ -97,6 +107,7 @@ from webapp.routers import (
     system,
     watcher,
 )
+from webapp.routers._deps import verify_api_token
 from webapp.runner import RunStore
 from webapp.scheduler import Scheduler
 from webapp.watcher import WatcherSupervisor
@@ -120,6 +131,11 @@ async def _lifespan(app: FastAPI):
     exists once ``create_app`` has run. They are attached to
     ``app.state`` so router endpoints can reach them through the
     ``Depends()`` helpers in :mod:`webapp.routers._deps`.
+
+    Phase 6.4: also starts the ``folders_deleted`` trim job that
+    purges expired soft-deleted folder rows. The trim interval is
+    configurable (default 1h) so tests can pass a 0-second override
+    to run the trim synchronously.
     """
     settings = app.state.settings
     history = RunHistory(settings)
@@ -131,16 +147,60 @@ async def _lifespan(app: FastAPI):
     app.state.history = history
     app.state.scheduler = _scheduler
     app.state.watcher_supervisor = supervisor
+    # Phase 6.4: start the periodic trim job for the soft-delete
+    # restore window. The supervisor exposes ``start`` / ``stop``
+    # matching the watcher supervisor's contract so the teardown
+    # path is symmetric. ``interval_seconds`` is read once at startup
+    # — operators who change it can restart the webapp, matching the
+    # other singleton lifecycles in this module. The supervisor
+    # class is imported lazily so the lifespan stays usable before
+    # 6.4 is implemented (the import is gated on ``trim_interval >
+    # 0``; an operator setting it to 0 to disable trimming also
+    # disables the import).
+    trim_interval = int(
+        __import__("os").environ.get(
+            "FOLDERS_DELETED_TRIM_INTERVAL_SECONDS", "3600"
+        )
+    )
+    trim_supervisor = None
+    if trim_interval > 0:
+        try:
+            from webapp.routers.folders import SoftDeleteTrimSupervisor
+        except ImportError:
+            # The 6.4 module isn't in place yet; skip silently
+            # rather than crashing the whole app. Operators who set
+            # FOLDERS_DELETED_TRIM_INTERVAL_SECONDS before 6.4 ships
+            # get a no-op until the trim supervisor is implemented.
+            SoftDeleteTrimSupervisor = None  # type: ignore[assignment]
+        if SoftDeleteTrimSupervisor is not None:
+            trim_supervisor = SoftDeleteTrimSupervisor(
+                settings, interval_seconds=trim_interval
+            )
+            trim_supervisor.start()
+            app.state.soft_delete_trim = trim_supervisor
     try:
         yield
     finally:
+        if trim_supervisor is not None:
+            trim_supervisor.stop()
         _scheduler.stop()
         if supervisor is not None:
             supervisor.stop()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build the FastAPI app. ``settings`` is injectable for tests."""
+    """Build the FastAPI app. ``settings`` is injectable for tests.
+
+    Phase 6.2: applies :func:`webapp.routers._deps.verify_api_token`
+    as a router-level dependency on every ``include_router`` call.
+    When ``BFS_API_TOKEN`` is empty the dependency is a no-op; when
+    set, every endpoint other than the exempt list (see
+    :data:`webapp.routers._deps._AUTH_EXEMPT_PATHS`) requires a
+    matching bearer token. The static mount at ``/`` is registered
+    *after* the routers so ``/api/*`` paths win the matching; the
+    static mount itself doesn't carry the auth dependency (the
+    browser UI must be reachable so the login prompt can fire).
+    """
     app = FastAPI(title="Batch File Sender", version="0.1.0", lifespan=_lifespan)
     app.state.settings = settings or Settings.from_env()
     app.state.run_store = _run_store
@@ -148,6 +208,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Register one router per domain. Order is irrelevant — FastAPI
     # matches by path before method so the only thing that matters is
     # that each route appears at most once across all routers.
+    #
+    # Phase 6.2: ``dependencies=[Depends(verify_api_token)]`` attaches
+    # the bearer-token guard at the router-include layer. Endpoints
+    # that need to remain reachable without a token (e.g. ``/api/health``
+    # for Docker health checks) check their path inside the dependency
+    # itself; the static mount at ``/`` doesn't carry the dependency
+    # at all.
+    auth_dep = [Depends(verify_api_token)]
     for router in (
         system.router,
         imports.router,
@@ -161,9 +229,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         maintenance.router,
         backups.router,
     ):
-        app.include_router(router)
+        app.include_router(router, dependencies=auth_dep)
 
-    # Static UI last so /api/* routes win.
+    # Static UI last so /api/* routes win. The static mount doesn't
+    # carry the auth dependency — the browser UI must be reachable so
+    # the login prompt can fire and fetch the token from the operator.
     app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
     return app
 
@@ -177,6 +247,11 @@ def main() -> None:
     Phase 6.1: default bind is ``127.0.0.1:8000`` (local-first per
     ``PROJECT_SPEC.md`` §3.4). Operators who want remote access opt
     in via ``BFS_HOST=0.0.0.0`` or ``uvicorn --host 0.0.0.0``.
+
+    Phase 6.2: if ``BFS_API_TOKEN`` is set, the same ``main()`` will
+    serve a token-protected API. The login prompt in the static UI
+    prompts for the token on the first 401 and stores it in
+    ``localStorage``.
     """
     import uvicorn
 

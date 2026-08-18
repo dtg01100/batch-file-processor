@@ -154,3 +154,108 @@ test("uses the statusText when the error JSON has no detail", async () => {
     status: 404,
   });
 });
+
+/* ---------------- Phase 6.2: bearer-token helpers ---------------- */
+
+const { _resetApiTokenCache, setApiToken, getApiToken, clearApiToken } = require("../../webapp/static/api.js");
+
+function _reset() { _resetApiTokenCache(); }
+
+function withLocalStorage(initial = {}) {
+  const stored = { ...initial };
+  const mock = {
+    getItem: (k) => (k in stored ? stored[k] : null),
+    setItem: (k, v) => { stored[k] = String(v); },
+    removeItem: (k) => { delete stored[k]; },
+  };
+  // The browser-side helper accesses ``window.localStorage``; in Node
+  // we have to wire both ``global.localStorage`` (used by jsdom-style
+  // tests) and ``global.window.localStorage`` (used by the api.js
+  // helper directly).
+  global.localStorage = mock;
+  global.window = global.window || { addEventListener: () => {}, dispatchEvent: () => {} };
+  global.window.localStorage = mock;
+  return stored;
+}
+
+test("getApiToken returns empty string when nothing stored", () => {
+  _reset();  withLocalStorage({});
+  assert.equal(getApiToken(), "");
+});
+
+test("setApiToken stores in localStorage and getApiToken reads it back", () => {
+  _reset();  const stored = withLocalStorage({});
+  setApiToken("round-trip-secret");
+  assert.equal(getApiToken(), "round-trip-secret");
+  assert.equal(stored.bfs_api_token, "round-trip-secret");
+  clearApiToken();
+  assert.equal(getApiToken(), "");
+  assert.equal(stored.bfs_api_token, undefined);
+});
+
+test("setApiToken('') clears the stored token", () => {
+  _reset();  const stored = withLocalStorage({ bfs_api_token: "stale" });
+  setApiToken("");
+  assert.equal(getApiToken(), "");
+  assert.equal(stored.bfs_api_token, undefined);
+});
+
+test("api attaches Authorization header when token is set in storage", async () => {
+  _reset();  withLocalStorage({ bfs_api_token: "header-test" });
+  const calls = [];
+  global.fetch = async (path, options) => {
+    calls.push({ path, options });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  await api("/api/folders");
+  assert.equal(calls[0].options.headers.Authorization, "Bearer header-test");
+});
+
+test("api attaches no Authorization header when no token is stored", async () => {
+  _reset();  withLocalStorage({});
+  const calls = [];
+  global.fetch = async (path, options) => {
+    calls.push({ path, options });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  await api("/api/folders");
+  const headers = calls[0].options && calls[0].options.headers;
+  if (headers) {
+    assert.equal(headers.Authorization, undefined);
+  }
+});
+
+test("api dispatches bfs:api-401 event on 401", async () => {
+  _reset();  withLocalStorage({});
+  global.fetch = async () => ({
+    ok: false, status: 401, statusText: "Unauthorized",
+    json: async () => ({ detail: "Invalid bearer token" }),
+  });
+  const dispatched = [];
+  global.window = {
+    addEventListener: () => {},
+    dispatchEvent: (e) => dispatched.push(e),
+    CustomEvent,
+  };
+  await assert.rejects(api("/api/folders"), (err) => err.status === 401);
+  const ev = dispatched.find((e) => e && e.type === "bfs:api-401");
+  assert.ok(ev, "expected bfs:api-401 event");
+  delete global.window;
+});
+
+test("api does not dispatch bfs:api-401 on non-401 errors", async () => {
+  _reset();  withLocalStorage({});
+  global.fetch = async () => ({
+    ok: false, status: 500, statusText: "Internal Server Error",
+    json: async () => ({}),
+  });
+  const dispatched = [];
+  global.window = {
+    addEventListener: () => {},
+    dispatchEvent: (e) => dispatched.push(e),
+    CustomEvent,
+  };
+  await assert.rejects(api("/api/config"), (err) => err.status === 500);
+  assert.equal(dispatched.find((e) => e && e.type === "bfs:api-401"), undefined);
+  delete global.window;
+});

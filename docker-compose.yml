@@ -26,6 +26,12 @@ services:
     environment:
       BFS_BASE_DIR: /data
       BFS_DATA_DIR: /data/config
+      # Phase 6.2: when exposing the webapp to the LAN (BIND="0.0.0.0"
+      # + ports: "8000:8000"), set a long-lived bearer token. The
+      # dashboard prompts for the token on the first 401 and stores
+      # it in localStorage. Uncomment the line below to enable; rotate
+      # by restarting the container with a new value.
+      # BFS_API_TOKEN: change-me
     volumes:
       - ./data:/data
     restart: unless-stopped

@@ -649,6 +649,30 @@
     <span class="footer__shortcuts">Press <kbd>?</kbd> for keyboard shortcuts.</span>
   </footer>
 
+  <dialog id="login-modal" class="dlg" aria-labelledby="login-title">
+    <div class="dlg__head">
+      <h3 id="login-title">API token required</h3>
+      <button type="button" class="dlg__close" data-dismiss="cancel" aria-label="Close">×</button>
+    </div>
+    <div class="dlg__body">
+      <p class="card__hint">
+        The webapp is configured to require an API token
+        (<code>BFS_API_TOKEN</code>). Paste the token to sign in.
+        The token is stored in <code>localStorage</code> and attached
+        to every subsequent request.
+      </p>
+      <label class="field">
+        <span>API token</span>
+        <input type="password" id="login-token" autocomplete="off" />
+      </label>
+      <div id="login-error" class="notice notice--err" hidden></div>
+    </div>
+    <div class="dlg__actions">
+      <button type="button" id="login-submit" class="btn btn--primary">Sign in</button>
+      <button type="button" class="btn btn--ghost" data-dismiss="cancel">Cancel</button>
+    </div>
+  </dialog>
+
   <dialog id="shortcuts-modal" class="dlg" aria-labelledby="shortcuts-title">
     <div class="dlg__head">
       <h3 id="shortcuts-title">Keyboard shortcuts</h3>

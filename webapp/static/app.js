@@ -1009,6 +1009,131 @@ function _openShortcutsModal() {
   if (typeof dlg.showModal === "function") dlg.showModal();
   else dlg.setAttribute("open", "");
 }
+
+/* ---------------- bearer-token login (Phase 6.2) ---------------- */
+
+// Listen for the 401 event fired by api.js (which can't reach into
+// the DOM directly). When a token-required endpoint returns 401 we
+// open the login modal; the operator pastes the token, the modal
+// stores it in localStorage, and the next ``api()`` call attaches
+// it automatically.
+function _openLoginModal() {
+  const dlg = $("login-modal");
+  if (!dlg) return;
+  const errEl = $("login-error");
+  if (errEl) {
+    errEl.hidden = true;
+    errEl.textContent = "";
+  }
+  const tokEl = $("login-token");
+  if (tokEl) tokEl.value = "";
+  if (typeof dlg.showModal === "function") dlg.showModal();
+  else dlg.setAttribute("open", "");
+  // Focus the input once the dialog is rendered so the operator can
+  // paste the token immediately.
+  setTimeout(() => {
+    if (tokEl) tokEl.focus();
+  }, 0);
+}
+
+function _closeLoginModal() {
+  const dlg = $("login-modal");
+  if (!dlg) return;
+  if (typeof dlg.close === "function") dlg.close();
+  else dlg.removeAttribute("open");
+}
+
+function _setLoginError(msg) {
+  const errEl = $("login-error");
+  if (!errEl) return;
+  if (msg) {
+    errEl.textContent = String(msg);
+    errEl.hidden = false;
+  } else {
+    errEl.textContent = "";
+    errEl.hidden = true;
+  }
+}
+
+async function _submitLogin() {
+  const tokEl = $("login-token");
+  const token = tokEl ? tokEl.value.trim() : "";
+  if (!token) {
+    _setLoginError("Token is required.");
+    return;
+  }
+  setApiToken(token);
+  _setLoginError("");
+  _closeLoginModal();
+  // Notify listeners that auth succeeded — currently a no-op but the
+  // event name is the documented extension point.
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    window.dispatchEvent(new CustomEvent("bfs:api-authenticated", { detail: { token_set: true } }));
+  }
+  // Re-render everything that the first load may have failed on. The
+  // boot ``init()`` only ran the unauthenticated /api/health check;
+  // every other card needs an authenticated retry now that we have
+  // a token. Each re-render is wrapped so a single failure doesn't
+  // strand the dashboard — the operator can still operate against
+  // the cards that did load.
+  const _safeReload = async (label, fn) => {
+    try {
+      await fn();
+    } catch (err) {
+      // Use the debug console (no alertDialog) — the cards that
+      // failed will simply not refresh; the operator will see the
+      // 401 on the next manual action and can re-submit.
+      console.debug(`post-login re-render failed: ${label}`, err);
+    }
+  };
+  await _safeReload("config", refreshConfig);
+  await _safeReload("folders", loadFolders);
+  await _safeReload("watched", loadWatched);
+  await _safeReload("errors", loadErrors);
+  await _safeReload("runs", loadRuns);
+  await _safeReload("processed", () => loadProcessed({ append: false }));
+  await _safeReload("backups", loadBackups);
+  await _safeReload("settings", loadSettings);
+  await _safeReload("converters", loadConverters);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("bfs:api-401", () => _openLoginModal());
+  // After a successful token submission, dispatch a one-shot event so
+  // anything that was deferred on auth (e.g. an import queued during
+  // the pre-token window) can resume.
+  window.addEventListener("bfs:api-authenticated", () => {
+    /* no-op for now; placeholder for future queueing */
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const submit = $("login-submit");
+  if (submit) {
+    submit.addEventListener("click", async () => {
+      await _submitLogin();
+    });
+  }
+  const cancelBtns = document.querySelectorAll(
+    "#login-modal [data-dismiss='cancel']",
+  );
+  cancelBtns.forEach((btn) => {
+    btn.addEventListener("click", () => _closeLoginModal());
+  });
+  const dlg = $("login-modal");
+  if (dlg) {
+    dlg.addEventListener("click", (e) => {
+      if (e.target === dlg) _closeLoginModal();
+    });
+    dlg.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target && e.target.id === "login-token") {
+        e.preventDefault();
+        _submitLogin();
+      }
+    });
+  }
+});
+
 function _closeShortcutsModal() {
   const dlg = $("shortcuts-modal");
   if (!dlg) return;
