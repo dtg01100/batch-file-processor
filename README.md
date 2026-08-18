@@ -53,7 +53,7 @@ uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 | `BFS_DATA_DIR` | `<base_dir>/config` | Where `folders.db` lives |
 | `BFS_HOST` | `127.0.0.1` | Interface uvicorn binds (Phase 6.1; opt in to remote access with `0.0.0.0`) |
 | `BFS_PORT` | `8000` | TCP port uvicorn binds |
-| `BFS_API_TOKEN` | *(unset)* | Phase 6.2 single-user bearer-token. When set, every API endpoint except `/`, `/api/health`, `/docs`, `/openapi.json`, `/redoc` requires `Authorization: Bearer <token>`. The static UI prompts for the token on the first 401 and stores it in `localStorage` under `bfs_api_token`. Rotate by restarting with a new value. |
+| `BFS_API_TOKEN` | *(unset)* | Phase 6.2 single-user bearer-token. When set, every API endpoint except `/`, `/api/health`, `/docs`, `/openapi.json`, `/redoc` requires `Authorization: Bearer *** The static UI prompts for the token on the first 401 and stores it in `localStorage` under `bfs_api_token`. Rotate by restarting with a new value. |
 | `FOLDERS_DELETED_TTL_DAYS` | `30` | Phase 6.4 soft-delete restore window in days, clamped to `[1, 365]`. After this many days a soft-deleted folder is purged by the hourly trim job. |
 | `FOLDERS_DELETED_TRIM_INTERVAL_SECONDS` | `3600` | How often the soft-delete trim job runs. Set to `0` to disable. |
 
@@ -66,8 +66,12 @@ uvicorn webapp.main:app --host 0.0.0.0 --port 8000
 | `POST /api/import` | Multipart upload of a legacy `folders.db` (+ optional `base_dir`, `platform`) |
 | `POST /api/preview/edi` | Classify an EDI upload (parse-only preview) |
 | `GET /api/folders` | Configured folders (relative + resolved paths) |
+| `POST /api/folders` | Create a new folder row |
 | `GET /api/folders/{id}` | One folder (full edit schema) |
 | `PUT /api/folders/{id}` | Save one folder |
+| `DELETE /api/folders/{id}` | Soft-delete a folder (Phase 6.4); the row moves to `folders_deleted` for `FOLDERS_DELETED_TTL_DAYS` (default 30). Returns `{deleted, expires_at}`. |
+| `GET /api/folders/deleted` | List non-expired soft-deleted folders (Phase 6.4). Sorted by `expires_at` ascending so the UI can surface rows that are about to disappear first. |
+| `POST /api/folders/{id}/restore` | Restore a soft-deleted folder (Phase 6.4). Re-inserts the original row with the original `id`. Returns 409 if the id is in use, 410 if the tombstone has expired. |
 | `POST /api/run` | Start a background processing run |
 | `POST /api/resend` | Start a background resend run |
 | `POST /api/folders/{id}/run` | Run a single folder |

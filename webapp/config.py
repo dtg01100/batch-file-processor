@@ -17,6 +17,11 @@ The knobs:
   it did before Phase 6.2.
 - ``FOLDERS_DELETED_TTL_DAYS`` — Phase 6.4 soft-delete restore window
   in days. Default ``30``; clamped to ``[1, 365]``.
+- ``FOLDERS_DELETED_TRIM_INTERVAL_SECONDS`` — Phase 6.4 how often the
+  ``SoftDeleteTrimSupervisor`` wakes up to purge expired rows.
+  Default ``3600`` (1 hour). ``0`` is the synchronous-test override
+  (run-once on ``start()``, no background thread). Clamped to
+  ``[0, 86400]``.
 
 The dataclass ``Settings.__init__`` signature is intentionally frozen
 at the 6.1 shape (``base_dir``, ``data_dir``, ``host``, ``port``) so
@@ -60,6 +65,15 @@ DEFAULT_FOLDERS_DELETED_TTL_DAYS = 30
 MIN_FOLDERS_DELETED_TTL_DAYS = 1
 MAX_FOLDERS_DELETED_TTL_DAYS = 365
 
+# Phase 6.4: how often the soft-delete trim job wakes up to purge
+# expired ``folders_deleted`` rows. ``0`` is the synchronous-test
+# override — ``SoftDeleteTrimSupervisor.start()`` runs one trim
+# immediately on a 0-second interval and then exits (no background
+# thread), which is what the test suite needs.
+DEFAULT_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS = 3600
+MIN_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS = 0
+MAX_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS = 24 * 3600
+
 
 def _clamp_folders_deleted_ttl_days(raw: int) -> int:
     """Clamp the configured TTL into the [1, 365] window.
@@ -72,6 +86,23 @@ def _clamp_folders_deleted_ttl_days(raw: int) -> int:
     return max(
         MIN_FOLDERS_DELETED_TTL_DAYS,
         min(MAX_FOLDERS_DELETED_TTL_DAYS, int(raw)),
+    )
+
+
+def _clamp_folders_deleted_trim_interval_seconds(raw: int) -> int:
+    """Clamp the trim interval into the [0, 86400] window.
+
+    ``0`` is the synchronous-test override (run-once on ``start()``,
+    no background thread); values above 24 h are silly for an
+    in-process trim and get pinned to 24 h to bound memory use.
+    """
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS
+    return max(
+        MIN_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS,
+        min(MAX_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS, value),
     )
 
 
@@ -133,6 +164,25 @@ class Settings:
         return _clamp_folders_deleted_ttl_days(value)
 
     @property
+    def folders_deleted_trim_interval_seconds(self) -> int:
+        """How often the soft-delete trim job wakes up.
+
+        Reads ``FOLDERS_DELETED_TRIM_INTERVAL_SECONDS`` from the
+        environment so tests can override without rebuilding the
+        ``Settings`` instance. ``0`` is the run-once synchronous-test
+        override (see :func:`_clamp_folders_deleted_trim_interval_seconds`).
+        """
+        raw = os.environ.get(
+            "FOLDERS_DELETED_TRIM_INTERVAL_SECONDS",
+            str(DEFAULT_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS),
+        )
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS
+        return _clamp_folders_deleted_trim_interval_seconds(value)
+
+    @property
     def database_path(self) -> Path:
         """Path to the webapp's active ``folders.db``."""
         return self.data_dir / "folders.db"
@@ -156,12 +206,16 @@ class Settings:
 __all__ = [
     "BASE_DIRECTORY_KEY",
     "DEFAULT_API_TOKEN",
+    "DEFAULT_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS",
     "DEFAULT_FOLDERS_DELETED_TTL_DAYS",
     "DEFAULT_HOST",
     "DEFAULT_PORT",
+    "MAX_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS",
     "MAX_FOLDERS_DELETED_TTL_DAYS",
+    "MIN_FOLDERS_DELETED_TRIM_INTERVAL_SECONDS",
     "MIN_FOLDERS_DELETED_TTL_DAYS",
-    "Settings",
     "SOURCE_PLATFORM_KEY",
+    "Settings",
+    "_clamp_folders_deleted_trim_interval_seconds",
     "_clamp_folders_deleted_ttl_days",
 ]

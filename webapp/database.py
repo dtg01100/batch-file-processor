@@ -81,6 +81,25 @@ def _ensure_columns(db: Any) -> None:
             "error_file TEXT DEFAULT '', "
             "severity TEXT DEFAULT '')"
         )
+        # Phase 6.4: soft-delete tombstone table. ``DELETE
+        # /api/folders/{id}`` moves the row here (with the original
+        # row JSON-serialized) and ``POST /api/folders/{id}/restore``
+        # moves it back. A periodic trim job (driven by
+        # ``SoftDeleteTrimSupervisor``) purges expired rows after the
+        # operator-configured TTL. Idempotent — pre-6.4 databases pick
+        # this up on next open without a migration version bump.
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS folders_deleted ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "folder_id INTEGER NOT NULL, "
+            "deleted_at TEXT NOT NULL, "
+            "expires_at TEXT NOT NULL, "
+            "original_row_json TEXT NOT NULL)"
+        )
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS folders_deleted_expires_idx "
+            "ON folders_deleted(expires_at)"
+        )
         existing = {
             row[1] for row in con.execute("PRAGMA table_info(folders)").fetchall()
         }

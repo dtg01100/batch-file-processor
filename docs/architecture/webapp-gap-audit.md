@@ -207,6 +207,18 @@ For completeness — these were parity-checked, no gap.
 
 None. All gap-1.x items are resolved.
 
+### 4.1 Phase 6 status (2026-08-18)
+
+All four gap-2.x picks (2.1 bearer-token, 2.3 localhost, 2.4 backend
+health probe, 2.6 soft-delete) are landed on the `webapp-pivot`
+branch. The webapp is now safe-by-default (binds `127.0.0.1`), supports
+opt-in remote access (bearer-token), exposes live backend health in
+the diagnostics card, and recovers from accidental folder deletion
+through the "Recently deleted" collapsible section with per-row
+Restore. Phase 6.4's `FOLDERS_DELETED_TTL_DAYS` env var (default 30,
+clamped `[1, 365]`) controls the restore window; the trim job
+(`SoftDeleteTrimSupervisor`) purges expired tombstones every hour.
+
 ---
 
 ## 5. Gap-2.x — Production hardening (new track)
@@ -238,14 +250,15 @@ Phase 6 ships the four ✅ items: 2.3, 2.1, 2.4, 2.6. Ordered by
 risk reduction (smallest, broadest-impact first):
 
 1. **2.3 localhost-by-default** — 3-line fix, eliminates the entire
-   network-exposure problem class.
+   network-exposure problem class. ✅ Landed (`06aa7dea7`).
 2. **2.1 bearer-token auth** — opens the door to safe remote exposure;
    without it, 2.3 leaves a one-host-only webapp, which is correct
-   for the spec but limiting.
+   for the spec but limiting. ✅ Landed (`d96d876f3`).
 3. **2.4 backend health probe** — operator-facing observability win,
-   no security implications.
+   no security implications. ✅ Landed (`9ee5b0daa`).
 4. **2.6 soft-delete with restore window** — removes the
-   permanent-delete foot-gun.
+   permanent-delete foot-gun. ✅ Landed (Phase 6.4 commit on this
+   branch).
 
 ### 5.3 Deferred (gap-3.x candidates)
 

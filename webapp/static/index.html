@@ -83,6 +83,35 @@
           </thead>
           <tbody id="folders-body"></tbody>
         </table>
+      </div>
+      <!-- Phase 6.4: Recently deleted (soft-delete) section. The
+           server keeps the row in ``folders_deleted`` for the TTL
+           (default 30 days, ``FOLDERS_DELETED_TTL_DAYS``) so a stray
+           click on **Delete** can be undone with the Restore button. -->
+      <details class="folders-deleted-details" id="folders-deleted-details" hidden>
+        <summary>
+          <span id="folders-deleted-summary">Recently deleted (0)</span>
+        </summary>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Alias</th>
+                <th>Deleted</th>
+                <th>Expires in</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="folders-deleted-body"></tbody>
+          </table>
+        </div>
+        <p class="card__hint">
+          Deleted folders are kept for the configured restore window
+          (<code>FOLDERS_DELETED_TTL_DAYS</code>, default 30 days)
+          and then purged by the soft-delete trim job.
+        </p>
+      </details>
+        </table>
         <p class="card__hint">Click any row to edit the folder, or use “+ Add folder” to onboard a new one.</p>
       </div>
     </section>

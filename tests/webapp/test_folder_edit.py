@@ -457,9 +457,18 @@ def test_delete_folder_removes_row_and_processed_history(client):
 
     resp = client.delete(f"/api/folders/{new_id}")
     assert resp.status_code == 200
-    assert resp.json() == {"deleted": new_id}
+    # Phase 6.4: soft-delete also returns ``expires_at`` so the UI
+    # can show "Expires in N days" without a second round trip.
+    body = resp.json()
+    assert body["deleted"] == new_id
+    assert "expires_at" in body
 
     assert client.get(f"/api/folders/{new_id}").status_code == 404
+    # The tombstone should also be listable so the UI can offer a
+    # Restore button (Phase 6.4).
+    listed = client.get("/api/folders/deleted").json()
+    assert listed["count"] == 1
+    assert listed["rows"][0]["folder_id"] == new_id
     db = open_database(settings)
     try:
         row = db.database_connection.raw_connection.execute(

@@ -188,6 +188,95 @@ async function loadFolders() {
   // dropdown; re-render here so it picks up new / deleted folders
   // without a second round-trip.
   _renderProcessedFolderFilter();
+  // Phase 6.4: also fetch the recently-deleted list so the
+  // collapsible Restore section stays in sync.
+  await loadFoldersDeleted();
+}
+
+// Phase 6.4: fetch the soft-deleted folder list (Phase 6.4
+// ``GET /api/folders/deleted``) and render the collapsible
+// ``Recently deleted (N)`` table. Called from ``loadFolders`` so a
+// normal refresh keeps the list current, and from the Restore
+// handler after a successful restore.
+async function loadFoldersDeleted() {
+  let body;
+  try {
+    body = await api("/api/folders/deleted");
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+  _renderFoldersDeleted(body || { count: 0, rows: [] });
+}
+
+function _renderFoldersDeleted(body) {
+  const details = $("folders-deleted-details");
+  const summary = $("folders-deleted-summary");
+  const tbody = $("folders-deleted-body");
+  if (!details || !summary || !tbody) return;
+  const rows = Array.isArray(body.rows) ? body.rows : [];
+  summary.textContent = `Recently deleted (${body.count || rows.length})`;
+  if (rows.length === 0) {
+    details.hidden = true;
+    tbody.innerHTML = "";
+    return;
+  }
+  details.hidden = false;
+  tbody.innerHTML = rows
+    .map((row) => {
+      const alias = esc(row.alias || "(no alias)");
+      const deleted = esc(_formatLocalDateTime(row.deleted_at) || "");
+      const expires = esc(_formatExpiresIn(row.expires_at));
+      const fid = Number(row.folder_id);
+      return (
+        "<tr>" +
+        `<td>${alias}</td>` +
+        `<td>${deleted}</td>` +
+        `<td>${expires}</td>` +
+        `<td><button type="button" class="btn btn--ghost" data-restore-folder="${fid}">Restore</button></td>` +
+        "</tr>"
+      );
+    })
+    .join("");
+}
+
+// Format a soft-delete expiry as "Expires in 27d" or "Expires in
+// 3h". ``iso`` is the ``expires_at`` ISO timestamp from the API.
+function _formatExpiresIn(iso) {
+  if (!iso) return "—";
+  const now = Date.now();
+  const target = new Date(iso).getTime();
+  if (Number.isNaN(target)) return "—";
+  const ms = target - now;
+  if (ms <= 0) return "expired";
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 60) return `Expires in ${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `Expires in ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `Expires in ${days}d`;
+}
+
+// Best-effort local datetime formatter — used for the deleted_at
+// column. Falls back to the raw string if parsing fails.
+function _formatLocalDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString();
+}
+
+// Restore a soft-deleted folder. Wired up below via event delegation
+// on ``folders-deleted-body``. Triggers a refresh of both the live
+// folders list and the deleted list so the UI reflects the move.
+async function _restoreDeletedFolder(folderId) {
+  try {
+    await api(`/api/folders/${folderId}/restore`, { method: "POST" });
+  } catch (err) {
+    console.error("Could not restore folder", folderId, err);
+    return;
+  }
+  await loadFolders();
 }
 
 // Re-render the folders table applying the current search filter. State
@@ -2109,6 +2198,24 @@ $("clear-flags-btn").addEventListener("click", async () => {
   } catch (err) {
     await alertDialog(`Failed: ${err.message || err}`);
   }
+});
+
+/* ---------------- soft-delete Restore (Phase 6.4) ---------------- */
+
+// Event delegation: every click inside the soft-deleted folders
+// table that hits a Restore button triggers the restore round-trip.
+// Re-renders the live folders list so the row moves back where it
+// belongs.
+$("folders-deleted-body").addEventListener("click", async (ev) => {
+  const target = ev.target;
+  if (!(target instanceof HTMLElement)) return;
+  const btn = target.closest("button[data-restore-folder]");
+  if (!btn) return;
+  const folderId = Number(btn.getAttribute("data-restore-folder"));
+  if (!Number.isFinite(folderId) || folderId <= 0) return;
+  btn.disabled = true;
+  await _restoreDeletedFolder(folderId);
+  btn.disabled = false;
 });
 
 /* ---------------- boot ---------------- */

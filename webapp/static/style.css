@@ -946,6 +946,20 @@ dialog#diagnostics-modal .dlg__close:hover { color: var(--text); }
   color: var(--text-dim);
   margin-bottom: 6px;
 }
+/* Phase 6.4: Recently deleted (soft-delete) section. Same shape
+   as ``.diagnostics-details`` — a thin top border + dim summary
+   that opens into a restore table. */
+.folders-deleted-details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.folders-deleted-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
 .diagnostics-runs {
   margin: 6px 0 0;
   padding-left: 18px;

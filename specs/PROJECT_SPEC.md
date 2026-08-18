@@ -205,6 +205,61 @@ The product ships as:
 
 ---
 
+## 3.7 Addendum (2026-08-18) — Webapp Deployment Model
+
+The webapp-pivot (commit `9864dc7e5`) reversed the §3.6 rejection of a
+browser-based UI and ships FastAPI + a static SPA in the same repo as
+the dispatch engine. This addendum captures the new deployment model
+and the security posture it requires.
+
+**Deployment posture:** single-host, single-operator, local-first. A
+fresh `python -m webapp.main` binds `127.0.0.1:8000` (Phase 6.1) — no
+inbound network surface. Remote access is an explicit opt-in via
+`BFS_HOST=0.0.0.0` and `BFS_API_TOKEN=<secret>` (Phase 6.2). The
+bearer-token is a long-lived env-var secret, not a JWT — the spec is
+single-user, so refresh flows would add ceremony for zero operational
+benefit. TLS termination is deliberately out of scope: an operator
+who wants to expose the dashboard remotely puts nginx or Caddy in
+front, and the bearer-token + nginx-TLS pairing is documented as the
+canonical remote-access shape.
+
+**Why this is consistent with §3.4 ("no inbound network surface"):**
+the default bind makes that statement literally true on a fresh
+install. Remote access is the explicit exception that requires two
+deliberate operator actions (env var + flag), each documented in the
+README. The threat model is unchanged: credentials remain in the
+local SQLite DB; the bearer-token is an authentication gate, not a
+credential store.
+
+**Why this changes §3.5 (release channels):** the webapp replaces the
+"source + venv" distribution shape with `docker compose up -d` or
+`uvicorn webapp.main:app`. The PyInstaller single-file .exe remains
+the primary production distribution; the webapp is a parallel option
+for operators who want remote access from a different machine. The
+two share the same SQLite-backed `dispatch/` engine, so a single
+configuration carries across both.
+
+**Why the spec still rejects the §3.6 alternative wholesale:** the
+PyQt5 GUI is still the recommended path for an operator who works
+directly on the host. The webapp is the right choice when the
+operator wants to leave the host running unattended and check in
+from a workstation — but for that workflow the operator already has
+a workstation, so the PyQt5 GUI remains the better *local* tool.
+
+**Soft-delete + restore (Phase 6.4):** the desktop GUI's permanent
+delete was a known foot-gun; the webapp ships soft-delete with a
+configurable restore window (`FOLDERS_DELETED_TTL_DAYS`, default 30
+days, clamped `[1, 365]`). The implementation lives in
+`webapp/routers/folders.py::api_delete_folder` (moves the row to a
+`folders_deleted` tombstone) + `api_restore_folder` (re-inserts with
+the original id, 409 on id-reuse, 410 on expired). The trim job
+(`SoftDeleteTrimSupervisor`) is a daemon thread started by the
+FastAPI lifespan; `interval_seconds=0` is the synchronous-test
+override. The spec's release-channel rationale (§3.5) covers why the
+trim defaults to 1 h rather than running on every delete.
+
+---
+
 ## 4. Implementation Plan
 
 > **This is the product-level roadmap, not a feature spec.** Each phase corresponds to a deliverable the operator can see. Individual feature specifications live in `specs/<name>.md`.
