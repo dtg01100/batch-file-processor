@@ -1,11 +1,18 @@
 # Desktop → Webapp Feature Gap Audit
 
-**Status:** Re-checked 2026-08-17 against the current working tree
-after closing gaps 1.2, 1.5, 1.6, and 1.7. All gap-1.x items are
-now resolved.
-**Method:** Read every `interface/qt/dialogs/*.py` from `9864dc7e5^` and compare
-against `webapp/static/index.html` + `webapp/static/app.js`. Anything the
-desktop exposed to the operator that the webapp doesn't is listed below.
+**Status:** Re-checked 2026-08-18 against the current working tree
+after closing all gap-1.x items (2026-08-17) and the router split
+(2026-08-18). Operator-visible feature parity is complete; §6 adds a
+new gap-2.x track for production hardening.
+**Method (gap-1.x):** Read every `interface/qt/dialogs/*.py` from
+`9864dc7e5^` and compare against `webapp/static/index.html` +
+`webapp/static/app.js`. Anything the desktop exposed to the operator
+that the webapp doesn't is listed below.
+**Method (gap-2.x):** Read `specs/PROJECT_SPEC.md` §3.4 (Non-Functional
+Requirements), §3.5 (Release Channels), §3.6 (Alternatives) and grade
+each candidate against the spec's stated security model — single-user,
+local-first, no inbound network surface — to find where the webapp
+diverges from the intent.
 **Out of scope:** desktop-only build / packaging features (PyInstaller,
 Nuitka) and the Qt test surface — both removed by design.
 
@@ -196,13 +203,75 @@ For completeness — these were parity-checked, no gap.
 
 ---
 
-## 4. Remaining work
+## 4. Remaining work (gap-1.x)
 
-None. All gap-1.x items are resolved. Any further parity work belongs
-in new audit cycles (e.g. comparing a future desktop feature against
-the webapp once it's built).
+None. All gap-1.x items are resolved.
 
-## 5. References
+---
+
+## 5. Gap-2.x — Production hardening (new track)
+
+**Context:** The webapp pivot (commit `9864dc7e5`) built exactly the
+"Browser-based web UI" alternative that §3.6 rejected for *"complicating
+single-user local-first story"*. The audit gap-1.x closed operator-visible
+parity; gap-2.x closes the production-readiness gap that comes with
+having an inbound network surface that the spec never sanctioned.
+
+### 5.1 Candidates (graded)
+
+| # | Item | Spec ref | Effort | Phase 6? | Why |
+|---|------|----------|--------|----------|-----|
+| 2.1 | Single-user bearer-token auth (`BFS_API_TOKEN` env var) | §3.4 Security | M | ✅ | The webapp defaults to `host="0.0.0.0"` (verified — `webapp/main.py:173`, `Dockerfile` exposes 8000). Any machine on the LAN can hit every endpoint. Bearer-token is the simplest match for the spec's "single-user" constraint. |
+| 2.2 | TLS termination (TLS cert + key) | §3.4 Portability | M | ❌ defer | Meaningful only after 2.1 exists *and* the operator opts into remote exposure. Default recommendation is "put nginx / Caddy in front" — keep the webapp plain HTTP. |
+| 2.3 | Bind to `127.0.0.1` by default; require explicit opt-in for remote | §3.4 Portability | S | ✅ | 3-line change. Prevents the entire exposure problem class before it starts. Matches the spec's "no inbound network surface" intent verbatim. |
+| 2.4 | Backend health probe (TCP-open SMTP/FTP, copy-path exists) | §3.4 Observability | M | ✅ | Operator's #1 question after a failed run is *"is the SMTP server actually reachable right now?"*. The Diagnostics card is the natural home — the current `collect_diagnostics` only checks config existence, not reachability. |
+| 2.5 | Configuration-change audit log (who changed what when) | §3.4 (implicit) | M | ❌ defer | Meaningful only after 2.1 lands; until then there's no "user" to attribute changes to. Also conflicts with the spec's "single-machine local-only" — there's typically one human on the box. |
+| 2.6 | Soft-delete with restore window (deleted folders → `folders_deleted` for N days) | §3.4 Safety | L | ✅ | Current DELETE is permanent (verified — `webapp/routers/folders.py::api_delete_folder` removes the row + its processed-files; the only recovery is from backup, which is heavyweight for "I clicked Delete by accident"). Soft-delete is small, isolated, and removes a real foot-gun. |
+| 2.7 | Backup encryption (credentials in `folders.db` are cleartext) | §3.4 Security | M | ❌ defer | Real risk only if the operator copies backup tarballs off-machine; today's deployment is a single local volume. Defensible to defer until 2.6 lands and a backup-of-backups workflow exists. |
+| 2.8 | Mobile / responsive layout (one `@media` rule today) | §3.4 (implicit) | L | ❌ defer | Operator persona is at a workstation; the existing `@media (max-width: 900px)` rule covers "browser resized small". Tablet/phone isn't an immediate user. |
+| 2.9 | Playwright real-browser smoke tests | §3.4 Testability | M | ❌ defer | The 24 jsdom DOM tests + 265 python tests cover the existing surface well. Real-browser tests catch CSS regressions and focus-trap bugs that JSDOM doesn't. Worth doing once the static UI stops moving weekly. |
+| 2.10 | Plug-in hot-reload (no uvicorn restart for new converters) | §3.1 Pluggable | M | ❌ defer | Today the operator is the only plugin author and knows to restart uvicorn. Becomes meaningful when third-party plugins exist. |
+
+### 5.2 Phase 6 picks
+
+Phase 6 ships the four ✅ items: 2.3, 2.1, 2.4, 2.6. Ordered by
+risk reduction (smallest, broadest-impact first):
+
+1. **2.3 localhost-by-default** — 3-line fix, eliminates the entire
+   network-exposure problem class.
+2. **2.1 bearer-token auth** — opens the door to safe remote exposure;
+   without it, 2.3 leaves a one-host-only webapp, which is correct
+   for the spec but limiting.
+3. **2.4 backend health probe** — operator-facing observability win,
+   no security implications.
+4. **2.6 soft-delete with restore window** — removes the
+   permanent-delete foot-gun.
+
+### 5.3 Deferred (gap-3.x candidates)
+
+The remaining six items (2.2, 2.5, 2.7, 2.8, 2.9, 2.10) are deferred
+to a future audit cycle. Each is defensible today:
+
+- **2.2 TLS / 2.5 audit log / 2.7 backup encryption** — meaningful only
+  if the deployment model expands beyond single-host single-user.
+- **2.8 mobile responsive** — operator persona doesn't require it.
+- **2.9 Playwright** — JSDOM + python tests cover the surface; revisit
+  when the static UI stabilizes.
+- **2.10 plugin hot-reload** — meaningful when there are external
+  plugin authors, not today.
+
+### 5.4 Spec delta required
+
+The webapp-pivot creates a real divergence from `PROJECT_SPEC.md` §3.4
+(security model: *"no inbound network surface"*) and §3.6 (the spec
+explicitly rejected the web-UI alternative the webapp-pivot built).
+Phase 6 should include a small §3.7 addendum to the project spec
+capturing the new deployment model and the rationale for the
+single-user bearer-token design.
+
+---
+
+## 6. References
 
 - Commit `9864dc7e5` — pivot commit, dropped `interface/qt/`
 - Commit `287015606` — most recent "gap closure" (folder create / delete
@@ -210,4 +279,8 @@ the webapp once it's built).
 - Commits `e0729e88e` (1.1), `d7ac64ea0` (1.3), `8de4d4476` (bulk
   "mark all processed"), `0326ae246` (per-format plugin UIs),
   `c4a20bc49` (async dialogs).
-- Spec: `specs/PROJECT_SPEC.md` §3.2 (capabilities A–E).
+- Phase-5 spec: `specs/webapp-phase-5-observability.md` (the established
+  template Phase 6 follows).
+- Phase-6 spec: `specs/webapp-phase-6-production-hardening.md`.
+- Spec: `specs/PROJECT_SPEC.md` §3.2 (capabilities A–E), §3.4 (NFRs),
+  §3.5 (release channels), §3.6 (alternatives).
