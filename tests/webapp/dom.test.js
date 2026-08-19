@@ -1539,6 +1539,15 @@ test("diagnostics modal: opens from the topbar button, fetches /api/diagnostics,
           ok: false,
           warnings: ["Recent run failures: 1 failed run(s) in the last 24h",
                      "Watcher health: 1 watched folder(s) with errors"],
+          backends_health: {
+            smtp: { ok: false, error: "not configured", latency_ms: null },
+            ftp: { ok: true, latency_ms: 4.2, error: null },
+            copy: [
+              { folder_id: 1, alias: "ACME", ok: true, error: null },
+              { folder_id: 2, alias: "GAMMA", ok: false,
+                error: "missing: /data/inbox/gamma/archive" },
+            ],
+          },
         }),
       };
     }
@@ -1740,4 +1749,70 @@ test("login modal: dispatching bfs:api-401 opens the modal, submitting stores to
   // The token is persisted to localStorage; subsequent api() calls
   // attach Authorization: Bearer <token>.
   assert.equal(window.localStorage.getItem("bfs_api_token"), "test-secret-token");
+});
+
+test("diagnostics modal: Backends table renders SMTP/FTP/Copy rows", async () => {
+  const { dom } = bootDom();
+  const { window } = dom;
+  const document = window.document;
+  await waitFor(() => document.querySelectorAll("#folders-body tr").length === 3);
+
+  const originalFetch = window.fetch;
+  window.fetch = async (input, options) => {
+    const url = new URL(String(input), window.location.href);
+    if (url.pathname === "/api/diagnostics") {
+      return {
+        ok: true, status: 200, statusText: "OK",
+        json: async () => ({
+          collected_at: "2026-08-19T10:00:00",
+          platform: { system: "Linux", release: "6.5.0", machine: "x86_64",
+                       python_version: "3.13.3", pid: 1 },
+          app: { title: "Batch File Sender", version: "0.1.0" },
+          paths: { base_dir: "/data", data_dir: "/data/config",
+                   database_path: "/data/config/folders.db",
+                   database_exists: true, database_size_bytes: 1024 },
+          database: { version: "51", folders_count: 0,
+                      active_folders_count: 0,
+                      processed_files_count: 0, errors_count: 0,
+                      queued_emails: 0 },
+          runtime: { active_runs: 0, scheduler: {},
+                     watched_folders: 0, watched_with_errors: 0,
+                     recent_runs: [], recent_run_failures_24h: 0,
+                     backup_count: 0 },
+          backends_health: {
+            smtp: { ok: false, error: "not configured", latency_ms: null },
+            ftp: { ok: true, latency_ms: 7.0, error: null },
+            copy: [
+              { folder_id: 1, alias: "ACME", ok: true, error: null },
+              { folder_id: 2, alias: "GAMMA", ok: false,
+                error: "missing: /data/inbox/gamma/archive" },
+            ],
+          },
+          modules: [], ok: true, warnings: [],
+        }),
+      };
+    }
+    return originalFetch(input, options);
+  };
+
+  document.getElementById("diagnostics-help").click();
+  // Wait for the backends table to render.
+  await waitFor(() => {
+    const body = document.getElementById("diag-backends-body");
+    return body && body.querySelectorAll("tr").length >= 4;
+  });
+  const body = document.getElementById("diag-backends-body");
+  const text = body.textContent;
+  // One row per backend section.
+  assert.ok(text.includes("SMTP"), "should render SMTP row");
+  assert.ok(text.includes("FTP"), "should render FTP row");
+  // Copy rows: one per folder in the fixture.
+  assert.ok(text.includes("ACME"), "should render ACME copy row");
+  assert.ok(text.includes("GAMMA"), "should render GAMMA copy row");
+  // The reachable state label surfaces the latency.
+  assert.ok(text.includes("reachable") || text.includes("7"));
+  // The unreachable SMTP path shows "not configured".
+  assert.ok(text.toLowerCase().includes("not configured"));
+  // The missing copy destination surfaces its error.
+  assert.ok(text.includes("missing"));
 });
