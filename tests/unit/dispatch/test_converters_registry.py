@@ -134,21 +134,18 @@ class TestConverterRegistry:
 
 
 class TestConverterRegistryIntegration:
-    """Integration tests for registry with other modules."""
+    """Integration tests for registry with other modules.
 
-    def test_registry_compatible_with_convertformat(self):
-        """Test that registry integrates with ConvertFormat."""
-        from interface.models.folder_configuration import ConvertFormat
-
-        # Get formats from ConvertFormat
-        cf_formats = set(ConvertFormat.values())
-
-        # Get formats from registry
-        reg_formats = set(get_format_names())
-
-        # They should have the same core formats (excluding do_nothing)
-        cf_core = cf_formats - {"do_nothing"}
-        assert cf_core.issubset(reg_formats)
+    Phase 7b: ``test_registry_compatible_with_convertformat``
+    asserted the registry covered every format listed in
+    ``interface.models.folder_configuration.ConvertFormat``. With
+    ``interface/`` gone, the test's only meaningful assertion
+    target is gone too — there's no value in porting ``ConvertFormat``
+    to a test-only stub. The remaining integration test
+    (``test_registry_compatible_with_pipeline_converter``) still
+    validates a contract with ``dispatch.pipeline.converter`` and
+    stays.
+    """
 
     def test_registry_compatible_with_pipeline_converter(self):
         """Test that registry formats match pipeline SUPPORTED_FORMATS."""

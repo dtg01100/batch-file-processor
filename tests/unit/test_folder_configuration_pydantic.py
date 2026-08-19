@@ -179,57 +179,6 @@ class TestFolderConfigurationDefaults:
         ), f"expected default alert_on_failure=True, got {config.alert_on_failure}"
 
 
-class TestConvertFormatLookup:
-    """Tests for ConvertFormat metaclass dunder guard and lookup."""
-
-    def test_dunder_access_raises_attribute_error(self):
-        """L64 negate_if_condition: ``if name.startswith('_'): raise
-        AttributeError(name)`` must catch dunder lookups. With the
-        mutation to ``if not (name.startswith('_'))``, dunder names
-        would fall through to the rest of the function, attempting
-        to look up the attribute (which may cause infinite recursion
-        or wrong AttributeErrors).
-        """
-        from interface.models.folder_configuration import ConvertFormat
-
-        with pytest.raises(AttributeError):
-            # __getattr__ is a class method that handles dunder
-            # lookups. The dunder check must raise AttributeError
-            # for dunder names so Python's default attribute access
-            # mechanism works correctly (e.g., for pickling).
-            _ = ConvertFormat.__nonexistent_dunder_xyz__
-
-    def test_from_string_case_insensitive_lookup(self):
-        """L115 eq_to_ne: ``ConvertFormat.from_string`` does a
-        case-insensitive lookup of format names. With the mutation
-        to ``!=``, the case-insensitive match would never succeed
-        and the function would return the first non-matching value
-        (the WRONG format) instead of the matching one.
-        """
-        from interface.models.folder_configuration import ConvertFormat
-
-        # _ensure_discovered is no longer called at module-load time, so trigger
-        # it explicitly here before reading the internal _discovered state.
-        ConvertFormat._ensure_discovered()
-
-        if not ConvertFormat._discovered:
-            pytest.skip("no discovered convert formats in this environment")
-
-        # Look up the first discovered format, case-insensitive.
-        first = ConvertFormat._discovered[0]
-        result = ConvertFormat.from_string(first.lower())
-        # The returned instance must contain the FIRST format's
-        # display value, not any other. With the mutation, the
-        # function would return whatever the FIRST non-matching
-        # value happens to be (the second element of _discovered).
-        expected = ConvertFormat._display_values.get(first, first)
-        assert str(result) == expected, (
-            f"expected from_string({first.lower()!r}) to return "
-            f"{expected!r}, got {str(result)!r}. The mutation would "
-            f"return the first NON-matching value."
-        )
-
-
 class TestBoolFromData:
     """Tests for the module-level _bool_from_data helper."""
 

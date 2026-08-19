@@ -16,8 +16,6 @@ from backend.database import sqlite_wrapper
 from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
 from dispatch.pipeline.interfaces import PipelineStep
 from dispatch.send_manager import SendManager
-from interface.ports import ProgressServiceProtocol, UIServiceProtocol
-from interface.services.resend_service import ResendService
 from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
@@ -348,11 +346,21 @@ class MockFactories:
 
     @staticmethod
     def ui_service() -> MagicMock:
-        return MagicMock(spec=UIServiceProtocol)
+        # Phase 7b: was ``MagicMock(spec=UIServiceProtocol)`` from
+        # interface.ports. The interface/ package is gone; the
+        # spec parameter would be a bare MagicMock() now. Per the
+        # 2026-08-18 decision (user choice over alternatives), we
+        # accept the loss of the typo-catcher — tests run unchanged
+        # but a typo in a method name now passes silently. Webapp
+        # tests cover the equivalent UI / progress paths at a
+        # higher level (HTTP endpoints + JS), so the regression net
+        # is intact for the user-facing surface.
+        return MagicMock()
 
     @staticmethod
     def progress_service() -> MagicMock:
-        return MagicMock(spec=ProgressServiceProtocol)
+        # See ui_service() above for the Phase 7b rationale.
+        return MagicMock()
 
     @staticmethod
     def send_manager() -> MagicMock:
@@ -413,7 +421,8 @@ class MockFactories:
 
     @staticmethod
     def resend_service() -> MagicMock:
-        return MagicMock(spec=ResendService)
+        # See ui_service() above for the Phase 7b rationale.
+        return MagicMock()
 
     @staticmethod
     def folders_table() -> MagicMock:
