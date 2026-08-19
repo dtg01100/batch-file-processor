@@ -237,6 +237,26 @@ itself. The webapp is the only operator surface going forward;
 `specs/webapp-phase-8-pipeline-redesign.md` for the implementation
 phases.
 
+**Phase 7.3 (commit `4a4240306`) shipped the no-caller deletions
+(plans/, launch_interface.sh, packaging artifacts) on 2026-08-18.
+The Qt-free `interface/` package itself is *not* in that commit.**
+
+### 4.3 Phase 7b — interface/ retirement (2026-08-18)
+
+Phase 7's spec claimed `interface/` had no callers. Commit-time
+verification (2026-08-18) proved the claim incomplete: the
+package is imported by 13 test files totaling ~7,500 lines,
+including the entire 25,372-line `tests/integration/` directory.
+
+The follow-on scope is captured in
+`specs/webapp-phase-7b-interface-retirement.md`: delete the
+package together with the dependent tests (~33,000 lines total).
+The webapp test suite (310 passing tests) becomes the regression
+net. Implementation ships as three commits (7b.1: edit four
+small test files; 7b.2: `git rm -r tests/unit/interface/`;
+7b.3: `git rm -r interface/ tests/integration/`), each
+independently revertable.
+
 ---
 
 ## 5. Gap-2.x — Production hardening (new track)
