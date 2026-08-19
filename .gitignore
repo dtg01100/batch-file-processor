@@ -155,8 +155,20 @@ ai-assisted/
 .aider*
 
 # Session scratch — long-form plans and AI processing logs
-plans/
 Copilot-Processing.md
+
+# Legacy desktop packaging artifacts from the pre-webapp-pivot era.
+# The PyQt5 GUI (interface/qt/) was removed 2026-08-04; the Qt-free
+# interface/ business-logic layer is being retired in Phase 7 (see
+# specs/webapp-phase-7-operator-confidence.md). These directories held
+# PyInstaller/Nuitka intermediate output. They stay ignored so a
+# fresh clone doesn't ship dead build artifacts, but they can be
+# safely deleted by anyone with a local clone.
+dist/
+dist_windows/
+dist_linux/
+sdist/
+outdir/
 
 # Nuitka-on-Wine build cache + artifacts (Phase 5 — docker-compose.yml)
 .nuitka-wine-cache/
