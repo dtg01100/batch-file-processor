@@ -8,6 +8,7 @@ against older databases without failing.
 
 import sqlite3
 import time
+from typing import Any
 
 from core.structured_logging import get_logger
 
@@ -482,30 +483,47 @@ def ensure_schema(database_connection) -> None:
         except Exception:
             logger.info("%s skipped (may already exist)", log_msg)
 
-    _safe_alter(
-        raw_conn,
-        "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
-        "Migration: added plugin_configurations column to folders table",
-    )
-    # Initialize existing rows with default value {}
-    try:
-        if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
-            _execute_sqlite_statement(
-                raw_conn,
-                "UPDATE folders SET plugin_configurations = '{}' "
-                "WHERE plugin_configurations IS NULL",
-            )
-        else:
-            database_connection.query(
-                "UPDATE folders SET plugin_configurations = '{}' "
-                "WHERE plugin_configurations IS NULL"
-            )
-        logger.info("Migration: initialized plugin_configurations for existing rows")
-    except Exception:
-        logger.info(
-            "Migration: plugin_configurations initialization skipped "
-            "(may already exist)"
+    # Phase 7.1: gate the per-row backfill updates on the same
+    # one-shot marker the migration uses (see
+    # ``backend.database.database_obj._run_current_version_repairs``).
+    # Without this gate, ``plugin_configurations`` flips from NULL to
+    # ``{}`` on every ``open_database`` — same symptom as the v33→v51
+    # ``_backfill_defaults`` UPDATE, same root cause (two separate
+    # idempotent UPDATEs that fire on every open). The gate is a
+    # fast-path: a healthy at-version DB skips the UPDATE entirely;
+    # a DB that *needs* the backfill (a pre-existing NULL row, a
+    # restored backup, etc.) gets it once and never again.
+    already_repaired = _schema_already_repaired(database_connection)
+
+    if not already_repaired:
+        _safe_alter(
+            raw_conn,
+            "ALTER TABLE 'folders' ADD COLUMN 'plugin_configurations' TEXT",
+            "Migration: added plugin_configurations column to folders table",
         )
+    # Initialize existing rows with default value {}. Same
+    # one-shot gate as the ALTER above (Phase 7.1).
+    if not already_repaired:
+        try:
+            if raw_conn is not None and isinstance(raw_conn, sqlite3.Connection):
+                _execute_sqlite_statement(
+                    raw_conn,
+                    "UPDATE folders SET plugin_configurations = '{}' "
+                    "WHERE plugin_configurations IS NULL",
+                )
+            else:
+                database_connection.query(
+                    "UPDATE folders SET plugin_configurations = '{}' "
+                    "WHERE plugin_configurations IS NULL"
+                )
+            logger.info(
+                "Migration: initialized plugin_configurations for existing rows"
+            )
+        except Exception:
+            logger.info(
+                "Migration: plugin_configurations initialization skipped "
+                "(may already exist)"
+            )
 
     _safe_alter(
         raw_conn,
@@ -562,6 +580,36 @@ def _extract_object_name(stmt: str) -> str | None:
         return "PRAGMA"
 
     return None
+
+
+def _schema_already_repaired(database_connection: Any) -> bool:
+    """Phase 7.1: check the one-shot ``schema_repaired_at`` marker.
+
+    The migration in
+    ``backend.database.database_obj._run_current_version_repairs``
+    writes a row to ``kv_settings`` after a successful repair. This
+    helper lets ``ensure_schema`` read the same marker so the
+    per-row backfill UPDATEs (e.g. the ``plugin_configurations``
+    ALTER + UPDATE) also become one-shot. Without this, ``ensure_schema``
+    would still mutate rows on every open, breaking any
+    "snapshot-then-round-trip" test (Phase 6.4's symptom).
+
+    Returns True if the marker is present; False on any error
+    (missing table, missing key, mocked connection). The False branch
+    preserves the pre-7.1 "always backfill" behavior so a fresh DB
+    or a test fixture that mocks the connection still gets the
+    initial backfill.
+    """
+    try:
+        kv_settings = database_connection["kv_settings"]
+    except (KeyError, AttributeError, TypeError):
+        return False
+    try:
+        return (
+            kv_settings.find_one(key="schema_repaired_at") is not None
+        )
+    except Exception:
+        return False
 
 
 def _apply_statement_to_connection(

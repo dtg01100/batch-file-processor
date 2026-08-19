@@ -28,16 +28,14 @@ def setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             "process_backend_ftp": False, "process_backend_email": False,
             "process_backend_http": False, "created_at": "2026-08-18T12:00:00",
         })
-        # Re-open the DB so the v33→current repair pass (which fires
-        # on every ``open_database`` at the current schema version,
-        # backfilling NULL columns to the schema defaults via
-        # ``_backfill_defaults``) gets a chance to apply before the
-        # fixture captures ``original``. Without this, ``original``
-        # captures pre-repair NULLs and the round-trip test would
-        # fail because the restore endpoint's snapshot was taken
-        # post-repair.
-        db.close()
-        db = open_database(settings)
+        # Phase 7.1 made the re-open unnecessary — the
+        # ``_run_current_version_repairs`` gate now runs the v33→v51
+        # ``_backfill_defaults`` UPDATE exactly once per DB lifetime
+        # (gated on a ``schema_repaired_at`` marker in
+        # ``kv_settings``). The fixture can capture ``original``
+        # immediately after the insert; the round-trip test in
+        # ``tests/webapp/test_database_repair.py`` proves the
+        # no-reopen path is stable.
         original = dict(db.folders_table.find_one(id=folder_id))
     finally:
         db.close()

@@ -18,6 +18,12 @@ from backend.database import sqlite_wrapper
 from core.database import schema
 
 
+def _utcnow_iso() -> str:
+    """UTC timestamp in the same ``isoformat()`` shape the rest of
+    the webapp uses for ``created_at`` / ``deleted_at``."""
+    return datetime.datetime.now(datetime.UTC).isoformat()
+
+
 @runtime_checkable
 class DatabaseConnectionProtocol(Protocol):
     """Protocol for dataset database connection.
@@ -310,10 +316,28 @@ class DatabaseObj:
     def _run_current_version_repairs(self) -> None:
         """Run safe repair migrations for current-version databases.
 
-        This intentionally skips backup creation and version checks, and relies
-        on the migrator's idempotent repair logic for no-op behavior when the
-        schema is already consistent.
+        Gated on a one-shot ``schema_repaired_at`` row in the
+        ``kv_settings`` table so a healthy at-version database does
+        not pay the repair cost on every open. The kv_settings table
+        already exists (Phase 4 created it for the import's per-DB
+        config); the new key is set on first successful repair and
+        never cleared.
+
+        The migrator is still safe to call again (its ALTER TABLE /
+        UPDATE statements are idempotent), but skipping it removes
+        the ``_backfill_defaults`` side effect that breaks any
+        "snapshot-then-round-trip" test (the symptom bit Phase 6.4
+        testing — see ``tests/webapp/test_soft_delete.py:30`` for
+        the workaround Phase 7.1 makes unnecessary).
+
+        A custom ``_migrator_func`` injected by a test fixture is
+        intentionally not gated: tests that want to drive the
+        migrator manually on every open still get that behavior.
+        The fast-path is only for the production code path.
         """
+        kv_settings = self.database_connection["kv_settings"]
+        if kv_settings.find_one(key="schema_repaired_at") is not None:
+            return
         if self._migrator_func:
             self._migrator_func(
                 self.database_connection, self._config_folder, self._running_platform
@@ -324,6 +348,15 @@ class DatabaseObj:
             folders_database_migrator.upgrade_database(
                 self.database_connection, self._config_folder, self._running_platform
             )
+        # Mark the repair as complete so future opens skip it.
+        # Single-threaded in practice — every ``open_database`` takes
+        # ``webapp.database._DB_LOCK`` (or the equivalent in the
+        # desktop app). If a future caller races, the worst case is
+        # two migrator runs; the migrator is idempotent so that's
+        # safe, just wasted work.
+        kv_settings.insert(
+            {"key": "schema_repaired_at", "value": _utcnow_iso()}
+        )
 
     def _upgrade_database(self) -> None:
         """Upgrade the database to the current version."""
