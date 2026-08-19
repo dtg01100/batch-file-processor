@@ -310,11 +310,25 @@ def test_runbook_endpoints_referenced(tmp_path: Path) -> None:
     referenced_paths: set[str] = set()
     text = runbook.read_text()
     # ``curl ... /api/runs/{run_id} ...`` and similar — extract any
-    # /api/... path that follows a forward-slash.
+    # /api/... path that follows a forward-slash. The regex
+    # tolerates FastAPI path templates (``{run_id}`` etc.) by
+    # stopping at whitespace, punctuation, or backticks rather
+    # than at the first ``}``.
     import re
 
     for match in re.finditer(r"/api/[A-Za-z_/{}\-]+", text):
-        referenced_paths.add(match.group(0).rstrip(".,;"))
+        path = match.group(0).rstrip(".,;`")
+        # Drop trailing slashes that the runbook's prose
+        # adds (``/api/runs/`` rather than ``/api/runs``); the
+        # endpoint actually mounted is the no-trailing-slash
+        # version.
+        path = path.rstrip("/")
+        # Reject obviously-bad matches: a single trailing slash
+        # with nothing else means the runbook ended a sentence
+        # with "and the /api/runs/ endpoint" — not a real path.
+        # The actual path always has at least a resource name.
+        if path.count("/") >= 2:
+            referenced_paths.add(path)
 
     # Every path the runbook mentions must be routable in some
     # module's ``router.routes`` list. We compare against the

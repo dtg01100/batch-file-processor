@@ -218,6 +218,9 @@ through the "Recently deleted" collapsible section with per-row
 Restore. Phase 6.4's `FOLDERS_DELETED_TTL_DAYS` env var (default 30,
 clamped `[1, 365]`) controls the restore window; the trim job
 (`SoftDeleteTrimSupervisor`) purges expired tombstones every hour.
+For an operator-facing index of "where do I look?" for the six
+most common failure modes, see [`docs/runbook.md`](../runbook.md)
+(Phase 7.2).
 
 ### 4.2 Desktop retirement (2026-08-18)
 

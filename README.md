@@ -132,6 +132,7 @@ pytest -m unit
 - **Format Conversion**: Transform EDI files into various business-specific formats (CSV, Excel, Fintech, E-Store, etc.)
 - **Multi-Channel Delivery**: Send processed files via FTP, email, HTTP, or local file copy
 - **Database Tracking**: SQLite database for configuration and processed file tracking
+- **Operator Runbook**: [docs/runbook.md](docs/runbook.md) — six common failure modes ("a run failed", "files aren't being picked up", "SMTP/FTP unreachable", "I deleted a folder by accident", "is the operator-configured stuff working", "the database looks weird") mapped to the existing endpoints with copy-pasteable `curl` examples
 - **Pipeline Processing**: Configurable validation → splitting → conversion → tweaks pipeline
 - **Background runs**: Each run is executed in a worker thread with a pollable status
 
