@@ -5,13 +5,14 @@ for the dispatch pipeline.
 
 IMPORT NOTE (import cycle): this package eagerly re-exports its submodules,
 so ANY ``import webapp.pipeline.services.<submodule>`` runs this whole file first.
-That makes ``dispatch.services`` a fan-in hub: ``dispatch.results`` must not
-runtime-import anything here (it uses ``TYPE_CHECKING`` for
-``ProgressReporter``), and no ``dispatch.services.*`` module may
-module-level-import ``dispatch.pipeline.*`` (``file_processor`` keeps those
-imports function-local). Otherwise the cycle
-``dispatch.results -> dispatch.services -> dispatch.pipeline ->
-dispatch.results`` comes back — see ``docs/IMPORT_ARCHITECTURE.md``.
+That makes ``webapp.pipeline.services`` a fan-in hub: ``webapp.pipeline.results``
+must not runtime-import anything here (it uses ``TYPE_CHECKING`` for
+``ProgressReporter``), and no ``webapp.pipeline.services.*`` module may
+module-level-import ``webapp.pipeline.pipeline.*`` (``file_processor`` keeps
+those imports function-local). Otherwise the cycle
+``webapp.pipeline.results -> webapp.pipeline.services ->
+webapp.pipeline.pipeline -> webapp.pipeline.results`` comes back — see
+``docs/IMPORT_ARCHITECTURE.md``.
 """
 
 from webapp.pipeline.services.file_processor import (
@@ -25,7 +26,6 @@ from webapp.pipeline.services.progress_reporter import (
     LoggingProgressReporter,
     NullProgressReporter,
     ProgressReporter,
-    UIProgressReporter,
 )
 from webapp.pipeline.services.progress_reporting import ProgressReportingService
 from webapp.pipeline.services.upc_service import UPCLookupService
@@ -44,7 +44,6 @@ __all__ = [
     "ProgressReporter",
     # Progress Reporting
     "ProgressReportingService",
-    "UIProgressReporter",
     # UPC Service
     "UPCLookupService",
 ]

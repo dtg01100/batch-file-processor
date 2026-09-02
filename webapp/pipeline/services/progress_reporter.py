@@ -24,55 +24,10 @@ class ProgressReporter(Protocol):
     ) -> None: ...
 
 
-class UIProgressReporter:
-    def __init__(self) -> None:
-        self._parent = None
-        self._overlay_text = ""
-        self._footer = ""
-        self._overlay_height = 120
-
-    def update(
-        self,
-        message: str,
-        folder_num: int,
-        folder_total: int,
-        file_num: int,
-        file_total: int,
-        footer: str,
-    ) -> None:
-        self.update_overlay(
-            parent=self._parent,
-            overlay_text=message,
-            folder_num=folder_num,
-            folder_total=folder_total,
-            file_num=file_num,
-            file_total=file_total,
-            footer=footer,
-            overlay_height=self._overlay_height,
-        )
-
-    def update_overlay(
-        self,
-        parent,
-        overlay_text: str,
-        folder_num: int,
-        folder_total: int,
-        file_num: int,
-        file_total: int,
-        footer: str,
-        overlay_height: int,
-    ) -> None:
-        pass
-
-    def update_discovery_file(
-        self,
-        folder_num: int,
-        folder_total: int,
-        file_num: int,
-        file_total: int,
-        filename: str,
-    ) -> None:
-        pass
+# ``UIProgressReporter`` was removed in Phase 9.2 (2026-09-02). It
+# existed to forward ``update()`` calls to a Qt overlay widget that
+# no longer exists; its ``update_overlay`` method body was already
+# ``pass`` (a no-op). CLI/Null/Logging reporters below remain.
 
 
 class CLIProgressReporter:
