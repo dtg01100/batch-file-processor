@@ -156,7 +156,7 @@ Snapshot of the working tree at `webapp-pivot` branch head
 | **7b.1** (drop `interface/` imports from surviving tests) | Landed | `64e7c6236` (2026-08-19) | 12 |
 | **7b.2** (delete `tests/unit/interface/`) | Landed | `2f29cca57` (2026-08-19) | 12 |
 | **7b.3** (delete `interface/` + `tests/integration/`) | **Staged, not committed** | — | working tree |
-| **8** (Pipeline redesign — design spec) | Spec'd | `a4642f29f` (2026-08-18) | 13 |
+| **8** (Pipeline redesign — design spec) | **Approved** | `a4642f29f` (2026-08-18) | 13 |
 | **9+** (Phase 8 implementation) | Not started | — | — |
 
 ### 2.2 Code shape

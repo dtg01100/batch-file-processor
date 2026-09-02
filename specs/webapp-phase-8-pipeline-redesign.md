@@ -1,9 +1,9 @@
 # Spec: Webapp Phase 8 — Pipeline Redesign
 
-**Status:** DRAFT (2026-08-18)
+**Status:** APPROVED (2026-09-02)
 **Author:** Project Owner
 **Created:** 2026-08-18
-**Updated:** 2026-08-18
+**Updated:** 2026-09-02
 
 > **This is a *design* spec, not an *implementation* spec.**
 > Phase 8's deliverable is "the next agent knows what to build,"
@@ -14,6 +14,12 @@
 > the decisions should be measured against. No decision is
 > pre-made; the spec exists so the decisions have a coherent
 > structure when they're made.
+>
+> **All 10 §4 decisions are answered in
+> [`docs/architecture/webapp-phase-8-decisions.md`](../architecture/webapp-phase-8-decisions.md)
+> (status: APPROVED, 2026-09-02). This spec remains the design
+> context; the decisions file is the actionable surface for
+> Phase 9+ commits.**
 
 ---
 
