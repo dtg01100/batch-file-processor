@@ -378,6 +378,54 @@ class FintechConverterConfig:
         )
 
 
+# =============================================================================
+# YellowDog CSV
+# =============================================================================
+
+
+@dataclass
+class YellowDogConverterConfig:
+    """Typed configuration for ``convert_to_yellowdog_csv``.
+
+    Attributes:
+        database_lookup_mode: Lower-cased lookup mode controlling
+            InvFetcher behaviour. Values ``"strict"``, ``"required"``,
+            and ``"test"`` enable strict mode (raises when AS400
+            credentials are missing or query runner initialisation
+            fails). All other values (including the empty string)
+            are treated as ``"optional"``.
+    """
+
+    database_lookup_mode: str = "optional"
+
+    STRICT_MODES: frozenset[str] = frozenset({"strict", "required", "test"})
+
+    @property
+    def strict(self) -> bool:
+        """Return True when database_lookup_mode is strict/required/test."""
+        return self.database_lookup_mode in self.STRICT_MODES
+
+    @classmethod
+    def from_parameters(
+        cls,
+        params: dict,
+        settings_dict: dict | None = None,
+    ) -> YellowDogConverterConfig:
+        """Build a config from a flat ``parameters_dict`` (and settings_dict).
+
+        The ``database_lookup_mode`` value is resolved via a fallback
+        chain: ``parameters_dict["database_lookup_mode"]`` first, then
+        ``settings_dict["database_lookup_mode"]``, finally the string
+        ``"optional"``. The result is coerced to a lower-cased string.
+        """
+        settings = settings_dict or {}
+        mode_raw = params.get(
+            "database_lookup_mode",
+            settings.get("database_lookup_mode", "optional"),
+        )
+        return cls(database_lookup_mode=str(mode_raw).strip().lower())
+
+
 __all__ = [
     "CSVConverterConfig",
     "EStoreEInvoiceConverterConfig",
@@ -386,4 +434,5 @@ __all__ = [
     "ScannerWareConverterConfig",
     "SimplifiedCsvConverterConfig",
     "X810ConverterConfig",
+    "YellowDogConverterConfig",
 ]

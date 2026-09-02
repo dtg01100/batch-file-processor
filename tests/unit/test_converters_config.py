@@ -10,11 +10,11 @@ The dataclasses themselves live in
 
 - ``X810ConverterConfig`` (4 params, 2 required)
 - ``SimplifiedCsvConverterConfig`` (5 params, all optional)
-- ``CSVConverterConfig`` (13 params, all optional)
 - ``ScannerWareConverterConfig`` (5 params, all optional)
 - ``EStoreEInvoiceGenericConverterConfig`` (4 params, all strings)
 - ``EStoreEInvoiceConverterConfig`` (3 params, all strings)
 - ``FintechConverterConfig`` (1 param)
+- ``YellowDogConverterConfig`` (1 param, with settings_dict fallback)
 
 Each converter retains its own converter-specific behavioural tests in
 ``test_convert_to_<name>.py`` — this file only covers the typed-config
@@ -33,6 +33,7 @@ from webapp.pipeline.converters.converters_config import (
     ScannerWareConverterConfig,
     SimplifiedCsvConverterConfig,
     X810ConverterConfig,
+    YellowDogConverterConfig,
 )
 
 # =============================================================================
@@ -436,3 +437,78 @@ class TestFintechConverterConfig:
     def test_none_value_falls_back_to_default(self):
         cfg = FintechConverterConfig.from_parameters({"fintech_division_id": None})
         assert cfg.division_id == ""
+
+
+# =============================================================================
+# YellowDog CSV
+# =============================================================================
+
+
+class TestYellowDogConverterConfig:
+    def test_empty_inputs_use_optional_default(self):
+        cfg = YellowDogConverterConfig.from_parameters({})
+        assert cfg.database_lookup_mode == "optional"
+        assert cfg.strict is False
+
+    def test_explicit_optional_mode(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "optional"}
+        )
+        assert cfg.database_lookup_mode == "optional"
+        assert cfg.strict is False
+
+    def test_strict_mode_is_strict(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "strict"}
+        )
+        assert cfg.database_lookup_mode == "strict"
+        assert cfg.strict is True
+
+    def test_required_mode_is_strict(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "required"}
+        )
+        assert cfg.strict is True
+
+    def test_test_mode_is_strict(self):
+        cfg = YellowDogConverterConfig.from_parameters({"database_lookup_mode": "test"})
+        assert cfg.strict is True
+
+    def test_mode_is_lowercased(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "STRICT"}
+        )
+        assert cfg.database_lookup_mode == "strict"
+        assert cfg.strict is True
+
+    def test_mode_is_stripped(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "  strict  "}
+        )
+        assert cfg.database_lookup_mode == "strict"
+        assert cfg.strict is True
+
+    def test_settings_dict_fallback_when_param_missing(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {}, settings_dict={"database_lookup_mode": "strict"}
+        )
+        assert cfg.database_lookup_mode == "strict"
+
+    def test_parameters_dict_takes_precedence_over_settings(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "optional"},
+            settings_dict={"database_lookup_mode": "strict"},
+        )
+        assert cfg.database_lookup_mode == "optional"
+        assert cfg.strict is False
+
+    def test_both_missing_uses_optional_default(self):
+        cfg = YellowDogConverterConfig.from_parameters({}, settings_dict={})
+        assert cfg.database_lookup_mode == "optional"
+
+    def test_unknown_mode_is_not_strict(self):
+        cfg = YellowDogConverterConfig.from_parameters(
+            {"database_lookup_mode": "fancy"}
+        )
+        assert cfg.database_lookup_mode == "fancy"
+        assert cfg.strict is False

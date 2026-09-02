@@ -43,6 +43,9 @@ from webapp.pipeline.converters.convert_base import (
     create_csv_writer,
     make_edi_convert,
 )
+from webapp.pipeline.converters.converters_config import (
+    YellowDogConverterConfig,
+)
 
 logger = get_logger(__name__)
 
@@ -58,21 +61,16 @@ class YellowDogConverter(BaseEDIConverter):
     """
 
     def _initialize_output(self, context: ConversionContext) -> None:
-        """Initialize CSV output file, writer, and batching state.
-
-        Args:
-            context: The conversion context
-
-        """
-        # Initialize InvFetcher for database lookups
-        settings_dict = context.settings_dict
-        params = context.parameters_dict or {}
-        mode_raw = params.get(
-            "database_lookup_mode",
-            settings_dict.get("database_lookup_mode", "optional"),
+        """Initialize CSV output file, writer, and batching state."""
+        # Phase 11.x: typed config from parameters_dict (with settings_dict
+        # fallback for database_lookup_mode).
+        config = YellowDogConverterConfig.from_parameters(
+            context.parameters_dict,
+            settings_dict=context.settings_dict,
         )
-        self.database_lookup_mode = str(mode_raw).strip().lower()
-        strict_db_mode = self.database_lookup_mode in {"strict", "required", "test"}
+        self.database_lookup_mode = config.database_lookup_mode
+        strict_db_mode = config.strict
+        settings_dict = context.settings_dict
 
         required_keys = (
             "as400_username",
