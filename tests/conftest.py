@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -432,3 +433,93 @@ class MockFactories:
         mock.find_one.return_value = None
         mock.count.return_value = 0
         return mock
+
+
+# Phase 9.7: ``make_folder_row`` is a factory for the folder row
+# shape the webapp uses. Tests that need a hand-rolled folder row
+# can call ``make_folder_row(format="csv", backends=("copy",))``
+# instead of repeating the 50+ column dict. New tests should prefer
+# this factory over inline dicts; existing tests are unchanged
+# because the factory mirrors the flat ``folders`` table shape.
+def make_folder_row(
+    *,
+    id: int = 1,
+    folder_name: str = "/data/test-folder",
+    alias: str = "test-folder",
+    folder_is_active: str = "True",
+    convert_to_format: str = "csv",
+    backends: tuple[str, ...] = (),
+    watch_enabled: str = "False",
+    **overrides: Any,
+) -> dict[str, Any]:
+    """Return a flat folders-table row dict suitable for tests.
+
+    Args:
+        id: Folder primary key.
+        folder_name: Relative folder path (resolved against
+            ``settings.base_dir`` at runtime).
+        alias: Display name.
+        folder_is_active: Whether the dispatcher should process this
+            folder. ``"True"`` (str) matches the DB convention.
+        convert_to_format: One of the 12 registered converter formats.
+        backends: Tuple of backend names (``"copy"``, ``"ftp"``,
+            ``"email"``, ``"http"``). Each one becomes ``"True"`` on
+            the corresponding ``process_backend_*`` column.
+        watch_enabled: ``"True"`` to enable the watcher.
+        **overrides: Any other column to set directly. Use this for
+            per-format ``parameters_dict`` keys like
+            ``include_headers=True`` or per-folder settings like
+            ``split_edi="True"``.
+
+    Returns:
+        A dict with the 50+ columns the ``folders`` table expects.
+        Use ``db.folders_table.insert(make_folder_row(...))`` to add
+        it to a real test database.
+
+    """
+    row: dict[str, Any] = {
+        "id": id,
+        "folder_name": folder_name,
+        "alias": alias,
+        "folder_is_active": folder_is_active,
+        "watch_enabled": watch_enabled,
+        "convert_to_format": convert_to_format,
+        "process_backend_copy": "True" if "copy" in backends else "False",
+        "process_backend_ftp": "True" if "ftp" in backends else "False",
+        "process_backend_email": "True" if "email" in backends else "False",
+        "process_backend_http": "True" if "http" in backends else "False",
+        "alert_on_failure": "True",
+        "tweak_edi": "False",
+        "prepend_date_files": "False",
+        "split_edi": "False",
+        "force_edi_validation": "False",
+        "calculate_upc_check_digit": "False",
+        "upc_target_length": 11,
+        "upc_padding_pattern": "0",
+        "include_a_records": "False",
+        "include_c_records": "False",
+        "include_headers": "True",
+        "filter_ampersand": "False",
+        "pad_a_records": "False",
+        "invoice_date_custom_format": "",
+        "force_txt_file_ext": "False",
+        "split_prepaid_sales_tax_crec": "False",
+        "split_edi_include_invoices": "True",
+        "split_edi_include_credits": "True",
+        "retail_uom": "False",
+        "force_each_upc": "False",
+        "include_item_numbers": "True",
+        "include_item_description": "True",
+        "override_upc_bool": "False",
+        "override_upc_level": 1,
+        "override_upc_category_filter": "",
+        "max_duration_seconds": 0,
+        "max_failure_rate_percent": 0,
+        "watch_interval_seconds": 30,
+        "last_tick_at": "",
+        "last_run_id": "",
+        "last_error": "",
+        "plugin_configurations": "{}",
+    }
+    row.update(overrides)
+    return row
