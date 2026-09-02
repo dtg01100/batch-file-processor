@@ -155,9 +155,19 @@ Snapshot of the working tree at `webapp-pivot` branch head
 | **7** (Operator confidence + desktop retirement partial) | Landed | `64f4db1fc` (2026-08-18) | 13 |
 | **7b.1** (drop `interface/` imports from surviving tests) | Landed | `64e7c6236` (2026-08-19) | 12 |
 | **7b.2** (delete `tests/unit/interface/`) | Landed | `2f29cca57` (2026-08-19) | 12 |
-| **7b.3** (delete `interface/` + `tests/integration/`) | **Staged, not committed** | — | working tree |
-| **8** (Pipeline redesign — design spec) | **Approved** | `a4642f29f` (2026-08-18) | 13 |
-| **9+** (Phase 8 implementation) | Not started | — | — |
+| **7b.3** (delete `interface/` + `tests/integration/`) | Landed | `2aeefb035` (2026-09-02) | 0 |
+| **8** (Pipeline redesign — design spec) | Approved | [`webapp-phase-8-decisions.md`](../docs/architecture/webapp-phase-8-decisions.md) | 0 |
+| **X** (x810 outbound converter) | Landed | `4b421081e` (2026-09-02) | 0 |
+| **9.1** (rename `dispatch/` → `webapp/pipeline/`) | Landed | `d3f7295d9` (2026-09-02) | 0 |
+| **9.2** (delete Qt-era progress reporter) | Landed | `cc7a7271b` (2026-09-02) | 0 |
+| **9.3** (single `ThreadPoolExecutor` for runs) | Landed | `4a5a2de2d` (2026-09-02) | 0 |
+| **9.4** (registry-driven converter spec API) | Landed | `e7b7ecf5a` (2026-09-02) | 0 |
+| **9.5** (route errors through `webapp/errors.insert_error`) | Landed | `d3fd0dd57` (2026-09-02) | 0 |
+| **9.6** (watcher → orchestrator direct doc) | Landed | `fb430b0a9` (2026-09-02) | 0 |
+| **9.7** (`make_folder_row()` factory) | Landed | `cac66d545` (2026-09-02) | 0 |
+| **9.8** (`webapp/pipeline/AGENTS.md` final) | Landed | `b60cbb5ed` (2026-09-02) | 0 |
+| **11** (typed records + per-converter config dataclasses) | Spec'd | [`webapp-phase-11-typed-config-and-records.md](./webapp-phase-11-typed-config-and-records.md) | 0 |
+| **Phase 10 checkpoint** (Candidate C re-evaluation) | Trigger-driven | — | — |
 
 ### 2.2 Code shape
 
