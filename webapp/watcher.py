@@ -39,6 +39,15 @@ from webapp.errors import (
 )
 from webapp.runner import RunStore
 
+# Phase 9.6: the watcher's fire-and-forget run path goes through
+# ``RunStore.start_folder`` which submits ``run_folder`` to the shared
+# ``_PIPELINE_EXECUTOR`` (Phase 9.3). ``run_folder`` constructs a
+# ``DispatchOrchestrator`` and calls ``process_folder`` directly — the
+# pre-pivot watcher-to-orchestrator indirection is gone. The
+# ``RunStore`` indirection remains because it owns the active-run
+# guard; that guard is the only watcher concern (a manual run must
+# not be stomped on), so the abstraction cost is justified.
+
 logger = get_logger(__name__)
 
 # Default poll interval when a folder doesn't override it.
