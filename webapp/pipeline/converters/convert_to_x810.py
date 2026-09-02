@@ -6,7 +6,8 @@ EDI process dict (A/B/C records). The internal parser is unchanged
 
 Envelope layout:
 
-    ISA*00*          *00*          *ZZ*<sender>*ZZ*<receiver>*<YYMMDD>*<HHMM>*U*00401*<ctrl>*0*P*:~
+    ISA*00*          *00*          *ZZ*<sender>*ZZ*<receiver>\
+*<YYMMDD>*<HHMM>*U*00401*<ctrl>*0*P*:~
     GS*IN*<sender>*<receiver>*<YYMMDD>*<HHMM>*<gs_ctrl>*X*004010~
     ST*810*<st_ctrl>~
     BIG*<YYYYMMDD>*<invoice_number>~
@@ -30,14 +31,6 @@ Element separator: '*'. Sub-element separator: '>'. Segment
 terminator: '~'.
 """
 
-CONVERTER_METADATA = {
-    "format_name": "x810",
-    "display_name": "X12 810 (Invoice)",
-    "description": "Emit an ASC X12 004010 810 invoice envelope from internal EDI.",
-    "module_name": "webapp.pipeline.converters.convert_to_x810",
-}
-
-
 import time
 from datetime import UTC, datetime
 
@@ -51,6 +44,14 @@ from webapp.pipeline.converters.convert_base import (
 from webapp.pipeline.converters.converters_config import X810ConverterConfig
 
 logger = get_logger(__name__)
+
+
+CONVERTER_METADATA = {
+    "format_name": "x810",
+    "display_name": "X12 810 (Invoice)",
+    "description": "Emit an ASC X12 004010 810 invoice envelope from internal EDI.",
+    "module_name": "webapp.pipeline.converters.convert_to_x810",
+}
 
 
 _ELEMENT = "*"
@@ -82,7 +83,7 @@ def _format_time() -> str:
     return datetime.now(tz=UTC).strftime("%H%M")
 
 
-def _gen_control(seed: str, prefix: str, width: int) -> str:
+def _gen_control(_seed: str, prefix: str, width: int) -> str:
     base = f"{prefix}{int(time.time() * 1000) % (10 ** (width - len(prefix)))}"
     return base[-width:].zfill(width)
 
@@ -177,7 +178,9 @@ class X810Converter(BaseEDIConverter):
         )
         user_data.setdefault("it1_lines", []).append(line)
 
-    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+    def process_c_record(
+        self, record: EDIRecord, context: ConversionContext  # noqa: ARG002
+    ) -> None:
         return
 
     def _finalize_output(self, context: ConversionContext) -> None:

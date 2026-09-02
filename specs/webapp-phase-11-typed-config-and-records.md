@@ -1,9 +1,9 @@
 # Spec: Phase 11 — Typed Config and Records
 
-**Status:** DRAFT
+**Status:** LANDED
 **Author:** Project Owner
 **Created:** 2026-09-02
-**Updated:** 2026-09-02
+**Updated:** 2026-09-02 (status updated 2026-09-02 to LANDED)
 
 > **Maintainability phase.** Phase 11 replaces dict-as-everything
 > with typed dataclasses in the two places that matter most:
@@ -114,21 +114,42 @@ core/edi/
 webapp/pipeline/           # after Phase 9.1 rename
 ├── config.py              # FolderConfigAdapter (Phase 8 §4.1)
 ├── records.py             # EDIRecord wrapper (NEW, Phase 11)
-└── ...
-
-webapp/converters/         # after Phase 9.1 rename
-├── csv.py
-├── csv_config.py          # CSVConverterConfig (NEW, Phase 11)
-├── scannerware.py
-├── scannerware_config.py
-├── x810.py
-├── x810_config.py         # X810ConverterConfig (NEW, Phase 11)
+├── converters/
+│   ├── typed_records.py   # TypedRecordProxy (NEW, Phase 11.1)
+│   ├── converters_config.py  # consolidated config dataclasses
+│   │                          (NEW, Phase 11.x)
+│   ├── convert_to_x810.py
+│   ├── convert_to_simplified_csv.py
+│   ├── convert_to_csv.py
+│   ├── convert_to_scannerware.py
+│   ├── convert_to_estore_einvoice.py
+│   ├── convert_to_estore_einvoice_generic.py
+│   ├── convert_to_yellowdog_csv.py
+│   ├── convert_to_fintech.py
+│   └── ...                 # stewarts_custom / jolley_custom /
+│                           # scansheet_type_a have no
+│                           # parameters_dict reads — config
+│                           # migration not applicable
 └── ...
 ```
 
-Each converter gets a `_config.py` sibling with one dataclass.
-The converter's `__init__` (or `_initialize_output`) takes a
-config object, not a dict.
+All seven typed config dataclasses live in a **single
+consolidated module**: ``webapp/pipeline/converters/converters_config.py``.
+The dispatch/ era's planned pluggable-module drop-in workflow
+(where each converter would have its own ``*_config.py``
+sibling) is not a design goal in the webapp-pivot era. The
+webapp is monolithic; one config module is the right shape.
+Each converter's ``_initialize_output`` reads its config from
+``<Name>ConverterConfig.from_parameters(context.parameters_dict)``
+(or, for yellowdog_csv, accepts both ``parameters_dict`` and
+``settings_dict`` to preserve its existing fallback chain).
+
+### 5.1a Out-of-scope converters
+
+``convert_to_tweaks`` already has a ``TweakerConfig`` dataclass
+in ``core/edi/edi_tweaker.py`` (core layer, not converters/).
+It conforms to the typed-config pattern but lives outside this
+spec's scope because it's a different layer.
 
 ### 5.2 Where the typing boundary lives
 
@@ -226,45 +247,61 @@ regression net).
    defaults.
 2. `CSVConverter.__init__` accepts a `CSVConverterConfig`.
 3. `webapp/pipeline/config.py::FolderConfigAdapter` constructs
-   `CSVConverterConfig` when `convert_to_format == "csv"`.
-4. Migrate all `record.fields["..."]` to `record.fields.<attr>`.
-5. Golden-file test: `tests/unit/test_convert_to_csv.py` byte-equal
-   before/after.
+### 6.6 Sub-phase 11.x — Remaining converters (LANDED)
 
-### 6.5 Sub-phase 11.3 — ScannerWare converter migrated
+**Status:** LANDED.
+**Effort:** ~1 day total (single consolidated commit plus
+yellowdog_csv follow-up).
 
-**Effort:** 0.5 day.
-**Risk:** Low.
+Each converter configures itself via a dataclass in
+``webapp/pipeline/converters/converters_config.py`` (consolidated
+module, not per-converter files).
 
-Same pattern as 11.2; chosen second because it has the most
-distinct parameter shape (5 params, all defaulted booleans +
-strings).
+Converters migrated (in commit ``5668eb4bf`` plus yellowdog_csv
+in ``5252765b9``):
 
-### 6.6 Sub-phase 11.x — Remaining 9 converters
+| Converter | Params | Required | Strategy |
+|-----------|--------|----------|----------|
+| x810 | 4 | 2 | config + record attribute access |
+| simplified_csv | 5 | 0 | config only |
+| csv | 13 | 0 | config only |
+| scannerware | 5 | 0 | config + record attribute access |
+| estore_einvoice | 3 | 0 | config only |
+| estore_einvoice_generic | 4 | 0 | config only |
+| fintech | 1 | 0 | config only |
+| yellowdog_csv | 1 | 0 | config with ``settings_dict`` fallback |
 
-**Effort:** 0.5 day each (~4.5 days total).
-**Risk:** Low individually; high if done all at once.
+Converters with **no parameters_dict reads** (config migration
+not applicable):
 
-Each converter gets its own `*_config.py` and gets migrated one
-at a time. Order is by parameter count, ascending:
+* stewarts_custom — DB-driven; reads ``settings_dict`` only.
+* jolley_custom — DB-driven; reads ``settings_dict`` only.
+* scansheet_type_a — extracts invoice numbers from EDI and
+  fetches all item data from the database; the converter
+  explicitly documents ``parameters_dict`` as unused
+  (``del parameters_dict, upc_lut``).
+* tweaks — has its own ``TweakerConfig`` in ``core/edi/`` (out
+  of scope; different layer).
 
-- x810 (4 params) → simplified_csv (5) → stewarts_custom (6) →
-  jolley_custom (7) → estore_einvoice (8) → estore_einvoice_generic
-  (10) → yellowdog_csv (11) → fintech (12) → scansheet_type_a (13).
-
-x810 (just added) is the easiest one to migrate; doing it first
-sets the pattern.
+**Record-access migration scope:** only x810 and scannerware
+switched from ``record.fields["x"]`` dict access to
+``record.fields.x`` attribute access. The other five converters
+keep dict-style access because their downstream helpers
+(``apply_retail_uom``, ``apply_upc_override``, etc. in
+``csv_utils.py``) mutate the dict argument in place, and the
+``TypedRecordProxy`` wraps a frozen dataclass — touching the
+shared helpers is a wider refactor outside Phase 11.x.
 
 ### 6.7 Total effort
 
-| Sub-phase | Effort |
-|-----------|--------|
-| 11.4 adapter | 1 day |
-| 11.1 typed records | 1 day |
-| 11.2 csv | 0.5 day |
-| 11.3 scannerware | 0.5 day |
-| 11.x remaining (9 converters × 0.5) | 4.5 days |
-| **Total** | **~7.5 days** |
+| Sub-phase | Effort (estimate) | Effort (actual) |
+|-----------|-------------------|-----------------|
+| 11.4 adapter | 1 day | 1 day |
+| 11.1 typed records | 1 day | 1 day |
+| 11.2 csv | 0.5 day | (rolled into consolidated commit) |
+| 11.3 scannerware | 0.5 day | (rolled into consolidated commit) |
+| 11.x remaining | 4.5 days | ~1 day (consolidated module + yellowdog_csv follow-up) |
+| **Total** | **~7.5 days** | **~4 days** |
 
 ## 7. Testing
 
@@ -281,8 +318,17 @@ and after the migration. The test runs as part of CI today.
   returns the right dataclass for A/B/C records.
 - `tests/unit/core/test_folder_config_adapter.py` — adapter
   produces correct typed config from a flat row.
-- `tests/unit/test_convert_to_csv_config.py` — CSVConverterConfig
-  validation: missing required field raises, wrong type raises.
+- `tests/unit/test_converters_config.py` — consolidated typed-
+  config tests for all eight dataclasses in
+  ``webapp/pipeline/converters/converters_config.py``
+  (X810ConverterConfig, SimplifiedCsvConverterConfig,
+  CSVConverterConfig, ScannerWareConverterConfig,
+  EStoreEInvoiceConverterConfig,
+  EStoreEInvoiceGenericConverterConfig, FintechConverterConfig,
+  YellowDogConverterConfig). Covers defaults, validation,
+  boolean-string normalisation, int parsing fallbacks, legacy
+  aliases, parameter-name preservation, settings_dict fallback
+  chain.
 
 ### 7.3 Type-checking (CI gate)
 
@@ -370,9 +416,10 @@ Phase 11 starts **after** Phase 9 lands. Two reasons:
    current name was inherited from a 2010-era codebase and is
    non-standard for a Python parser. **TENTATIVE:** rename in
    11.1 along with the typed return.
-
 ## 13. Changelog
+
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-09-02 | Project Owner | Initial draft. Sub-phases 11.1-11.4 + 11.x. ~7.5 days total. Sequenced after Phase 9 lands. |
+| 2026-09-02 | Session | **Status → LANDED.** 11.1 (`TypedRecordProxy`) shipped as `86ddf95ec`. 11.x converter migrations shipped as a single consolidated commit `5668eb4bf` (x810, simplified_csv, csv, scannerware, estore_einvoice_generic, estore_einvoice, fintech), followed by `5252765b9` (yellowdog_csv). All seven converter configs live in one consolidated module — `webapp/pipeline/converters/converters_config.py` — not seven separate `convert_to_<name>_config.py` files. The dispatch/ era's planned pluggable-module drop-in workflow is not a design goal in the webapp-pivot era. Tests cover the typed-config contract (defaults, normalisation, validation, settings_dict fallback) in `tests/unit/test_converters_config.py`. `convert_to_tweaks` is out of scope — its `TweakerConfig` lives in `core/edi/edi_tweaker.py` (core layer, not converters/). |
