@@ -10,8 +10,8 @@ run log, and returned (or stored for background polling).
 
 from __future__ import annotations
 
-import contextlib
 import concurrent.futures
+import contextlib
 import dataclasses
 import datetime
 import io
@@ -20,9 +20,6 @@ import time
 import uuid
 from typing import Any
 
-from webapp.pipeline.error_handler import ErrorHandler
-from webapp.pipeline.orchestrator import DispatchOrchestrator
-from webapp.pipeline.pipeline.factory import create_standard_pipeline
 from webapp.config import Settings
 from webapp.converters_api import merge_plugin_config
 from webapp.database import lock, open_database
@@ -33,7 +30,9 @@ from webapp.errors import (
     write_error_artifact,
 )
 from webapp.paths import resolve_row
-
+from webapp.pipeline.error_handler import ErrorHandler
+from webapp.pipeline.orchestrator import DispatchOrchestrator
+from webapp.pipeline.pipeline.factory import create_standard_pipeline
 
 # Phase 9.3: a single module-level executor owns all background runs.
 # FastAPI endpoint handlers (``/api/run``, ``/api/resend``, etc.) are
@@ -359,9 +358,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
     try:
         with lock():
             settings.ensure_dirs()
-            flagged = list_processed_files(
-                db, only_resend_flagged=True, limit=10000
-            )
+            flagged = list_processed_files(db, only_resend_flagged=True, limit=10000)
             if not flagged:
                 report.status = "completed"
                 _finalize_run_report(report)
@@ -372,9 +369,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
             for row in flagged:
                 by_folder.setdefault(row["folder_id"], []).append(row)
 
-            folders_by_id = {
-                r["id"]: r for r in (db.folders_table.all() or [])
-            }
+            folders_by_id = {r["id"]: r for r in (db.folders_table.all() or [])}
             settings_dict = db.get_settings_or_default() or {}
 
             # Phase 5.1: hand the pipeline's error handler a database so
@@ -422,9 +417,7 @@ def run_resend(settings: Settings, db=None) -> RunReport:
                 # dedup doesn't skip them.
                 row_ids = [r["id"] for r in rows]
                 delete_processed_rows(db, row_ids)
-                file_paths = [
-                    r["file_name"] for r in rows if r.get("file_name")
-                ]
+                file_paths = [r["file_name"] for r in rows if r.get("file_name")]
                 folder_started = time.monotonic()
                 try:
                     result = orchestrator.process_folder(
@@ -624,6 +617,23 @@ class RunStore:
         """Return the number of runs currently in flight."""
         with self._lock:
             return self._active
+
+    def wait_until_idle(self, timeout: float = 5.0) -> bool:
+        """Block until ``active_count`` drops to zero, or ``timeout`` elapses.
+
+        Returns True if the store reached an idle state before the
+        deadline, False on timeout. Useful in tests (and any
+        callers that need to wait for a background run to finish)
+        where the worker may take longer than expected under
+        I/O contention or parallel xdist load.
+
+        Args:
+            timeout: Maximum seconds to wait. Must be > 0.
+        """
+        deadline = time.monotonic() + timeout
+        while self.active_count > 0 and time.monotonic() < deadline:
+            time.sleep(0.05)
+        return self.active_count == 0
 
     def start(self, settings: Settings) -> str:
         """Start a background run and return its id immediately.

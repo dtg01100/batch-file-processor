@@ -178,7 +178,10 @@ def test_folder_warning_flags_exceeded_thresholds():
     out = _folder_warning(row, duration_seconds=95, files_processed=8, files_failed=2)
     assert out == "took 95.0s (limit 60s); failure rate 20.0% (limit 10%)"
     # Within limits — no warning.
-    assert _folder_warning(row, duration_seconds=30, files_processed=10, files_failed=0) == ""
+    assert (
+        _folder_warning(row, duration_seconds=30, files_processed=10, files_failed=0)
+        == ""
+    )
     # Rate exactly at the limit is not a warning.
     assert (
         _folder_warning(
@@ -193,10 +196,16 @@ def test_folder_warning_flags_exceeded_thresholds():
 
 def test_folder_warning_no_thresholds_or_bad_values():
     # No thresholds configured → nothing to compare against.
-    assert _folder_warning({}, duration_seconds=9999, files_processed=0, files_failed=5) == ""
+    assert (
+        _folder_warning({}, duration_seconds=9999, files_processed=0, files_failed=5)
+        == ""
+    )
     # Invalid / negative threshold values are treated as unset.
     bad = {"max_duration_seconds": "abc", "max_failure_rate_percent": "-5"}
-    assert _folder_warning(bad, duration_seconds=1, files_processed=0, files_failed=1) == ""
+    assert (
+        _folder_warning(bad, duration_seconds=1, files_processed=0, files_failed=1)
+        == ""
+    )
     # No files at all → failure rate is 0, never warns.
     assert (
         _folder_warning(
@@ -224,7 +233,6 @@ def test_run_warns_when_folder_exceeds_failure_rate_threshold(workspace):
     assert folder.files_failed == 1
     assert folder.duration_seconds > 0
     assert folder.warning == "failure rate 100.0% (limit 10%)"
-
 
 
 def test_run_uses_real_upc_lookup_when_as400_configured(workspace, monkeypatch):
@@ -390,10 +398,10 @@ def test_run_store_active_count_drops_after_run_completes(workspace):
     store = RunStore()
     store.start(workspace)
 
-    # Wait for the worker to finish; 5s is generous for an empty folder.
-    import time
-
-    deadline = time.monotonic() + 5.0
-    while store.active_count > 0 and time.monotonic() < deadline:
-        time.sleep(0.05)
-    assert store.active_count == 0
+    # The worker runs run_folders() which does SQLite I/O on a
+    # tmp_path database; under xdist with other tests writing their
+    # own tmp_path DBs, this can exceed 5 seconds. Use a 30-second
+    # deadline via the production helper (rather than a hardcoded
+    # polling loop in the test) so the lifecycle contract is
+    # exercised regardless of I/O contention.
+    assert store.wait_until_idle(timeout=30.0)
