@@ -10,7 +10,7 @@ The smoke tests in `test_app_smoke.py` validate that the application can start a
 
 ### 1. Main Entry Point Tests (`TestMainEntryPoint`)
 
-Tests the core `interface/main.py` module:
+Tests the core `main_interface` entry point module:
 
 - **Module imports**: Verifies all main entry point functions are importable
 - **Argument parsing**: Tests `parse_arguments()` with default and `--automatic` flags
@@ -61,8 +61,7 @@ Tests the `run_tests.sh` shell script:
 
 Tests that critical files and directories exist:
 
-- **Directories**: `interface/` directory
-- **Entry points**: `interface/main.py`, `dispatch.py`, `utils.py`
+- **Entry points**: `main_interface.py`, `dispatch/`, `core/utils/`
 - **Converter backends**: `convert_base.py`, `convert_to_csv.py`, `convert_to_fintech.py`
 - **Send backends**: `send_base.py`, `email_backend.py`, `ftp_backend.py`, `copy_backend.py`
 

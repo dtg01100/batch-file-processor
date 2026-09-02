@@ -15,19 +15,20 @@ Convention (from ``AGENTS.md`` and ``tests/AGENTS.md``):
 
   | Marker       | Expected directory                              |
   |--------------|-------------------------------------------------|
-  | unit         | ``tests/unit/``                                 |
-  | integration  | ``tests/integration/``                          |
-  | qt           | ``tests/qt/`` (single-threaded per AGENTS.md)   |
+  | unit         | ``tests/unit/`` OR ``tests/webapp/``            |
+  | integration  | ``tests/webapp/`` (no Qt; no live network)      |
+  | qt           | *(none — retired in the webapp pivot)*          |
   | dispatch     | ``tests/dispatch/`` OR ``tests/unit/dispatch_tests/`` |
   | conversion   | ``tests/convert_backends/``                     |
   | backend      | ``tests/unit/backend/``                         |
-  | database     | ``tests/integration/`` OR ``tests/unit/core/database/`` |
+  | database     | ``tests/unit/core/database/``                   |
   | property     | ``tests/**/*_property.py`` (file-name suffix)   |
 
 A test file that uses ``@pytest.mark.unit`` but lives under
-``tests/integration/`` is a layering violation. The runner fails on
-each such mismatch with the actual file path, marker, and expected
-directory.
+``tests/webapp/`` is fine; one that uses ``@pytest.mark.integration``
+but lives under ``tests/unit/`` is a layering violation. The runner
+fails on each such mismatch with the actual file path, marker, and
+expected directory.
 
 Allowlist (``KNOWN_MARKER_MISPLACEMENT``):
   - Each entry is (file_relpath, marker, expected_dir, reason).
@@ -63,28 +64,29 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # These reflect the project's actual organization (verified by
 # inspection of test file distribution) rather than the strict
 # one-to-one directory mapping in AGENTS.md.
+#
+# Phase 7b.3 dropped ``tests/integration/`` and ``tests/unit/interface/``
+# from the allowed directories: both were retired along with the
+# ``interface/`` package (see
+# ``specs/webapp-phase-7b-interface-retirement.md``).
 MARKER_TO_DIRECTORIES: dict[str, list[str]] = {
     "unit": ["tests/unit", "tests/webapp"],
-    "integration": ["tests/integration", "tests/webapp"],
-    "qt": ["tests/qt", "tests/unit/interface/qt"],
+    "integration": ["tests/webapp"],
+    "qt": [],  # no Qt tests remain after the webapp pivot
     "dispatch": [
         "tests/dispatch",
         "tests/unit/dispatch_tests",
         "tests/unit/dispatch",
-        "tests/integration",  # dispatch tests that need real services
     ],
     "conversion": [
         "tests/convert_backends",
         "tests/unit",
-        "tests/integration",
     ],
     "backend": [
         "tests/unit/backend",
         "tests/unit",
-        "tests/integration",  # live-server backend tests
     ],
     "database": [
-        "tests/integration",
         "tests/unit/core/database",
         "tests/unit",
     ],
@@ -118,25 +120,26 @@ KNOWN_MARKER_MISPLACEMENT: list[tuple[str, str, str]] = [
         "protocol-definition smoke test; doesn't exercise the "
         "dispatch pipeline, so it lives in tests/unit/",
     ),
-    # ---- @integration outside tests/integration/ ----
+    # ---- @integration outside tests/webapp/ ----
     # Pipeline + migration tests that legitimately touch the database
-    # and filesystem but were organized under tests/unit/ before the
-    # integration directory existed.
+    # and filesystem. They live under tests/unit/ because the legacy
+    # tests/integration/ split was retired in Phase 7b.3; the
+    # @integration marker still tags the slow / I/O path.
     (
         "tests/unit/dispatch_tests/test_orchestrator_pipeline.py",
         "integration",
         "end-to-end orchestrator pipeline test; the @integration "
-        "marker tags the slow path, but the directory predates the "
-        "tests/integration/ split",
+        "marker tags the slow path, but the file stays in tests/unit/ "
+        "because the tests/integration/ split was retired in Phase 7b.3",
     ),
     (
         "tests/unit/test_folders_database_migrator.py",
         "integration",
         "folder-DB migration test exercising a real SQLite database; "
-        "@integration marks the I/O dependency, but the file predates "
-        "the tests/integration/ split",
+        "@integration marks the I/O dependency, but the file stays in "
+        "tests/unit/ because the tests/integration/ split was retired "
+        "in Phase 7b.3",
     ),
-    # ---- @qt outside tests/qt/ ----
 ]
 
 

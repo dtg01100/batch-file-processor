@@ -51,8 +51,13 @@ This document provides a comprehensive summary of test coverage for the dispatch
 - **Tweaker**: Tests for EDI file tweaking (22 tests)
 - **Converter**: Tests for EDI conversion (18 tests)
 
-### Integration Tests (30+ tests)
-**File**: `/tests/integration/test_dispatch_backends_integration.py`
+### Integration Tests (retired 2026-08-20 with Phase 7b.3)
+
+The end-to-end integration tests previously living under
+`tests/integration/` were retired alongside the pre-pivot `interface/`
+package (see `specs/webapp-phase-7b-interface-retirement.md`).
+The webapp test suite (`tests/webapp/`) plus the surviving unit tests
+replace the integration coverage.
 
 #### Integration Scenarios:
 - **Convert Backend Integration**: 2 tests

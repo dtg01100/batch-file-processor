@@ -7,7 +7,7 @@ not be caught by any test.
 
 Scope:
   - Walks every ``.py`` file under the production roots:
-    ``core/``, ``dispatch/``, ``backend/``, ``interface/``,
+    ``core/``, ``dispatch/``, ``backend/``,
     ``adapters/`` (and ``batch_file_processor/``, the compatibility
     shim).
   - Excludes ``__init__.py`` modules (these are namespace shims; their
@@ -64,11 +64,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Production roots to scan. Each entry is (relpath, label). The label is
 # used in test IDs and the CLI summary.
+# Phase 7b.3 removed ``interface`` from PRODUCTION_ROOTS: the package
+# was deleted in commit ``2f29cca57``'s follow-on (Phase 7b.3).
 PRODUCTION_ROOTS: list[tuple[str, str]] = [
     ("core", "core"),
     ("dispatch", "dispatch"),
     ("backend", "backend"),
-    ("interface", "interface"),
     ("adapters", "adapters"),
     ("batch_file_processor", "batch_file_processor"),
     ("scripts", "scripts"),
@@ -182,35 +183,6 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
         "progress reporting module; covered transitively via "
         "dispatch.services.progress_reporter (note the singular); "
         "consider deleting one if they're truly redundant",
-    ),
-    # ---- interface ----
-    (
-        "interface/interfaces.py",
-        "interface module protocol definitions; not imported by any "
-        "test (covered via interface/qt/* smoke tests at runtime)",
-    ),
-    (
-        "interface/services/progress_service.py",
-        "progress service; not imported by any test "
-        "(covered transitively via qt UI smoke tests)",
-    ),
-    (
-        "interface/services/ftp_service.py",
-        "FTP service helper; previously covered by the Qt dialog "
-        "tests, which were removed in the webapp pivot. The backend/ "
-        "FTP client is the tested path; this wrapper is UI-era glue.",
-    ),
-    (
-        "interface/services/smtp_service.py",
-        "SMTP service helper; previously covered by the Qt dialog "
-        "tests, which were removed in the webapp pivot. The backend/ "
-        "SMTP client is the tested path; this wrapper is UI-era glue.",
-    ),
-    (
-        "interface/operations/folder_data_extractor.py",
-        "folder-data helper; no test imports it directly, but it is "
-        "exercised transitively via interface.validation.folder_settings_validator "
-        "(tested by test_settings_validation.py)",
     ),
     # ---- scripts ----
     # Utility scripts. Most are CLI entry points invoked from the

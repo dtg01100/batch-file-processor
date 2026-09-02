@@ -40,17 +40,14 @@ This test plan outlines the comprehensive testing strategy for the dispatch laye
 - **Implementation**: `/tests/unit/dispatch_tests/`
 - **Mocking**: Use `unittest.mock` for dependencies
 
-### 2. Integration Tests
-- **Purpose**: Test interactions between components
-- **Scope**: Orchestrator + pipeline, send manager + backends, etc.
-- **Implementation**: `/tests/integration/test_dispatch_backends_integration.py` and `/tests/integration/test_all_processing_flows.py`
-- **Mocking**: Partial mocking of external systems
+### 2. Integration Tests (retired 2026-08-20 with Phase 7b.3)
 
-### 3. System Tests
-- **Purpose**: Test entire dispatch layer in real scenario
-- **Scope**: Complete processing pipeline with real file operations
-- **Implementation**: `/tests/integration/test_end_to_end_batch_processing.py`
-- **Mocking**: Minimal mocking, use temporary directories
+End-to-end integration tests (orchestrator + pipeline, send manager +
+backends, full batch scenarios) previously lived under
+`tests/integration/`. They were retired alongside the pre-pivot
+`interface/` package (see `specs/webapp-phase-7b-interface-retirement.md`).
+The webapp test suite (`tests/webapp/`) plus the surviving unit tests
+replace the integration coverage.
 
 ## Test Strategies
 
@@ -102,8 +99,8 @@ This test plan outlines the comprehensive testing strategy for the dispatch laye
 
 ## Test Execution
 - Run unit tests: `python -m pytest tests/unit/dispatch_tests/ -v`
-- Run integration tests: `python -m pytest tests/integration/test_dispatch_backends_integration.py -v`
-- Run all tests: `python -m pytest tests/ -v`
+- Run webapp tests: `python -m pytest tests/webapp/ -v`
+- Run all tests: `python -m pytest tests/ --ignore=tests/meta -v`
 
 ## Test Maintenance
 - Update tests when components change

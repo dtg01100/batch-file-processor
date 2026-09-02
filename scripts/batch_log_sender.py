@@ -1,18 +1,41 @@
+"""Batch log-email sender.
+
+Sends the per-run log files out as email attachments. Historically the
+``interface.services.progress_service.ProgressCallback`` was injected by the
+Qt UI; Phase 7b removed the ``interface/`` package (see
+``specs/webapp-phase-7b-interface-retirement.md``) so this module defines a
+minimal local protocol + null implementation. ``dispatch.log_sender`` remains
+the actively-used path; this script is retained as a CLI entry point for
+running the legacy batch send flow without the webapp.
+"""
+
+from __future__ import annotations
+
 import mimetypes
 import os
 import smtplib
-
-# Ensure the project root is in sys.path so we can import 'interface' package
-# when running as a script without installation
-import sys
 from email.message import EmailMessage
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
-_script_dir = os.path.dirname(os.path.abspath(__file__))
-if _script_dir not in sys.path:
-    sys.path.insert(0, _script_dir)
 
-from interface.services.progress_service import NullProgressCallback, ProgressCallback
+@runtime_checkable
+class ProgressCallback(Protocol):
+    """Minimal progress-callback contract used by :func:`do`.
+
+    Only ``update_message`` is exercised; the rest are no-ops to keep this
+    script decoupled from the deleted ``interface/`` package.
+    """
+
+    def update_message(self, message: str) -> None:
+        ...
+
+
+class NullProgressCallback:
+    """No-op progress callback used when the caller omits one."""
+
+    def update_message(self, message: str) -> None:
+        return None
 
 
 def do(

@@ -114,21 +114,15 @@ def _iter_dispatch_test_files() -> list[Path]:
 
     These are acceptance/integration-style tests that exercise the dispatch
     service tree end-to-end (customer_queries, customer_lookup_service,
-    uom_lookup_service, item_processing). They live outside tests/integration/
-    because they target the dispatch package directly, not the full pipeline.
+    uom_lookup_service, item_processing). They live under their own
+    ``tests/dispatch/`` layer because they target the dispatch package
+    directly, not the full pipeline.
     """
     dispatch_dir = Path("tests/dispatch")
     return sorted(p for p in dispatch_dir.rglob("test_*.py"))
 
 
-def _iter_interface_test_files() -> list[Path]:
-    """test_*.py under tests/interface/.
 
-    Interface-layer tests (e.g. plugins/test_interfaces.py) live here.
-    Currently thin coverage: only plugins/test_interfaces.py.
-    """
-    interface_dir = Path("tests/interface")
-    return sorted(p for p in interface_dir.rglob("test_*.py"))
 
 
 def _iter_drift_test_files() -> list[Path]:
@@ -142,18 +136,21 @@ def _iter_drift_test_files() -> list[Path]:
     return sorted(p for p in drift_dir.glob("test_*.py"))
 
 
+# Phase 7b.3 removed two layers:
+# - ``integration`` (tests/integration/) — the full end-to-end suite was
+#   deleted along with the pre-pivot ``interface/`` package because both
+#   were tightly coupled. The webapp tests (tests/webapp/) plus the
+#   surviving unit tests replace the integration coverage.
+# - ``interface`` (tests/interface/) — already-empty after the desktop
+#   retirement; removed to avoid a phantom layer in the runners' output.
+
+
 ALL_LAYERS: list[Layer] = [
     Layer(
         name="unit",
         path=Path("tests/unit"),
         description="Unit tests (fast, isolated, no DB/network).",
         iter_files=_iter_unit_test_files,
-    ),
-    Layer(
-        name="integration",
-        path=Path("tests/integration"),
-        description="Integration tests (DB, network, full pipeline).",
-        iter_files=lambda: _glob_test_files(Path("tests/integration")),
     ),
     Layer(
         name="webapp",
@@ -170,15 +167,6 @@ ALL_LAYERS: list[Layer] = [
             "Targets the dispatch package directly."
         ),
         iter_files=_iter_dispatch_test_files,
-    ),
-    Layer(
-        name="interface",
-        path=Path("tests/interface"),
-        description=(
-            "Interface-layer tests under tests/interface/ "
-            "(e.g. plugins/test_interfaces.py)."
-        ),
-        iter_files=_iter_interface_test_files,
     ),
     Layer(
         name="drift",

@@ -259,14 +259,6 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "tests/unit/dispatch/services/test_folder_processor.py",
     ),  # 3/8 killed
     (
-        "interface/validation/email_validator.py",
-        "tests/unit/interface/validation/test_email_validator.py",
-    ),  # 5/9 killed
-    (
-        "interface/models/folder_configuration.py",
-        "tests/unit/interface/models/test_folder_config_alert.py",
-    ),  # 2/11 killed
-    (
         "core/edi/upc_utils.py",
         "tests/unit/core/edi/test_upc_utils.py",
     ),  # 5/11 killed (companion to property test; plain unit test covers different paths)
@@ -282,8 +274,8 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "tests/unit/dispatch/test_feature_flags.py",
     ),  # 3/5 killed
     # Batch 4 (also 2026-07-09): previously-untouched layers (tests/dispatch/,
-    # tests/unit/dispatch_tests/, tests/unit/interface/operations/). Mix of
-    # strong and weak tests; high survivor rates reveal missing-assertion gaps.
+    # tests/unit/dispatch_tests/). Mix of strong and weak tests; high
+    # survivor rates reveal missing-assertion gaps.
     (
         "dispatch/converters/customer_queries.py",
         "tests/dispatch/converters/test_customer_queries.py",
@@ -312,19 +304,11 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "dispatch/orchestrator.py",
         "tests/unit/dispatch_tests/test_orchestrator.py",
     ),  # 2/9 killed
-    (
-        "interface/operations/folder_manager.py",
-        "tests/unit/interface/operations/test_folder_manager.py",
-    ),  # 3/9 killed
-    (
-        "interface/operations/processed_files.py",
-        "tests/unit/interface/operations/test_processed_files.py",
-    ),  # 4/4 killed (100% clean)
-    # Batch 5 (also 2026-07-09): dispatch_tests/ pipeline + services, plus
-    # interface/validation and form/. Includes a 0-N entry on purpose:
-    # 0/8 (dispatch/pipeline/validator.py) means the test runs without
-    # binding to module behavior at all — adding it makes the meta-test
-    # surface that as a test-quality debt. Same for 0/6 on interfaces.py.
+    # Batch 5 (also 2026-07-09): dispatch_tests/ pipeline + services.
+    # Includes a 0-N entry on purpose: 0/8 (dispatch/pipeline/validator.py)
+    # means the test runs without binding to module behavior at all —
+    # adding it makes the meta-test surface that as a test-quality debt.
+    # Same for 0/6 on interfaces.py.
     (
         "dispatch/pipeline/validator.py",
         "tests/unit/dispatch_tests/test_pipeline_validator.py",
@@ -353,23 +337,10 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "dispatch/interfaces.py",
         "tests/unit/dispatch_tests/test_interfaces.py",
     ),  # 0/6 — test has no assertions on mutated behavior
-    (
-        "interface/validation/folder_settings_validator.py",
-        "tests/unit/test_settings_validation.py",
-    ),  # 7/11 killed
-    # Batch 6 (also 2026-07-09): backend/database, dispatch/converters,
-    # dispatch interfaces (companion pair), core EDI fetchers, and
-    # interface/folder_configuration. Several 0-N entries expose tests
-    # that don't bind to module behavior — the meta-test surfaces these
-    # as test-quality debt.
-    (
-        "backend/database/database_obj.py",
-        "tests/unit/interface/database/test_database_obj.py",
-    ),  # 4/10 killed
-    (
-        "backend/database/database_obj.py",
-        "tests/unit/interface/database/test_safe_accessors.py",
-    ),  # 2/10 killed
+    # Batch 6 (also 2026-07-09): dispatch/converters, dispatch
+    # interfaces (companion pair), and core EDI fetchers.
+    # Several 0-N entries expose tests that don't bind to module
+    # behavior — the meta-test surfaces these as test-quality debt.
     (
         "dispatch/converters/convert_base.py",
         "tests/unit/test_estore_null_safety.py",
@@ -390,14 +361,6 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
         "dispatch/converters/convert_to_fintech.py",
         "tests/unit/test_convert_backends.py",
     ),  # was mispaired as core/edi/inv_fetcher (0/9 was a DEFAULT_PAIRS bug, not a test gap)
-    (
-        "interface/models/folder_configuration.py",
-        "tests/unit/test_folder_configuration_pydantic.py",
-    ),  # 8/11 (was 1/11; L115, L165, L18, L273, L298, L64, L409 killed by new test classes)
-    (
-        "interface/models/folder_configuration.py",
-        "tests/unit/test_folder_db_roundtrip.py",
-    ),  # 1/11 (same module, different test pair; the new tests in test_folder_configuration_pydantic.py don't apply here, but the underlying model mutations are not exercised by the db_roundtrip path either)
     # Batch 7 (also 2026-07-09): dispatch/converters/* (concrete converter
     # modules: eStore, simplified CSV, fintech, scansheet_type_a), and
     # core/edi/inv_fetcher pulled in via converter tests. High 0/N rates

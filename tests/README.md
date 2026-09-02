@@ -126,8 +126,7 @@ pytest -m "not slow"
 
 # Run tests by directory
 pytest tests/unit/
-pytest tests/integration/
-pytest tests/qt/
+pytest tests/webapp/
 
 # Run specific test file
 pytest tests/unit/test_utils.py
@@ -243,8 +242,14 @@ def test_database_operation():
 ## Test File Organization Guidelines
 
 1. **Unit tests** (`tests/unit/`): Fast, isolated, no external dependencies
-2. **Integration tests** (`tests/integration/`): Tests with real database/filesystem
-3. **Qt tests** (`tests/qt/`): UI tests requiring Qt framework
+2. **Webapp tests** (`tests/webapp/`): FastAPI API + runner + importer (use a real
+   SQLite DB against a temp dir; no Qt, no live network)
+3. **Dispatch-acceptance tests** (`tests/dispatch/`): small suite that
+   exercises the dispatch service tree end-to-end against a real DB
+
+> **Note:** the `tests/integration/` directory was retired in Phase 7b.3
+> along with the pre-pivot `interface/` package; its coverage is replaced
+> by the webapp test suite plus the surviving unit tests.
 
 Each test file should have a module-level `pytestmark` defining its primary markers.
 

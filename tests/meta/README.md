@@ -189,8 +189,8 @@ its behavior can break production without any test failing.
 
 **Detection strategy:**
 1. Walk every production root (`core/`, `dispatch/`, `backend/`,
-   `interface/`, `adapters/`, `batch_file_processor/`, `scripts/`)
-   and build the set of module dotted names.
+   `adapters/`, `batch_file_processor/`, `scripts/`) and build the
+   set of module dotted names.
 2. Walk every test file under `tests/` (excluding `tests/meta/`),
    parse every `Import` and `ImportFrom`, and also extract dotted
    module paths from `patch("...")` / `monkeypatch.setattr("...")`
@@ -216,8 +216,6 @@ uncovered. All 37 are intentional:
 - 5 `core/*` — utility helpers (CSV, folder-path, generic `utils`).
 - 6 `dispatch/*` — converters imported only via `patch()` string
   references, and pipeline factory that is constructed inline.
-- 9 `interface/*` — Qt form/window helpers exercised via dialog
-  smoke tests, not direct imports.
 - 13 `scripts/*` — CLI utilities invoked manually, not library code.
 
 The full allowlist is in `KNOWN_UNCOVERED` with one-line citations

@@ -1008,71 +1008,6 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         324,
         "invoke.vendor.yaml ImportError probe; same fallback chain " "as L315",
     ),
-    # Integration-layer sleep calls. All four are in explicit polling
-    # helpers whose entire job is "wait for a real external thing to
-    # become ready, with a deadline". The pattern is the same as the
-    # unit test_timing_utils.SlowBackend test fixture: bounded by a
-    # timeout, polling a real signal, fail-fast on deadline. The
-    # ``time.sleep`` is the only way to do this without busy-waiting
-    # the CPU; the helper docstring documents the contract.
-    (
-        "tests/integration/test_edi_sample_files.py",
-        "sleep_call",
-        95,
-        "_wait_for_server: bounded poll for a real socket connect, "
-        "raises RuntimeError on timeout; helper is the documented "
-        "pattern for waiting on real servers",
-    ),
-    (
-        "tests/integration/test_edi_sample_files.py",
-        "sleep_call",
-        108,
-        "_wait_for_messages: bounded poll for handler.messages to "
-        "reach count; same pattern as _wait_for_server",
-    ),
-    (
-        "tests/integration/test_ftp_smtp_live_servers.py",
-        "sleep_call",
-        70,
-        "_wait_for_server: bounded poll for a real socket connect; "
-        "same pattern as test_edi_sample_files L95",
-    ),
-    (
-        "tests/integration/test_ftp_smtp_live_servers.py",
-        "sleep_call",
-        83,
-        "_wait_for_messages: bounded poll for handler.messages; "
-        "same pattern as test_edi_sample_files L108",
-    ),
-    (
-        "tests/integration/test_log_email_comprehensive.py",
-        "sleep_call",
-        110,
-        "_wait_until: bounded poll with deadline; helper docstring "
-        "states it replaces fixed time.sleep() with a deterministic "
-        "deadline, so a faster handler doesn't slow the suite and a "
-        "slower one fails fast",
-    ),
-    (
-        "tests/integration/test_multi_folder_edge_cases.py",
-        "sleep_call",
-        93,
-        "SlowBackend.send: explicit artificial-delay class for "
-        "testing concurrency/race conditions; class name and "
-        "docstring declare the intent",
-    ),
-    (
-        "tests/integration/test_multi_folder_edge_cases.py",
-        "sleep_call",
-        420,
-        "same SlowBackend.send pattern as L93",
-    ),
-    (
-        "tests/integration/test_multi_folder_edge_cases.py",
-        "sleep_call",
-        430,
-        "same SlowBackend.send pattern as L93",
-    ),
     # UPC-A -> EAN-13 conversion. The literal "0" is not zero-padding
     # to a fixed width — it is a domain-specific prefix that converts
     # the 12-digit UPC-A into the 13-digit EAN-13 barcode format the
@@ -1101,40 +1036,6 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         96,
         "same UPC-A -> EAN-13 conversion as L69 (list comprehension)",
     ),
-    # ---- tests/integration/test_automatic_and_single_mode.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/integration/test_automatic_and_single_mode.py",
-        "missing_assert",
-        400,
-        "class-body method; test_overlay_called_during_processing has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/integration/test_automatic_and_single_mode.py",
-        "missing_assert",
-        417,
-        "class-body method; test_single_folder_overlay_text has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/integration/test_automatic_and_single_mode.py",
-        "missing_assert",
-        497,
-        "class-body method; test_refresh_called_after_graphical_process has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/integration/test_automatic_and_single_mode.py",
-        "missing_assert",
-        512,
-        "class-body method; test_refresh_users_list_destroys_and_recreates has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    # ---- tests/integration/test_gui_user_workflows.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/integration/test_pipeline_logging_validation.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/integration/test_pipeline_logging_validation.py",
-        "missing_assert",
-        376,
-        "class-body method; test_handler_with_none_run_log_discards_silently has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    # ---- tests/interface/plugins/test_interfaces.py (class-body methods, surfaced 2026-07-16) ----
     # ---- tests/qt/test_backend_gui_communication.py (class-body methods, surfaced 2026-07-16) ----
     # ---- tests/qt/test_comprehensive_ui.py (class-body methods, surfaced 2026-07-16) ----
     # ---- tests/qt/test_database_import_dialog_extra.py (class-body methods, surfaced 2026-07-16) ----
@@ -1445,105 +1346,6 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         219,
         "class-body method; test_update_with_empty_values has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
     ),
-    # ---- tests/unit/interface/database/test_database_obj.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/unit/interface/database/test_database_obj.py",
-        "missing_assert",
-        124,
-        "class-body method; test_set_setting has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/database/test_database_obj.py",
-        "missing_assert",
-        149,
-        "class-body method; test_update_default_settings has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/database/test_database_obj.py",
-        "missing_assert",
-        160,
-        "class-body method; test_close_calls_connection_close has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/database/test_database_obj.py",
-        "missing_assert",
-        160,
-        "class-body method; test_close_with_no_connection has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    # ---- tests/unit/interface/operations/test_folder_manager.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/unit/interface/operations/test_folder_manager.py",
-        "missing_assert",
-        268,
-        "class-body method; test_get_all_folders_with_order has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/operations/test_folder_manager.py",
-        "missing_assert",
-        488,
-        "class-body method; test_add_folder_uses_oversight_defaults_provider has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    # ---- tests/unit/interface/qt/test_database_import_dialog.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/unit/interface/qt/test_dialog_contracts_wave4.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/unit/interface/qt/test_edit_settings_dialog.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/unit/interface/qt/test_qt_app.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/unit/interface/qt/test_resend_dialog.py (class-body methods, surfaced 2026-07-16) ----
-    # ---- tests/unit/interface/test_ports.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        61,
-        "class-body method; test_show_info_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        67,
-        "class-body method; test_show_error_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        73,
-        "class-body method; test_show_warning_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        139,
-        "class-body method; test_pump_events_is_noop has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        164,
-        "class-body method; test_show_info_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        173,
-        "class-body method; test_show_error_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        182,
-        "class-body method; test_show_warning_delegates_to_qmessagebox has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    (
-        "tests/unit/interface/test_ports.py",
-        "missing_assert",
-        412,
-        "class-body method; test_pump_events_delegates_to_process_events has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
-    # ---- tests/unit/interface/validation/test_email_validator.py (class-body methods, surfaced 2026-07-16) ----
-    (
-        "tests/unit/interface/validation/test_email_validator.py",
-        "missing_assert",
-        281,
-        "class-body method; test_trailing_separator has no load-bearing assertion (was invisible to the runner pre-2026-07-16)",
-    ),
     # ---- tests/unit/test_batch_log_sender.py (class-body methods, surfaced 2026-07-16) ----
     (
         "tests/unit/test_batch_log_sender.py",
@@ -1712,12 +1514,6 @@ KNOWN_HYGIENE_VIOLATIONS: list[tuple[str, str, int, str]] = [
         "missing_assert",
         232,
         "legitimate smoke - NullProgressReporter.update empty values, no observation",
-    ),
-    (
-        "tests/unit/interface/database/test_database_obj.py",
-        "missing_assert",
-        174,
-        "legitimate smoke - close() on unset connection must not raise, no observation",
     ),
     (
         "tests/unit/test_structured_logging.py",

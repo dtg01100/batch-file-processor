@@ -109,7 +109,7 @@ lint:
 	.venv/bin/ruff check .
 
 type-check:
-	.venv/bin/mypy backend core dispatch interface webapp
+	.venv/bin/mypy backend core dispatch webapp
 
 # =============================================================================
 # Run tests by marker (examples)
