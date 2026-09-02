@@ -2,6 +2,14 @@
 
 This module provides centralized error handling and logging,
 using dependency injection for testability.
+
+Phase 9.5: ``ErrorHandler.record_error`` also routes to
+``webapp.errors.insert_error`` so the modern
+``dispatch_errors`` ledger receives entries via the canonical path.
+The in-memory buffer and ``_persist_to_database`` paths remain
+for backward compatibility; the duplicate write is the cost of
+the migration window. Phase 11.x can drop the
+``_persist_to_database`` path entirely once every caller migrates.
 """
 
 import datetime
@@ -22,37 +30,6 @@ logger = get_logger(__name__)
 # \r\n between header lines. Centralise the constant so call sites do not have
 # to know about the legacy format.
 _LEGACY_RUN_LOG_LINE_ENDING = "\r\n"
-
-
-def generate_edi_validation_report(errors: str) -> str:
-    """Format an EDI validation report.
-
-    Mirrors the legacy ``ReportGenerator.generate_edi_validation_report`` output
-    that ``ErrorHandler.write_validation_report`` has been emitting since the
-    report-format migration. Callers must not depend on any specific line
-    ordering beyond the header being the first line.
-    """
-    timestamp = datetime.datetime.now().isoformat().replace(":", "-")
-    return (
-        f"EDI Validation Report - {timestamp}{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"{'=' * 50}{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"{errors}"
-    )
-
-
-def generate_processing_report(errors: str, version: str) -> str:
-    """Format a processing report with program version and error block.
-
-    Mirrors the legacy ``ReportGenerator.generate_processing_report`` output
-    consumed by ``ErrorHandler.write_processing_report``.
-    """
-    return (
-        f"Program Version = {version}{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"Processing Errors{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"{'=' * 30}{_LEGACY_RUN_LOG_LINE_ENDING}"
-        f"{errors}"
-    )
 
 
 class ErrorHandler:
@@ -123,6 +100,7 @@ class ErrorHandler:
 
         """
         import logging
+        import traceback as tb
 
         error_record = {
             "timestamp": time.ctime(),
@@ -156,7 +134,33 @@ class ErrorHandler:
         # Write to error log buffer
         self._write_to_log(error_record)
 
-        # Persist to database if configured
+        # Phase 9.5: route to the modern dispatch_errors ledger via
+        # ``webapp.errors.insert_error``. The dedupe flag suppresses the
+        # "consecutive-failure" path because the pipeline emits each
+        # error exactly once; the ledger dedupes by id, not by
+        # consecutive-occurrence semantics.
+        if self.db is not None:
+            try:
+                from webapp.errors import insert_error
+
+                insert_error(
+                    self.db,
+                    folder=folder,
+                    filename=filename,
+                    error_message=str(error),
+                    error_type=type(error).__name__,
+                    error_source=error_source,
+                    severity=severity,
+                    dedupe=True,
+                )
+            except Exception:
+                logger.debug(
+                    "Failed to write to webapp.errors ledger (non-fatal)",
+                    exc_info=True,
+                )
+
+        # Persist to database if configured (legacy path, retained
+        # during the Phase 11.x migration window).
         if self.db is not None:
             self._persist_to_database(error_record)
 
@@ -165,8 +169,6 @@ class ErrorHandler:
             "alert_on_failure", True
         ):
             try:
-                import traceback as tb
-
                 self._alert_dispatcher.dispatch_error_alert(
                     error_record={
                         "error_type": type(error).__name__,
@@ -188,56 +190,13 @@ class ErrorHandler:
                     extra={"folder_alias": (context or {}).get("folder_alias", "")},
                 )
 
-    def record_error_to_logs(
-        self,
-        run_log: RunLog,
-        errors_log: StringIO,
-        error_message: str,
-        filename: str,
-        error_source: str,
-        *,
-        threaded: bool = False,
-    ) -> tuple:
-        """Record error to run log and errors log (backward compatible).
-
-        This method provides compatibility with the existing record_error.do()
-        function signature.
-
-        Args:
-            run_log: Run log file or list (for threaded mode)
-            errors_log: Errors log StringIO or list (for threaded mode)
-            error_message: Error message string
-            filename: File being processed
-            error_source: Source module name
-            threaded: If True, use list append; if False, use write
-
-        Returns:
-            Tuple of (run_log, errors_log) for threaded mode
-
-        """
-        message = self._format_error_message(error_message, filename, error_source)
-
-        if not threaded:
-            if hasattr(run_log, "write"):
-                run_log.write(message)
-            if hasattr(errors_log, "write"):
-                errors_log.write(message)
-        else:
-            if isinstance(run_log, list):
-                run_log.append(message)
-            if isinstance(errors_log, list):
-                errors_log.append(message)
-            return run_log, errors_log
-
-        return run_log, errors_log
-
     def _format_error_message(
         self, error_message: str, filename: str, error_source: str
     ) -> str:
         """Format an error message for logging.
 
         Args:
-            error_message: The error message
+            error_message: Error message string
             filename: File being processed
             error_source: Source module name
 
@@ -376,7 +335,7 @@ class ErrorHandler:
         """Check if any errors have been recorded.
 
         Returns:
-            True if errors have been recorded, False otherwise
+            True if errors have been recorded
 
         """
         return bool(self.errors)
@@ -389,41 +348,3 @@ class ErrorHandler:
 
         """
         return len(self.errors)
-
-    def write_validation_report(self, errors: str) -> str:
-        """Write an EDI validation report to a file.
-
-        Args:
-            errors: Error message string to include in the report.
-
-        Returns:
-            Path to the written validation report file.
-
-        """
-        validator_log_name = (
-            f"Validator Log {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
-        )
-        validator_log_path = os.path.join(self.run_log_directory, validator_log_name)
-        content = generate_edi_validation_report(errors)
-        self.fs.write_file_text(validator_log_path, content)
-        return validator_log_path
-
-    def write_processing_report(self, errors: str, version: str) -> str:
-        """Write a processing report to a file.
-
-        Args:
-            errors: Error message string to include in the report.
-            version: Program version string to display in the report header.
-
-        Returns:
-            Path to the written processing report file.
-
-        """
-        folder_log_name = (
-            f"Folder Errors Log"
-            f" {datetime.datetime.now().isoformat().replace(':', '-')}.txt"
-        )
-        folder_log_path = os.path.join(self.run_log_directory, folder_log_name)
-        content = generate_processing_report(errors, version)
-        self.fs.write_file_text(folder_log_path, content)
-        return folder_log_path
