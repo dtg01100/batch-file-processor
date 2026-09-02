@@ -80,13 +80,17 @@ class EDIRecord:
     Attributes:
         record_type: The type of record ('A', 'B', or 'C')
         raw_line: The original raw line from the EDI file
-        fields: Dictionary of parsed field values from the record
+        fields: Phase 11.1 — a ``TypedRecordProxy`` wrapping the
+            appropriate dataclass (``ARecord`` / ``BRecord`` /
+            ``CRecord``). Use ``record.fields.invoice_number`` for
+            attribute access or ``record.fields["invoice_number"]``
+            for legacy dict-style access during the migration window.
 
     """
 
     record_type: str
     raw_line: str
-    fields: dict[str, str]
+    fields: Any  # TypedRecordProxy (forward ref to avoid import cycle)
 
 
 @dataclass
@@ -229,6 +233,8 @@ class BaseEDIConverter(ABC):
             context: The conversion context containing file paths and state
 
         """
+        from webapp.pipeline.converters.typed_records import parse_typed_record
+
         with open(context.edi_filename, encoding="utf-8") as work_file:
             work_file_lined = work_file.readlines()
 
@@ -239,11 +245,21 @@ class BaseEDIConverter(ABC):
                 input_edi_dict = utils.capture_records(line)
 
                 if input_edi_dict is not None:
-                    # Create EDIRecord object
+                    record_type = input_edi_dict["record_type"]
+
+                    # Phase 11.1: known record types wrap into a typed
+                    # proxy. Unknown types keep the dict shape and are
+                    # routed to ``_handle_unknown_record`` (subclasses
+                    # may ignore them by default).
+                    if record_type in ("A", "B", "C"):
+                        fields = parse_typed_record(input_edi_dict)
+                    else:
+                        fields = input_edi_dict
+
                     record = EDIRecord(
-                        record_type=input_edi_dict["record_type"],
+                        record_type=record_type,
                         raw_line=line,
-                        fields=input_edi_dict,
+                        fields=fields,
                     )
 
                     # Dispatch to appropriate hook method based on record type
