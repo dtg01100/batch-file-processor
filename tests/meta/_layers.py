@@ -110,15 +110,15 @@ def _iter_meta_test_files() -> list[Path]:
 
 
 def _iter_dispatch_test_files() -> list[Path]:
-    """test_*.py under tests/dispatch/.
+    """test_*.py under tests/webapp_pipeline/.
 
     These are acceptance/integration-style tests that exercise the dispatch
     service tree end-to-end (customer_queries, customer_lookup_service,
     uom_lookup_service, item_processing). They live under their own
-    ``tests/dispatch/`` layer because they target the dispatch package
-    directly, not the full pipeline.
+    ``tests/webapp_pipeline/`` layer because they target the
+    ``webapp.pipeline`` package directly, not the full pipeline.
     """
-    dispatch_dir = Path("tests/dispatch")
+    dispatch_dir = Path("tests/webapp_pipeline")
     return sorted(p for p in dispatch_dir.rglob("test_*.py"))
 
 
@@ -159,12 +159,12 @@ ALL_LAYERS: list[Layer] = [
         iter_files=lambda: _glob_test_files(Path("tests/webapp")),
     ),
     Layer(
-        name="dispatch",
-        path=Path("tests/dispatch"),
+        name="webapp_pipeline",
+        path=Path("tests/webapp_pipeline"),
         description=(
-            "Dispatch-acceptance tests under tests/dispatch/ "
+            "Pipeline-acceptance tests under tests/webapp_pipeline/ "
             "(customer_queries, lookup services, item_processing). "
-            "Targets the dispatch package directly."
+            "Targets the webapp.pipeline package directly."
         ),
         iter_files=_iter_dispatch_test_files,
     ),

@@ -65,7 +65,7 @@ test = [
 include = [
     "backend*",
     "core*",
-    "dispatch*",
+    "webapp/pipeline*",
     "scripts*",
     "adapters*",
     "webapp*",
@@ -227,91 +227,91 @@ keep-runtime-typing = true
     "C90",
     "ARG",
 ]
-"dispatch/converters/convert_to_csv.py" = [
+"webapp/pipeline/converters/convert_to_csv.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_estore_einvoice.py" = [
+"webapp/pipeline/converters/convert_to_estore_einvoice.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_estore_einvoice_generic.py" = [
+"webapp/pipeline/converters/convert_to_estore_einvoice_generic.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_fintech.py" = [
+"webapp/pipeline/converters/convert_to_fintech.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_funding.py" = [
+"webapp/pipeline/converters/convert_to_funding.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_jolley_custom.py" = [
-    "E402",
-    "E501",
-    "ARG",
-    "C90",
-]
-"dispatch/converters/convert_to_scansheet_type_a.py" = [
+"webapp/pipeline/converters/convert_to_jolley_custom.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_simplified_csv.py" = [
+"webapp/pipeline/converters/convert_to_scansheet_type_a.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_stewarts_custom.py" = [
+"webapp/pipeline/converters/convert_to_simplified_csv.py" = [
     "E402",
     "E501",
     "ARG",
     "C90",
 ]
-"dispatch/converters/convert_to_sears_mosaic.py" = [
+"webapp/pipeline/converters/convert_to_stewarts_custom.py" = [
+    "E402",
+    "E501",
+    "ARG",
+    "C90",
+]
+"webapp/pipeline/converters/convert_to_sears_mosaic.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_smart_invoice.py" = [
+"webapp/pipeline/converters/convert_to_smart_invoice.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_target.py" = [
+"webapp/pipeline/converters/convert_to_target.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_tweaks.py" = [
+"webapp/pipeline/converters/convert_to_tweaks.py" = [
     "E402",
     "E501",
     "ARG",
     "SIM115",
 ]
-"dispatch/converters/convert_to_vendor_specific.py" = [
+"webapp/pipeline/converters/convert_to_vendor_specific.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_walgreens.py" = [
+"webapp/pipeline/converters/convert_to_walgreens.py" = [
     "E402",
     "E501",
     "ARG",
 ]
-"dispatch/converters/convert_to_yellowdog_csv.py" = [
+"webapp/pipeline/converters/convert_to_yellowdog_csv.py" = [
     "E402",
     "E501",
     "ARG",
@@ -320,10 +320,10 @@ keep-runtime-typing = true
 "core/edi/edi_splitting_utils.py" = [
     "SIM115",
 ]
-"dispatch/converters/convert_base.py" = [
+"webapp/pipeline/converters/convert_base.py" = [
     "B027",
 ]
-"dispatch/converters/convert_to_scannerware.py" = [
+"webapp/pipeline/converters/convert_to_scannerware.py" = [
     "E402",
     "E501",
     "ARG",
@@ -332,7 +332,7 @@ keep-runtime-typing = true
 "core/structured_logging.py" = [
     "UP017",
 ]
-"dispatch/observability/audit_logger.py" = [
+"webapp/pipeline/observability/audit_logger.py" = [
     "UP017",
 ]
 [tool.mypy]

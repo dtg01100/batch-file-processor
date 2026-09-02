@@ -1,7 +1,13 @@
-"""Regression tests for the dispatch import cycle.
+"""Regression tests for the webapp.pipeline import cycle.
 
-The dispatch.results -> dispatch.services -> dispatch.pipeline -> dispatch.results
-cycle is order-dependent: the same code that imports fine in tests can raise
+The webapp.pipeline.results -> webapp.pipeline.services ->
+webapp.pipeline.pipeline -> webapp.pipeline.results cycle was
+introduced when the dispatch package was refactored into the
+webapp-owned pipeline (Phase 9.1, 2026-09-02). The tests below
+exercise that each submodule imports cleanly in a fresh
+interpreter; they would catch a cycle being re-introduced.
+
+The cycle is order-dependent: the same code that imports fine in tests can raise
 ``ImportError: cannot import name 'X' from partially initialized module`` when a
 different module is imported FIRST in a fresh process.
 
@@ -21,13 +27,13 @@ pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 # Every entry point that must survive being the first import in a fresh process.
 # Importing any of these used to crash before the results.py fix (2026-08-09).
 CRITICAL_FIRST_IMPORTS = [
-    "dispatch",
-    "dispatch.pipeline",
-    "dispatch.results",
-    "dispatch.orchestrator",
-    "dispatch.services",
-    "dispatch.services.file_processor",
-    "dispatch.send_manager",
+    "webapp.pipeline",
+    "webapp.pipeline.pipeline",
+    "webapp.pipeline.results",
+    "webapp.pipeline.orchestrator",
+    "webapp.pipeline.services",
+    "webapp.pipeline.services.file_processor",
+    "webapp.pipeline.send_manager",
     "webapp.main",
     "webapp.runner",
 ]

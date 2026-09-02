@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from core.edi.inv_fetcher import InvFetcher
-from dispatch.converters import convert_to_yellowdog_csv
+from webapp.pipeline.converters import convert_to_yellowdog_csv
 
 
 class TestConvertToYellowdogCSVFixtures:
@@ -99,7 +99,7 @@ class TestConvertToYellowdogCSVBasicFunctionality(TestConvertToYellowdogCSVFixtu
 
     def test_module_import(self):
         """Test that convert_to_yellowdog_csv module can be imported."""
-        from dispatch.converters import convert_to_yellowdog_csv
+        from webapp.pipeline.converters import convert_to_yellowdog_csv
 
         assert convert_to_yellowdog_csv is not None
         assert hasattr(convert_to_yellowdog_csv, "edi_convert")
@@ -119,7 +119,7 @@ class TestConvertToYellowdogCSVBasicFunctionality(TestConvertToYellowdogCSVFixtu
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -186,7 +186,7 @@ class TestConvertToYellowdogCSVBasicFunctionality(TestConvertToYellowdogCSVFixtu
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -257,7 +257,7 @@ class TestConvertToYellowdogCSVHeaders(TestConvertToYellowdogCSVFixtures):
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -345,10 +345,10 @@ class TestConvertToYellowdogCSVDatabaseLookup(TestConvertToYellowdogCSVFixtures)
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
         with patch(
-            "dispatch.converters.convert_to_yellowdog_csv.InvFetcher", fetcher_class
+            "webapp.pipeline.converters.convert_to_yellowdog_csv.InvFetcher", fetcher_class
         ):
             with patch(
-                "dispatch.converters.convert_to_yellowdog_csv.utils"
+                "webapp.pipeline.converters.convert_to_yellowdog_csv.utils"
             ) as mock_utils:
                 mock_utils.capture_records.side_effect = lambda line: (
                     {
@@ -416,10 +416,10 @@ class TestConvertToYellowdogCSVDatabaseLookup(TestConvertToYellowdogCSVFixtures)
 
         fetcher_class, fetcher_instance = mock_inv_fetcher
         with patch(
-            "dispatch.converters.convert_to_yellowdog_csv.InvFetcher", fetcher_class
+            "webapp.pipeline.converters.convert_to_yellowdog_csv.InvFetcher", fetcher_class
         ):
             with patch(
-                "dispatch.converters.convert_to_yellowdog_csv.utils"
+                "webapp.pipeline.converters.convert_to_yellowdog_csv.utils"
             ) as mock_utils:
                 mock_utils.capture_records.side_effect = lambda line: (
                     {
@@ -514,7 +514,7 @@ class TestConvertToYellowdogCSVEdgeCases(TestConvertToYellowdogCSVFixtures):
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
 
             with pytest.raises(FileNotFoundError):
@@ -541,7 +541,7 @@ class TestConvertToYellowdogCSVEdgeCases(TestConvertToYellowdogCSVFixtures):
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -612,7 +612,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {
@@ -710,7 +710,7 @@ class TestConvertToYellowdogCSVOutputContent(TestConvertToYellowdogCSVFixtures):
         output_file = str(tmp_path / "output")
 
         fetcher_class, _ = mock_inv_fetcher
-        with patch("dispatch.converters.convert_to_yellowdog_csv.utils") as mock_utils:
+        with patch("webapp.pipeline.converters.convert_to_yellowdog_csv.utils") as mock_utils:
             mock_utils.InvFetcher = fetcher_class
             mock_utils.capture_records.side_effect = lambda line: (
                 {

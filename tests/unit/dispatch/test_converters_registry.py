@@ -1,6 +1,6 @@
 """Tests for dispatch.converters.registry module."""
 
-from dispatch.converters.registry import (
+from webapp.pipeline.converters.registry import (
     ConverterMetadata,
     format_exists,
     get_all_converters,
@@ -81,7 +81,7 @@ class TestConverterRegistry:
     def test_get_module_name_valid(self):
         """Test get_module_name with valid format."""
         module = get_module_name("csv")
-        assert module == "dispatch.converters.convert_to_csv"
+        assert module == "webapp.pipeline.converters.convert_to_csv"
 
     def test_get_module_name_invalid(self):
         """Test get_module_name with invalid format returns None."""
@@ -149,7 +149,7 @@ class TestConverterRegistryIntegration:
 
     def test_registry_compatible_with_pipeline_converter(self):
         """Test that registry formats match pipeline SUPPORTED_FORMATS."""
-        from dispatch.pipeline.converter import SUPPORTED_FORMATS
+        from webapp.pipeline.pipeline.converter import SUPPORTED_FORMATS
 
         reg_formats = set(get_format_names())
 

@@ -13,9 +13,9 @@ pytest_plugins = ["tests.conftest_magicmock_plugin"]
 
 from adapters.db2ssh.connection import DB2SSHConnection
 from backend.database import sqlite_wrapper
-from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
-from dispatch.pipeline.interfaces import PipelineStep
-from dispatch.send_manager import SendManager
+from webapp.pipeline.interfaces import ErrorHandlerInterface, FileSystemInterface
+from webapp.pipeline.pipeline.interfaces import PipelineStep
+from webapp.pipeline.send_manager import SendManager
 from migrations import folders_database_migrator
 
 os.environ["DISPATCH_STRICT_TESTING_MODE"] = "true"
@@ -294,7 +294,7 @@ def mock_upc_service(request, monkeypatch):
         # and the injected ``upc_service=`` kwarg keep working.
         return
 
-    from dispatch.services.upc_service import UPCLookupService
+    from webapp.pipeline.services.upc_service import UPCLookupService
 
     def _stub_get_dictionary(self, *args, **kwargs):
         # No-op stub: returns an empty UPC dict and emits no warnings.

@@ -13,7 +13,7 @@ from core.edi.edi_splitting_utils import (
     filter_b_records_by_category,
 )
 from core.utils.date_utils import parse_edi_date
-from dispatch.interfaces import FileSystemInterface
+from webapp.pipeline.interfaces import FileSystemInterface
 
 
 @dataclass

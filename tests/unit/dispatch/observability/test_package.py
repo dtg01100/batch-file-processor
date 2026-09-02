@@ -3,7 +3,7 @@
 
 class TestObservabilityPackage:
     def test_exports(self):
-        from dispatch.observability import (
+        from webapp.pipeline.observability import (
             AlertDispatcher,
             AlertQueue,
             AuditBackgroundWriter,
@@ -18,7 +18,7 @@ class TestObservabilityPackage:
         assert AuditBackgroundWriter is not None
 
     def test_audit_event_can_be_instantiated(self):
-        from dispatch.observability import AuditEvent
+        from webapp.pipeline.observability import AuditEvent
 
         event = AuditEvent(
             correlation_id="test123",

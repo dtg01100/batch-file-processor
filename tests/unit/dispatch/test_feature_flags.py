@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from dispatch.feature_flags import (
+from webapp.pipeline.feature_flags import (
     get_debug_mode,
     get_feature_flags,
     get_strict_testing_mode,

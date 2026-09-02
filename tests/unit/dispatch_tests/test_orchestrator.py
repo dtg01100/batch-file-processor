@@ -4,16 +4,16 @@ import hashlib
 import logging
 from unittest.mock import MagicMock
 
-from dispatch.error_handler import ErrorHandler
-from dispatch.interfaces import RunLog
-from dispatch.orchestrator import (
+from webapp.pipeline.error_handler import ErrorHandler
+from webapp.pipeline.interfaces import RunLog
+from webapp.pipeline.orchestrator import (
     DispatchOrchestrator,
     FileResult,
 )
-from dispatch.pipeline.interfaces import PipelineStep
-from dispatch.pipeline.validator import EDIValidationStep
-from dispatch.results import DispatchConfig, FolderResult
-from dispatch.send_manager import MockBackend
+from webapp.pipeline.pipeline.interfaces import PipelineStep
+from webapp.pipeline.pipeline.validator import EDIValidationStep
+from webapp.pipeline.results import DispatchConfig, FolderResult
+from webapp.pipeline.send_manager import MockBackend
 
 
 class MockDatabase:
@@ -144,7 +144,7 @@ class TestOrchestratorFinalize:
     """
 
     def _make_orchestrator(self):
-        from dispatch.orchestrator import DispatchOrchestrator
+        from webapp.pipeline.orchestrator import DispatchOrchestrator
 
         config = DispatchConfig()
         return DispatchOrchestrator(config)
@@ -302,7 +302,7 @@ class TestDispatchOrchestrator:
         run_log = MagicMock(spec=RunLog)
 
         # Process files
-        with caplog.at_level(logging.DEBUG, logger="dispatch.orchestrator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.orchestrator"):
             result = orchestrator.process_folder(folder, run_log)
 
         # Check that files were processed
@@ -380,7 +380,7 @@ class TestDispatchOrchestrator:
 
         folder = {"folder_name": "/data/input", "process_edi": "True"}
 
-        with caplog.at_level(logging.DEBUG, logger="dispatch.orchestrator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.orchestrator"):
             result = orchestrator.process_file("/data/input/file.edi", folder)
 
         assert result.validated is False

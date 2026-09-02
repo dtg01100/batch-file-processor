@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from dispatch.pipeline.validator import (
+from webapp.pipeline.pipeline.validator import (
     EDIValidationStep,
     MockValidator,
     ValidationError,
@@ -522,7 +522,7 @@ class TestEDIValidationStep:
         mock_fs = MockFileSystem({"/test/valid.edi": valid_edi_content})
 
         step = EDIValidationStep(file_system=mock_fs)
-        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.pipeline.validator"):
             result = step.validate("/test/valid.edi", "valid.edi")
 
         assert result.is_valid is True
@@ -534,7 +534,7 @@ class TestEDIValidationStep:
         mock_fs = MockFileSystem({"/test/invalid.edi": invalid_edi_content})
 
         step = EDIValidationStep(file_system=mock_fs)
-        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.pipeline.validator"):
             result = step.validate("/test/invalid.edi", "invalid.edi")
 
         assert result.is_valid is False
@@ -548,7 +548,7 @@ class TestEDIValidationStep:
         mock_fs = MockFileSystem({"/test/minor.edi": edi_content_with_minor_errors})
 
         step = EDIValidationStep(file_system=mock_fs)
-        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.validator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.pipeline.validator"):
             result = step.validate("/test/minor.edi", "minor.edi")
 
         assert result.is_valid is True

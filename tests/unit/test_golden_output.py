@@ -49,8 +49,8 @@ from typing import Any
 import pytest
 
 from core.database import QueryRunner, SQLiteConnection
-from dispatch.services.customer_lookup_service import CustomerLookupService
-from dispatch.services.uom_lookup_service import UOMLookupService
+from webapp.pipeline.services.customer_lookup_service import CustomerLookupService
+from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
 _project_root = Path(__file__).parent.parent.parent.parent
 if str(_project_root) not in sys.path:
@@ -649,7 +649,7 @@ def run_converter(
     import tempfile
 
     # Import the edi_convert function for the specified format
-    module_name = f"dispatch.converters.convert_to_{format_name}"
+    module_name = f"webapp.pipeline.converters.convert_to_{format_name}"
     module = __import__(module_name, fromlist=["edi_convert"])
     edi_convert = module.edi_convert
 
@@ -717,7 +717,7 @@ def run_converter(
         if test_customer_data is not None or test_uom_data is not None:
             import csv
 
-            from dispatch.converters.customer_queries import BASIC_CUSTOMER_QUERY_SQL
+            from webapp.pipeline.converters.customer_queries import BASIC_CUSTOMER_QUERY_SQL
 
             # Dynamically find the converter class by name
             converter_cls_name = (
@@ -735,7 +735,7 @@ def run_converter(
 
             # Use STEWARTS_CUSTOMER_QUERY_SQL for stewarts_custom, BASIC_CUSTOMER_QUERY_SQL for jolley_custom
             if format_name == "stewarts_custom":
-                from dispatch.converters.customer_queries import (
+                from webapp.pipeline.converters.customer_queries import (
                     STEWARTS_CUSTOMER_QUERY_SQL,
                 )
 

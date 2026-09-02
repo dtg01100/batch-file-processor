@@ -34,8 +34,8 @@ Checks implemented:
 - ``bare_except_pass`` — ``except ...: pass`` (silent error swallowing).
 - ``unjustified_noqa`` — ``# noqa`` without a trailing ``: CODE — reason``
   justification. Bare ``# noqa`` hides lint findings.
-- ``single_item_dispatch_root_import`` — ``from dispatch import X`` with
-  a single name. AGENTS.md prefers ``from dispatch.module import X``;
+- ``single_item_dispatch_root_import`` — ``from webapp.pipeline import X`` with
+  a single name. AGENTS.md prefers ``from webapp.pipeline.module import X``;
   multiple items from ``dispatch`` root is acceptable.
 
 Coverage scope (current):
@@ -669,7 +669,7 @@ def _check_assert_is_bool_comparison(file: Path) -> list[Violation]:
 
 
 # ---------------------------------------------------------------------------
-# Check: from dispatch import X (single item).
+# Check: from webapp.pipeline import X (single item).
 # ---------------------------------------------------------------------------
 
 
@@ -702,10 +702,10 @@ def _check_single_item_dispatch_root(file: Path) -> list[Violation]:
                 line=node.lineno,
                 rule="single_item_dispatch_root_import",
                 message=(
-                    f"from dispatch import {names[0].name} — use "
-                    f"from dispatch.{_module_for(names[0].name)} import "
+                    f"from webapp.pipeline import {names[0].name} — use "
+                    f"from webapp.pipeline.{_module_for(names[0].name)} import "
                     f"{names[0].name} (AGENTS.md Import Conventions). "
-                    "Multi-item 'from dispatch import A, B' is acceptable."
+                    "Multi-item 'from webapp.pipeline import A, B' is acceptable."
                 ),
                 source=src,
             )

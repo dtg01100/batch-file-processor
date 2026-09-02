@@ -14,7 +14,7 @@ import os
 
 import pytest
 
-from dispatch.converters import convert_to_scannerware
+from webapp.pipeline.converters import convert_to_scannerware
 
 
 class TestConvertToScannerwareFixtures:
@@ -87,7 +87,7 @@ class TestConvertToScannerwareBasicFunctionality(TestConvertToScannerwareFixture
 
     def test_module_import(self):
         """Test that convert_to_scannerware module can be imported."""
-        from dispatch.converters import convert_to_scannerware
+        from webapp.pipeline.converters import convert_to_scannerware
 
         assert convert_to_scannerware is not None
         assert hasattr(convert_to_scannerware, "edi_convert")

@@ -7,7 +7,7 @@ not be caught by any test.
 
 Scope:
   - Walks every ``.py`` file under the production roots:
-    ``core/``, ``dispatch/``, ``backend/``,
+    ``core/``, ``webapp/pipeline/``, ``backend/``,
     ``adapters/`` (and ``batch_file_processor/``, the compatibility
     shim).
   - Excludes ``__init__.py`` modules (these are namespace shims; their
@@ -68,7 +68,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # was deleted in commit ``2f29cca57``'s follow-on (Phase 7b.3).
 PRODUCTION_ROOTS: list[tuple[str, str]] = [
     ("core", "core"),
-    ("dispatch", "dispatch"),
+    ("webapp/pipeline", "webapp/pipeline"),
     ("backend", "backend"),
     ("adapters", "adapters"),
     ("batch_file_processor", "batch_file_processor"),
@@ -120,11 +120,11 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
     # ---- core utility modules ----
     # Retail UOM conversions. Defined in core/edi/retail_uom.py but
     # not imported by any test; the unit conversion path lives in
-    # dispatch/services/uom_lookup_service.py and is exercised there.
+    # webapp/pipeline/services/uom_lookup_service.py and is exercised there.
     (
         "core/edi/retail_uom.py",
         "retail-UOM constants; not imported by any test "
-        "(UOM lookup is covered via dispatch.services.uom_lookup_service)",
+        "(UOM lookup is covered via webapp.pipeline.services.uom_lookup_service)",
     ),
     # EDI format-parser helper. Same module is referenced indirectly
     # through core/edi/edi_parser.py tests.
@@ -149,39 +149,39 @@ KNOWN_UNCOVERED: list[tuple[str, str]] = [
         "generic utility module; not imported by any test "
         "(superseded by more specific core/utils/* modules)",
     ),
-    # ---- dispatch ----
+    # ---- webapp/pipeline ----
     # Converters that are imported only at runtime via patch() string
     # references OR that have no test (the registry holds them but
     # they're not exercised end-to-end).
     (
-        "dispatch/converters/convert_to_simplified_csv.py",
+        "webapp/pipeline/converters/convert_to_simplified_csv.py",
         "simplified CSV converter; test exists but imports via "
         "patch() string reference only (see test_all_processing_flows)",
     ),
     (
-        "dispatch/converters/convert_to_stewarts_custom.py",
+        "webapp/pipeline/converters/convert_to_stewarts_custom.py",
         "Stewart's custom converter; no end-to-end test yet "
         "(converter is registered but not on the live codepath)",
     ),
     (
-        "dispatch/converters/convert_to_tweaks.py",
-        "tweaks converter; the dispatch/pipeline/tweaker step was "
+        "webapp/pipeline/converters/convert_to_tweaks.py",
+        "tweaks converter; the webapp/pipeline/pipeline/tweaker step was "
         "removed and replaced with convert_to_format='tweaks' — see "
         "AGENTS.md 'Removed/Migrated Components' table",
     ),
     (
-        "dispatch/pipeline/factory.py",
+        "webapp/pipeline/pipeline/factory.py",
         "pipeline factory; not imported by any test "
         "(pipeline is constructed inline in tests)",
     ),
     (
-        "dispatch/services/folder_discovery.py",
+        "webapp/pipeline/services/folder_discovery.py",
         "folder discovery helper; covered transitively via " "FolderProcessor tests",
     ),
     (
-        "dispatch/services/progress_reporting.py",
+        "webapp/pipeline/services/progress_reporting.py",
         "progress reporting module; covered transitively via "
-        "dispatch.services.progress_reporter (note the singular); "
+        "webapp.pipeline.services.progress_reporter (note the singular); "
         "consider deleting one if they're truly redundant",
     ),
     # ---- scripts ----
@@ -268,7 +268,7 @@ def _is_production_path(path: Path) -> bool:
         return False
     # Skip vendored fixture trees that happen to live under a
     # production root (e.g. tests/fixtures/legacy_147/dispatch.py
-    # mirrors dispatch/orchestrator.py shape).
+    # mirrors webapp/pipeline/orchestrator.py shape).
     rel_str = str(rel)
     return not (
         rel_str.startswith("tests/") or "fixtures/" in rel_str or "/legacy_" in rel_str
@@ -309,7 +309,7 @@ def _iter_test_imports() -> set[str]:
     statement. Also extracts dotted module paths from string arguments
     to ``unittest.mock.patch`` and ``monkeypatch.setattr`` because those
     are common runtime-import paths that don't show up as AST imports
-    (e.g. ``patch("dispatch.converters.convert_to_csv.edi_convert")``).
+    (e.g. ``patch("webapp.pipeline.converters.convert_to_csv.edi_convert")``).
     """
     imports: set[str] = set()
     tests_root = PROJECT_ROOT / "tests"
@@ -355,9 +355,9 @@ def _collect_string_import_targets(call: ast.Call, imports: set[str]) -> None:
     string-argument calls.
 
     The shape of the string argument depends on the function:
-      - ``patch("dispatch.converters.convert_to_csv.edi_convert")`` —
+      - ``patch("webapp.pipeline.converters.convert_to_csv.edi_convert")`` —
         patches attribute ``edi_convert`` of module
-        ``dispatch.converters.convert_to_csv``. The module is the
+        ``webapp.pipeline.converters.convert_to_csv``. The module is the
         prefix before the last dot.
       - ``patch.object(SomeClass, "method")`` — we do NOT infer a
         module from this shape (the class is the import target, and
@@ -365,13 +365,13 @@ def _collect_string_import_targets(call: ast.Call, imports: set[str]) -> None:
       - ``monkeypatch.setattr("module.attr", value)`` — first
         positional arg; same prefix-before-last-dot rule as
         ``patch``.
-      - ``import_module("dispatch.converters.convert_to_csv")`` —
+      - ``import_module("webapp.pipeline.converters.convert_to_csv")`` —
         imports the module whose name is the WHOLE string. The
         call does not have an attribute-access shape (the function
         call takes a module name, not a path to a function), so
         the prefix-before-last-dot rule would be wrong: it would
-        record ``dispatch.converters`` instead of the actual
-        imported module ``dispatch.converters.convert_to_csv``.
+        record ``webapp.pipeline.converters`` instead of the actual
+        imported module ``webapp.pipeline.converters.convert_to_csv``.
 
     Only paths that look like a Python module (lowercase + underscore
     segments; reject class-like CamelCase) are recorded.
@@ -557,8 +557,8 @@ def test_coverage_runner_self_check() -> None:
         # A naive rsplit(". ", 1)[0] would record the parent path
         # and miss the actual module being imported.
         (
-            'importlib.import_module("dispatch.converters.convert_to_csv")',
-            {"dispatch.converters.convert_to_csv"},
+            'importlib.import_module("webapp.pipeline.converters.convert_to_csv")',
+            {"webapp.pipeline.converters.convert_to_csv"},
         ),
         (
             # Bare module name (no dot) — the runner's

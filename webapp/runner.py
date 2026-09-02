@@ -19,9 +19,9 @@ import time
 import uuid
 from typing import Any
 
-from dispatch.error_handler import ErrorHandler
-from dispatch.orchestrator import DispatchOrchestrator
-from dispatch.pipeline.factory import create_standard_pipeline
+from webapp.pipeline.error_handler import ErrorHandler
+from webapp.pipeline.orchestrator import DispatchOrchestrator
+from webapp.pipeline.pipeline.factory import create_standard_pipeline
 from webapp.config import Settings
 from webapp.converters_api import merge_plugin_config
 from webapp.database import lock, open_database

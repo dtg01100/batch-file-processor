@@ -12,7 +12,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from dispatch.services.file_filter import (
+from webapp.pipeline.services.file_filter import (
     filter_pending_files,
     get_skipped_checksums,
     record_file_mtime,

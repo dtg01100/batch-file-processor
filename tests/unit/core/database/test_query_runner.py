@@ -313,7 +313,7 @@ def test_database_connection_mixin_uses_create_query_runner_from_settings(
     monkeypatch,
 ):
     """Ensure DatabaseConnectionMixin uses create_query_runner_from_settings."""
-    from dispatch.converters.mixins import DatabaseConnectionMixin
+    from webapp.pipeline.converters.mixins import DatabaseConnectionMixin
 
     called = {}
 
@@ -353,7 +353,7 @@ def test_database_connection_mixin_uses_create_query_runner_from_settings(
 
 def test_database_connection_mixin_allows_key_only(monkeypatch):
     """Test DatabaseConnectionMixin can use ssh key auth without password."""
-    from dispatch.converters.mixins import DatabaseConnectionMixin
+    from webapp.pipeline.converters.mixins import DatabaseConnectionMixin
 
     called = {}
 

@@ -16,8 +16,8 @@ import os
 
 import pytest
 
-from dispatch.converters import convert_to_x810
-from dispatch.converters.convert_to_x810 import X810Converter
+from webapp.pipeline.converters import convert_to_x810
+from webapp.pipeline.converters.convert_to_x810 import X810Converter
 
 
 def _a(invoice_number="INV001", invoice_date="010125", invoice_total="0000050000"):
@@ -92,10 +92,10 @@ class TestMetadata:
         md = convert_to_x810.CONVERTER_METADATA
         assert md["format_name"] == "x810"
         assert md["display_name"] == "X12 810 (Invoice)"
-        assert md["module_name"] == "dispatch.converters.convert_to_x810"
+        assert md["module_name"] == "webapp.pipeline.converters.convert_to_x810"
 
     def test_registry_picks_up_x810(self):
-        from dispatch.converters.registry import (
+        from webapp.pipeline.converters.registry import (
             format_exists,
             get_converter_by_name,
             get_format_names,

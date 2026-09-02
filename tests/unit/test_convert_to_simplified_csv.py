@@ -16,7 +16,7 @@ import os
 
 import pytest
 
-from dispatch.converters import convert_to_simplified_csv
+from webapp.pipeline.converters import convert_to_simplified_csv
 
 
 class TestConvertToSimplifiedCSVFixtures:
@@ -80,7 +80,7 @@ class TestConvertToSimplifiedCSVBasicFunctionality(TestConvertToSimplifiedCSVFix
 
     def test_module_import(self):
         """Test that convert_to_simplified_csv module can be imported."""
-        from dispatch.converters import convert_to_simplified_csv
+        from webapp.pipeline.converters import convert_to_simplified_csv
 
         assert convert_to_simplified_csv is not None
         assert hasattr(convert_to_simplified_csv, "edi_convert")
@@ -770,7 +770,7 @@ class TestSimplifiedCSVEachUOMCategoryFilter(TestConvertToSimplifiedCSVFixtures)
         upc_lookup,
         tmp_path,
     ):
-        from dispatch.converters import convert_to_simplified_csv
+        from webapp.pipeline.converters import convert_to_simplified_csv
 
         b_record = (
             "B"

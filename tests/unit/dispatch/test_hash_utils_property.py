@@ -13,7 +13,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from dispatch.hash_utils import (
+from webapp.pipeline.hash_utils import (
     build_hash_dictionaries,
     check_file_against_processed,
     generate_file_hash,

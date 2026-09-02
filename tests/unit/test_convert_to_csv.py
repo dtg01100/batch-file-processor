@@ -16,7 +16,7 @@ import os
 import pytest
 
 # Import the module to test
-from dispatch.converters import convert_to_csv
+from webapp.pipeline.converters import convert_to_csv
 
 
 class TestConvertToCSVFixtures:
@@ -149,7 +149,7 @@ class TestConvertToCSVBasicFunctionality(TestConvertToCSVFixtures):
 
     def test_module_import(self):
         """Test that convert_to_csv module can be imported."""
-        from dispatch.converters import convert_to_csv
+        from webapp.pipeline.converters import convert_to_csv
 
         assert convert_to_csv is not None
         assert hasattr(convert_to_csv, "edi_convert")

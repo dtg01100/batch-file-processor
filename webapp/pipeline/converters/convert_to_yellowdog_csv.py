@@ -1,0 +1,315 @@
+"""YellowDog CSV EDI Converter - Refactored to use Template Method Pattern.
+
+This module converts EDI files to YellowDog CSV format with database lookups
+for customer information. It has been refactored to use the BaseEDIConverter
+base class, eliminating ~60 lines of duplicated code while maintaining the
+exact same behavior and output format.
+
+The converter features:
+- Database lookups via InvFetcher for customer name and PO number
+- Batching pattern that collects B and C records per invoice
+- Reverses B and C record order before output (as per original behavior)
+- Specific CSV column layout with all values quoted
+
+Output Columns:
+    Invoice Total, Description, Item Number, Cost, Quantity, UOM Desc.,
+    Invoice Date, Invoice Number, Customer Name, Customer PO Number, UPC
+
+Backward Compatibility:
+    The module-level edi_convert() function maintains the same signature
+    as before: edi_convert(edi_process, output_filename, settings_dict,
+    parameters_dict, upc_lookup)
+"""
+
+CONVERTER_METADATA = {
+    "format_name": "yellowdog_csv",
+    "display_name": "yellowdog_csv",
+    "description": "Convert EDI to YellowDog CSV format",
+    "module_name": "webapp.pipeline.converters.convert_to_yellowdog_csv",
+}
+
+
+import csv
+from datetime import datetime
+
+from core import utils
+from core.edi.inv_fetcher import InvFetcher
+from core.structured_logging import get_logger
+from core.utils import safe_int
+from webapp.pipeline.converters.convert_base import (
+    BaseEDIConverter,
+    ConversionContext,
+    EDIRecord,
+    create_csv_writer,
+    make_edi_convert,
+)
+
+logger = get_logger(__name__)
+
+
+class YellowDogConverter(BaseEDIConverter):
+    """Converter for YellowDog CSV format with database lookups.
+
+    This class implements the hook methods required by BaseEDIConverter
+    to produce YellowDog-compatible CSV output. It features:
+    - Batching of B and C records per invoice
+    - Database lookups for customer name and PO number
+    - Reversed output order for B and C records
+    """
+
+    def _initialize_output(self, context: ConversionContext) -> None:
+        """Initialize CSV output file, writer, and batching state.
+
+        Args:
+            context: The conversion context
+
+        """
+        # Initialize InvFetcher for database lookups
+        settings_dict = context.settings_dict
+        params = context.parameters_dict or {}
+        mode_raw = params.get(
+            "database_lookup_mode",
+            settings_dict.get("database_lookup_mode", "optional"),
+        )
+        self.database_lookup_mode = str(mode_raw).strip().lower()
+        strict_db_mode = self.database_lookup_mode in {"strict", "required", "test"}
+
+        required_keys = (
+            "as400_username",
+            "as400_password",
+            "as400_address",
+        )
+        missing_keys = [key for key in required_keys if not settings_dict.get(key)]
+
+        if strict_db_mode and missing_keys:
+            raise ValueError(
+                "YellowDog strict database_lookup_mode is enabled but missing "
+                f"AS400 settings: {', '.join(missing_keys)}"
+            )
+
+        query_runner = None
+        if not missing_keys:
+            try:
+                from core.database.query_runner import create_query_runner_from_settings
+
+                query_runner = create_query_runner_from_settings(settings_dict)
+                logger.debug("YellowDog database lookup runner initialized")
+            except Exception:
+                if strict_db_mode:
+                    raise
+                logger.exception(
+                    "YellowDog could not initialize DB query runner;"
+                    " continuing in optional mode"
+                )
+
+        if query_runner is None and strict_db_mode:
+            raise RuntimeError(
+                "YellowDog strict database_lookup_mode requires"
+                " a working AS400 query runner"
+            )
+
+        inv_fetcher_settings = dict(settings_dict)
+        inv_fetcher_settings["database_lookup_mode"] = self.database_lookup_mode
+        self.inv_fetcher = InvFetcher(query_runner, inv_fetcher_settings)
+
+        # Initialize batching state
+        self.arec_line: dict[str, str] = {}
+        self.brec_lines: list[dict[str, str]] = []
+        self.crec_lines: list[dict[str, str]] = []
+        self.brec_index = 0
+
+        # Open output file and create CSV writer
+        context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output
+            context.get_output_path(".csv"), "w", newline="", encoding="utf-8"
+        )
+        context.csv_writer = create_csv_writer(
+            context.output_file,
+            dialect="excel",
+            lineterminator="\r\n",
+            quoting=csv.QUOTE_ALL,
+        )
+
+        # Write headers
+        writer = context.csv_writer
+        assert writer is not None
+        writer.writerow(
+            [
+                "Invoice Total",
+                "Description",
+                "Item Number",
+                "Cost",
+                "Quantity",
+                "UOM Desc.",
+                "Invoice Date",
+                "Invoice Number",
+                "Customer Name",
+                "Customer PO Number",
+                "UPC",
+            ]
+        )
+
+    def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process an A record (header), flushing previous invoice if exists.
+
+        Args:
+            record: The A record
+            context: The conversion context
+
+        """
+        # Flush previous invoice's records if we have any
+        if self.brec_lines:
+            self._flush_to_csv(context)
+
+        # Store new A record
+        self.arec_line = record.fields
+        self.brec_index = 0
+
+    def process_b_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process a B record (line item), adding to batch.
+
+        Args:
+            record: The B record
+            context: The conversion context
+
+        """
+        self.brec_lines.append(record.fields)
+
+    def process_c_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        """Process a C record (charge/tax), adding to batch.
+
+        Args:
+            record: The C record
+            context: The conversion context
+
+        """
+        self.crec_lines.append(record.fields)
+
+    def _finalize_output(self, context: ConversionContext) -> None:
+        """Finalize output by flushing remaining records and closing file.
+
+        Args:
+            context: The conversion context
+
+        """
+        # Flush any remaining records
+        if self.brec_lines or self.crec_lines:
+            self._flush_to_csv(context)
+
+        # Close the output file
+        if context.output_file is not None:
+            context.output_file.close()
+            context.output_file = None
+
+    def _flush_to_csv(self, context: ConversionContext) -> None:
+        """Flush batched B and C records to CSV.
+
+        Reverses record order (as per original behavior) and writes
+        all records with database lookups for customer info.
+
+        The invoice consists of batched B records (line items) and C records
+        (charges/taxes), all sharing the same A record (invoice header) context.
+
+        Args:
+            context: The conversion context containing the CSV writer,
+                output file, and user data (arec_line, brec_lines, crec_lines).
+
+        """
+        csv_writer = context.csv_writer
+        assert (
+            csv_writer is not None
+        ), "csv_writer must be initialized in _initialize_output"
+
+        # Reverse record order (original behavior)
+        self.brec_lines.reverse()
+        self.crec_lines.reverse()
+
+        # Calculate invoice date
+        try:
+            invoice_date = datetime.strftime(
+                utils.datetime_from_invtime(self.arec_line["invoice_date"]), "%Y%m%d"
+            )
+        except (ValueError, KeyError):
+            logger.debug(
+                "Failed to parse invoice date: %s", self.arec_line.get("invoice_date")
+            )
+            invoice_date = "N/A"
+
+        # Get invoice total
+        try:
+            invoice_total = utils.convert_to_price(
+                str(utils.dac_str_int_to_int(self.arec_line["invoice_total"]))
+            )
+        except (KeyError, ValueError):
+            logger.debug(
+                "Failed to get invoice total: %s", self.arec_line.get("invoice_total")
+            )
+            invoice_total = "0.00"
+
+        # Get invoice number for lookups
+        try:
+            invoice_number = self.arec_line["invoice_number"]
+        except KeyError:
+            logger.debug("Missing invoice_number in arec")
+            invoice_number = "0"
+
+        # Fetch customer info from database
+        customer_name = self.inv_fetcher.fetch_cust_name(safe_int(invoice_number))
+        customer_po = self.inv_fetcher.fetch_po(safe_int(invoice_number))
+        # Write B records (line items)
+        lineno = 0
+        while self.brec_lines:
+            curline = self.brec_lines.pop()
+
+            # Fetch UOM description
+            uom_desc = self.inv_fetcher.fetch_uom_desc(
+                safe_int(curline["vendor_item"]),
+                safe_int(curline["unit_multiplier"]),
+                lineno,
+                safe_int(invoice_number),
+            )
+
+            csv_writer.writerow(
+                [
+                    invoice_total,
+                    curline["description"],
+                    curline["vendor_item"],
+                    utils.convert_to_price(curline["unit_cost"]),
+                    utils.dac_str_int_to_int(curline["qty_of_units"]),
+                    uom_desc,
+                    invoice_date,
+                    invoice_number,
+                    customer_name,
+                    customer_po,
+                    curline["upc_number"],
+                ]
+            )
+            lineno += 1
+
+        # Write C records (charges)
+        while self.crec_lines:
+            curline = self.crec_lines.pop()
+
+            try:
+                charge_amount = utils.convert_to_price(
+                    str(utils.dac_str_int_to_int(self.arec_line["invoice_total"]))
+                )
+            except (KeyError, ValueError):
+                charge_amount = "0.00"
+
+            csv_writer.writerow(
+                [
+                    charge_amount,
+                    curline["description"],
+                    9999999,
+                    utils.convert_to_price(curline["amount"]),
+                    1,
+                    "",
+                    invoice_date,
+                    invoice_number,
+                    customer_name,
+                    "",  # No PO for C records
+                ]
+            )
+
+
+edi_convert = make_edi_convert(YellowDogConverter)

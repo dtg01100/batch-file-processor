@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dispatch.hash_utils import (
+from webapp.pipeline.hash_utils import (
     build_hash_dictionaries,
     generate_file_hash,
     generate_match_lists,
@@ -121,7 +121,7 @@ class TestGenerateFileHash:
 
     def test_generate_hash_file_not_found(self):
         """Test hash generation for non-existent file."""
-        with patch("dispatch.hash_utils.time.sleep"):
+        with patch("webapp.pipeline.hash_utils.time.sleep"):
             with pytest.raises(FileNotFoundError):
                 generate_file_hash("/nonexistent/path/file.txt")
 
@@ -154,8 +154,8 @@ class TestGenerateFileHash:
     def test_generate_hash_uses_exact_max_retries_for_failures(self):
         """Regression: generate_file_hash should attempt exactly max_retries times on failure."""
         with (
-            patch("dispatch.hash_utils.open", side_effect=OSError("fail")) as mock_open,
-            patch("dispatch.hash_utils.time.sleep"),
+            patch("webapp.pipeline.hash_utils.open", side_effect=OSError("fail")) as mock_open,
+            patch("webapp.pipeline.hash_utils.time.sleep"),
         ):
             with pytest.raises(OSError, match="fail"):
                 generate_file_hash("/tmp/nonexistent", max_retries=3)
@@ -247,7 +247,7 @@ class TestGenerateFileHashRetryCount:
                 return original_open(*args, **kwargs)
 
             with patch("builtins.open", mock_open):
-                with patch("dispatch.hash_utils.time.sleep"):  # Speed up test
+                with patch("webapp.pipeline.hash_utils.time.sleep"):  # Speed up test
                     generate_file_hash(temp_path, max_retries=3)
 
             # With max_retries=3, we should get exactly 4 total attempts:

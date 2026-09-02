@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from core.database.query_runner import QueryRunner
-from dispatch.services.database_connector import DatabaseConnector
+from webapp.pipeline.services.database_connector import DatabaseConnector
 
 
 class TestDatabaseConnector:

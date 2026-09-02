@@ -561,7 +561,7 @@ class TestConvertToFintech:
         sample_upc_dict,
     ):
         """Test conversion with valid EDI data."""
-        from dispatch.converters import convert_to_fintech
+        from webapp.pipeline.converters import convert_to_fintech
 
         input_file = tmp_path / "test.edi"
         input_file.write_text(sample_edi_content)
@@ -595,7 +595,7 @@ class TestConvertToFintech:
         self, tmp_path, sample_settings_dict, sample_upc_dict
     ):
         """Test that fintech CSV has correct structure."""
-        from dispatch.converters import convert_to_fintech
+        from webapp.pipeline.converters import convert_to_fintech
 
         # Verify headers are defined in the module
         # The actual CSV is generated dynamically, so we check the function signature
@@ -647,7 +647,7 @@ class TestConvertToYellowdogCSV:
 
     def test_strict_mode_requires_as400_settings(self, tmp_path):
         """Strict DB mode should fail fast when AS400 credentials are missing."""
-        from dispatch.converters import convert_to_yellowdog_csv
+        from webapp.pipeline.converters import convert_to_yellowdog_csv
 
         input_file = tmp_path / "input.edi"
         input_file.write_text("AVENDOR 00000000010101250000010000\n", encoding="utf-8")
@@ -663,7 +663,7 @@ class TestConvertToYellowdogCSV:
 
     def test_optional_mode_allows_missing_db_credentials(self, tmp_path):
         """Optional DB mode should still generate output with fallback values."""
-        from dispatch.converters import convert_to_yellowdog_csv
+        from webapp.pipeline.converters import convert_to_yellowdog_csv
 
         input_file = tmp_path / "input.edi"
         input_file.write_text("AVENDOR 00000000010101250000010000\n", encoding="utf-8")
@@ -755,7 +755,7 @@ class TestConvertFormatConfiguration:
 
     def test_supported_formats(self):
         """Test that all supported formats are registered."""
-        from dispatch.converters.registry import get_format_names
+        from webapp.pipeline.converters.registry import get_format_names
 
         # Core formats that should always be importable
         core_formats = [
@@ -781,19 +781,19 @@ class TestConvertFormatConfiguration:
 
     def test_format_to_module_mapping(self):
         """Test that format names map to correct module paths."""
-        from dispatch.converters.registry import get_module_name
+        from webapp.pipeline.converters.registry import get_module_name
 
         # Verify module paths for core formats
         format_mapping = {
-            "fintech": "dispatch.converters.convert_to_fintech",
-            "simplified_csv": "dispatch.converters.convert_to_simplified_csv",
-            "stewarts_custom": "dispatch.converters.convert_to_stewarts_custom",
-            "yellowdog_csv": "dispatch.converters.convert_to_yellowdog_csv",
-            "estore_einvoice": "dispatch.converters.convert_to_estore_einvoice",
-            "estore_einvoice_generic": "dispatch.converters.convert_to_estore_einvoice_generic",
-            "csv": "dispatch.converters.convert_to_csv",
-            "scannerware": "dispatch.converters.convert_to_scannerware",
-            "jolley_custom": "dispatch.converters.convert_to_jolley_custom",
+            "fintech": "webapp.pipeline.converters.convert_to_fintech",
+            "simplified_csv": "webapp.pipeline.converters.convert_to_simplified_csv",
+            "stewarts_custom": "webapp.pipeline.converters.convert_to_stewarts_custom",
+            "yellowdog_csv": "webapp.pipeline.converters.convert_to_yellowdog_csv",
+            "estore_einvoice": "webapp.pipeline.converters.convert_to_estore_einvoice",
+            "estore_einvoice_generic": "webapp.pipeline.converters.convert_to_estore_einvoice_generic",
+            "csv": "webapp.pipeline.converters.convert_to_csv",
+            "scannerware": "webapp.pipeline.converters.convert_to_scannerware",
+            "jolley_custom": "webapp.pipeline.converters.convert_to_jolley_custom",
         }
 
         for format_name, expected_module in format_mapping.items():

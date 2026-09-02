@@ -14,7 +14,7 @@ import platform as _platform
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from dispatch.preflight_validator import PreflightIssue, PreflightValidator
+from webapp.pipeline.preflight_validator import PreflightIssue, PreflightValidator
 from webapp.backup import list_backups
 from webapp.config import Settings
 from webapp.database import lock, open_database

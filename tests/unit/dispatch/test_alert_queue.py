@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from dispatch.observability.alert_queue import AlertQueue
+from webapp.pipeline.observability.alert_queue import AlertQueue
 
 
 class TestAlertQueueMalformedLines:

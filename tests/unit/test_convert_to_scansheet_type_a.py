@@ -4,7 +4,7 @@ import io as _io
 
 import pytest
 
-from dispatch.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
+from webapp.pipeline.converters.convert_to_scansheet_type_a import ScanSheetTypeAConverter
 
 # pyzbar is required for the round-trip barcode tests. If it's not
 # installed, the entire module is skipped — the tests cannot meaningfully

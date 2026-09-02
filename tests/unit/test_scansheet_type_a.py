@@ -42,7 +42,7 @@ def run_scansheet_converter(
     Returns:
         Path to output file, or None if conversion failed
     """
-    from dispatch.converters.convert_to_scansheet_type_a import edi_convert
+    from webapp.pipeline.converters.convert_to_scansheet_type_a import edi_convert
 
     if params is None:
         params = {}

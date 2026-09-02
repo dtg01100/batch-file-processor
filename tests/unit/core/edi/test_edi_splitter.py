@@ -8,7 +8,7 @@ from core.edi.edi_splitter import (
     SplitResult,
 )
 from core.edi.edi_splitting_utils import _col_to_excel, filter_b_records_by_category
-from dispatch.file_system import RealFileSystem as RealFilesystem
+from webapp.pipeline.file_system import RealFileSystem as RealFilesystem
 
 
 class TestColToExcel:

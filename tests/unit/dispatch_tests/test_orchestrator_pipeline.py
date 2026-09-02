@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dispatch.orchestrator import DispatchConfig, DispatchOrchestrator, FileResult
+from webapp.pipeline.orchestrator import DispatchConfig, DispatchOrchestrator, FileResult
 
 pytestmark = [pytest.mark.unit, pytest.mark.dispatch, pytest.mark.integration]
 
@@ -470,7 +470,7 @@ class TestGetUPCDictionary:
         ]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub_runner,
         )
 
@@ -508,7 +508,7 @@ class TestGetUPCDictionary:
         ]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub_runner,
         )
 
@@ -537,7 +537,7 @@ class TestGetUPCDictionary:
         rows = [{"bad_key": "bad_value"}]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub_runner,
         )
 
@@ -558,7 +558,7 @@ class TestGetUPCDictionary:
         rows = [{"bad_key": "bad_value"}]
         stub_runner = self._StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub_runner,
         )
 

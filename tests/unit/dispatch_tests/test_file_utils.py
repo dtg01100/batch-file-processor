@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from dispatch.file_utils import (
+from webapp.pipeline.file_utils import (
     build_error_log_filename,
     build_output_filename,
     build_processed_file_record,
@@ -30,7 +30,7 @@ class TestBuildOutputFilename:
 
     def test_with_datetime_placeholder(self):
         """Test with datetime placeholder in rename template."""
-        with patch("dispatch.file_utils.datetime") as mock_datetime:
+        with patch("webapp.pipeline.file_utils.datetime") as mock_datetime:
             mock_datetime.datetime.now.return_value = datetime.datetime(
                 2024, 1, 15, 10, 30, 0
             )
@@ -99,7 +99,7 @@ class TestBuildErrorLogFilename:
 
     def test_basic_construction(self):
         """Test basic filename construction."""
-        with patch("dispatch.file_utils.datetime") as mock_datetime:
+        with patch("webapp.pipeline.file_utils.datetime") as mock_datetime:
             mock_datetime.datetime.now.return_value.strftime.return_value = (
                 "2024-01-15_10-30-00"
             )
@@ -142,7 +142,7 @@ class TestBuildErrorLogFilename:
 
     def test_colons_replaced_in_timestamp(self):
         """Test that generated timestamp has no colons (replaced with dashes)."""
-        with patch("dispatch.file_utils.datetime") as mock_datetime:
+        with patch("webapp.pipeline.file_utils.datetime") as mock_datetime:
             mock_datetime.datetime.now.return_value.strftime.return_value = (
                 "2024-01-15_10-30-00"
             )
@@ -302,7 +302,7 @@ class TestBuildProcessedFileRecord:
 
     def test_basic_record(self):
         """Test basic record construction."""
-        with patch("dispatch.file_utils.datetime") as mock_datetime:
+        with patch("webapp.pipeline.file_utils.datetime") as mock_datetime:
             mock_datetime.datetime.now.return_value = datetime.datetime(
                 2024, 1, 15, 10, 30, 0
             )

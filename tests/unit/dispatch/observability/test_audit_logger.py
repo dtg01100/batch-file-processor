@@ -3,7 +3,7 @@
 
 class TestAuditLogger:
     def test_log_event_non_blocking(self):
-        from dispatch.observability.audit_logger import AuditEvent, AuditLogger
+        from webapp.pipeline.observability.audit_logger import AuditEvent, AuditLogger
 
         logger = AuditLogger()
         event = AuditEvent(
@@ -17,7 +17,7 @@ class TestAuditLogger:
         assert logger._queue.empty() is False
 
     def test_log_step_creates_event(self):
-        from dispatch.observability.audit_logger import AuditLogger
+        from webapp.pipeline.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         logger.log_step(
@@ -34,7 +34,7 @@ class TestAuditLogger:
         assert evt.duration_ms == 150
 
     def test_log_step_with_error(self):
-        from dispatch.observability.audit_logger import AuditLogger
+        from webapp.pipeline.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         err = ValueError("bad input")
@@ -52,7 +52,7 @@ class TestAuditLogger:
         assert evt.error_message == "bad input"
 
     def test_drain_returns_all_events(self):
-        from dispatch.observability.audit_logger import AuditLogger
+        from webapp.pipeline.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         logger.log_step(
@@ -76,14 +76,14 @@ class TestAuditLogger:
         assert logger._queue.empty()
 
     def test_drain_empty_queue(self):
-        from dispatch.observability.audit_logger import AuditLogger
+        from webapp.pipeline.observability.audit_logger import AuditLogger
 
         logger = AuditLogger()
         events = logger.drain()
         assert events == []
 
     def test_audit_event_has_timestamp(self):
-        from dispatch.observability.audit_logger import AuditEvent
+        from webapp.pipeline.observability.audit_logger import AuditEvent
 
         event = AuditEvent(
             correlation_id="abc",
@@ -96,7 +96,7 @@ class TestAuditLogger:
         assert "T" in event.timestamp  # ISO format
 
     def test_audit_event_to_dict(self):
-        from dispatch.observability.audit_logger import AuditEvent
+        from webapp.pipeline.observability.audit_logger import AuditEvent
 
         event = AuditEvent(
             correlation_id="abc",

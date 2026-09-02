@@ -3,12 +3,12 @@
 import os
 from unittest.mock import MagicMock
 
-from dispatch.preflight_validator import (
+from webapp.pipeline.preflight_validator import (
     PreflightIssue,
     PreflightResult,
     PreflightValidator,
 )
-from dispatch.send_manager import SendManager
+from webapp.pipeline.send_manager import SendManager
 
 
 def _make_folder(**overrides):

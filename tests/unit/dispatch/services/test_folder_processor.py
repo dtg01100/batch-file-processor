@@ -6,7 +6,7 @@ import os
 import tempfile
 from unittest.mock import Mock, patch
 
-from dispatch.services.folder_processor import (
+from webapp.pipeline.services.folder_processor import (
     FolderPipelineExecutor,
     FolderProcessingDependencies,
     FolderProcessingRequest,
@@ -85,7 +85,7 @@ class MockFileProcessor:
 
     def _build_context(self, folder, upc_dict, effective_folder=None):
         """Build a mock processing context."""
-        from dispatch.services.file_processor import ProcessingContext
+        from webapp.pipeline.services.file_processor import ProcessingContext
 
         return ProcessingContext(
             folder=folder,
@@ -240,7 +240,7 @@ class TestFolderPipelineExecutor:
             ]
 
             # Patch _has_sql to force the find() path
-            with patch("dispatch.services.file_filter._has_sql", return_value=False):
+            with patch("webapp.pipeline.services.file_filter._has_sql", return_value=False):
                 files = [filepath]
                 result = executor._filter_processed_files(
                     files, mock_processed, {"id": 1}
@@ -264,7 +264,7 @@ class TestFolderPipelineExecutor:
 
         try:
             # Patch _has_sql to force the find() path
-            with patch("dispatch.services.file_filter._has_sql", return_value=False):
+            with patch("webapp.pipeline.services.file_filter._has_sql", return_value=False):
                 files = [filepath]
                 result = executor._filter_processed_files(
                     files, mock_processed, {"id": 1}

@@ -1,6 +1,6 @@
 """Import every module in the repository as the FIRST import of a fresh subprocess.
 
-Import cycles in Python are order-dependent: ``import dispatch.results`` works
+Import cycles in Python are order-dependent: ``import webapp.pipeline.results`` works
 if ``dispatch.pipeline`` happens to load first in the same process, but crashes
 as a first import in a fresh interpreter. Ordinary test runs mask these cycles,
 so this script checks every module the way a fresh entry point would see it.

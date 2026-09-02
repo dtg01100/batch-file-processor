@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from types import SimpleNamespace
 
-from dispatch.pipeline.temp_dir_utils import (
+from webapp.pipeline.pipeline.temp_dir_utils import (
     cleanup_pipeline_temp_dir,
     create_pipeline_temp_dir,
 )

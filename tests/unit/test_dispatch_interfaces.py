@@ -20,7 +20,7 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.dispatch]
 from typing import Any, Optional
 
-from dispatch.interfaces import (
+from webapp.pipeline.interfaces import (
     BackendInterface,
     DatabaseInterface,
     ErrorHandlerInterface,

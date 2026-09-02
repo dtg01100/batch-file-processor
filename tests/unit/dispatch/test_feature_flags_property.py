@@ -8,8 +8,8 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from dispatch import get_debug_mode, get_feature_flags, set_feature_flag
-from dispatch.feature_flags import get_strict_testing_mode
+from webapp.pipeline import get_debug_mode, get_feature_flags, set_feature_flag
+from webapp.pipeline.feature_flags import get_strict_testing_mode
 
 pytestmark = [pytest.mark.unit, pytest.mark.property]
 

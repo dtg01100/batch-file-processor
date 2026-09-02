@@ -7,13 +7,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dispatch.services.progress_reporter import (
+from webapp.pipeline.services.progress_reporter import (
     CLIProgressReporter,
     LoggingProgressReporter,
     NullProgressReporter,
     ProgressReporter,
 )
-from dispatch.services.upc_service import UPCLookupService
+from webapp.pipeline.services.upc_service import UPCLookupService
 
 # These tests exercise the real UPCLookupService behaviour (last_error,
 # WARNING emission, ``create_query_runner_from_settings`` monkeypatch,
@@ -68,7 +68,7 @@ class TestUPCLookupService:
         rows = [(100, "ELEC", "123456789012", "desc", "brand", "item")]
         stub = _StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {
@@ -97,7 +97,7 @@ class TestUPCLookupService:
         ]
         stub = _StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {
@@ -124,7 +124,7 @@ class TestUPCLookupService:
         monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         stub = _StubQueryRunner([])
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {
@@ -143,7 +143,7 @@ class TestUPCLookupService:
         monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         stub = _StubQueryRunner([{"bad_key": "bad_value"}])
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {
@@ -161,7 +161,7 @@ class TestUPCLookupService:
         monkeypatch.setenv("DISPATCH_STRICT_TESTING_MODE", "false")
         stub = _StubQueryRunner([])
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {
@@ -190,7 +190,7 @@ class TestUPCLookupService:
         ]
         stub = _StubQueryRunner(rows)
         monkeypatch.setattr(
-            "dispatch.services.upc_service.create_query_runner_from_settings",
+            "webapp.pipeline.services.upc_service.create_query_runner_from_settings",
             lambda settings_dict, database="QGPL": stub,
         )
         settings = {

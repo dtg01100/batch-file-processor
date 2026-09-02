@@ -6,7 +6,7 @@ and can be used with isinstance() checks for dependency injection.
 
 import pytest
 
-from dispatch.interfaces import (
+from webapp.pipeline.interfaces import (
     BackendInterface,
     DatabaseInterface,
     ErrorHandlerInterface,

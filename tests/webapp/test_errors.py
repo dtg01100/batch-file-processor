@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from dispatch.error_handler import ErrorHandler
+from webapp.pipeline.error_handler import ErrorHandler
 from webapp.config import Settings
 from webapp.database import open_database
 from webapp.errors import (

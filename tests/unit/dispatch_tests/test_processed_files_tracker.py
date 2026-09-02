@@ -7,7 +7,7 @@ from datetime import datetime
 
 import pytest
 
-from dispatch.processed_files_tracker import (
+from webapp.pipeline.processed_files_tracker import (
     DatabaseProtocol,
     InMemoryDatabase,
     ProcessedFileRecord,

@@ -237,7 +237,7 @@ def test_run_uses_real_upc_lookup_when_as400_configured(workspace, monkeypatch):
     dict, the orchestrator's ``UPCLookupService`` actually runs; when
     the AS400 settings are set it fetches the dictionary.
     """
-    import dispatch.services.upc_service as upc_service_module
+    import webapp.pipeline.services.upc_service as upc_service_module
 
     calls: list[dict] = []
 
@@ -286,7 +286,7 @@ def test_run_without_as400_creds_still_succeeds(workspace, monkeypatch):
     The orchestrator's lookup fails fast on missing credentials
     (non-strict mode) and returns ``{}``; files must still process.
     """
-    import dispatch.services.upc_service as upc_service_module
+    import webapp.pipeline.services.upc_service as upc_service_module
 
     def fake_get_dictionary(self, *args, **kwargs):
         # Mirrors the real service: missing creds -> no query -> {}.

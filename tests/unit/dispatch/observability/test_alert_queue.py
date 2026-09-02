@@ -4,7 +4,7 @@ import json
 
 class TestAlertQueue:
     def test_enqueue_adds_json_line(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
         alert = {"error_type": "ValidationError", "message": "bad file"}
@@ -14,7 +14,7 @@ class TestAlertQueue:
         assert json.loads(lines[0])["error_type"] == "ValidationError"
 
     def test_dequeue_returns_and_removes_first(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
         queue._queue_path.write_text(
@@ -27,13 +27,13 @@ class TestAlertQueue:
         assert remaining[0]["id"] == 2
 
     def test_dequeue_empty_returns_none(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
         assert queue.dequeue() is None
 
     def test_mark_failed_writes_to_failures_log(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(
             queue_path=str(tmp_path / "queue.jsonl"),
@@ -44,7 +44,7 @@ class TestAlertQueue:
         assert "boom" in (tmp_path / "failures.log").read_text()
 
     def test_enqueue_sets_retry_count(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
         queue.enqueue({"error": "test"})
@@ -52,7 +52,7 @@ class TestAlertQueue:
         assert stored["retry_count"] == 0
 
     def test_retry_count_preserved_on_enqueue(self, tmp_path):
-        from dispatch.observability.alert_queue import AlertQueue
+        from webapp.pipeline.observability.alert_queue import AlertQueue
 
         queue = AlertQueue(queue_path=str(tmp_path / "queue.jsonl"))
         queue.enqueue({"error": "test", "retry_count": 3})

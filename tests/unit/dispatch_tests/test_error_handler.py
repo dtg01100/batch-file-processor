@@ -5,9 +5,9 @@ import tempfile
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
-from dispatch.error_handler import ErrorHandler
-from dispatch.file_system import RealFileSystem
-from dispatch.interfaces import FileSystemInterface, RunLog
+from webapp.pipeline.error_handler import ErrorHandler
+from webapp.pipeline.file_system import RealFileSystem
+from webapp.pipeline.interfaces import FileSystemInterface, RunLog
 
 
 class MockDatabase:
@@ -190,7 +190,7 @@ class TestErrorHandler:
         """Test error message formatting."""
         handler = ErrorHandler()
 
-        with patch("dispatch.error_handler.time") as mock_time:
+        with patch("webapp.pipeline.error_handler.time") as mock_time:
             mock_time.ctime.return_value = "Mon Jan 15 10:30:00 2024"
 
             message = handler._format_error_message(

@@ -454,7 +454,7 @@ class TestEachUOMCategoryFilter:
     def test_should_apply_retail_uom_helper(
         self, categories, mode, vendor_item, upc_dict, expected
     ):
-        from dispatch.converters.csv_utils import should_apply_retail_uom
+        from webapp.pipeline.converters.csv_utils import should_apply_retail_uom
 
         fields = {"vendor_item": str(vendor_item)}
         assert should_apply_retail_uom(fields, upc_dict, categories, mode) is expected

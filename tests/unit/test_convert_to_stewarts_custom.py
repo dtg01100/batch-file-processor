@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from dispatch.converters import convert_to_stewarts_custom
+from webapp.pipeline.converters import convert_to_stewarts_custom
 from tests.conftest import MockFactories
 
 
@@ -119,7 +119,7 @@ class TestConvertToStewartsCustomBasicFunctionality(
 
     def test_module_import(self):
         """Test that convert_to_stewarts_custom module can be imported."""
-        from dispatch.converters import convert_to_stewarts_custom
+        from webapp.pipeline.converters import convert_to_stewarts_custom
 
         assert convert_to_stewarts_custom is not None
         assert hasattr(convert_to_stewarts_custom, "edi_convert")
@@ -193,7 +193,7 @@ class TestConvertToStewartsCustomDatabaseLookup(TestConvertToStewartsCustomFixtu
         mock_uom_result,
     ):
         """Test UOM lookup via service."""
-        from dispatch.services.uom_lookup_service import UOMLookupService
+        from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
         uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [
@@ -213,7 +213,7 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         default_settings,
     ):
         """Test UPC generation from 11-digit input adds check digit."""
-        from dispatch.services.item_processing import ItemProcessor
+        from webapp.pipeline.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
         # Use valid 11-digit UPC (check digit will be added to make 12)
@@ -226,7 +226,7 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         default_settings,
     ):
         """Test UPC generation from 8-digit input (UPC-E to UPC-A)."""
-        from dispatch.services.item_processing import ItemProcessor
+        from webapp.pipeline.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
         result = item_processor.generate_full_upc("01234567")
@@ -238,7 +238,7 @@ class TestConvertToStewartsCustomUPCGeneration(TestConvertToStewartsCustomFixtur
         default_settings,
     ):
         """Test UPC generation from empty string returns empty string."""
-        from dispatch.services.item_processing import ItemProcessor
+        from webapp.pipeline.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
         result = item_processor.generate_full_upc("")
@@ -254,7 +254,7 @@ class TestConvertToStewartsCustomItemTotal(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test item total calculation with positive quantity."""
-        from dispatch.services.item_processing import ItemProcessor
+        from webapp.pipeline.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
         total, qty = item_processor.convert_to_item_total("000100", "00010")
@@ -267,7 +267,7 @@ class TestConvertToStewartsCustomItemTotal(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test item total calculation with negative quantity returns negative values."""
-        from dispatch.services.item_processing import ItemProcessor
+        from webapp.pipeline.services.item_processing import ItemProcessor
 
         item_processor = ItemProcessor()
         total, qty = item_processor.convert_to_item_total("000100", "-00010")
@@ -284,7 +284,7 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test UOM lookup with matching item and packsize."""
-        from dispatch.services.uom_lookup_service import UOMLookupService
+        from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
         uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [
@@ -300,7 +300,7 @@ class TestConvertToStewartsCustomUOM(TestConvertToStewartsCustomFixtures):
         default_settings,
     ):
         """Test UOM lookup with no matching item returns '?'."""
-        from dispatch.services.uom_lookup_service import UOMLookupService
+        from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
         uom_service = UOMLookupService(MockFactories.db2ssh_connection())
         uom_service.uom_lookup_list = [

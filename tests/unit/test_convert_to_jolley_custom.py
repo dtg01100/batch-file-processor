@@ -24,7 +24,7 @@ import os
 import pytest
 
 from core.database import QueryRunner, SQLiteConnection
-from dispatch.converters import convert_to_jolley_custom
+from webapp.pipeline.converters import convert_to_jolley_custom
 
 
 class QueryRunnerWithTestData:
@@ -291,7 +291,7 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
     def test_module_import(self):
         """Test that convert_to_jolley_custom module can be imported."""
-        from dispatch.converters import convert_to_jolley_custom
+        from webapp.pipeline.converters import convert_to_jolley_custom
 
         assert convert_to_jolley_custom is not None
         assert hasattr(convert_to_jolley_custom, "edi_convert")
@@ -319,13 +319,13 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -377,13 +377,13 @@ class TestJolleyCustomBasicFunctionality(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -436,13 +436,13 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -516,13 +516,13 @@ class TestJolleyCustomCustomerLookup(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -581,13 +581,13 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -642,13 +642,13 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -703,13 +703,13 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -764,13 +764,13 @@ class TestJolleyCustomAddressFormatting(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -829,13 +829,13 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -907,13 +907,13 @@ class TestJolleyCustomItemTotal(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -986,13 +986,13 @@ class TestJolleyCustomUOM(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1064,13 +1064,13 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1139,13 +1139,13 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1214,13 +1214,13 @@ class TestJolleyCustomUPCGeneration(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1296,13 +1296,13 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1359,13 +1359,13 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1419,13 +1419,13 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1510,13 +1510,13 @@ class TestJolleyCustomEdgeCases(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1591,13 +1591,13 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1651,13 +1651,13 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL
@@ -1712,13 +1712,13 @@ class TestJolleyCustomOutputStructure(TestJolleyCustomFixtures):
 
         def patched_init(self, context):
             # Create customer lookup service with the test query runner
-            from dispatch.converters.convert_to_jolley_custom import (
+            from webapp.pipeline.converters.convert_to_jolley_custom import (
                 BASIC_CUSTOMER_QUERY_SQL,
             )
-            from dispatch.services.customer_lookup_service import (
+            from webapp.pipeline.services.customer_lookup_service import (
                 CustomerLookupService,
             )
-            from dispatch.services.uom_lookup_service import UOMLookupService
+            from webapp.pipeline.services.uom_lookup_service import UOMLookupService
 
             self._customer_service = CustomerLookupService(
                 query_object, BASIC_CUSTOMER_QUERY_SQL

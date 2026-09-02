@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dispatch.file_utils import build_error_log_filename
+from webapp.pipeline.file_utils import build_error_log_filename
 
 # Maximum number of rows kept in the ledger; the oldest rows beyond the
 # cap are deleted when a new one is inserted (mirrors

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dispatch.pipeline.interfaces import ErrorRecordingMixin, PipelineStep
+from webapp.pipeline.pipeline.interfaces import ErrorRecordingMixin, PipelineStep
 
 
 class TestPipelineStepProtocol:

@@ -7,9 +7,9 @@ keys without raising KeyError.
 
 import pytest
 
-from dispatch.converters.convert_base import ConversionContext
-from dispatch.converters.convert_to_estore_einvoice import EStoreEInvoiceConverter
-from dispatch.converters.convert_to_estore_einvoice_generic import (
+from webapp.pipeline.converters.convert_base import ConversionContext
+from webapp.pipeline.converters.convert_to_estore_einvoice import EStoreEInvoiceConverter
+from webapp.pipeline.converters.convert_to_estore_einvoice_generic import (
     EStoreEInvoiceGenericConverter,
 )
 
@@ -19,14 +19,14 @@ class TestEstoreNullSafety:
     """Estore converters must not raise KeyError when estore params are absent."""
 
     def test_einvoice_module_importable(self):
-        """dispatch.converters.convert_to_estore_einvoice must import and expose edi_convert."""
-        import dispatch.converters.convert_to_estore_einvoice as mod
+        """webapp.pipeline.converters.convert_to_estore_einvoice must import and expose edi_convert."""
+        import webapp.pipeline.converters.convert_to_estore_einvoice as mod
 
         assert hasattr(mod, "edi_convert"), "Module must expose edi_convert function"
 
     def test_einvoice_generic_module_importable(self):
-        """dispatch.converters.convert_to_estore_einvoice_generic must import and expose edi_convert."""
-        import dispatch.converters.convert_to_estore_einvoice_generic as mod
+        """webapp.pipeline.converters.convert_to_estore_einvoice_generic must import and expose edi_convert."""
+        import webapp.pipeline.converters.convert_to_estore_einvoice_generic as mod
 
         assert hasattr(mod, "edi_convert"), "Module must expose edi_convert function"
 

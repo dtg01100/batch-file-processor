@@ -103,7 +103,7 @@ legacy_result = legacy.edi_tweak(input_path, legacy_out, settings, params, upc)
 print("legacy_result ->", legacy_result)
 
 # Modern: import wrapper
-modern = importlib.import_module("dispatch.converters.convert_to_tweaks")
+modern = importlib.import_module("webapp.pipeline.converters.convert_to_tweaks")
 # modern.edi_convert(edi_process, output_filename, settings_dict, parameters_dict, upc_lut)
 modern_result = modern.edi_convert(input_path, modern_out, {}, params, upc)
 print("modern_result ->", modern_result)

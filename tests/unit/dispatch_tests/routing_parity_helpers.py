@@ -64,12 +64,12 @@ class Legacy147ModuleLoader:
         self.loaded: list[str] = []
 
     def _resolve(self, module_name: str) -> ModuleType:
-        # Strip a "dispatch.converters." prefix if present so a master
+        # Strip a "webapp.pipeline.converters." prefix if present so a master
         # call can be redirected to vendored 1.47 code without rewriting
         # the master's formatter.
         bare = module_name
-        if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters.") :]
+        if bare.startswith("webapp.pipeline.converters."):
+            bare = bare[len("webapp.pipeline.converters.") :]
         path = _VENDORED_DIR / f"{bare}.py"
         if not path.exists():
             raise ImportError(f"no vendored 1.47 module at {path}")
@@ -87,8 +87,8 @@ class Legacy147ModuleLoader:
 
     def module_exists(self, module_name: str) -> bool:
         bare = module_name
-        if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters.") :]
+        if bare.startswith("webapp.pipeline.converters."):
+            bare = bare[len("webapp.pipeline.converters.") :]
         return (_VENDORED_DIR / f"{bare}.py").exists()
 
 
@@ -182,8 +182,8 @@ class MasterMockModuleLoader:
         if module_name in self._modules:
             return True
         bare = module_name
-        if bare.startswith("dispatch.converters."):
-            bare = bare[len("dispatch.converters.") :]
+        if bare.startswith("webapp.pipeline.converters."):
+            bare = bare[len("webapp.pipeline.converters.") :]
         return (_VENDORED_DIR / f"{bare}.py").exists()
 
 
@@ -209,7 +209,7 @@ def drive_master_converter_step(
     """
     from core.utils.bool_utils import normalize_bool  # type: ignore
     from core.utils.format_utils import normalize_convert_to_format  # type: ignore
-    from dispatch.pipeline.converter import EDIConverterStep  # type: ignore
+    from webapp.pipeline.pipeline.converter import EDIConverterStep  # type: ignore
 
     raw_format = row.get("convert_to_format") or ""
     fmt = normalize_convert_to_format(raw_format)
@@ -217,7 +217,7 @@ def drive_master_converter_step(
 
     loader = MasterMockModuleLoader()
     # Pre-register a recorder for the concrete module master would build.
-    module_name = f"dispatch.converters.convert_to_{fmt}"
+    module_name = f"webapp.pipeline.converters.convert_to_{fmt}"
     if fmt:
         recorder = loader.register(module_name)
 

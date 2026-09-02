@@ -17,15 +17,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dispatch.interfaces import ErrorHandlerInterface, FileSystemInterface
-from dispatch.pipeline.interfaces import PipelineStep
-from dispatch.pipeline.splitter import (
+from webapp.pipeline.interfaces import ErrorHandlerInterface, FileSystemInterface
+from webapp.pipeline.pipeline.interfaces import PipelineStep
+from webapp.pipeline.pipeline.splitter import (
     EDISplitterStep,
     SplitterInterface,
     SplitterResult,
 )
-from dispatch.send_manager import MockBackend, SendManager
-from dispatch.services.file_processor import (
+from webapp.pipeline.send_manager import MockBackend, SendManager
+from webapp.pipeline.services.file_processor import (
     FileProcessor,
     FileResult,
     ProcessingContext,
@@ -258,8 +258,8 @@ class TestCleanupTempArtifacts:
         assert context.temp_dirs == []
         assert context.temp_files == []
 
-    @patch("dispatch.services.file_processor.os.path.exists")
-    @patch("dispatch.services.file_processor.shutil.rmtree")
+    @patch("webapp.pipeline.services.file_processor.os.path.exists")
+    @patch("webapp.pipeline.services.file_processor.shutil.rmtree")
     def test_cleanup_removes_dirs(self, mock_rmtree, mock_exists):
         """Test cleanup removes temp directories."""
         send_manager = MagicMock(spec=SendManager)
@@ -280,8 +280,8 @@ class TestCleanupTempArtifacts:
 
         assert mock_rmtree.call_count == 2
 
-    @patch("dispatch.services.file_processor.os.path.exists")
-    @patch("dispatch.services.file_processor.os.remove")
+    @patch("webapp.pipeline.services.file_processor.os.path.exists")
+    @patch("webapp.pipeline.services.file_processor.os.remove")
     def test_cleanup_removes_files(self, mock_remove, mock_exists):
         """Test cleanup removes temp files."""
         send_manager = MagicMock(spec=SendManager)

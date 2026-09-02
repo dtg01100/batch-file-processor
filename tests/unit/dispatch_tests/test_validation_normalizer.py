@@ -5,7 +5,7 @@ Contract unification per specs/refactor-dispatch-simplification.md §3.4.
 
 import logging
 
-from dispatch.pipeline.validator import (
+from webapp.pipeline.pipeline.validator import (
     ValidationResult,
     normalize_validation_output,
 )
@@ -72,7 +72,7 @@ def test_bool_false():
 
 
 def test_unknown_logs_warning_and_returns_false(caplog):
-    with caplog.at_level(logging.WARNING, logger="dispatch.pipeline.validator"):
+    with caplog.at_level(logging.WARNING, logger="webapp.pipeline.pipeline.validator"):
         result = normalize_validation_output("a string", CURRENT_FILE)
     assert result[0] is False
     assert "unexpected type" in result[1][0].lower() or "type" in result[1][0].lower()

@@ -3,8 +3,8 @@ import queue
 import threading
 from unittest.mock import MagicMock
 
-from dispatch.observability.audit_logger import AuditEvent
-from dispatch.observability.background_writer import AuditBackgroundWriter
+from webapp.pipeline.observability.audit_logger import AuditEvent
+from webapp.pipeline.observability.background_writer import AuditBackgroundWriter
 
 
 class TestAuditBackgroundWriter:

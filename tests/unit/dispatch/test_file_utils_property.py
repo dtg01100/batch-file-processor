@@ -13,7 +13,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from dispatch.file_utils import (
+from webapp.pipeline.file_utils import (
     build_output_filename,
     extract_invoice_numbers,
     get_file_extension,

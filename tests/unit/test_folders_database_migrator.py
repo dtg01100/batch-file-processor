@@ -906,7 +906,7 @@ class TestV32UpgradeIntegration:
 
     def test_all_convert_formats_are_supported_after_upgrade(self, migrated_db_conn):
         """Every non-empty convert_to_format value must be a known canonical token."""
-        from dispatch.pipeline.converter import SUPPORTED_FORMATS
+        from webapp.pipeline.pipeline.converter import SUPPORTED_FORMATS
 
         cur = migrated_db_conn.cursor()
         cur.execute(

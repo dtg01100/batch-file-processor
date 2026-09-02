@@ -1,8 +1,8 @@
 # tests/unit/dispatch/services/test_folder_processor_correlation.py
 from unittest.mock import MagicMock, patch
 
-from dispatch.results import FolderResult
-from dispatch.services.folder_processor import (
+from webapp.pipeline.results import FolderResult
+from webapp.pipeline.services.folder_processor import (
     FolderPipelineExecutor,
     FolderProcessingDependencies,
     FolderProcessingRequest,

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from dispatch.send_manager import MockBackend, SendManager
+from webapp.pipeline.send_manager import MockBackend, SendManager
 
 
 class TestSendManager:
@@ -93,7 +93,7 @@ class TestSendManager:
         params = {"process_backend_copy": True}
         settings = {}
 
-        with caplog.at_level(logging.DEBUG, logger="dispatch.send_manager"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.send_manager"):
             results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
 
         assert results["copy"] is True
@@ -110,7 +110,7 @@ class TestSendManager:
         settings = {}
 
         # Should not raise - should continue with other backends
-        with caplog.at_level(logging.DEBUG, logger="dispatch.send_manager"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.send_manager"):
             results = manager.send_all({"copy"}, "/test/file.edi", params, settings)
 
         # Backend that failed should be marked as False
@@ -279,7 +279,7 @@ class TestMockBackend:
 class TestSendManagerModuleBackends:
     """Tests for SendManager with module-based backends."""
 
-    @patch("dispatch.send_manager.importlib.import_module")
+    @patch("webapp.pipeline.send_manager.importlib.import_module")
     def test_send_via_module_copy(self, mock_import):
         """Test sending via copy_backend module."""
         mock_module = MagicMock()
@@ -296,7 +296,7 @@ class TestSendManagerModuleBackends:
         mock_import.assert_called_with("backend.copy_backend")
         mock_module.do.assert_called_once()
 
-    @patch("dispatch.send_manager.importlib.import_module")
+    @patch("webapp.pipeline.send_manager.importlib.import_module")
     def test_send_via_module_ftp(self, mock_import):
         """Test sending via ftp_backend module."""
         mock_module = MagicMock()
@@ -312,7 +312,7 @@ class TestSendManagerModuleBackends:
         mock_import.assert_called_with("backend.ftp_backend")
         mock_module.do.assert_called_once()
 
-    @patch("dispatch.send_manager.importlib.import_module")
+    @patch("webapp.pipeline.send_manager.importlib.import_module")
     def test_send_via_module_email(self, mock_import):
         """Test sending via email_backend module."""
         mock_module = MagicMock()

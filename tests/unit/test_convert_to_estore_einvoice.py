@@ -17,7 +17,7 @@ import re
 import pytest
 
 # Import the module to test
-from dispatch.converters import convert_to_estore_einvoice
+from webapp.pipeline.converters import convert_to_estore_einvoice
 
 
 class TestEstoreEinvoiceFixtures:
@@ -125,7 +125,7 @@ class TestEstoreEinvoiceBasicFunctionality(TestEstoreEinvoiceFixtures):
 
     def test_module_import(self):
         """Test that convert_to_estore_einvoice module can be imported."""
-        from dispatch.converters import convert_to_estore_einvoice
+        from webapp.pipeline.converters import convert_to_estore_einvoice
 
         assert convert_to_estore_einvoice is not None
         assert hasattr(convert_to_estore_einvoice, "edi_convert")

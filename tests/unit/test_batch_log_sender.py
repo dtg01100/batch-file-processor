@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from dispatch.interfaces import DatabaseInterface
+from webapp.pipeline.interfaces import DatabaseInterface
 
 
 def _mock_table() -> MagicMock:

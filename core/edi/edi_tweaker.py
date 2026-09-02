@@ -701,7 +701,7 @@ class EDITweaker:
         """
         if not self.config.retail_uom:
             return fields
-        from dispatch.converters.csv_utils import should_apply_retail_uom
+        from webapp.pipeline.converters.csv_utils import should_apply_retail_uom
 
         if not should_apply_retail_uom(
             fields,

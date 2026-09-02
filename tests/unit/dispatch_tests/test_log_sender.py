@@ -5,7 +5,7 @@ This module tests the refactored log sender with mock services.
 
 from unittest.mock import patch
 
-from dispatch.log_sender import (
+from webapp.pipeline.log_sender import (
     EmailConfig,
     LogEntry,
     LogSender,
@@ -368,7 +368,7 @@ class TestLogSender:
 
         service = SMTPEmailService(config)
 
-        with patch("dispatch.log_sender.smtplib.SMTP") as mock_smtp:
+        with patch("webapp.pipeline.log_sender.smtplib.SMTP") as mock_smtp:
             server = mock_smtp.return_value
             server.send_message.return_value = None
 

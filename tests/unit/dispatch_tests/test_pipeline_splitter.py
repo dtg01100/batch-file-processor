@@ -7,7 +7,7 @@ import pytest
 
 from core.edi.edi_splitter import SplitConfig, SplitResult
 from core.utils.bool_utils import normalize_db_bool
-from dispatch.pipeline.splitter import (
+from webapp.pipeline.pipeline.splitter import (
     DefaultCreditDetector,
     EDISplitterStep,
     MockSplitter,
@@ -504,7 +504,7 @@ class TestEDISplitterStep:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True}
-        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.splitter"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.pipeline.splitter"):
             result = step.split("/input/test.edi", "/output", params, {})
 
         assert result.was_split is True
@@ -519,7 +519,7 @@ class TestEDISplitterStep:
         step = EDISplitterStep(splitter=mock_splitter)
 
         params = {"split_edi": True}
-        with caplog.at_level(logging.DEBUG, logger="dispatch.pipeline.splitter"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.pipeline.splitter"):
             result = step.split("/input/test.edi", "/output", params, {})
 
         assert result.was_split is False

@@ -1,8 +1,8 @@
 # tests/unit/dispatch/test_error_handler_alert_integration.py
 from unittest.mock import MagicMock
 
-from dispatch.error_handler import ErrorHandler
-from dispatch.observability.alert_dispatcher import AlertDispatcher
+from webapp.pipeline.error_handler import ErrorHandler
+from webapp.pipeline.observability.alert_dispatcher import AlertDispatcher
 
 
 class TestErrorHandlerAlertIntegration:

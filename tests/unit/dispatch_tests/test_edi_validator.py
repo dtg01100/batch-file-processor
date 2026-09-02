@@ -5,8 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
-from dispatch.edi_validator import EDIValidator
-from dispatch.file_system import RealFileSystem
+from webapp.pipeline.edi_validator import EDIValidator
+from webapp.pipeline.file_system import RealFileSystem
 
 
 class MockFileSystem:
@@ -41,7 +41,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        with caplog.at_level(logging.DEBUG, logger="dispatch.edi_validator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.edi_validator"):
             is_valid, errors = validator.validate("/test/file.edi")
 
         # This test validates the format check logic
@@ -57,7 +57,7 @@ class TestEDIValidator:
         mock_fs = MockFileSystem({"/test/file.edi": edi_content})
 
         validator = EDIValidator(file_system=mock_fs)
-        with caplog.at_level(logging.DEBUG, logger="dispatch.edi_validator"):
+        with caplog.at_level(logging.DEBUG, logger="webapp.pipeline.edi_validator"):
             is_valid, errors = validator.validate("/test/file.edi")
 
         assert not is_valid
