@@ -346,11 +346,31 @@ def converter_spec(format_key: str) -> dict[str, Any] | None:
 
 
 def all_converter_specs() -> list[dict[str, Any]]:
-    """Return every format spec for the API payload, keys normalized."""
-    return [
-        {"format": key, "display_name": spec["display_name"], "fields": spec["fields"]}
-        for key, spec in CONVERTER_FORMATS.items()
-    ]
+    """Return every format spec for the API payload, keys normalized.
+
+    Phase 9.4: identity (``format``, ``display_name``) is delegated to
+    ``webapp.pipeline.converters.registry.discover_converters()`` so
+    adding a 12th converter is a one-file change (register
+    ``CONVERTER_METADATA``). UI ``fields`` stay in this module's
+    ``CONVERTER_FORMATS`` table keyed by format — they're the
+    per-format plugin config the desktop had, ported verbatim, and
+    adding new UI fields is a per-format UI decision, not a registry
+    discovery concern.
+    """
+    from webapp.pipeline.converters.registry import get_all_converters
+
+    registry = {
+        meta.format_name: meta.display_name
+        for meta in get_all_converters()
+    }
+    out: list[dict[str, Any]] = []
+    for key, display_name in registry.items():
+        spec = CONVERTER_FORMATS.get(key)
+        fields = spec["fields"] if spec else []
+        out.append(
+            {"format": key, "display_name": display_name, "fields": fields}
+        )
+    return out
 
 
 def merge_plugin_config(folder: dict[str, Any]) -> dict[str, Any]:

@@ -52,7 +52,8 @@ def test_converters_endpoint_returns_specs(tmp_path):
     app = create_app(settings=settings)
     c = TestClient(app)
     body = c.get("/api/converters").json()
-    assert len(body) == 11
+    # 11 original converters + the X12 810 added in Phase X.
+    assert len(body) >= 11
     by_format = {spec["format"]: spec for spec in body}
     assert by_format["scannerware"]["display_name"] == "ScannerWare"
     field_keys = {f["key"] for f in by_format["scannerware"]["fields"]}
