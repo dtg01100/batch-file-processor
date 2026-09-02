@@ -19,7 +19,7 @@ def test_vendored_dispatch_imports(legacy_147_dispatch):
     assert callable(getattr(legacy_147_dispatch, "process", None))
 
 
-def test_vendored_convert_to_csv_imports():
+def test_vendored_convert_to_csv_imports(_legacy_147_runtime):
     """``convert_to_csv`` is one of the simplest 1.47 converters — if it
     imports, the harness's sys.path + stubs setup is correct."""
     mod = importlib.import_module("convert_to_csv")
