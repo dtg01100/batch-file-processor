@@ -11,6 +11,7 @@ run log, and returned (or stored for background polling).
 from __future__ import annotations
 
 import contextlib
+import concurrent.futures
 import dataclasses
 import datetime
 import io
@@ -32,6 +33,20 @@ from webapp.errors import (
     write_error_artifact,
 )
 from webapp.paths import resolve_row
+
+
+# Phase 9.3: a single module-level executor owns all background runs.
+# FastAPI endpoint handlers (``/api/run``, ``/api/resend``, etc.) are
+# synchronous ``def`` (not ``async def``), so they can't call
+# ``loop.run_in_executor`` directly. A dedicated ``ThreadPoolExecutor``
+# is the documented substitute: ``run_in_executor`` from a sync handler
+# would just spin up another thread on top of the FastAPI worker pool,
+# which is what we already do here. The win is consolidation (one
+# pool to size, one place to add cancellation hooks in a future phase)
+# rather than changing the threading model.
+_PIPELINE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2, thread_name_prefix="webapp-pipeline"
+)
 
 
 @dataclasses.dataclass
@@ -637,7 +652,7 @@ class RunStore:
                 with self._lock:
                     self._active -= 1
 
-        threading.Thread(target=_work, name=f"webapp-run-{run_id}", daemon=True).start()
+        _PIPELINE_EXECUTOR.submit(_work)
         return run_id
 
     def start_resend(self, settings: Settings) -> str:
@@ -669,9 +684,7 @@ class RunStore:
                 with self._lock:
                     self._active -= 1
 
-        threading.Thread(
-            target=_work, name=f"webapp-resend-{run_id}", daemon=True
-        ).start()
+        _PIPELINE_EXECUTOR.submit(_work)
         return run_id
 
     def start_folder(self, settings: Settings, folder_id: int) -> str:
@@ -701,9 +714,7 @@ class RunStore:
                 with self._lock:
                     self._active -= 1
 
-        threading.Thread(
-            target=_work, name=f"webapp-folder-{run_id}", daemon=True
-        ).start()
+        _PIPELINE_EXECUTOR.submit(_work)
         return run_id
 
     def get(self, run_id: str) -> RunReport | None:
