@@ -35,9 +35,12 @@ from webapp.pipeline.converters.convert_base import (
     EDIRecord,
     create_csv_writer,
     make_edi_convert,
-    normalize_parameter,
 )
-from webapp.pipeline.converters.csv_utils import apply_retail_uom, should_apply_retail_uom
+from webapp.pipeline.converters.converters_config import SimplifiedCsvConverterConfig
+from webapp.pipeline.converters.csv_utils import (
+    apply_retail_uom,
+    should_apply_retail_uom,
+)
 
 
 class SimplifiedCSVConverter(BaseEDIConverter):
@@ -57,34 +60,16 @@ class SimplifiedCSVConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        # Extract and normalize parameters
-        params = context.parameters_dict
+        # Phase 11.x: typed config from parameters_dict.
+        config = SimplifiedCsvConverterConfig.from_parameters(context.parameters_dict)
 
-        context.user_data["retail_uom"] = normalize_parameter(
-            params.get("retail_uom"), default=False
-        )
-        context.user_data["each_uom_categories"] = (
-            params.get("each_uom_categories") or "ALL"
-        )
-        context.user_data["each_uom_mode"] = params.get("each_uom_mode") or "include"
-        context.user_data["inc_headers"] = normalize_parameter(
-            params.get(
-                "include_headers", params.get("simple_csv_include_headers", True)
-            )
-        )
-        context.user_data["inc_item_numbers"] = normalize_parameter(
-            params.get("include_item_numbers"), default=True
-        )
-        context.user_data["inc_item_desc"] = normalize_parameter(
-            params.get("include_item_description"), default=True
-        )
-        context.user_data["column_layout"] = (
-            params.get(
-                "simple_csv_sort_order",
-                "upc_number,qty_of_units,unit_cost,description,vendor_item",
-            )
-            or "upc_number,qty_of_units,unit_cost,description,vendor_item"
-        )
+        context.user_data["retail_uom"] = config.retail_uom
+        context.user_data["each_uom_categories"] = config.each_uom_categories
+        context.user_data["each_uom_mode"] = config.each_uom_mode
+        context.user_data["inc_headers"] = config.include_headers
+        context.user_data["inc_item_numbers"] = config.include_item_numbers
+        context.user_data["inc_item_desc"] = config.include_item_description
+        context.user_data["column_layout"] = config.column_layout
 
         # Open output file and create CSV writer
         context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output

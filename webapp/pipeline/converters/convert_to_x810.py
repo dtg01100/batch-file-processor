@@ -38,19 +38,17 @@ CONVERTER_METADATA = {
 }
 
 
-import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from core import utils
 from core.structured_logging import get_logger
 from webapp.pipeline.converters.convert_base import (
     BaseEDIConverter,
     ConversionContext,
     EDIRecord,
     make_edi_convert,
-    normalize_parameter,
 )
+from webapp.pipeline.converters.converters_config import X810ConverterConfig
 
 logger = get_logger(__name__)
 
@@ -67,21 +65,21 @@ def _pad(value: str, width: int) -> str:
 
 def _to_yymmdd(s: str) -> str:
     if not s or len(s) != 6:
-        return datetime.now(tz=timezone.utc).strftime("%y%m%d")
+        return datetime.now(tz=UTC).strftime("%y%m%d")
     return s
 
 
 def _to_yyyymmdd(s: str) -> str:
     if not s or len(s) != 6:
-        return datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+        return datetime.now(tz=UTC).strftime("%Y%m%d")
     try:
         return f"20{s[4:6]}{s[0:2]}{s[2:4]}"
     except (IndexError, ValueError):
-        return datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+        return datetime.now(tz=UTC).strftime("%Y%m%d")
 
 
 def _format_time() -> str:
-    return datetime.now(tz=timezone.utc).strftime("%H%M")
+    return datetime.now(tz=UTC).strftime("%H%M")
 
 
 def _gen_control(seed: str, prefix: str, width: int) -> str:
@@ -93,26 +91,16 @@ class X810Converter(BaseEDIConverter):
     """Converter for X12 004010 810 (Invoice) envelopes."""
 
     def _initialize_output(self, context: ConversionContext) -> None:
-        params = context.parameters_dict
-        missing = [
-            k
-            for k in ("x810_sender_id", "x810_receiver_id")
-            if not params.get(k)
-        ]
-        if missing:
-            raise ValueError(
-                f"x810 converter missing required parameters: {', '.join(missing)}"
-            )
+        # Phase 11.x: typed config from parameters_dict.
+        config = X810ConverterConfig.from_parameters(context.parameters_dict)
 
-        sender = _pad(params["x810_sender_id"], 15)
-        receiver = _pad(params["x810_receiver_id"], 15)
-        bill_to = params.get("x810_bill_to_name", "") or ""
+        sender = _pad(config.sender_id, 15)
+        receiver = _pad(config.receiver_id, 15)
+        bill_to = config.bill_to_name
 
-        isa_ctrl = params.get("x810_isa_control") or _gen_control(
-            sender + receiver, "1", 9
-        )
-        gs_ctrl = params.get("x810_gs_control") or isa_ctrl[-9:].lstrip("0") or "1"
-        st_ctrl = params.get("x810_st_control") or (gs_ctrl or "1").rjust(4, "0")[:9]
+        isa_ctrl = config.isa_control or _gen_control(sender + receiver, "1", 9)
+        gs_ctrl = config.gs_control or isa_ctrl[-9:].lstrip("0") or "1"
+        st_ctrl = config.st_control or (gs_ctrl or "1").rjust(4, "0")[:9]
 
         context.user_data["sender"] = sender
         context.user_data["receiver"] = receiver
@@ -120,9 +108,9 @@ class X810Converter(BaseEDIConverter):
         context.user_data["isa_ctrl"] = str(isa_ctrl).zfill(9)[:9]
         context.user_data["gs_ctrl"] = str(gs_ctrl)[:9]
         context.user_data["st_ctrl"] = str(st_ctrl)[:9]
-        context.user_data["yymmdd"] = datetime.now(tz=timezone.utc).strftime("%y%m%d")
+        context.user_data["yymmdd"] = datetime.now(tz=UTC).strftime("%y%m%d")
         context.user_data["hhmm"] = _format_time()
-        context.user_data["yyyymmdd"] = datetime.now(tz=timezone.utc).strftime("%Y%m%d")
+        context.user_data["yyyymmdd"] = datetime.now(tz=UTC).strftime("%Y%m%d")
         context.user_data["line_count"] = 0
         context.user_data["total_cents"] = 0
 
@@ -131,19 +119,20 @@ class X810Converter(BaseEDIConverter):
         )
 
     def process_a_record(self, record: EDIRecord, context: ConversionContext) -> None:
+        # Phase 11.x: typed attribute access via TypedRecordProxy.
         fields = record.fields
         super().process_a_record(record, context)
 
-        a_date = fields.get("invoice_date", "")
+        a_date = fields.invoice_date or ""
         yyyymmdd = _to_yyyymmdd(a_date)
         context.user_data["yyyymmdd"] = yyyymmdd
 
         try:
-            total_cents = int(fields.get("invoice_total", "0") or "0")
+            total_cents = int(fields.invoice_total or "0")
         except (TypeError, ValueError):
             logger.debug(
                 "x810: unparseable invoice_total %r, defaulting to 0",
-                fields.get("invoice_total"),
+                fields.invoice_total,
             )
             total_cents = 0
         context.user_data["total_cents"] = total_cents
@@ -152,22 +141,22 @@ class X810Converter(BaseEDIConverter):
         fields = record.fields
 
         try:
-            unit_cost_cents = int(fields.get("unit_cost", "0") or "0")
+            unit_cost_cents = int(fields.unit_cost or "0")
             unit_price_dollars = unit_cost_cents / 100.0
         except (TypeError, ValueError):
             unit_price_dollars = 0.0
 
         try:
-            qty_units = int(fields.get("qty_of_units", "0") or "0")
-            unit_mult = int(fields.get("unit_multiplier", "1") or "1")
+            qty_units = int(fields.qty_of_units or "0")
+            unit_mult = int(fields.unit_multiplier or "1")
             qty = qty_units * (unit_mult if unit_mult > 0 else 1)
         except (TypeError, ValueError):
             qty = 0
 
-        upc = (fields.get("upc_number") or "").strip()
+        upc = (fields.upc_number or "").strip()
         if upc and len(upc) < 12:
             upc = upc.zfill(12)
-        vendor_item = (fields.get("vendor_item") or "").strip()
+        vendor_item = (fields.vendor_item or "").strip()
 
         user_data = context.user_data
         user_data["line_count"] += 1
@@ -193,9 +182,10 @@ class X810Converter(BaseEDIConverter):
 
     def _finalize_output(self, context: ConversionContext) -> None:
         user_data = context.user_data
-        arec = context.arec_header or {}
+        arec = context.arec_header
 
-        invoice_number = (arec.get("invoice_number") or "").strip()
+        invoice_number = (arec.invoice_number if arec else "") or ""
+        invoice_number = invoice_number.strip()
         total_dollars = user_data["total_cents"] / 100.0
         line_count = user_data["line_count"]
 
@@ -241,46 +231,32 @@ class X810Converter(BaseEDIConverter):
             )
         )
 
-        segments.append(
-            _ELEMENT.join(["ST", "810", user_data["st_ctrl"]])
-        )
+        segments.append(_ELEMENT.join(["ST", "810", user_data["st_ctrl"]]))
 
-        segments.append(
-            _ELEMENT.join(["BIG", user_data["yyyymmdd"], invoice_number])
-        )
+        segments.append(_ELEMENT.join(["BIG", user_data["yyyymmdd"], invoice_number]))
 
         if user_data["bill_to"]:
-            segments.append(
-                _ELEMENT.join(["N1", "BT", user_data["bill_to"]])
-            )
+            segments.append(_ELEMENT.join(["N1", "BT", user_data["bill_to"]]))
 
         segments.extend(user_data.get("it1_lines", []))
 
-        segments.append(
-            _ELEMENT.join(["TDS", f"{int(total_dollars):010d}"])
-        )
+        segments.append(_ELEMENT.join(["TDS", f"{int(total_dollars):010d}"]))
 
-        segments.append(
-            _ELEMENT.join(["CTT", str(line_count)])
-        )
+        segments.append(_ELEMENT.join(["CTT", str(line_count)]))
 
         st_seg_count = sum(
             1
             for s in segments
-            if not s.startswith("ISA") and not s.startswith("GS")
-            and not s.startswith("GE") and not s.startswith("IEA")
+            if not s.startswith("ISA")
+            and not s.startswith("GS")
+            and not s.startswith("GE")
+            and not s.startswith("IEA")
         )
         st_seg_count += 3
 
-        segments.append(
-            _ELEMENT.join(["SE", str(st_seg_count), user_data["st_ctrl"]])
-        )
-        segments.append(
-            _ELEMENT.join(["GE", "1", user_data["gs_ctrl"]])
-        )
-        segments.append(
-            _ELEMENT.join(["IEA", "1", user_data["isa_ctrl"]])
-        )
+        segments.append(_ELEMENT.join(["SE", str(st_seg_count), user_data["st_ctrl"]]))
+        segments.append(_ELEMENT.join(["GE", "1", user_data["gs_ctrl"]]))
+        segments.append(_ELEMENT.join(["IEA", "1", user_data["isa_ctrl"]]))
 
         output_file = context.output_file
         assert output_file is not None

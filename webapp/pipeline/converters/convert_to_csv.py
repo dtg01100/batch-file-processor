@@ -42,8 +42,8 @@ from webapp.pipeline.converters.convert_base import (
     EDIRecord,
     create_csv_writer,
     make_edi_convert,
-    normalize_parameter,
 )
+from webapp.pipeline.converters.converters_config import CSVConverterConfig
 from webapp.pipeline.converters.csv_utils import (
     apply_retail_uom,
     apply_upc_override,
@@ -71,44 +71,24 @@ class CSVConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        # Extract and normalize parameters
-        params = context.parameters_dict
+        # Phase 11.x: typed config from parameters_dict.
+        config = CSVConverterConfig.from_parameters(context.parameters_dict)
 
-        context.user_data["calc_upc"] = normalize_parameter(
-            params.get("calculate_upc_check_digit"), default=False
+        context.user_data["calc_upc"] = config.calculate_upc_check_digit
+        context.user_data["inc_arec"] = config.include_a_records
+        context.user_data["inc_crec"] = config.include_c_records
+        context.user_data["inc_headers"] = config.include_headers
+        context.user_data["filter_ampersand"] = config.filter_ampersand
+        context.user_data["pad_arec"] = config.pad_a_records
+        context.user_data["arec_padding"] = config.a_record_padding
+        context.user_data["override_upc"] = config.override_upc_bool
+        context.user_data["override_upc_level"] = config.override_upc_level
+        context.user_data["override_upc_category_filter"] = (
+            config.override_upc_category_filter
         )
-        context.user_data["inc_arec"] = normalize_parameter(
-            params.get("include_a_records"), default=False
-        )
-        context.user_data["inc_crec"] = normalize_parameter(
-            params.get("include_c_records"), default=False
-        )
-        context.user_data["inc_headers"] = normalize_parameter(
-            params.get("include_headers"), default=True
-        )
-        context.user_data["filter_ampersand"] = normalize_parameter(
-            params.get("filter_ampersand"), default=False
-        )
-        context.user_data["pad_arec"] = normalize_parameter(
-            params.get("pad_a_records"), default=False
-        )
-        context.user_data["arec_padding"] = params.get("a_record_padding", "")
-        context.user_data["override_upc"] = normalize_parameter(
-            params.get("override_upc_bool"), default=False
-        )
-        context.user_data["override_upc_level"] = params.get("override_upc_level", 1)
-        context.user_data["override_upc_category_filter"] = params.get(
-            "override_upc_category_filter", "ALL"
-        )
-        context.user_data["retail_uom"] = normalize_parameter(
-            params.get("retail_uom"), default=False
-        )
-        context.user_data["upc_target_length"] = int(
-            params.get("upc_target_length", 11) or 11
-        )
-        context.user_data["upc_padding_pattern"] = params.get(
-            "upc_padding_pattern", "           "
-        )
+        context.user_data["retail_uom"] = config.retail_uom
+        context.user_data["upc_target_length"] = config.upc_target_length
+        context.user_data["upc_padding_pattern"] = config.upc_padding_pattern
 
         # Open output file and create CSV writer
         context.output_file = open(  # noqa: SIM115 — lifecycle managed by BaseEDIConverter._finalize_output

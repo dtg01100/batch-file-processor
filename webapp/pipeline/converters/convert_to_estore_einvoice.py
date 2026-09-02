@@ -51,6 +51,7 @@ from webapp.pipeline.converters.convert_base import (
     EDIRecord,
     make_edi_convert,
 )
+from webapp.pipeline.converters.converters_config import EStoreEInvoiceConverterConfig
 
 logger = get_logger(__name__)
 
@@ -67,17 +68,12 @@ class EStoreEInvoiceConverter(BaseEDIConverter):
     """
 
     def _initialize_output(self, context: ConversionContext) -> None:
-        """Initialize CSV output file, writer, and state.
-
-        Args:
-            context: The conversion context
-
-        """
-        # Get parameters
-        params = context.parameters_dict
-        self.store_number = params.get("estore_store_number", "")
-        self.vendor_oid = params.get("estore_Vendor_OId", "")
-        self.vendor_name = params.get("estore_vendor_NameVendorOID", "")
+        """Initialize CSV output file, writer, and state."""
+        # Phase 11.x: typed config from parameters_dict.
+        config = EStoreEInvoiceConverterConfig.from_parameters(context.parameters_dict)
+        self.store_number = config.store_number
+        self.vendor_oid = config.vendor_oid
+        self.vendor_name = config.vendor_name
         self.upc_lookup = context.upc_lut
 
         # Initialize state

@@ -126,7 +126,7 @@ class ConversionContext:
     upc_lut: dict[int, tuple]
 
     # Internal state (initialized automatically)
-    arec_header: dict[str, str] | None = field(default=None)
+    arec_header: Any | None = field(default=None)
     line_num: int = field(default=0)
     records_processed: int = field(default=0)
     output_file: IO | None = field(default=None, repr=False)

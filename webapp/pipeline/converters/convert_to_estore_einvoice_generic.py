@@ -65,6 +65,9 @@ from webapp.pipeline.converters.convert_base import (
     EDIRecord,
     make_edi_convert,
 )
+from webapp.pipeline.converters.converters_config import (
+    EStoreEInvoiceGenericConverterConfig,
+)
 
 logger = get_logger(__name__)
 
@@ -89,12 +92,14 @@ class EStoreEInvoiceGenericConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        # Get parameters
-        params = context.parameters_dict
-        self.store_number = params.get("estore_store_number", "")
-        self.vendor_oid = params.get("estore_Vendor_OId", "")
-        self.vendor_name = params.get("estore_vendor_NameVendorOID", "")
-        self.c_record_oid = params.get("estore_c_record_OID", "")
+        # Phase 11.x: typed config from parameters_dict.
+        config = EStoreEInvoiceGenericConverterConfig.from_parameters(
+            context.parameters_dict
+        )
+        self.store_number = config.store_number
+        self.vendor_oid = config.vendor_oid
+        self.vendor_name = config.vendor_name
+        self.c_record_oid = config.c_record_oid
         self.upc_lookup = context.upc_lut
 
         # Initialize InvFetcher for database lookups

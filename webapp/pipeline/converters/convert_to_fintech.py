@@ -44,6 +44,7 @@ from webapp.pipeline.converters.convert_base import (
     create_csv_writer,
     make_edi_convert,
 )
+from webapp.pipeline.converters.converters_config import FintechConverterConfig
 
 logger = get_logger(__name__)
 
@@ -64,15 +65,10 @@ class FintechConverter(BaseEDIConverter):
         """Initialize CSV output file and writer.
 
         Creates the output CSV file with Fintech-specific headers.
-
-        Args:
-            context: The conversion context with output_filename
-
         """
-        # Store the division ID in user_data for use in record processing
-        context.user_data["fintech_division_id"] = context.parameters_dict.get(
-            "fintech_division_id", ""
-        )
+        # Phase 11.x: typed config from parameters_dict.
+        config = FintechConverterConfig.from_parameters(context.parameters_dict)
+        context.user_data["fintech_division_id"] = config.division_id
 
         # Initialize invoice fetcher for customer number lookups.
         # InvFetcher is used here only for fetch_cust_no(), which retrieves

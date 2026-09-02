@@ -39,8 +39,8 @@ from webapp.pipeline.converters.convert_base import (
     ConversionContext,
     EDIRecord,
     make_edi_convert,
-    normalize_parameter,
 )
+from webapp.pipeline.converters.converters_config import ScannerWareConverterConfig
 
 
 class ScannerWareConverter(BaseEDIConverter):
@@ -61,18 +61,14 @@ class ScannerWareConverter(BaseEDIConverter):
             context: The conversion context
 
         """
-        # Extract and normalize parameters
-        params = context.parameters_dict
+        # Phase 11.x: typed config from parameters_dict.
+        config = ScannerWareConverterConfig.from_parameters(context.parameters_dict)
 
-        context.user_data["arec_padding"] = params.get("a_record_padding", "")
-        context.user_data["append_arec"] = normalize_parameter(
-            params.get("append_a_records"), default=False
-        )
-        context.user_data["append_arec_text"] = params.get("a_record_append_text", "")
-        context.user_data["force_txt_ext"] = normalize_parameter(
-            params.get("force_txt_file_ext"), default=False
-        )
-        context.user_data["invoice_date_offset"] = params.get("invoice_date_offset", 0)
+        context.user_data["arec_padding"] = config.a_record_padding
+        context.user_data["append_arec"] = config.append_a_records
+        context.user_data["append_arec_text"] = config.a_record_append_text
+        context.user_data["force_txt_ext"] = config.force_txt_file_ext
+        context.user_data["invoice_date_offset"] = config.invoice_date_offset
 
         # Determine output file extension
         if context.user_data["force_txt_ext"]:
@@ -98,25 +94,25 @@ class ScannerWareConverter(BaseEDIConverter):
 
         # Build A record line
         line_builder_list = [
-            fields["record_type"],
+            fields.record_type,
             user_data["arec_padding"].ljust(6),
-            fields["invoice_number"],
+            fields.invoice_number,
             "   ",
         ]
 
         # Handle invoice date with optional offset
-        write_invoice_date = fields["invoice_date"]
+        write_invoice_date = fields.invoice_date
         invoice_date_offset = user_data["invoice_date_offset"]
 
         if invoice_date_offset != 0:
-            invoice_date_string = fields["invoice_date"]
+            invoice_date_string = fields.invoice_date
             if invoice_date_string != EMPTY_DATE_MMDDYY:
                 invoice_date = datetime.strptime(invoice_date_string, "%m%d%y")
                 offset_invoice_date = invoice_date + timedelta(days=invoice_date_offset)
                 write_invoice_date = datetime.strftime(offset_invoice_date, "%m%d%y")
 
         line_builder_list.append(write_invoice_date)
-        line_builder_list.append(fields["invoice_total"])
+        line_builder_list.append(fields.invoice_total)
 
         # Append custom text if enabled
         if user_data["append_arec"]:
@@ -141,15 +137,15 @@ class ScannerWareConverter(BaseEDIConverter):
         fields = record.fields
 
         line_builder_list = [
-            fields["record_type"],
-            fields["upc_number"].ljust(14),
-            fields["description"][:25],
-            fields["vendor_item"],
-            fields["unit_cost"],
+            fields.record_type,
+            fields.upc_number.ljust(14),
+            fields.description[:25],
+            fields.vendor_item,
+            fields.unit_cost,
             "  ",
-            fields["unit_multiplier"],
-            fields["qty_of_units"],
-            fields["suggested_retail_price"],
+            fields.unit_multiplier,
+            fields.qty_of_units,
+            fields.suggested_retail_price,
             "001",
             "       ",
         ]
@@ -170,10 +166,10 @@ class ScannerWareConverter(BaseEDIConverter):
         fields = record.fields
 
         line_builder_list = [
-            fields["record_type"],
-            fields["description"].ljust(25),
+            fields.record_type,
+            fields.description.ljust(25),
             "   ",
-            fields["amount"],
+            fields.amount,
         ]
 
         writeable_line = "".join(line_builder_list)
